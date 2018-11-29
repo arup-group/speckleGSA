@@ -95,10 +95,6 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\SpeckleGSAConverter\SpeckleGSAConverter.csproj">
-      <Project>{2e5ee1d2-b88e-4fc7-a456-63604de6daf7}</Project>
-      <Name>SpeckleGSAConverter</Name>
-    </ProjectReference>
     <ProjectReference Include="..\SpeckleGSA\SpeckleGSA.csproj">
       <Project>{6d8ca3ad-e530-4cda-af79-9715a7583f4f}</Project>
       <Name>SpeckleGSA</Name>

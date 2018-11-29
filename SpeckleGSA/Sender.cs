@@ -15,7 +15,8 @@ namespace SpeckleGSA
     public class Sender
     {
         private SpeckleApiClient mySender;
-        private List<object> BucketObjects;
+        private List<object> DesignBucketObjects;
+        private List<object> AnalysisBucketObjects;
 
         private string apiToken { get; set; }
         private string serverAddress { get; set; }
@@ -34,13 +35,62 @@ namespace SpeckleGSA
             await mySender.IntializeSender(apiToken, "GSA", "GSA", "none");
         }
 
-        public void UpdateData(string name, GSAController gsa)
+        public void UpdateData(GSAController gsa, string streamName)
         {
-            BucketObjects = gsa.ExportObjects();
+            DesignBucketObjects = gsa.ExportDesignLayerObjects();
+            AnalysisBucketObjects = gsa.ExportAnalysisLayerObjects();
+
+            List<SpeckleObject> designPayload = new List<SpeckleObject>();
+            List<SpeckleObject> analysisPayload = new List<SpeckleObject>();
+            List<Layer> bucketLayers = new List<Layer>();
+
+            int objectCount = 0;
+
+            if (DesignBucketObjects.Count > 0)
+            {
+                designPayload = GetPayload(DesignBucketObjects);
+                bucketLayers.Add(new Layer(
+                    "Design Layer",
+                    Guid.NewGuid().ToString(),
+                    "",
+                    designPayload.Count(),
+                    objectCount,
+                    objectCount + designPayload.Count() - 1));
+                objectCount += designPayload.Count();
+            }
+            if (AnalysisBucketObjects.Count > 0)
+            {
+                analysisPayload = GetPayload(AnalysisBucketObjects);
+                bucketLayers.Add(new Layer(
+                    "Analysis Layer",
+                    Guid.NewGuid().ToString(),
+                    "",
+                    analysisPayload.Count(),
+                    objectCount,
+                    objectCount + analysisPayload.Count() - 1));
+                objectCount += analysisPayload.Count();
+            }
+
+            List<SpeckleObject> payload = designPayload;
+            payload.AddRange(analysisPayload);
+
+            SpeckleStream updateStream = new SpeckleStream()
+            {
+                Layers = bucketLayers,
+                Name = streamName,
+                Objects = payload
+            };
+
+            var response = mySender.StreamUpdateAsync(mySender.StreamId, updateStream).Result;
+        }
+        
+        public List<SpeckleObject> GetPayload(List<object> bucketObjects)
+        {
+            ConverterHack n = new ConverterHack();
 
             // Serialize objects to send
-            var convertedObjects = Converter.Serialise(BucketObjects).ToList();
-            
+            var convertedObjects = Converter.Serialise(bucketObjects).ToList();
+
             // Seperate objects into sizable payloads
             long totalBucketSize = 0;
             long currentBucketSize = 0;
@@ -79,25 +129,7 @@ namespace SpeckleGSA
             foreach (var myResponse in responses)
                 foreach (var obj in myResponse.Resources) placeholders.Add(new SpecklePlaceholder() { _id = obj._id });
 
-            List<Layer> BucketLayers = new List<Layer>
-            {
-                new Layer(
-                    "all",
-                    Guid.NewGuid().ToString(),
-                    "",
-                    BucketObjects.Count,
-                    0,
-                    BucketObjects.Count-1)
-            };
-
-            SpeckleStream updateStream = new SpeckleStream()
-            {
-                Layers = BucketLayers,
-                Name = name,
-                Objects = placeholders
-            };
-
-            var response = mySender.StreamUpdateAsync(mySender.StreamId, updateStream).Result;
+            return placeholders;
         }
     }
 }

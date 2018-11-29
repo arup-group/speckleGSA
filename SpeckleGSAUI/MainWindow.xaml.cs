@@ -17,6 +17,7 @@ using System.Timers;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
+using Microsoft.Win32;
 
 namespace SpeckleGSAUI
 {
@@ -49,26 +50,54 @@ namespace SpeckleGSAUI
         {
             userManager = new UserManager(EmailAddress.Text, Password.Password, ServerAddress.Text);
             userManager.Login();
-            MessageBox.Show("Successfuly logged in");
+            AddMessage("Successfully logged in");
         }
 
         private void LinkGSA(object sender, RoutedEventArgs e)
         {
             if (userManager == null)
             {
-                MessageBox.Show("Login first");
+                AddError("Please log in");
                 return;
             }
 
             gsa = new GSAController();
-            MessageBox.Show("Successfuly linked to GSA");
+            AddMessage("Successfully linked to GSA");
+        }
+
+        private void NewGSAFile(object sender, RoutedEventArgs e)
+        {
+            if (gsa == null)
+            {
+                AddError("GSA link not found");
+                return;
+            }
+            gsa.NewFile();
+            AddMessage("New GSA file created");
+        }
+
+        private void OpenGSAFile(object sender, RoutedEventArgs e)
+        {
+            if (gsa == null)
+            {
+                AddError("GSA link not found");
+                return;
+            }
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            if (openFileDialog.ShowDialog() == true)
+            {
+                gsa.OpenFile(openFileDialog.FileName);
+                AddMessage("Opened " + openFileDialog.FileName);
+            }
+            else
+                AddMessage("Cancel");
+
         }
 
         private async void SenderOn(object sender, RoutedEventArgs e)
         {
             if (userManager == null)
             {
-                MessageBox.Show("Login first");
                 ToggleSender.IsChecked = false;
                 return;
             }
@@ -77,24 +106,28 @@ namespace SpeckleGSAUI
             await speckleSender.InitializeSender();
             SenderStreamID.Text = speckleSender.StreamID;
 
-            TimerTrigger = new System.Timers.Timer(UPDATE_INTERVAL) { AutoReset = true, Enabled = false };
+            gsa.SendDesignLayer = SendDesignLayer.IsChecked.Value;
+            gsa.SendAnalysisLayer = SendAnalysisLayer.IsChecked.Value;
+
+            TimerTrigger = new System.Timers.Timer(UPDATE_INTERVAL) { AutoReset = false, Enabled = false };
             TimerTrigger.Elapsed += TriggerSend;
             TimerTrigger.Start();
         }
 
         private void SenderOff(object sender, RoutedEventArgs e)
         {
-            if (userManager != null)
+            if (userManager != null && TimerTrigger != null)
             {
                 TimerTrigger.Stop();
+                AddMessage("Stopped sending");
             }
         }
 
         private void TriggerSend(object sender, ElapsedEventArgs e)
         {
-            gsa.GetNodes();
-            gsa.GetElements();
-            speckleSender.UpdateData(StreamName, gsa);
+            speckleSender.UpdateData(gsa, StreamName);
+            TimerTrigger.Stop();
+            TimerTrigger.Start();
         }
 
         private void UpdateStreamName(object sender, TextChangedEventArgs e)
@@ -106,7 +139,6 @@ namespace SpeckleGSAUI
         {
             if (userManager == null)
             {
-                MessageBox.Show("Login first");
                 ToggleReceiver.IsChecked = false;
                 return;
             }
@@ -115,14 +147,14 @@ namespace SpeckleGSAUI
             await speckleReceiver.InitializeReceiver(ReceiverStreamID.Text);
             ReceiverStreamName.Text = speckleReceiver.StreamName;
 
-            TimerTrigger = new System.Timers.Timer(UPDATE_INTERVAL) { AutoReset = true, Enabled = false };
+            TimerTrigger = new System.Timers.Timer(UPDATE_INTERVAL) { AutoReset = false, Enabled = false };
             TimerTrigger.Elapsed += TriggerReceive;
             TimerTrigger.Start();
         }
 
         private void ReceiverOff(object sender, RoutedEventArgs e)
         {
-            if (userManager != null)
+            if (userManager != null && TimerTrigger != null)
             {
                 TimerTrigger.Stop();
             }
@@ -132,21 +164,18 @@ namespace SpeckleGSAUI
         private void TriggerReceive(object sender, ElapsedEventArgs e)
         {
             speckleReceiver.UpdateGlobal(gsa);
+            TimerTrigger.Stop();
+            TimerTrigger.Start();
         }
 
-        private async void TestReceiver(object sender, RoutedEventArgs e)
+        private void AddMessage(string message)
         {
-            if (userManager == null)
-            {
-                MessageBox.Show("Login first");
-                return;
-            }
+            Messages.Inlines.Add(message + '\n');
+        }
 
-            speckleReceiver = new Receiver(userManager.ServerAddress, userManager.ApiToken);
-            await speckleReceiver.InitializeReceiver(ReceiverStreamID.Text);
-
-
-            speckleReceiver.UpdateGlobal(gsa);
+        private void AddError(string error)
+        {
+            Messages.Inlines.Add("ERROR: " + error + '\n');
         }
     }
 }

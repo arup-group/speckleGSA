@@ -39,8 +39,13 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Object\Element.cs" />
-    <Compile Include="Object\Node.cs" />
+    <Compile Include="Object\GSAArea.cs" />
+    <Compile Include="Object\GSAElement.cs" />
+    <Compile Include="Object\GSAObject.cs" />
+    <Compile Include="Object\GSALine.cs" />
+    <Compile Include="Object\GSAMember.cs" />
+    <Compile Include="Object\GSANode.cs" />
+    <Compile Include="Object\GSARegion.cs" />
     <Compile Include="SpeckleGSAConverter.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -55,8 +60,11 @@
       <EmbedInteropTypes>True</EmbedInteropTypes>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="PresentationCore" />
     <Reference Include="System" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows" />
+    <Reference Include="WindowsBase" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

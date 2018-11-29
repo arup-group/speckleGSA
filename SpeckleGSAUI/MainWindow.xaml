@@ -11,6 +11,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="auto"/>
         </Grid.RowDefinitions>
 
         <TextBlock
@@ -27,7 +28,7 @@
             TextWrapping="Wrap" />
         <Grid
             Grid.Row="1"
-            Margin="25,25,25,25">
+            Margin="25,25,25,0">
             <TabControl
                 x:Name="TabControl">
                 <TabItem Header="Server Settings">
@@ -62,6 +63,14 @@
                         <Button
                             Click="LinkGSA"
                             Content="Link to GSA"/>
+                        <Separator Height="10" Background="Transparent"/>
+                        <Button
+                            Click="NewGSAFile"
+                            Content="New File"/>
+                        <Separator Height="10" Background="Transparent"/>
+                        <Button
+                            Click="OpenGSAFile"
+                            Content="Open File"/>
                     </StackPanel>
                 </TabItem>
                 <TabItem Header="Sender">
@@ -86,6 +95,13 @@
                             Unchecked="SenderOff"
                             x:Name="ToggleSender"
                             Content="Send"/>
+                        <Separator Height="10" Background="Transparent"/>
+                        <CheckBox
+                            x:Name="SendDesignLayer"
+                            Content="Design Layer"/>
+                        <CheckBox
+                            x:Name="SendAnalysisLayer"
+                            Content="Analysis Layer"/>
                     </StackPanel>
                 </TabItem>
                 <TabItem Header="Receiver">
@@ -113,6 +129,19 @@
                     </StackPanel>
                 </TabItem>
             </TabControl>
+        </Grid>
+        <Grid
+            Grid.Row="2"
+            Margin="25,0,25,25">
+            <ScrollViewer
+                Height="100">
+                <TextBlock
+                    x:Name="Messages"
+                    Background="White"
+                    FontFamily="Consolas"
+                    Padding="10"
+                    />
+            </ScrollViewer>
         </Grid>
     </Grid>
 </Window>

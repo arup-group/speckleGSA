@@ -1,3 +1,6 @@
+C:\Speckle\SpeckleGSA\SpeckleGSAConverter\bin\Debug\SpeckleGSAConverter.dll.config
+C:\Speckle\SpeckleGSA\SpeckleGSAConverter\bin\Debug\SpeckleGSAConverter.dll
+C:\Speckle\SpeckleGSA\SpeckleGSAConverter\bin\Debug\SpeckleGSAConverter.pdb
 C:\Speckle\SpeckleGSA\SpeckleGSAConverter\bin\Debug\SpeckleCore.dll
 C:\Speckle\SpeckleGSA\SpeckleGSAConverter\bin\Debug\Newtonsoft.Json.dll
 C:\Speckle\SpeckleGSA\SpeckleGSAConverter\bin\Debug\websocket-sharp.dll
@@ -5,8 +8,5 @@ C:\Speckle\SpeckleGSA\SpeckleGSAConverter\bin\Debug\SpeckleCore.pdb
 C:\Speckle\SpeckleGSA\SpeckleGSAConverter\obj\Debug\SpeckleGSAConverter.csprojAssemblyReference.cache
 C:\Speckle\SpeckleGSA\SpeckleGSAConverter\obj\Debug\SpeckleGSAConverter.csproj.CoreCompileInputs.cache
 C:\Speckle\SpeckleGSA\SpeckleGSAConverter\obj\Debug\SpeckleGSAConverter.csproj.CopyComplete
-C:\Speckle\SpeckleGSA\SpeckleGSAConverter\bin\Debug\SpeckleGSAConverter.dll.config
-C:\Speckle\SpeckleGSA\SpeckleGSAConverter\bin\Debug\SpeckleGSAConverter.dll
-C:\Speckle\SpeckleGSA\SpeckleGSAConverter\bin\Debug\SpeckleGSAConverter.pdb
 C:\Speckle\SpeckleGSA\SpeckleGSAConverter\obj\Debug\SpeckleGSAConverter.dll
 C:\Speckle\SpeckleGSA\SpeckleGSAConverter\obj\Debug\SpeckleGSAConverter.pdb

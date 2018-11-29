@@ -39,6 +39,8 @@ namespace SpeckleGSA
 
         public void UpdateGlobal(GSAController gsa)
         {
+            ConverterHack n = new ConverterHack();
+
             var getStream = myReceiver.StreamGetAsync(myReceiver.StreamId, null);
             getStream.Wait();
 
@@ -54,29 +56,11 @@ namespace SpeckleGSA
                 SpeckleObjects.Clear();
                 foreach (var obj in getStream.Result.Resource.Objects)
                     SpeckleObjects.Add(ObjectCache[obj._id]);
-
-                // Convert
-                Node n = new Node();
-                ConvertedObjects = SpeckleCore.Converter.Deserialise(SpeckleObjects);
                 
-                // Add to GSA
-                foreach(object obj in ConvertedObjects)
-                {
-                    PropertyInfo p = obj.GetType().GetProperty("OBJ_TYPE");
-                    string type = p.GetValue(obj, null).ToString();
+                // Convert
+                ConvertedObjects = SpeckleCore.Converter.Deserialise(SpeckleObjects);
 
-                    switch (type)
-                    {
-                        case "NODE":
-                            gsa.SetNodes(new Node[] { obj as Node });
-                            break;
-                        case "ELEMENT":
-                            gsa.SetElements(new Element[] { obj as Element });
-                            break;
-                        default:
-                            break;
-                    }
-                }
+                gsa.ImportObjects(ConvertedObjects);
             });
         }
     }
