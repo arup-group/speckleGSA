@@ -15,11 +15,9 @@ namespace SpeckleGSA
         public int[] Topo { get; set; }
         public double Beta { get; set; }
         public int OrientNode { get; set; }
-        public string Releases { get; set; }
-        public double[] Stiffness { get; set; }
-        public double[] EndOffset { get; set; }
-        public double[] Offset { get; set; }
-        public string Dummy { get; set; }
+        public Dictionary<string, object> EndStiffness { get; set; }
+        public Dictionary<string, object> EndOffset { get; set; }
+        public bool Dummy { get; set; }
 
         public GSAElement() : base("ELEMENT")
         {
@@ -30,11 +28,37 @@ namespace SpeckleGSA
             Topo = new int[0];
             Beta = 0;
             OrientNode = 0;
-            Releases = "FFFFFFFFFFFF";
-            Stiffness = new double[0];
-            EndOffset = new double[2];
-            Offset = new double[3];
-            Dummy = "";
+            EndStiffness = new Dictionary<string, object>()
+            {
+                { "start", new Dictionary<string,object>()
+                {
+                    { "x", "FIXED" },
+                    { "y", "FIXED" },
+                    { "z", "FIXED" },
+                    { "xx", "FIXED" },
+                    { "yy", "FIXED" },
+                    { "zz", "FIXED" },
+                }
+                },
+                { "end", new Dictionary<string,object>()
+                {
+                    { "x", "FIXED" },
+                    { "y", "FIXED" },
+                    { "z", "FIXED" },
+                    { "xx", "FIXED" },
+                    { "yy", "FIXED" },
+                    { "zz", "FIXED" },
+                }
+                },
+            };
+            EndOffset = new Dictionary<string, object>()
+            {
+                { "x-start", 0.0 },
+                { "x-end", 0.0 },
+                { "y", 0.0 },
+                { "z", 0.0 },
+            };
+            Dummy = false;
         }
 
         public override void ParseGWACommand(string command)
@@ -56,18 +80,26 @@ namespace SpeckleGSA
             Beta = Convert.ToDouble(pieces[counter++]);
             if (pieces[counter++] != "NO_RLS")
             {
-                Releases = pieces[counter++];
-                Releases += pieces[counter++];
+                string start = pieces[counter++];
+                string end = pieces[counter++];
+                (EndStiffness["start"] as Dictionary<string, object>)["x"] = ParseEndStiffness(start[0], pieces, ref counter);
+                (EndStiffness["start"] as Dictionary<string, object>)["y"] = ParseEndStiffness(start[1], pieces, ref counter);
+                (EndStiffness["start"] as Dictionary<string, object>)["z"] = ParseEndStiffness(start[2], pieces, ref counter);
+                (EndStiffness["start"] as Dictionary<string, object>)["xx"] = ParseEndStiffness(start[3], pieces, ref counter);
+                (EndStiffness["start"] as Dictionary<string, object>)["yy"] = ParseEndStiffness(start[4], pieces, ref counter);
+                (EndStiffness["start"] as Dictionary<string, object>)["zz"] = ParseEndStiffness(start[5], pieces, ref counter);
+                (EndStiffness["end"] as Dictionary<string, object>)["x"] = ParseEndStiffness(end[0], pieces, ref counter);
+                (EndStiffness["end"] as Dictionary<string, object>)["y"] = ParseEndStiffness(end[1], pieces, ref counter);
+                (EndStiffness["end"] as Dictionary<string, object>)["z"] = ParseEndStiffness(end[2], pieces, ref counter);
+                (EndStiffness["end"] as Dictionary<string, object>)["xx"] = ParseEndStiffness(end[3], pieces, ref counter);
+                (EndStiffness["end"] as Dictionary<string, object>)["yy"] = ParseEndStiffness(end[4], pieces, ref counter);
+                (EndStiffness["end"] as Dictionary<string, object>)["zz"] = ParseEndStiffness(end[5], pieces, ref counter);
             }
-            Stiffness = new double[Releases.Count(k => k == 'K')];
-            for (int i = 0; i < Stiffness.Length; i++)
-                Stiffness[i] = Convert.ToDouble(pieces[counter++]);
-            EndOffset[0] = Convert.ToDouble(pieces[counter++]);
-            EndOffset[1] = Convert.ToDouble(pieces[counter++]);
-            Offset = new double[pieces.Length - counter - 1];
-            for (int i = 0; i < Offset.Length; i++)
-                Offset[i] = Convert.ToDouble(pieces[counter++]);
-            Dummy = pieces[counter++];
+            EndOffset["x-start"]= Convert.ToDouble(pieces[counter++]);
+            EndOffset["x-end"] = Convert.ToDouble(pieces[counter++]);
+            EndOffset["y"] = Convert.ToDouble(pieces[counter++]);
+            EndOffset["z"] = Convert.ToDouble(pieces[counter++]);
+            Dummy = pieces[counter++] == "DUMMY";
         }
 
         public override string GetGWACommand()
@@ -89,11 +121,45 @@ namespace SpeckleGSA
                 ls.Add(t.ToString());
             ls.Add(OrientNode.ToString());
             ls.Add(Beta.ToString());
-            ls.Add("NO_RLS");
-            ls.Add(0.ToString());
-            ls.Add(0.ToString());
-            ls.Add(0.ToString());
-            ls.Add(Dummy.ToString());
+            if (Coor.Length / 3 == 2)
+            {
+                ls.Add("RLS");
+
+                string start = "";
+                string end = "";
+                List<double> stiffness = new List<double>();
+
+                start += GetEndStiffness((EndStiffness["start"] as Dictionary<string, object>)["x"], ref stiffness);
+                start += GetEndStiffness((EndStiffness["start"] as Dictionary<string, object>)["y"], ref stiffness);
+                start += GetEndStiffness((EndStiffness["start"] as Dictionary<string, object>)["z"], ref stiffness);
+                start += GetEndStiffness((EndStiffness["start"] as Dictionary<string, object>)["xx"], ref stiffness);
+                start += GetEndStiffness((EndStiffness["start"] as Dictionary<string, object>)["yy"], ref stiffness);
+                start += GetEndStiffness((EndStiffness["start"] as Dictionary<string, object>)["zz"], ref stiffness);
+
+                end += GetEndStiffness((EndStiffness["end"] as Dictionary<string, object>)["x"], ref stiffness);
+                end += GetEndStiffness((EndStiffness["end"] as Dictionary<string, object>)["y"], ref stiffness);
+                end += GetEndStiffness((EndStiffness["end"] as Dictionary<string, object>)["z"], ref stiffness);
+                end += GetEndStiffness((EndStiffness["end"] as Dictionary<string, object>)["xx"], ref stiffness);
+                end += GetEndStiffness((EndStiffness["end"] as Dictionary<string, object>)["yy"], ref stiffness);
+                end += GetEndStiffness((EndStiffness["end"] as Dictionary<string, object>)["zz"], ref stiffness);
+
+                ls.Add(start);
+                ls.Add(end);
+
+                foreach (double d in stiffness)
+                    ls.Add(d.ToString());
+            }
+            else
+                ls.Add("NO_RLS");
+
+            ls.Add(((double)EndOffset["x-start"]).ToString());
+            ls.Add(((double)EndOffset["x-end"]).ToString());
+            ls.Add(((double)EndOffset["y"]).ToString());
+            ls.Add(((double)EndOffset["z"]).ToString());
+
+            ls.Add(Dummy ? "DUMMY" : "");
+
+            Console.WriteLine(string.Join(",", ls));
 
             return string.Join(",", ls);
         }
@@ -110,6 +176,30 @@ namespace SpeckleGSA
             }
 
             return children;
+        }
+
+        private object ParseEndStiffness(char code, string[] pieces, ref int counter)
+        {
+            switch(code)
+            {
+                case 'F':
+                    return "FIXED";
+                case 'R':
+                    return 0;
+                default:
+                    return Convert.ToDouble(pieces[counter++]);
+            }
+        }
+
+        private string GetEndStiffness(object code, ref List<double> stiffness)
+        {
+            if (code.GetType() == typeof(string)) return "F";
+            else if ((double)code == 0) return "R";
+            else
+            {
+                stiffness.Add((double)code);
+                return "K";
+            }
         }
     }
 }

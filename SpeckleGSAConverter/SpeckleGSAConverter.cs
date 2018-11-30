@@ -568,6 +568,11 @@ namespace SpeckleGSA
                     e.SetSpeckleProperties(line.Properties);
                     e.Coor = line.Value.ToArray();
                     return e;
+                case "LINE":
+                    GSALine l = new GSALine();
+                    l.SetSpeckleProperties(line.Properties);
+                    l.Coor = line.Value.ToArray();
+                    return l;
                 default:
                     return null;
             }
@@ -610,8 +615,14 @@ namespace SpeckleGSA
                     GSAElement e = new GSAElement();
                     e.SetSpeckleProperties(mesh.Properties);
                     e.Coor = mesh.Vertices.ToArray();
-                    e.Color = mesh.Colors[0];
+                        e.Color = Math.Max(mesh.Colors[0], 0);
                     return e;
+                case "AREA":
+                    GSAArea a = new GSAArea();
+                    a.SetSpeckleProperties(mesh.Properties);
+                    a.Coor = mesh.Vertices.ToArray();
+                    a.Color = Math.Max(mesh.Colors[0],0);
+                    return a;
                 default:
                     return null;
             }

@@ -165,7 +165,7 @@ namespace SpeckleGSAUI
         {
             speckleReceiver.UpdateGlobal(gsa);
             TimerTrigger.Stop();
-            TimerTrigger.Start();
+            //TimerTrigger.Start();
         }
 
         private void AddMessage(string message)

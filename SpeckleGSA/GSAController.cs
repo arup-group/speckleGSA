@@ -183,11 +183,14 @@ namespace SpeckleGSA
             elements.Clear();
             lines.Clear();
             areas.Clear();
+            elements.Clear();
 
             GSARefCounters counter = new GSARefCounters();
             
             foreach (object obj in ConvertedObjects)
             {
+                if (obj == null) continue;
+
                 Type t = obj.GetType();
                 if (t.IsArray)
                     foreach (GSAObject arrObj in (obj as Array))
@@ -213,6 +216,9 @@ namespace SpeckleGSA
                     break;
                 case "AREA":
                     AddArea(obj as GSAArea, ref counter);
+                    break;
+                case "ELEMENT":
+                    AddElement(obj as GSAElement, ref counter);
                     break;
                 default:
                     break;
@@ -286,6 +292,20 @@ namespace SpeckleGSA
             areas.Add(area);
             return area.Ref;
         }
+
+        public int AddElement(GSAElement element, ref GSARefCounters counter)
+        {
+            element = counter.RefElement(element);
+
+            List<GSAObject> eNodes = element.GetChildren();
+            for (int i = 0; i < eNodes.Count; i++)
+                element.Topo[i] = AddNode((eNodes[i] as GSANode), ref counter);
+
+            gsaObj.GwaCommand(element.GetGWACommand());
+            elements.Add(element);
+            return element.Ref;
+        }
+
     }
 
     public class GSARefCounters

@@ -62,11 +62,7 @@ namespace SpeckleGSA
                 lineList += l.ToString() + " ";
             ls.Add(lineList.TrimEnd());
             ls.Add(Coefficient.ToString());
-
-            foreach (double d in Coor)
-                Console.Write(d.ToString() + " ");
-            Console.WriteLine();
-            Console.WriteLine(string.Join(",", ls));
+            
             return string.Join(",", ls);
         }
 
