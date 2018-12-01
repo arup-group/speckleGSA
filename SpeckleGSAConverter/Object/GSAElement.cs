@@ -8,10 +8,9 @@ namespace SpeckleGSA
 {
     public class GSAElement : GSAObject
     {
-        public string eType { get; set; }
+        public string Type { get; set; }
         public int Property { get; set; }
         public int Group { get; set; }
-        public int NumTopo { get; set; }
         public int[] Topo { get; set; }
         public double Beta { get; set; }
         public int OrientNode { get; set; }
@@ -21,10 +20,9 @@ namespace SpeckleGSA
 
         public GSAElement() : base("ELEMENT")
         {
-            eType = "BEAM";
+            Type = "BEAM";
             Property = 1;
             Group = 0;
-            NumTopo = 0;
             Topo = new int[0];
             Beta = 0;
             OrientNode = 0;
@@ -69,11 +67,10 @@ namespace SpeckleGSA
             Ref = Convert.ToInt32(pieces[counter++]);
             Name = pieces[counter++].Trim(new char[] { '"' });
             Color = pieces[counter++].ParseGSAColor();
-            eType = pieces[counter++];
+            Type = pieces[counter++];
             Property = Convert.ToInt32(pieces[counter++]);
             Group = Convert.ToInt32(pieces[counter++]);
-            NumTopo = ElementNumNodes[eType];
-            Topo = new int[NumTopo];
+            Topo = new int[ElementNumNodes[Type]];
             for (int i = 0; i < Topo.Length; i++)
                 Topo[i] = Convert.ToInt32(pieces[counter++]);
             OrientNode = Convert.ToInt32(pieces[counter++]);
@@ -114,7 +111,7 @@ namespace SpeckleGSA
                 ls.Add("NO_RGB");
             else
                 ls.Add(((int)Color).ToString());
-            ls.Add(eType);
+            ls.Add(Type);
             ls.Add(Property.ToString());
             ls.Add(Group.ToString());
             foreach (int t in Topo)
@@ -159,8 +156,6 @@ namespace SpeckleGSA
 
             ls.Add(Dummy ? "DUMMY" : "");
 
-            Console.WriteLine(string.Join(",", ls));
-
             return string.Join(",", ls);
         }
 
@@ -168,7 +163,7 @@ namespace SpeckleGSA
         {
             List<GSAObject> children = new List<GSAObject>();
 
-            for (int i = 0; i < NumTopo; i++)
+            for (int i = 0; i < Coor.Length/3; i++)
             {
                 GSANode n = new GSANode();
                 n.Coor = Coor.Skip(i * 3).Take(3).ToArray();

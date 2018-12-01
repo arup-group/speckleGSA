@@ -212,6 +212,67 @@ namespace SpeckleGSA
             return ArcRadiustoSpeckleArc(coor, radius, checkVector.Length > radius);
         }
 
+        public static double[] SpeckleArctoArc3Point(SpeckleArc arc)
+        {
+            Vector3D v3 = new Vector3D(
+                arc.Plane.Normal.Value[0],
+                arc.Plane.Normal.Value[1],
+                arc.Plane.Normal.Value[2]);
+
+            Vector3D origin = new Vector3D(
+                arc.Plane.Origin.Value[0],
+                arc.Plane.Origin.Value[1],
+                arc.Plane.Origin.Value[2]);
+
+            double radius = arc.Radius.Value;
+            double startAngle = arc.StartAngle.Value;
+            double endAngle = arc.EndAngle.Value;
+            double midAngle = startAngle < endAngle ?
+                (startAngle + endAngle)/2 :
+                (startAngle + endAngle)/2 + Math.PI;
+
+            Vector3D p1 = new Vector3D(radius * Math.Cos(startAngle), radius * Math.Sin(startAngle), 0);
+            Vector3D p2 = new Vector3D(radius * Math.Cos(endAngle), radius * Math.Sin(endAngle), 0);
+            Vector3D p3 = new Vector3D(radius * Math.Cos(midAngle), radius * Math.Sin(midAngle), 0);
+
+            if (v3.Z == 1)
+            {
+            }
+            else if (v3.Z == -1)
+            {
+                p1 = Vector3D.Multiply(-1, p1);
+                p2 = Vector3D.Multiply(-1, p2);
+                p3 = Vector3D.Multiply(-1, p3);
+
+                Matrix3D reverseRotation = RotationMatrix(new Vector3D(1, 0, 0), Math.PI);
+
+                p1 = Vector3D.Multiply(p1, reverseRotation);
+                p2 = Vector3D.Multiply(p2, reverseRotation);
+                p3 = Vector3D.Multiply(p3, reverseRotation);
+            }
+            else
+            { 
+                Vector3D unitRotationvector = Vector3D.CrossProduct(new Vector3D(0, 0, 1), v3);
+                unitRotationvector.Normalize();
+                Matrix3D rotation = RotationMatrix(unitRotationvector, Vector3D.AngleBetween(v3, new Vector3D(0, 0, 1)).ToRadians());
+
+                p1 = Vector3D.Multiply(p1, rotation);
+                p2 = Vector3D.Multiply(p2, rotation);
+                p3 = Vector3D.Multiply(p3, rotation);
+            }
+
+            p1 = Vector3D.Add(p1, origin);
+            p2 = Vector3D.Add(p2, origin);
+            p3 = Vector3D.Add(p3, origin);
+
+            return new double[]
+            {
+                p1.X,p1.Y,p1.Z,
+                p2.X,p2.Y,p2.Z,
+                p3.X,p3.Y,p3.Z,
+            };
+        }
+
         public static Dictionary<string,object> ToSpeckle(this Array arr)
         {
             if (arr == null) return null;
@@ -254,10 +315,7 @@ namespace SpeckleGSA
             foreach(var prop in obj.GetType().GetProperties())
             {
                 string key = prop.Name;
-
-                if (key == "Color") continue;
-                if (key == "Coor") continue;
-
+                
                 object value = prop.GetValue(obj, null);
                 Type t = value.GetType();
 
@@ -276,10 +334,7 @@ namespace SpeckleGSA
             foreach (var prop in obj.GetType().GetProperties())
             {
                 string key = prop.Name;
-
-                if (key == "Color") continue;
-                if (key == "Coor") continue;
-
+                
                 if (!dict.ContainsKey(key)) continue;
 
                 object value = dict[key];
@@ -361,7 +416,7 @@ namespace SpeckleGSA
         
         public static SpeckleObject ToSpeckle(this GSAElement element)
         {
-            switch (element.NumTopo)
+            switch (element.Coor.Length/3)
             {
                 case 1:
                     return new SpecklePoint(
@@ -382,12 +437,12 @@ namespace SpeckleGSA
                             100, 100, 100);
                         return new SpeckleMesh(
                         element.Coor,
-                        new int[] { element.NumTopo - 3 }.Concat(
-                            Enumerable.Range(0, element.NumTopo).ToArray())
+                        new int[] { element.Coor.Length / 3 - 3 }.Concat(
+                            Enumerable.Range(0, element.Coor.Length / 3).ToArray())
                             .ToArray(),
                         Enumerable.Repeat(
                             color.ToArgb(),
-                            element.NumTopo).ToArray(),
+                            element.Coor.Length / 3).ToArray(),
                         null,
                         element.Ref.ToString(),
                         element.GetSpeckleProperties());
@@ -400,12 +455,12 @@ namespace SpeckleGSA
                            ((int)element.Color / 256 / 256) % 256);
                         return new SpeckleMesh(
                             element.Coor,
-                            new int[] { element.NumTopo - 3 }.Concat(
-                                Enumerable.Range(0, element.NumTopo).ToArray())
+                            new int[] { element.Coor.Length / 3 - 3 }.Concat(
+                                Enumerable.Range(0, element.Coor.Length / 3).ToArray())
                                 .ToArray(),
                             Enumerable.Repeat(
                                 color.ToArgb(),
-                                element.NumTopo).ToArray(),
+                                element.Coor.Length / 3).ToArray(),
                             null,
                             element.Ref.ToString(),
                             element.GetSpeckleProperties());
@@ -426,11 +481,13 @@ namespace SpeckleGSA
                     SpeckleArc arcR = ArcRadiustoSpeckleArc(line.Coor, line.Radius);
                     arcR.ApplicationId = line.Ref.ToString();
                     arcR.Properties = line.GetSpeckleProperties();
+                    arcR.GenerateHash();
                     return arcR;
                 case "ARC_THIRD_PT":
                     SpeckleArc arc3 = Arc3PointtoSpeckleArc(line.Coor);
                     arc3.ApplicationId = line.Ref.ToString();
                     arc3.Properties = line.GetSpeckleProperties();
+                    arc3.GenerateHash();
                     return arc3;
                 default:
                     return null;
@@ -439,14 +496,6 @@ namespace SpeckleGSA
 
         public static SpeckleMesh ToSpeckle(this GSAArea area)
         {
-            //SpecklePolycurve curve = new SpecklePolycurve();
-            //curve.ApplicationId = area.Ref.ToString();
-            //curve.Segments = area.GetCurves().Select(c => c.ToSpeckle()).ToList();
-            //curve.Properties = area.GetSpeckleProperties();
-            //curve.GenerateHash();
-
-            //return curve;
-
             SpeckleMesh mesh = new SpeckleMesh();
             mesh.Vertices = area.Coor.ToList();
             mesh.Faces = (new int[] { (int)(area.Coor.Length / 3) - 3 }.Concat(
@@ -471,59 +520,17 @@ namespace SpeckleGSA
                     (int)(area.Coor.Length / 3)).ToList();
             }
             mesh.Properties = area.GetSpeckleProperties();
+            mesh.GenerateHash();
             return mesh;
-
-            //if (area.Color == null)
-            //{
-            //    var color = System.Drawing.Color.FromArgb(255,
-            //        100, 100, 100);
-            //    return new SpeckleMesh(
-            //    area.Coor,
-            //    new int[] { (int)(area.Coor.Length / 3) - 3 }.Concat(
-            //        Enumerable.Range(0, (int)(area.Coor.Length / 3)).ToArray())
-            //        .ToArray(),
-            //    Enumerable.Repeat(
-            //        color.ToArgb(),
-            //        (int)(area.Coor.Length / 3)).ToArray(),
-            //    null,
-            //    area.Ref.ToString(),
-            //    area.GetSpeckleProperties());
-            //}
-            //else
-            //{
-            //    var color = System.Drawing.Color.FromArgb(255,
-            //       (int)area.Color % 256,
-            //       ((int)area.Color / 256) % 256,
-            //       ((int)area.Color / 256 / 256) % 256);
-            //    return new SpeckleMesh(
-            //        area.Coor,
-            //        new int[] { (int)(area.Coor.Length / 3) - 3 }.Concat(
-            //            Enumerable.Range(0, (int)(area.Coor.Length / 3)).ToArray())
-            //            .ToArray(),
-            //        Enumerable.Repeat(
-            //            color.ToArgb(),
-            //            (int)(area.Coor.Length / 3)).ToArray(),
-            //        null,
-            //        area.Ref.ToString(),
-            //        area.GetSpeckleProperties());
-            //}
         }
         #endregion
 
         #region
         public static GSAObject ToNative(this SpecklePoint point)
         {
-            if (point.Properties==null)
+            if (point.Properties==null || !point.Properties.ContainsKey("GSAEntity"))
             {
                 GSANode n = new GSANode();
-                n.Coor = point.Value.ToArray();
-                return n;
-            }
-
-            if(!point.Properties.ContainsKey("GSAEntity"))
-            {
-                GSANode n = new GSANode();
-                n.SetSpeckleProperties(point.Properties);
                 n.Coor = point.Value.ToArray();
                 return n;
             }
@@ -547,14 +554,7 @@ namespace SpeckleGSA
 
         public static GSAObject ToNative(this SpeckleLine line)
         {
-            if (line.Properties == null)
-            {
-                GSALine l = new GSALine();
-                l.Coor = line.Value.ToArray();
-                return l;
-            }
-
-            if (!line.Properties.ContainsKey("GSAEntity"))
+            if (line.Properties == null || !line.Properties.ContainsKey("GSAEntity"))
             {
                 GSALine l = new GSALine();
                 l.Coor = line.Value.ToArray();
@@ -572,6 +572,27 @@ namespace SpeckleGSA
                     GSALine l = new GSALine();
                     l.SetSpeckleProperties(line.Properties);
                     l.Coor = line.Value.ToArray();
+                    return l;
+                default:
+                    return null;
+            }
+        }
+
+        public static GSALine ToNative(this SpeckleArc arc)
+        {
+            if (arc.Properties == null || !arc.Properties.ContainsKey("GSAEntity"))
+            {
+                GSALine l = new GSALine();
+                l.Coor = SpeckleArctoArc3Point(arc);
+                return l;
+            }
+
+            switch (arc.Properties["GSAEntity"])
+            {
+                case "LINE":
+                    GSALine l = new GSALine();
+                    l.SetSpeckleProperties(arc.Properties);
+                    l.Coor = SpeckleArctoArc3Point(arc);
                     return l;
                 default:
                     return null;

@@ -14,9 +14,9 @@ namespace SpeckleGSA
         public string GSAEntity { get; set; }
         public int Ref { get; set; }
         public string Name { get; set; }
-        public object Color { get; set; }
 
         public double[] Coor;
+        public object Color;
 
         public ComAuto gsa;
 

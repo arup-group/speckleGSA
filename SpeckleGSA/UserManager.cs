@@ -61,16 +61,18 @@ namespace SpeckleGSA
             ServerName = (string)parsedReply.serverName;
 
             // Login and get API token
-            var response = userClient.UserLoginAsync(myUser).Result;
-            if (response.Success == false)
+            try
             {
-                Console.WriteLine("Failed to login. " + response.Message);
+                var response = userClient.UserLoginAsync(myUser).Result;
+                ApiToken = response.Resource.Apitoken;
+                RestApi = ServerAddress.ToString();
+                return 0;
+            }
+            catch
+            {
+                Console.WriteLine("Failed to login.");
                 return 1;
             }
-
-            ApiToken = response.Resource.Apitoken;
-            RestApi = ServerAddress.ToString();
-            return 0;
         }
     }
 }

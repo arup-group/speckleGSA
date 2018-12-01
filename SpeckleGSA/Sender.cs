@@ -32,10 +32,11 @@ namespace SpeckleGSA
 
         public async Task InitializeSender()
         {
-            await mySender.IntializeSender(apiToken, "GSA", "GSA", "none");
+            string res = await mySender.IntializeSender(apiToken, "GSA", "GSA", "none");
+            Console.WriteLine(res);
         }
 
-        public void UpdateData(GSAController gsa, string streamName)
+        public string UpdateData(GSAController gsa, string streamName)
         {
             DesignBucketObjects = gsa.ExportDesignLayerObjects();
             AnalysisBucketObjects = gsa.ExportAnalysisLayerObjects();
@@ -82,6 +83,10 @@ namespace SpeckleGSA
             };
 
             var response = mySender.StreamUpdateAsync(mySender.StreamId, updateStream).Result;
+            if (response.Success == false)
+                throw new Exception(response.Message);
+
+            return response.Message;
         }
         
         public List<SpeckleObject> GetPayload(List<object> bucketObjects)

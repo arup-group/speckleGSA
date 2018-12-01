@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SpeckleGSAUI"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="450">
+        Title="SpeckleGSA" x:Name="SpeckleGSAUI" Height="486" Width="450">
     <Grid
         Background="#FF0057FF">
         <Grid.RowDefinitions>
@@ -28,7 +28,7 @@
             TextWrapping="Wrap" />
         <Grid
             Grid.Row="1"
-            Margin="25,25,25,0">
+            Margin="25,25,25,5">
             <TabControl
                 x:Name="TabControl">
                 <TabItem Header="Server Settings">
@@ -80,7 +80,7 @@
                             HorizontalAlignment="Left"
                             Text="Stream Name:"/>
                         <TextBox
-                            TextChanged="UpdateStreamName"
+                            Text="{Binding ElementName=SpeckleGSAUI, Path=StreamName}"
                             x:Name="SenderStreamName"/>
                         <Separator Height="10" Background="Transparent"/>
                         <TextBlock
@@ -97,10 +97,10 @@
                             Content="Send"/>
                         <Separator Height="10" Background="Transparent"/>
                         <CheckBox
-                            x:Name="SendDesignLayer"
+                            IsChecked="{Binding ElementName=SpeckleGSAUI, Path=SendDesignLayer}"
                             Content="Design Layer"/>
                         <CheckBox
-                            x:Name="SendAnalysisLayer"
+                            IsChecked="{Binding ElementName=SpeckleGSAUI, Path=SendAnalysisLayer}"
                             Content="Analysis Layer"/>
                     </StackPanel>
                 </TabItem>
@@ -112,7 +112,7 @@
                             Text="Stream Name:"/>
                         <TextBox
                             IsReadOnly="True"
-                            TextChanged="UpdateStreamName"
+                            Text="{Binding ElementName=SpeckleGSAUI, Path=StreamName}"
                             x:Name="ReceiverStreamName"/>
                         <Separator Height="10" Background="Transparent"/>
                         <TextBlock
@@ -126,14 +126,42 @@
                             Unchecked="ReceiverOff"
                             x:Name="ToggleReceiver"
                             Content="Receive"/>
+                        <Separator Height="10" Background="Transparent"/>
+                        <Label 
+                            Content="Settings"/>
+                        <TextBlock
+                            HorizontalAlignment="Left"
+                            Text="Node Tolerance:"/>
+                        <TextBox
+                            x:Name="NodeTolerance"
+                            Text="{Binding ElementName=SpeckleGSAUI, Path=ReceiveNodeTolerance}"/>
                     </StackPanel>
                 </TabItem>
             </TabControl>
         </Grid>
         <Grid
             Grid.Row="2"
-            Margin="25,0,25,25">
-            <ScrollViewer
+            Margin="25,5,25,25">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Label
+                Grid.Row="0"
+                Foreground="White"
+                FontWeight="Medium"/>
+            <ListBox
+                Grid.Row="1"
+                Height="100"
+                x:Name="MessagePane"
+                ItemsSource="{Binding Path=Messages}">
+                <ListBox.Resources>
+                    <DataTemplate x:Key="MessageItem">
+                        <Label x:Name="MessageLine" Content="{Binding}"/>
+                    </DataTemplate>
+                </ListBox.Resources>
+            </ListBox>
+            <!--<ScrollViewer
                 Height="100">
                 <TextBlock
                     x:Name="Messages"
@@ -141,7 +169,7 @@
                     FontFamily="Consolas"
                     Padding="10"
                     />
-            </ScrollViewer>
+            </ScrollViewer>-->
         </Grid>
     </Grid>
 </Window>

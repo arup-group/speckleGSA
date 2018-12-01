@@ -10,13 +10,15 @@ namespace SpeckleGSA
 {
     public class GSAController
     {
-        public ComAuto gsaObj;
-        public List<GSANode> nodes;
-        public List<GSAElement> elements;
-        public List<GSALine> lines;
-        public List<GSAArea> areas;
         public bool SendDesignLayer { get; set; }
         public bool SendAnalysisLayer { get; set; }
+        public double ReceiveNodeTolerance { get; set; }
+
+        private ComAuto gsaObj;
+        private List<GSANode> nodes;
+        private List<GSAElement> elements;
+        private List<GSALine> lines;
+        private List<GSAArea> areas;
 
         public GSAController()
         {
@@ -228,9 +230,10 @@ namespace SpeckleGSA
         public int AddNode(GSANode node, ref GSARefCounters counter)
         {
             List<GSANode> matches = nodes.Where(
-                n => n.Coor[0] == node.Coor[0] &
-                n.Coor[1] == node.Coor[1] &
-                n.Coor[2] == node.Coor[2]
+                n => (Math.Pow(n.Coor[0] - node.Coor[0], 2) +
+                Math.Pow(n.Coor[1] - node.Coor[1], 2) +
+                Math.Pow(n.Coor[2] - node.Coor[2], 2) <=
+                ReceiveNodeTolerance)
                 ).ToList();
 
             if (matches.Count == 0)
@@ -248,7 +251,8 @@ namespace SpeckleGSA
         public int AddLine(GSALine line, ref GSARefCounters counter)
         {
             List<GSALine> matches = lines.Where(
-                            l => (l.Coor[0] == line.Coor[0] &
+                            l => l.Type == line.Type &
+                            ((l.Coor[0] == line.Coor[0] &
                             l.Coor[1] == line.Coor[1] &
                             l.Coor[2] == line.Coor[2] &
                             l.Coor[3] == line.Coor[3] &
@@ -259,7 +263,7 @@ namespace SpeckleGSA
                             l.Coor[2] == line.Coor[5] &
                             l.Coor[3] == line.Coor[0] &
                             l.Coor[4] == line.Coor[1] &
-                            l.Coor[5] == line.Coor[2])).ToList();
+                            l.Coor[5] == line.Coor[2]))).ToList();
 
             if (matches.Count == 0)
             {
