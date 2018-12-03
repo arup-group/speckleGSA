@@ -18,6 +18,7 @@ namespace SpeckleGSA
         private List<GSANode> nodes;
         private List<GSAElement> elements;
         private List<GSALine> lines;
+        private List<GSAMember> members;
         private List<GSAArea> areas;
 
         public GSAController()
@@ -28,6 +29,7 @@ namespace SpeckleGSA
             nodes = new List<GSANode>();
             elements = new List<GSAElement>();
             lines = new List<GSALine>();
+            members = new List<GSAMember>();
             areas = new List<GSAArea>();
 
             SendDesignLayer = false;
@@ -46,6 +48,7 @@ namespace SpeckleGSA
             gsaObj.DisplayGsaWindow(true);
         }
 
+        #region Extract GSA
         public void GetNodes()
         {
             nodes.Clear();
@@ -118,6 +121,11 @@ namespace SpeckleGSA
             }
         }
 
+        public void GetMembers()
+        {
+
+        }
+
         public void GetAreas()
         {
             areas.Clear();
@@ -135,11 +143,42 @@ namespace SpeckleGSA
                 a.ParseGWACommand(p);
 
 
-                List<double> aNodes = new List<double>();
+                List<double[]> aNodes = new List<double[]>();
+                int counter = 0;
                 foreach (int l in a.Lines)
-                    aNodes.AddRange(lines.Where(x => x.Ref == l).SelectMany(n => n.Coor.Take(3)));
+                {
+                    double[] node = lines.Where(x => x.Ref == l).SelectMany(n => n.Coor).ToArray();
+                    if (counter == 0)
+                        aNodes.Add(node.Take(3).ToArray());
+                    else if (counter == a.Lines.Count() - 1)
+                    {
+                        double[] firstNode = aNodes[0];
+                        double[] prevNode = aNodes[aNodes.Count - 1];
+                        if ((firstNode[0] == node[0] &
+                            firstNode[1] == node[1] &
+                            firstNode[2] == node[2]) ||
+                            (prevNode[0] == node[0] &
+                            prevNode[1] == node[1] &
+                            prevNode[2] == node[2]))
+                            aNodes.Add(node.Skip(3).Take(3).ToArray());
+                        else
+                            aNodes.Add(node.Take(3).ToArray());
+                    }
+                    else if (counter < a.Lines.Count()-1)
+                    {
+                        double[] prevNode = aNodes[aNodes.Count - 1];
+                        if (prevNode[0] == node[0] &
+                            prevNode[1] == node[1] &
+                            prevNode[2] == node[2])
+                            aNodes.Add(node.Skip(3).Take(3).ToArray());
+                        else
+                            aNodes.Add(node.Take(3).ToArray());
+                        
+                    }
+                    counter++;
+                }
 
-                a.Coor = aNodes.ToArray();
+                a.Coor = aNodes.SelectMany(d => d).ToArray();
 
                 areas.Add(a);
             }
@@ -178,29 +217,9 @@ namespace SpeckleGSA
 
             return BucketObjects;
         }
+        #endregion
 
-        public void ImportObjects(List<object> ConvertedObjects)
-        {
-            nodes.Clear();
-            elements.Clear();
-            lines.Clear();
-            areas.Clear();
-            elements.Clear();
-
-            GSARefCounters counter = new GSARefCounters();
-            
-            foreach (object obj in ConvertedObjects)
-            {
-                if (obj == null) continue;
-
-                Type t = obj.GetType();
-                if (t.IsArray)
-                    foreach (GSAObject arrObj in (obj as Array))
-                        AddGSAObj(arrObj, ref counter);
-                else
-                    AddGSAObj(obj as GSAObject, ref counter);
-            }
-        }
+        #region Import GSA
 
         public void AddGSAObj(GSAObject obj, ref GSARefCounters counter)
         {
@@ -310,18 +329,44 @@ namespace SpeckleGSA
             return element.Ref;
         }
 
+        public void ImportObjects(List<object> ConvertedObjects)
+        {
+            nodes.Clear();
+            elements.Clear();
+            lines.Clear();
+            areas.Clear();
+            elements.Clear();
+
+            GSARefCounters counter = new GSARefCounters();
+            
+            foreach (object obj in ConvertedObjects)
+            {
+                if (obj == null) continue;
+
+                Type t = obj.GetType();
+                if (t.IsArray)
+                    foreach (GSAObject arrObj in (obj as Array))
+                        AddGSAObj(arrObj, ref counter);
+                else
+                    AddGSAObj(obj as GSAObject, ref counter);
+            }
+
+            gsaObj.UpdateViews();
+        }
+
+        #endregion
     }
 
     public class GSARefCounters
     {
-        public int GetNodeRef
+        private int getNodeRef
         { get
             {
                 while (nodeRefs.Contains(nodeCounter)) nodeCounter++;
                 return nodeCounter;
             }
         }
-        public int GetElementRef
+        private int getElementRef
         {
             get
             {
@@ -329,7 +374,7 @@ namespace SpeckleGSA
                 return elementCounter;
             }
         }
-        public int GetLineRef
+        private int getLineRef
         {
             get
             {
@@ -337,7 +382,7 @@ namespace SpeckleGSA
                 return lineCounter;
             }
         }
-        public int GetMemberRef
+        private int getMemberRef
         {
             get
             {
@@ -345,7 +390,7 @@ namespace SpeckleGSA
                 return memberCounter;
             }
         }
-        public int GetAreaRef
+        private int getAreaRef
         {
             get
             {
@@ -353,7 +398,7 @@ namespace SpeckleGSA
                 return areaCounter;
             }
         }
-        public int GetRegionRef
+        private int getRegionRef
         {
             get
             {
@@ -396,7 +441,7 @@ namespace SpeckleGSA
         public GSANode RefNode(GSANode node)
         {
             if (node.Ref == 0)
-                node.Ref = GetNodeRef;
+                node.Ref = getNodeRef;
             nodeRefs.Add(node.Ref);
             return node;
         }
@@ -404,7 +449,7 @@ namespace SpeckleGSA
         public GSAElement RefElement(GSAElement element)
         {
             if (element.Ref == 0)
-                element.Ref = GetElementRef;
+                element.Ref = getElementRef;
             elementRefs.Add(element.Ref);
             return element;
         }
@@ -412,7 +457,7 @@ namespace SpeckleGSA
         public GSALine RefLine(GSALine line)
         {
             if (line.Ref == 0)
-                line.Ref = GetLineRef;
+                line.Ref = getLineRef;
             lineRefs.Add(line.Ref);
             return line;
         }
@@ -420,7 +465,7 @@ namespace SpeckleGSA
         public GSAMember RefMember(GSAMember member)
         {
             if (member.Ref == 0)
-                member.Ref = GetMemberRef;
+                member.Ref = getMemberRef;
             memberRefs.Add(member.Ref);
             return member;
         }
@@ -428,7 +473,7 @@ namespace SpeckleGSA
         public GSAArea RefArea(GSAArea area)
         {
             if (area.Ref == 0)
-                area.Ref = GetAreaRef;
+                area.Ref = getAreaRef;
             areaRefs.Add(area.Ref);
             return area;
         }
@@ -436,7 +481,7 @@ namespace SpeckleGSA
         public GSARegion RefRegion(GSARegion region)
         {
             if (region.Ref == 0)
-                region.Ref = GetRegionRef;
+                region.Ref = getRegionRef;
             regionRefs.Add(region.Ref);
             return region;
         }

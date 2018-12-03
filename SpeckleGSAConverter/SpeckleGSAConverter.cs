@@ -311,7 +311,7 @@ namespace SpeckleGSA
         {
             if (obj == null) { return null; }
 
-            var speckleDict = new Dictionary<string, object>();
+            var structuralDict = new Dictionary<string, object>();
             foreach(var prop in obj.GetType().GetProperties())
             {
                 string key = prop.Name;
@@ -323,21 +323,32 @@ namespace SpeckleGSA
                     value = ((Array)value).ToSpeckle();
                 else if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(Dictionary<,>))
                     value = (value as Dictionary<string, object>).ToSpeckle();
-                speckleDict.Add(key, value);
+                structuralDict.Add(key, value);
             }
+
+            var speckleDict = new Dictionary<string, object>()
+            {
+                { "Structural", structuralDict }
+            };
+            
             return speckleDict;
         }
         
         public static void SetSpeckleProperties(this object obj, Dictionary<string, object> dict)
         {
-            if (obj == null) { return; }
+            if (obj == null) return;
+        
+            if (!dict.ContainsKey("Structural")) return;
+
+            Dictionary<string, object> structuralDict = (dict["Structural"] as Dictionary<string, object>);
+
             foreach (var prop in obj.GetType().GetProperties())
             {
                 string key = prop.Name;
                 
-                if (!dict.ContainsKey(key)) continue;
+                if (!structuralDict.ContainsKey(key)) continue;
 
-                object value = dict[key];
+                object value = structuralDict[key];
 
                 if (prop.PropertyType.IsArray)
                 {
@@ -498,8 +509,8 @@ namespace SpeckleGSA
         {
             SpeckleMesh mesh = new SpeckleMesh();
             mesh.Vertices = area.Coor.ToList();
-            mesh.Faces = (new int[] { (int)(area.Coor.Length / 3) - 3 }.Concat(
-                    Enumerable.Range(0, (int)(area.Coor.Length / 3)).ToArray())).ToList();
+            mesh.Faces = (new int[] { area.Coor.Length / 3 - 3 }.Concat(
+                    Enumerable.Range(0, area.Coor.Length / 3).ToArray())).ToList();
             mesh.ApplicationId = area.Ref.ToString();
             if (area.Color == null)
             {
@@ -528,14 +539,16 @@ namespace SpeckleGSA
         #region
         public static GSAObject ToNative(this SpecklePoint point)
         {
-            if (point.Properties==null || !point.Properties.ContainsKey("GSAEntity"))
+            if (point.Properties==null || !point.Properties.ContainsKey("Structural"))
             {
                 GSANode n = new GSANode();
                 n.Coor = point.Value.ToArray();
                 return n;
             }
 
-            switch(point.Properties["GSAEntity"])
+            Dictionary<string, object> dict = point.Properties["Structural"] as Dictionary<string, object>;
+
+            switch(dict["GSAEntity"] as string)
             {
                 case "NODE":
                     GSANode n = new GSANode();
@@ -554,14 +567,16 @@ namespace SpeckleGSA
 
         public static GSAObject ToNative(this SpeckleLine line)
         {
-            if (line.Properties == null || !line.Properties.ContainsKey("GSAEntity"))
+            if (line.Properties == null || !line.Properties.ContainsKey("Structural"))
             {
                 GSALine l = new GSALine();
                 l.Coor = line.Value.ToArray();
                 return l;
             }
 
-            switch (line.Properties["GSAEntity"])
+            Dictionary<string, object> dict = line.Properties["Structural"] as Dictionary<string, object>;
+
+            switch (dict["GSAEntity"] as string)
             {
                 case "ELEMENT":
                     GSAElement e = new GSAElement();
@@ -580,14 +595,17 @@ namespace SpeckleGSA
 
         public static GSALine ToNative(this SpeckleArc arc)
         {
-            if (arc.Properties == null || !arc.Properties.ContainsKey("GSAEntity"))
+            if (arc.Properties == null || !arc.Properties.ContainsKey("Structural"))
             {
                 GSALine l = new GSALine();
                 l.Coor = SpeckleArctoArc3Point(arc);
+                l.Type = "ARC_THIRD_PT";
                 return l;
             }
 
-            switch (arc.Properties["GSAEntity"])
+            Dictionary<string, object> dict = arc.Properties["Structural"] as Dictionary<string, object>;
+
+            switch (dict["GSAEntity"] as string)
             {
                 case "LINE":
                     GSALine l = new GSALine();
@@ -601,7 +619,7 @@ namespace SpeckleGSA
 
         public static object ToNative(this SpeckleMesh mesh)
         {
-            if (mesh.Properties == null || !mesh.Properties.ContainsKey("GSAEntity"))
+            if (mesh.Properties == null || !mesh.Properties.ContainsKey("Structural"))
             {
                 List<GSAArea> areas = new List<GSAArea>();
 
@@ -630,7 +648,9 @@ namespace SpeckleGSA
             }
 
 
-            switch (mesh.Properties["GSAEntity"])
+            Dictionary<string, object> dict = mesh.Properties["Structural"] as Dictionary<string, object>;
+
+            switch (dict["GSAEntity"] as string)
             {
                 case "ELEMENT":
                     GSAElement e = new GSAElement();

@@ -56,7 +56,8 @@ namespace SpeckleGSA
                     "",
                     designPayload.Count(),
                     objectCount,
-                    objectCount + designPayload.Count() - 1));
+                    0));
+                    //objectCount + designPayload.Count() - 1));
                 objectCount += designPayload.Count();
             }
             if (AnalysisBucketObjects.Count > 0)
@@ -68,18 +69,20 @@ namespace SpeckleGSA
                     "",
                     analysisPayload.Count(),
                     objectCount,
-                    objectCount + analysisPayload.Count() - 1));
+                    1));
+                    //objectCount + analysisPayload.Count() - 1));
                 objectCount += analysisPayload.Count();
             }
 
             List<SpeckleObject> payload = designPayload;
             payload.AddRange(analysisPayload);
-
+            
             SpeckleStream updateStream = new SpeckleStream()
             {
                 Layers = bucketLayers,
                 Name = streamName,
-                Objects = payload
+                Objects = payload,
+
             };
 
             var response = mySender.StreamUpdateAsync(mySender.StreamId, updateStream).Result;

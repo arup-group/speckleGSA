@@ -43,7 +43,7 @@ namespace SpeckleGSAUI
 
         private Timer TimerTrigger;
 
-        public MainWindow()
+      public MainWindow()
         {
             InitializeComponent();
 
@@ -59,6 +59,8 @@ namespace SpeckleGSAUI
             Messages = new ObservableCollection<string>();
 
             DataContext = this;
+            
+            this.Topmost = true;
         }
 
         #region Server
@@ -112,6 +114,8 @@ namespace SpeckleGSAUI
             else
                 AddMessage("Cancel");
 
+            gsa.GetMembers();
+
         }
         #endregion
 
@@ -142,6 +146,7 @@ namespace SpeckleGSAUI
             if (userManager != null && TimerTrigger != null)
             {
                 TimerTrigger.Stop();
+                TimerTrigger = null;
                 AddMessage("Stop sending");
             }
         }
@@ -165,8 +170,15 @@ namespace SpeckleGSAUI
                 AddError(ex.Message);
             }
 
-            TimerTrigger.Stop();
-            TimerTrigger.Start();
+            try
+            {
+                TimerTrigger.Stop();
+                TimerTrigger.Start();
+            }
+            catch
+            {
+
+            }
         }
         #endregion
 
@@ -195,6 +207,7 @@ namespace SpeckleGSAUI
             if (userManager != null && TimerTrigger != null)
             {
                 TimerTrigger.Stop();
+                TimerTrigger = null;
                 AddMessage("Stop receiving");
             }
         }
@@ -219,8 +232,15 @@ namespace SpeckleGSAUI
                 AddError(ex.Message);
             }
 
-            TimerTrigger.Stop();
-            TimerTrigger.Start();
+            try
+            {
+                TimerTrigger.Stop();
+                TimerTrigger.Start();
+            }
+            catch
+            {
+
+            }
         }
 
         #endregion

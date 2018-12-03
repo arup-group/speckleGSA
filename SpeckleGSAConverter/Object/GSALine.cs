@@ -45,7 +45,7 @@ namespace SpeckleGSA
                 {"StepDefinition", "USE_REGION_STEP_SIZE" },
                 {"ElemLenStart", 0.0 },
                 {"ElemLenEnd", 0.0 },
-                {"ElemNum", 0 },
+                {"ElemNum", 0.0 },
                 {"TieMesh", false },
             };
         }
@@ -59,10 +59,10 @@ namespace SpeckleGSA
             Name = pieces[counter++].Trim(new char[] { '"' });
             Color = pieces[counter++].ParseGSAColor();
             Type = pieces[counter++];
-            Topo = new int[LineNumNodes[Type]];
+            Topo = new int[(int)Enum.Parse(typeof(LineNumNodes), Type)];
             for (int i = 0; i < Topo.Length; i++)
                 Topo[i] = Convert.ToInt32(pieces[counter++]);
-            if (LineNumNodes[Type] == 2) counter++;
+            if ((int)Enum.Parse(typeof(LineNumNodes), Type) == 2) counter++;
             Radius = Convert.ToDouble(pieces[counter++]);
             Axis = pieces[counter++];
             Restraint["x"] = pieces[counter++] == "0" ? false: true;
@@ -81,7 +81,7 @@ namespace SpeckleGSA
             MeshData["StepDefinition"] = pieces[counter++];
             MeshData["ElemLenStart"] = Convert.ToDouble(pieces[counter++]);
             MeshData["ElemLenEnd"] = Convert.ToDouble(pieces[counter++]);
-            MeshData["ElemNum"] = Convert.ToInt32(pieces[counter++]);
+            MeshData["ElemNum"] = Convert.ToDouble(pieces[counter++]);
             MeshData["TieMesh"] = pieces[counter++] == "NO" ? false : true;
         }
 
@@ -130,7 +130,7 @@ namespace SpeckleGSA
         {
             List<GSAObject> children = new List<GSAObject>();
 
-            for (int i = 0; i < LineNumNodes[Type]; i++)
+            for (int i = 0; i < (int)Enum.Parse(typeof(LineNumNodes), Type); i++)
             {
                 GSANode n = new GSANode();
                 n.Coor = Coor.Skip(i * 3).Take(3).ToArray();

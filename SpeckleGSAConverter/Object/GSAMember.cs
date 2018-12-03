@@ -10,7 +10,6 @@ namespace SpeckleGSA
     {
         public GSAMember() : base("MEMBER")
         {
-
         }
 
         public override void ParseGWACommand(string command)

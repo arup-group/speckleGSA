@@ -70,7 +70,7 @@ namespace SpeckleGSA
             Type = pieces[counter++];
             Property = Convert.ToInt32(pieces[counter++]);
             Group = Convert.ToInt32(pieces[counter++]);
-            Topo = new int[ElementNumNodes[Type]];
+            Topo = new int[(int)Enum.Parse(typeof(ElementNumNodes), Type)];
             for (int i = 0; i < Topo.Length; i++)
                 Topo[i] = Convert.ToInt32(pieces[counter++]);
             OrientNode = Convert.ToInt32(pieces[counter++]);

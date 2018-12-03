@@ -20,39 +20,39 @@ namespace SpeckleGSA
 
         public ComAuto gsa;
 
-        public Dictionary<string,int> LineNumNodes = new Dictionary<string, int>()
+        public enum LineNumNodes
         {
-            {"LINE", 2 },
-            {"ARC_RADIUS", 3 },
-            {"ARC_THIRD_PT", 3 }
+            LINE=2,
+            ARC_RADIUS=3 ,
+            ARC_THIRD_PT=3
         };
         
-        public Dictionary<string, int> ElementNumNodes = new Dictionary<string, int>()
+        public enum ElementNumNodes
         {
-            {"BAR", 2 },
-            {"BEAM", 2 },
-            {"BEAM3", 3 },
-            {"BRICK20", 20 },
-            {"BRICK8", 8 },
-            {"CABLE", 2 },
-            {"DAMPER", 2 },
-            {"GRD_DAMPER", 1 },
-            {"GRD_SPRING", 1 },
-            {"LINK", 2 },
-            {"MASS", 1 },
-            {"QUAD4", 4 },
-            {"QUAD8", 8 },
-            {"ROD", 2 },
-            {"SPACER", 2 },
-            {"SRING", 2 },
-            {"STRUT", 2 },
-            {"TETRA10", 10 },
-            {"TETRA4", 4 },
-            {"TIE", 2 },
-            {"TRI3", 3 },
-            {"TRI6", 6 },
-            {"WEDGE15", 15 },
-            {"WEDGE6", 6 }
+            BAR=2 ,
+            BEAM=2 ,
+            BEAM3=3 ,
+            BRICK20=20 ,
+            BRICK8=8 ,
+            CABLE=2 ,
+            DAMPER=2 ,
+            GRD_DAMPER=1 ,
+            GRD_SPRING=1 ,
+            LINK=2 ,
+            MASS=1 ,
+            QUAD4=4 ,
+            QUAD8=8 ,
+            ROD=2 ,
+            SPACER=2 ,
+            SRING=2 ,
+            STRUT=2 ,
+            TETRA10=10 ,
+            TETRA4=4 ,
+            TIE=2 ,
+            TRI3=3 ,
+            TRI6=6 ,
+            WEDGE15=15 ,
+            WEDGE6=6 
         };
 
         public GSAObject(string entity)
@@ -147,7 +147,7 @@ namespace SpeckleGSA
                 else
                 {
                     return Int32.Parse(
-                    rgbString,
+                    rgbString.Substring(2,6),
                     System.Globalization.NumberStyles.HexNumber);
                 }
             }
