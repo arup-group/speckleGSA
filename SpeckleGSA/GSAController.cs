@@ -197,10 +197,10 @@ namespace SpeckleGSA
         public Dictionary<string, List<object>> ExportObjects()
         {
             // Add nodes
-            List<GSANode> nodes = GetNodes();
-            BucketObjects["Nodes"] = new List<object>();
-            foreach (GSANode n in nodes)
-                BucketObjects["Nodes"].Add(n.ToSpeckle());
+            List<GSANode> nodes = new List<GSANode>();// = GetNodes();
+            //BucketObjects["Nodes"] = new List<object>();
+            //foreach (GSANode n in nodes)
+            //    BucketObjects["Nodes"].Add(n.ToSpeckle());
 
             // Add lines
             List<GSALine> lines = GetLines(nodes);
