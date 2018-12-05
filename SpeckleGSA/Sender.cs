@@ -38,51 +38,37 @@ namespace SpeckleGSA
 
         public string UpdateData(GSAController gsa, string streamName)
         {
-            DesignBucketObjects = gsa.ExportDesignLayerObjects();
-            AnalysisBucketObjects = gsa.ExportAnalysisLayerObjects();
-
-            List<SpeckleObject> designPayload = new List<SpeckleObject>();
-            List<SpeckleObject> analysisPayload = new List<SpeckleObject>();
+            Dictionary<string, List<object>> BucketObjects = gsa.ExportObjects();
+            
             List<Layer> bucketLayers = new List<Layer>();
+            List<SpeckleObject> payload = new List<SpeckleObject>();
 
             int objectCount = 0;
 
-            if (DesignBucketObjects.Count > 0)
+            foreach(KeyValuePair<string,List<object>> layer in BucketObjects)
             {
-                designPayload = GetPayload(DesignBucketObjects);
-                bucketLayers.Add(new Layer(
-                    "Design Layer",
-                    Guid.NewGuid().ToString(),
-                    "",
-                    designPayload.Count(),
-                    objectCount,
-                    0));
-                    //objectCount + designPayload.Count() - 1));
-                objectCount += designPayload.Count();
-            }
-            if (AnalysisBucketObjects.Count > 0)
-            {
-                analysisPayload = GetPayload(AnalysisBucketObjects);
-                bucketLayers.Add(new Layer(
-                    "Analysis Layer",
-                    Guid.NewGuid().ToString(),
-                    "",
-                    analysisPayload.Count(),
-                    objectCount,
-                    1));
-                    //objectCount + analysisPayload.Count() - 1));
-                objectCount += analysisPayload.Count();
-            }
+                List<SpeckleObject> layerPayload = GetPayload(layer.Value);
 
-            List<SpeckleObject> payload = designPayload;
-            payload.AddRange(analysisPayload);
+                bucketLayers.Add(new Layer
+                (
+                    layer.Key,
+                    Guid.NewGuid().ToString(),
+                    "",
+                    layerPayload.Count(),
+                    objectCount,
+                    0
+                )
+                );
+                objectCount += layerPayload.Count();
+
+                payload.AddRange(layerPayload);
+            }
             
             SpeckleStream updateStream = new SpeckleStream()
             {
                 Layers = bucketLayers,
                 Name = streamName,
                 Objects = payload,
-
             };
 
             var response = mySender.StreamUpdateAsync(mySender.StreamId, updateStream).Result;

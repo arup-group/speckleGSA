@@ -12,9 +12,12 @@ namespace SpeckleGSA
     public abstract class GSAObject
     {
         public string GSAEntity { get; set; }
-        public int Ref { get; set; }
         public string Name { get; set; }
 
+        public string[] SpeckleConnectivity { get; set; }
+    
+        public string SpeckleHash;
+        public int Ref;
         public double[] Coor;
         public object Color;
 
@@ -62,6 +65,10 @@ namespace SpeckleGSA
             Name = "";
             Color = null;
             Coor = new double[1];
+
+            SpeckleConnectivity = new string[0];
+
+            SpeckleHash = "";
 
             gsa = null;
         }
@@ -158,6 +165,17 @@ namespace SpeckleGSA
 
             Color col = Color.FromKnownColor((KnownColor)Enum.Parse(typeof(KnownColor), colStr));
             return col.R + col.G * 256 + col.B * 256 * 256;
+        }
+
+        public static int ToSpeckleColor(this object color)
+        {
+            if (color == null)
+                return Color.FromArgb(255, 100, 100, 100).ToArgb();
+
+            return Color.FromArgb(255,
+                           (int)color % 256,
+                           ((int)color / 256) % 256,
+                           ((int)color / 256 / 256) % 256).ToArgb();
         }
         #endregion
 

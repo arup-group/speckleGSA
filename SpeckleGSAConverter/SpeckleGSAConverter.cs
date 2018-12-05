@@ -422,7 +422,9 @@ namespace SpeckleGSA
         #region
         public static SpecklePoint ToSpeckle(this GSANode node)
         {
-            return new SpecklePoint(node.Coor[0], node.Coor[1], node.Coor[2], node.Ref.ToString(), node.GetSpeckleProperties());
+            SpecklePoint p = new SpecklePoint(node.Coor[0], node.Coor[1], node.Coor[2], "", node.GetSpeckleProperties());
+            node.SpeckleHash = p.Hash;
+            return p;
         }
         
         public static SpeckleObject ToSpeckle(this GSAElement element)
@@ -430,52 +432,35 @@ namespace SpeckleGSA
             switch (element.Coor.Length/3)
             {
                 case 1:
-                    return new SpecklePoint(
+                    SpecklePoint p = new SpecklePoint(
                         element.Coor[0],
                         element.Coor[1],
                         element.Coor[2],
                         element.Ref.ToString(),
                         element.GetSpeckleProperties());
+                    element.SpeckleHash = p.Hash;
+                    return p;
                 case 2:
-                    return new SpeckleLine(
+                    SpeckleLine l = new SpeckleLine(
                         element.Coor,
                         element.Ref.ToString(),
                         element.GetSpeckleProperties());
+                    element.SpeckleHash = l.Hash;
+                    return l;
                 default:
-                    if (element.Color == null)
-                    {
-                        var color = System.Drawing.Color.FromArgb(255,
-                            100, 100, 100);
-                        return new SpeckleMesh(
+                    SpeckleMesh m = new SpeckleMesh(
                         element.Coor,
                         new int[] { element.Coor.Length / 3 - 3 }.Concat(
                             Enumerable.Range(0, element.Coor.Length / 3).ToArray())
                             .ToArray(),
                         Enumerable.Repeat(
-                            color.ToArgb(),
+                            element.Color.ToSpeckleColor(),
                             element.Coor.Length / 3).ToArray(),
                         null,
                         element.Ref.ToString(),
                         element.GetSpeckleProperties());
-                    }
-                    else
-                    {
-                        var color = System.Drawing.Color.FromArgb(255,
-                           (int)element.Color % 256,
-                           ((int)element.Color / 256) % 256,
-                           ((int)element.Color / 256 / 256) % 256);
-                        return new SpeckleMesh(
-                            element.Coor,
-                            new int[] { element.Coor.Length / 3 - 3 }.Concat(
-                                Enumerable.Range(0, element.Coor.Length / 3).ToArray())
-                                .ToArray(),
-                            Enumerable.Repeat(
-                                color.ToArgb(),
-                                element.Coor.Length / 3).ToArray(),
-                            null,
-                            element.Ref.ToString(),
-                            element.GetSpeckleProperties());
-                    }
+                    element.SpeckleHash = m.Hash;
+                    return m;
             }
         }
 
@@ -484,21 +469,25 @@ namespace SpeckleGSA
             switch(line.Type)
             {
                 case "LINE":
-                    return new SpeckleLine(
+                    SpeckleLine l = new SpeckleLine(
                         line.Coor,
                         line.Ref.ToString(),
                         line.GetSpeckleProperties());
+                    line.SpeckleHash = l.Hash;
+                    return l;
                 case "ARC_RADIUS":
                     SpeckleArc arcR = ArcRadiustoSpeckleArc(line.Coor, line.Radius);
                     arcR.ApplicationId = line.Ref.ToString();
                     arcR.Properties = line.GetSpeckleProperties();
                     arcR.GenerateHash();
+                    line.SpeckleHash = arcR.Hash;
                     return arcR;
                 case "ARC_THIRD_PT":
                     SpeckleArc arc3 = Arc3PointtoSpeckleArc(line.Coor);
                     arc3.ApplicationId = line.Ref.ToString();
                     arc3.Properties = line.GetSpeckleProperties();
                     arc3.GenerateHash();
+                    line.SpeckleHash = arc3.Hash;
                     return arc3;
                 default:
                     return null;
@@ -512,26 +501,12 @@ namespace SpeckleGSA
             mesh.Faces = (new int[] { area.Coor.Length / 3 - 3 }.Concat(
                     Enumerable.Range(0, area.Coor.Length / 3).ToArray())).ToList();
             mesh.ApplicationId = area.Ref.ToString();
-            if (area.Color == null)
-            {
-                var color = System.Drawing.Color.FromArgb(255,
-                    100, 100, 100);
-                mesh.Colors = Enumerable.Repeat(
-                    color.ToArgb(),
+            mesh.Colors = Enumerable.Repeat(
+                    area.Color.ToSpeckleColor(),
                     (int)(area.Coor.Length / 3)).ToList();
-            }
-            else
-            {
-                var color = System.Drawing.Color.FromArgb(255,
-                   (int)area.Color % 256,
-                   ((int)area.Color / 256) % 256,
-                   ((int)area.Color / 256 / 256) % 256);
-                mesh.Colors = Enumerable.Repeat(
-                    color.ToArgb(),
-                    (int)(area.Coor.Length / 3)).ToList();
-            }
             mesh.Properties = area.GetSpeckleProperties();
             mesh.GenerateHash();
+            area.SpeckleHash = mesh.Hash;
             return mesh;
         }
         #endregion
@@ -543,6 +518,7 @@ namespace SpeckleGSA
             {
                 GSANode n = new GSANode();
                 n.Coor = point.Value.ToArray();
+                n.SpeckleHash = point.Hash;
                 return n;
             }
 
@@ -554,11 +530,13 @@ namespace SpeckleGSA
                     GSANode n = new GSANode();
                     n.SetSpeckleProperties(point.Properties);
                     n.Coor = point.Value.ToArray();
+                    n.SpeckleHash = point.Hash;
                     return n;
                 case "ELEMENT":
                     GSAElement e = new GSAElement();
                     e.SetSpeckleProperties(point.Properties);
                     e.Coor = point.Value.ToArray();
+                    e.SpeckleHash = point.Hash;
                     return e;
                 default:
                     return null;
@@ -571,6 +549,7 @@ namespace SpeckleGSA
             {
                 GSALine l = new GSALine();
                 l.Coor = line.Value.ToArray();
+                l.SpeckleHash = line.Hash;
                 return l;
             }
 
@@ -582,11 +561,13 @@ namespace SpeckleGSA
                     GSAElement e = new GSAElement();
                     e.SetSpeckleProperties(line.Properties);
                     e.Coor = line.Value.ToArray();
+                    e.SpeckleHash = line.Hash;
                     return e;
                 case "LINE":
                     GSALine l = new GSALine();
                     l.SetSpeckleProperties(line.Properties);
                     l.Coor = line.Value.ToArray();
+                    l.SpeckleHash = line.Hash;
                     return l;
                 default:
                     return null;
@@ -600,6 +581,7 @@ namespace SpeckleGSA
                 GSALine l = new GSALine();
                 l.Coor = SpeckleArctoArc3Point(arc);
                 l.Type = "ARC_THIRD_PT";
+                l.SpeckleHash = arc.Hash;
                 return l;
             }
 
@@ -611,6 +593,7 @@ namespace SpeckleGSA
                     GSALine l = new GSALine();
                     l.SetSpeckleProperties(arc.Properties);
                     l.Coor = SpeckleArctoArc3Point(arc);
+                    l.SpeckleHash = arc.Hash;
                     return l;
                 default:
                     return null;

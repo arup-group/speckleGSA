@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SpeckleGSAUI"
         mc:Ignorable="d"
-        Title="SpeckleGSA" x:Name="SpeckleGSAUI" Height="530" Width="300" WindowStyle="SingleBorderWindow">
+        Title="SpeckleGSA" x:Name="SpeckleGSAUI" Height="600" Width="350" WindowStyle="SingleBorderWindow">
     <Grid
         Background="#FF0057FF" Margin="0,0,0,0">
         <Grid.ColumnDefinitions>
@@ -92,13 +92,8 @@
                             Text="StreamID:"/>
                         <TextBox
                             IsReadOnly="True"
-                            x:Name="SenderStreamID"/>
-                        <Separator Height="10" Background="Transparent"/>
-                        <CheckBox
-                            Checked="SenderOn"
-                            Unchecked="SenderOff"
-                            x:Name="ToggleSender"
-                            Content="Send"/>
+                            x:Name="SenderStreamID"
+                            BorderBrush="White"/>
                         <Separator Height="10" Background="Transparent"/>
                         <CheckBox
                             IsChecked="{Binding ElementName=SpeckleGSAUI, Path=SendDesignLayer}"
@@ -106,6 +101,17 @@
                         <CheckBox
                             IsChecked="{Binding ElementName=SpeckleGSAUI, Path=SendAnalysisLayer}"
                             Content="Analysis Layer"/>
+                        <Separator Height="10" Background="Transparent"/>
+                        <Button
+                            Click="SendNewStream"
+                            Content="Create New Stream"/>
+                        <Separator Height="10" Background="Transparent"/>
+                        <Button
+                            Click="SendUpdateStream"
+                            Content="Update Stream"/>
+                        <Separator Height="10" Background="Transparent"/>
+                        <Button
+                            Content="Update and Save as Version"/>
                     </StackPanel>
                 </TabItem>
                 <TabItem Header="Receiver">
@@ -117,19 +123,14 @@
                         <TextBox
                             IsReadOnly="True"
                             Text="{Binding ElementName=SpeckleGSAUI, Path=StreamName}"
-                            x:Name="ReceiverStreamName"/>
+                            x:Name="ReceiverStreamName"
+                            BorderBrush="White"/>
                         <Separator Height="10" Background="Transparent"/>
                         <TextBlock
                             HorizontalAlignment="Left"
                             Text="StreamID:"/>
                         <TextBox
                             x:Name="ReceiverStreamID"/>
-                        <Separator Height="10" Background="Transparent"/>
-                        <CheckBox
-                            Checked="ReceiverOn"
-                            Unchecked="ReceiverOff"
-                            x:Name="ToggleReceiver"
-                            Content="Receive"/>
                         <Separator Height="10" Background="Transparent"/>
                         <Label 
                             Content="Settings"/>
@@ -139,6 +140,14 @@
                         <TextBox
                             x:Name="NodeTolerance"
                             Text="{Binding ElementName=SpeckleGSAUI, Path=ReceiveNodeTolerance}"/>
+                        <Separator Height="10" Background="Transparent"/>
+                        <Button
+                            Click="ReceiveNewStream"
+                            Content="Receive New Stream"/>
+                        <Separator Height="10" Background="Transparent"/>
+                        <Button
+                            Click="ReceiveUpdateStream"
+                            Content="Receive Stream Updates"/>
                     </StackPanel>
                 </TabItem>
             </TabControl>

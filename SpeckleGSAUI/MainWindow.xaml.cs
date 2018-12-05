@@ -41,8 +41,6 @@ namespace SpeckleGSAUI
         public Receiver speckleReceiver;
         public GSAController gsa;
 
-        private Timer TimerTrigger;
-
       public MainWindow()
         {
             InitializeComponent();
@@ -113,18 +111,14 @@ namespace SpeckleGSAUI
             }
             else
                 AddMessage("Cancel");
-
-            gsa.GetMembers();
-
         }
         #endregion
 
         #region Sender
-        private async void SenderOn(object sender, RoutedEventArgs e)
+        private async void SendNewStream(object sender, RoutedEventArgs e)
         {
             if (userManager == null)
             {
-                ToggleSender.IsChecked = false;
                 AddError("Login to server first");
                 return;
             }
@@ -135,24 +129,17 @@ namespace SpeckleGSAUI
             await speckleSender.InitializeSender();
             SenderStreamID.Text = speckleSender.StreamID;
 
-            TimerTrigger = new Timer(UPDATE_INTERVAL) { AutoReset = false, Enabled = false };
-            TimerTrigger.Elapsed += TriggerSend;
-            TimerTrigger.Start();
-            AddMessage("Start sending");
+            SendUpdateStream(sender, e);
         }
 
-        private void SenderOff(object sender, RoutedEventArgs e)
+        private void SendUpdateStream(object sender, RoutedEventArgs e)
         {
-            if (userManager != null && TimerTrigger != null)
+            if (speckleSender==null)
             {
-                TimerTrigger.Stop();
-                TimerTrigger = null;
-                AddMessage("Stop sending");
+                AddError("Create new stream first");
+                return;
             }
-        }
 
-        private void TriggerSend(object sender, ElapsedEventArgs e)
-        {
             gsa.SendDesignLayer = SendDesignLayer;
             if (gsa.SendDesignLayer)
                 AddMessage("Sending design layer");
@@ -169,25 +156,14 @@ namespace SpeckleGSAUI
             {
                 AddError(ex.Message);
             }
-
-            try
-            {
-                TimerTrigger.Stop();
-                TimerTrigger.Start();
-            }
-            catch
-            {
-
-            }
         }
         #endregion
 
         #region Receiver
-        private async void ReceiverOn(object sender, RoutedEventArgs e)
+        private async void ReceiveNewStream(object sender, RoutedEventArgs e)
         {
             if (userManager == null)
             {
-                ToggleReceiver.IsChecked = false;
                 AddError("Login to server first");
                 return;
             }
@@ -196,23 +172,10 @@ namespace SpeckleGSAUI
             AddMessage("Initializing receiver");
             await speckleReceiver.InitializeReceiver(ReceiverStreamID.Text);
 
-            TimerTrigger = new Timer(UPDATE_INTERVAL) { AutoReset = false, Enabled = false };
-            TimerTrigger.Elapsed += TriggerReceive;
-            TimerTrigger.Start();
-            AddMessage("Start receiving");
+            ReceiveUpdateStream(sender, e);
         }
 
-        private void ReceiverOff(object sender, RoutedEventArgs e)
-        {
-            if (userManager != null && TimerTrigger != null)
-            {
-                TimerTrigger.Stop();
-                TimerTrigger = null;
-                AddMessage("Stop receiving");
-            }
-        }
-        
-        private void TriggerReceive(object sender, ElapsedEventArgs e)
+        private void ReceiveUpdateStream(object sender, RoutedEventArgs e)
         {
             double tolerance = 0;
             if (!double.TryParse(ReceiveNodeTolerance, out tolerance))
@@ -231,18 +194,7 @@ namespace SpeckleGSAUI
             {
                 AddError(ex.Message);
             }
-
-            try
-            {
-                TimerTrigger.Stop();
-                TimerTrigger.Start();
-            }
-            catch
-            {
-
-            }
         }
-
         #endregion
 
         #region Log
