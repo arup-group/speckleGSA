@@ -117,16 +117,15 @@ namespace SpeckleGSA
             List<ResponseObject> responses = new List<ResponseObject>();
             foreach (var payload in objectUpdatePayloads)
             {
-                //foreach (var obj in payload)
-                //{
-                //    if (obj._id != "")
-                //    { 
-                //        mySender.ObjectUpdateAsync(obj._id, obj);
-                //        placeholders.Add(new SpecklePlaceholder() { _id = obj._id });
-                //    }
-                //}
-                responses.Add(mySender.ObjectCreateAsync(payload.Where(o => o._id == "")).GetAwaiter().GetResult());
-                //responses.Add(mySender.ObjectCreateAsync(payload).GetAwaiter().GetResult());
+                foreach (var obj in payload)
+                {
+                    if (obj._id != null)
+                    {
+                        mySender.ObjectUpdateAsync(obj._id, obj);
+                        placeholders.Add(new SpecklePlaceholder() { _id = obj._id });
+                    }
+                }
+                responses.Add(mySender.ObjectCreateAsync(payload.Where(o => o._id == null)).GetAwaiter().GetResult());
             }
 
             foreach (var myResponse in responses)

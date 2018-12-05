@@ -16,7 +16,7 @@ namespace SpeckleGSA
 
         public string[] SpeckleConnectivity { get; set; }
     
-        public string SpeckleHash;
+        public string SpeckleID;
         public int Ref;
         public double[] Coor;
         public object Color;
@@ -70,7 +70,7 @@ namespace SpeckleGSA
 
             SpeckleConnectivity = new string[0];
 
-            SpeckleHash = "";
+            SpeckleID = "";
 
             gsa = null;
         }
