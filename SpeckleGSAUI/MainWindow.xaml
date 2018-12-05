@@ -66,8 +66,8 @@
                         Margin="10,10,10,10">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="auto"/>
-                            <RowDefinition Height="auto"/>
                             <RowDefinition Height="*"/>
+                            <RowDefinition Height="auto"/>
                             <RowDefinition Height="auto"/>
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
@@ -88,13 +88,25 @@
                                     <RowDefinition Height="auto"/>
                                 </Grid.RowDefinitions>
                                 <Label Grid.Row="0" Grid.Column="0" Content="Project Name"/>
-                                <TextBox Grid.Row="0" Grid.Column="1" Margin="2,2,2,2"/>
-                                <Button Grid.Row="1" Grid.ColumnSpan="2" Content="Update Stream List" Margin="2,2,2,2"/>
+                                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Path=ProjectName}" Margin="2,2,2,2"/>
+                                <Button Grid.Row="1" Grid.ColumnSpan="2" Click="UpdateStreamList"  Content="Update Stream List" Margin="2,2,2,2"/>
                             </Grid>
                         </GroupBox>
+                        <DataGrid
+                            Grid.Row="1"
+                            Grid.ColumnSpan="2"
+                            Margin="5,5,5,5"
+                            CanUserSortColumns="False"
+                            AutoGenerateColumns="False"
+                            ItemsSource="{Binding StreamData}">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Name" Width="*" Binding="{Binding Item1}"/>
+                                <DataGridTextColumn Header="StreamID" Width="2*" Binding="{Binding Item2}"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
                         <GroupBox
                             Header="GSA "
-                            Grid.Row="1"
+                            Grid.Row="2"
                             Grid.ColumnSpan="2">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -110,10 +122,6 @@
                                 <Button Grid.Row="2" Content="Open File" Click="OpenGSAFile" Margin="2,2,2,2"/>
                             </Grid>
                         </GroupBox>
-                        <DataGrid
-                            Grid.Row="2"
-                            Grid.ColumnSpan="2">
-                        </DataGrid>
                         <GroupBox
                             Header="Sender"
                             Grid.Row="3"
@@ -122,22 +130,20 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="auto"/>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="auto"/>
                                     <RowDefinition Height="auto"/>
                                     <RowDefinition Height="auto"/>
+                                    <RowDefinition Height="auto"/>
                                 </Grid.RowDefinitions>
-                                <Label Grid.Row="0" Grid.Column="0" Content="Node"/>
-                                <TextBox Grid.Row="0" Grid.Column="1" IsReadOnly="True" BorderThickness="0" Margin="2,2,2,2"/>
-                                <Button Grid.Row="0" Grid.Column="2" Content="Send" Margin="2,2,2,2"/>
-                                <Label Grid.Row="1" Grid.Column="0" Content="Section Property"/>
-                                <TextBox Grid.Row="1" Grid.Column="1" IsReadOnly="True" BorderThickness="0" Margin="2,2,2,2"/>
-                                <Button Grid.Row="1" Grid.Column="2" Content="Send" Margin="2,2,2,2"/>
+                                <Label Grid.Row="0" Grid.Column="0" Content="Nodes"/>
+                                <TextBox Grid.Row="0" Grid.Column="1" x:Name="SenderNodeStreamID" IsReadOnly="True" BorderThickness="0" Margin="2,2,2,2"/>
+                                <Label Grid.Row="1" Grid.Column="0" Content="Section Properties"/>
+                                <TextBox Grid.Row="1" Grid.Column="1" x:Name="SenderSectionStreamID" IsReadOnly="True" BorderThickness="0" Margin="2,2,2,2"/>
                                 <Label Grid.Row="2" Grid.Column="0" Content="Elements"/>
-                                <TextBox Grid.Row="2" Grid.Column="1" IsReadOnly="True" BorderThickness="0" Margin="2,2,2,2"/>
-                                <Button Grid.Row="2" Grid.Column="2" Content="Send" Margin="2,2,2,2"/>
+                                <TextBox Grid.Row="2" Grid.Column="1" x:Name="SenderElementStreamID" IsReadOnly="True" BorderThickness="0" Margin="2,2,2,2"/>
+                                <Button Grid.Row="3" Grid.ColumnSpan="2" Content="Send/Update Streams" Click="SendStream" Margin="2,2,2,2"/>
                             </Grid>
                         </GroupBox>
                         <GroupBox
@@ -148,92 +154,23 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="auto"/>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="auto"/>
                                     <RowDefinition Height="auto"/>
                                     <RowDefinition Height="auto"/>
+                                    <RowDefinition Height="auto"/>
                                 </Grid.RowDefinitions>
-                                <Label Grid.Row="0" Grid.Column="0" Content="Node"/>
-                                <TextBox Grid.Row="0" Grid.Column="1" Margin="2,2,2,2"/>
-                                <Button Grid.Row="0" Grid.Column="2" Content="Receive" Margin="2,2,2,2"/>
-                                <Label Grid.Row="1" Grid.Column="0" Content="Section Property"/>
-                                <TextBox Grid.Row="1" Grid.Column="1" Margin="2,2,2,2"/>
-                                <Button Grid.Row="1" Grid.Column="2" Content="Receive" Margin="2,2,2,2"/>
+                                <Label Grid.Row="0" Grid.Column="0" Content="Nodes"/>
+                                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Path=ReceiverNodeStreamID}" Margin="2,2,2,2"/>
+                                <Label Grid.Row="1" Grid.Column="0" Content="Section Properties"/>
+                                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Path=ReceiverSectionStreamID}" Margin="2,2,2,2"/>
                                 <Label Grid.Row="2" Grid.Column="0" Content="Elements"/>
-                                <TextBox Grid.Row="2" Grid.Column="1" Margin="2,2,2,2"/>
-                                <Button Grid.Row="2" Grid.Column="2" Content="Receive" Margin="2,2,2,2"/>
+                                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Path=ReceiverElementStreamID}" Margin="2,2,2,2"/>
+                                <Button Grid.Row="3" Grid.ColumnSpan="2" Content="Receive Streams" Click="ReceiveStream" Margin="2,2,2,2"/>
                             </Grid>
                         </GroupBox>
                     </Grid>
-                </TabItem>
-                <TabItem Header="Sender">
-                    <StackPanel
-                        Margin="10,10,10,10">
-                        <TextBlock
-                            HorizontalAlignment="Left"
-                            Text="Stream Name:"/>
-                        <TextBox
-                            Text="{Binding ElementName=SpeckleGSAUI, Path=StreamName}"
-                            x:Name="SenderStreamName"/>
-                        <Separator Height="10" Background="Transparent"/>
-                        <TextBlock
-                            HorizontalAlignment="Left"
-                            Text="StreamID:"/>
-                        <TextBox
-                            IsReadOnly="True"
-                            x:Name="SenderStreamID"
-                            BorderThickness="0"/>
-                        <Separator Height="10" Background="Transparent"/>
-                        <Separator Height="10" Background="Transparent"/>
-                        <Button
-                            Click="SendNewStream"
-                            Content="Create New Stream"/>
-                        <Separator Height="10" Background="Transparent"/>
-                        <Button
-                            Click="SendUpdateStream"
-                            Content="Update Stream"/>
-                        <Separator Height="10" Background="Transparent"/>
-                        <Button
-                            Content="Update and Save as Version"/>
-                    </StackPanel>
-                </TabItem>
-                <TabItem Header="Receiver">
-                    <StackPanel
-                        Margin="10,10,10,10">
-                        <TextBlock
-                            HorizontalAlignment="Left"
-                            Text="Stream Name:"/>
-                        <TextBox
-                            IsReadOnly="True"
-                            Text="{Binding ElementName=SpeckleGSAUI, Path=StreamName}"
-                            x:Name="ReceiverStreamName"
-                            BorderBrush="White"/>
-                        <Separator Height="10" Background="Transparent"/>
-                        <TextBlock
-                            HorizontalAlignment="Left"
-                            Text="StreamID:"/>
-                        <TextBox
-                            x:Name="ReceiverStreamID"/>
-                        <Separator Height="10" Background="Transparent"/>
-                        <Label 
-                            Content="Settings"/>
-                        <TextBlock
-                            HorizontalAlignment="Left"
-                            Text="Node Tolerance:"/>
-                        <TextBox
-                            x:Name="NodeTolerance"
-                            Text="{Binding ElementName=SpeckleGSAUI, Path=ReceiveNodeTolerance}"/>
-                        <Separator Height="10" Background="Transparent"/>
-                        <Button
-                            Click="ReceiveNewStream"
-                            Content="Receive New Stream"/>
-                        <Separator Height="10" Background="Transparent"/>
-                        <Button
-                            Click="ReceiveUpdateStream"
-                            Content="Receive Stream Updates"/>
-                    </StackPanel>
                 </TabItem>
             </TabControl>
         </Grid>

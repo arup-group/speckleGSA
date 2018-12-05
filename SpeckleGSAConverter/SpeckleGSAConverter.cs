@@ -425,8 +425,8 @@ namespace SpeckleGSA
         public static SpecklePoint ToSpeckle(this GSANode node)
         {
             SpecklePoint p = new SpecklePoint(node.Coor[0], node.Coor[1], node.Coor[2], "", node.GetSpeckleProperties());
+            p._id = node.SpeckleID == ""? p._id: node.SpeckleID;
             node.SpeckleID = p._id;
-            p._id = node.Name == ""? p._id: node.Name;
             return p;
         }
         
@@ -441,16 +441,16 @@ namespace SpeckleGSA
                         element.Coor[2],
                         element.Ref.ToString(),
                         element.GetSpeckleProperties());
+                    p._id = element.SpeckleID == "" ? p._id : element.SpeckleID;
                     element.SpeckleID = p._id;
-                    p._id = element.Name == "" ? p._id : element.Name;
                     return p;
                 case 2:
                     SpeckleLine l = new SpeckleLine(
                         element.Coor,
                         element.Ref.ToString(),
                         element.GetSpeckleProperties());
+                    l._id = element.SpeckleID == "" ? l._id : element.SpeckleID;
                     element.SpeckleID = l._id;
-                    l._id = element.Name == "" ? l._id : element.Name;
                     return l;
                 default:
                     SpeckleMesh m = new SpeckleMesh(
@@ -464,8 +464,8 @@ namespace SpeckleGSA
                         null,
                         element.Ref.ToString(),
                         element.GetSpeckleProperties());
+                    m._id = element.SpeckleID == "" ? m._id : element.SpeckleID;
                     element.SpeckleID = m._id;
-                    m._id = element.Name == "" ? m._id : element.Name;
                     return m;
             }
         }
@@ -479,24 +479,24 @@ namespace SpeckleGSA
                         line.Coor,
                         line.Ref.ToString(),
                         line.GetSpeckleProperties());
+                    l._id = line.SpeckleID == "" ? l._id : line.SpeckleID;
                     line.SpeckleID = l._id;
-                    l._id = line.Name == "" ? l._id : line.Name;
                     return l;
                 case "ARC_RADIUS":
                     SpeckleArc arcR = ArcRadiustoSpeckleArc(line.Coor, line.Radius);
                     arcR.ApplicationId = line.Ref.ToString();
                     arcR.Properties = line.GetSpeckleProperties();
                     arcR.GenerateHash();
+                    arcR._id = line.SpeckleID == "" ? arcR._id : line.SpeckleID;
                     line.SpeckleID = arcR._id;
-                    arcR._id = line.Name == "" ? arcR._id : line.Name;
                     return arcR;
                 case "ARC_THIRD_PT":
                     SpeckleArc arc3 = Arc3PointtoSpeckleArc(line.Coor);
                     arc3.ApplicationId = line.Ref.ToString();
                     arc3.Properties = line.GetSpeckleProperties();
                     arc3.GenerateHash();
+                    arc3._id = line.SpeckleID == "" ? arc3._id : line.SpeckleID;
                     line.SpeckleID = arc3._id;
-                    arc3._id = line.Name == "" ? arc3._id : line.Name;
                     return arc3;
                 default:
                     return null;
@@ -515,8 +515,8 @@ namespace SpeckleGSA
                     (int)(area.Coor.Length / 3)).ToList();
             mesh.Properties = area.GetSpeckleProperties();
             mesh.GenerateHash();
+            mesh._id = area.SpeckleID == "" ? mesh._id : area.SpeckleID;
             area.SpeckleID = mesh._id;
-            mesh._id = area.Name == "" ? mesh._id : area.Name;
             return mesh;
         }
         #endregion

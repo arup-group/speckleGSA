@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using SpeckleCore;
-using Interop.Gsa_9_0;
-using System.Reflection;
 
 namespace SpeckleGSA
 {
@@ -37,7 +34,7 @@ namespace SpeckleGSA
             ConvertedObjects = new List<object>();
         }
 
-        public string UpdateData(GSAController gsa)
+        public List<object> UpdateData()
         {
             ConverterHack n = new ConverterHack();
 
@@ -46,24 +43,21 @@ namespace SpeckleGSA
 
             var payload = getStream.Result.Resource.Objects.Select(obj => obj._id).ToArray();
 
-            return myReceiver.ObjectGetBulkAsync(payload, "omit=displayValue").ContinueWith(res =>
-            {
-                // Add objects to cache
-                foreach (var x in res.Result.Resources)
-                    ObjectCache[x._id] = x;
+            ResponseObject response = myReceiver.ObjectGetBulkAsync(payload, "omit=displayValue").GetAwaiter().GetResult();
 
-                // Get real objects
-                SpeckleObjects.Clear();
-                foreach (var obj in getStream.Result.Resource.Objects)
-                    SpeckleObjects.Add(ObjectCache[obj._id]);
-                
-                // Convert
-                ConvertedObjects = SpeckleCore.Converter.Deserialise(SpeckleObjects);
+            // Add objects to cache
+            foreach (var x in response.Resources)
+                ObjectCache[x._id] = x;
 
-                gsa.ImportObjects(ConvertedObjects);
+            // Get real objects
+            SpeckleObjects.Clear();
+            foreach (var obj in getStream.Result.Resource.Objects)
+                SpeckleObjects.Add(ObjectCache[obj._id]);
 
-                return "Converted: " + ConvertedObjects.Count + " objects";
-            }).Result;
+            // Convert
+            ConvertedObjects = SpeckleCore.Converter.Deserialise(SpeckleObjects);
+
+            return ConvertedObjects;
         }
     }
 }

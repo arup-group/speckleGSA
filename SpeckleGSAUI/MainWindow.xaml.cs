@@ -30,13 +30,15 @@ namespace SpeckleGSAUI
     {
         const int UPDATE_INTERVAL = 2000;
         
-        public string ReceiveNodeTolerance { get; set; }
-        public string StreamName { get; set; }
+        public ObservableCollection<Tuple<string, string>> StreamData { get; set; }
         public ObservableCollection<string> Messages { get; set; }
-        
+
+        public string ProjectName { get; set; }
+        public string ReceiverNodeStreamID { get; set; }
+        public string ReceiverSectionStreamID { get; set; }
+        public string ReceiverElementStreamID { get; set; }
+
         public UserManager userManager;
-        public Sender speckleSender;
-        public Receiver speckleReceiver;
         public GSAController gsa;
 
       public MainWindow()
@@ -47,14 +49,15 @@ namespace SpeckleGSAUI
             ServerAddress.Text = "https://hestia.speckle.works/api/v1";
             EmailAddress.Text = "mishael.nuh@arup.com";
             Password.Password = "temporaryPassword";
-            
-            ReceiveNodeTolerance = "0";
-            StreamName = "";
+
+            ProjectName = "";
+            ReceiverNodeStreamID = "";
+            ReceiverSectionStreamID = "";
+            ReceiverElementStreamID = "";
+            StreamData = new ObservableCollection<Tuple<string, string>>();
             Messages = new ObservableCollection<string>();
 
             DataContext = this;
-            
-            this.Topmost = true;
         }
 
         #region Server
@@ -65,6 +68,17 @@ namespace SpeckleGSAUI
                 AddMessage("Successfully logged in");
             else
                 AddError("Failed to login");
+        }
+
+        private void UpdateStreamList(object sender, RoutedEventArgs e)
+        {
+            StreamManager manager = new StreamManager(userManager.ServerAddress, userManager.ApiToken);
+            List<Tuple<string, string>> streamData = manager.GetStreams();
+            streamData.Reverse();
+
+            StreamData.Clear();
+            foreach (Tuple<string, string> t in streamData)
+                StreamData.Add(t);
         }
         #endregion
 
@@ -77,7 +91,7 @@ namespace SpeckleGSAUI
                 return;
             }
 
-            gsa = new GSAController();
+            gsa = new GSAController(userManager);
             AddMessage("Linked to GSA");
         }
 
@@ -111,77 +125,40 @@ namespace SpeckleGSAUI
         #endregion
 
         #region Sender
-        private async void SendNewStream(object sender, RoutedEventArgs e)
+        private async void SendStream(object sender, RoutedEventArgs e)
         {
-            if (userManager == null)
+            if (gsa == null)
             {
-                AddError("Login to server first");
+                AddError("Link to GSA first");
                 return;
             }
-
-            speckleSender = new Sender(userManager.ServerAddress, userManager.ApiToken);
 
             AddMessage("Initializing sender");
-            await speckleSender.InitializeSender();
-            SenderStreamID.Text = speckleSender.StreamID;
+            await gsa.ExportObjects(ProjectName);
+            AddMessage("Finished sending");
 
-            SendUpdateStream(sender, e);
-        }
-
-        private void SendUpdateStream(object sender, RoutedEventArgs e)
-        {
-            if (speckleSender==null)
-            {
-                AddError("Create new stream first");
-                return;
-            }
-            
-            //try
-            //{
-                AddMessage(speckleSender.UpdateData(gsa, StreamName));
-            //}
-            //catch (Exception ex)
-            //{
-            //    AddError(ex.Message);
-            //}
+            SenderNodeStreamID.Text = gsa.SenderNodeStreamID;
+            SenderSectionStreamID.Text = gsa.SenderSectionStreamID;
+            SenderElementStreamID.Text = gsa.SenderElementStreamID;
         }
         #endregion
 
         #region Receiver
-        private async void ReceiveNewStream(object sender, RoutedEventArgs e)
+        private async void ReceiveStream(object sender, RoutedEventArgs e)
         {
-            if (userManager == null)
+            if (gsa == null)
             {
-                AddError("Login to server first");
+                AddError("Link to GSA first");
                 return;
             }
-
-            speckleReceiver = new Receiver(userManager.ServerAddress, userManager.ApiToken);
+            
             AddMessage("Initializing receiver");
-            await speckleReceiver.InitializeReceiver(ReceiverStreamID.Text);
-
-            ReceiveUpdateStream(sender, e);
-        }
-
-        private void ReceiveUpdateStream(object sender, RoutedEventArgs e)
-        {
-            double tolerance = 0;
-            if (!double.TryParse(ReceiveNodeTolerance, out tolerance))
+            await gsa.ImportObjects(new Dictionary<string, string>()
             {
-                AddError("Could not parse tolerance to number.");
-            }
-            AddMessage("Using tolerance of " + tolerance.ToString());
-            gsa.ReceiveNodeTolerance = tolerance;
-
-            try
-            {
-                AddMessage(speckleReceiver.UpdateData(gsa));
-                StreamName = speckleReceiver.StreamName;
-            }
-            catch (Exception ex)
-            {
-                AddError(ex.Message);
-            }
+                { "Nodes", ReceiverNodeStreamID },
+                { "Elements", ReceiverElementStreamID },
+            });
+            AddMessage("Finished receiving");
         }
         #endregion
 

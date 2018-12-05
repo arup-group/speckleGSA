@@ -11,19 +11,27 @@ namespace SpeckleGSA
     public class GSAController
     {
         public double ReceiveNodeTolerance { get; set; }
+        public string SenderNodeStreamID { get { return senders["Nodes"].StreamID; } }
+        public string SenderSectionStreamID { get { return ""; } }
+        public string SenderElementStreamID { get { return senders["Elements"].StreamID; } }
 
-        Dictionary<string, List<object>> BucketObjects = new Dictionary<string, List<object>>();
-
+        private UserManager userManager;
+        private Dictionary<string,Sender> senders;
+        private Dictionary<string, Receiver> receivers;
         private ComAuto gsaObj;
 
-        #region GSA
-        public GSAController()
+        public GSAController(UserManager user)
         {
+            userManager = user;
+
             gsaObj = new ComAuto();
             gsaObj.DisplayGsaWindow(true);
-           
+
+            senders = new Dictionary<string, Sender>();
+            receivers = new Dictionary<string, Receiver>();
         }
 
+        #region GSA
         public void NewFile()
         {
             gsaObj.NewFile();
@@ -38,15 +46,14 @@ namespace SpeckleGSA
         #endregion
 
         #region Extract GSA
-        public void GetNodes()
+        public List<GSANode> GetNodes()
         {
-            BucketObjects["Nodes"] = new List<object>();
             List<GSANode> nodes = new List<GSANode>();
 
             string res = gsaObj.GwaCommand("GET_ALL,NODE");
 
             if (res == "")
-                return;
+                return nodes;
 
             string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
 
@@ -58,8 +65,7 @@ namespace SpeckleGSA
                 nodes.Add(n);
             }
 
-            foreach (GSANode n in nodes)
-                BucketObjects["Nodes"].Add(n.ToSpeckle());
+            return nodes;
         }
 
         public List<GSAElement> GetElements(List<GSANode> nodes)
@@ -194,33 +200,51 @@ namespace SpeckleGSA
             return areas;
         }
 
-        public Dictionary<string, List<object>> ExportObjects()
+        public async Task ExportObjects(string projectName)
         {
+            Dictionary<string, List<object>> bucketObjects = new Dictionary<string, List<object>>();
+            Dictionary<string, string[]> objectIDs;
+
             // Add nodes
-            List<GSANode> nodes = new List<GSANode>();// = GetNodes();
-            //BucketObjects["Nodes"] = new List<object>();
-            //foreach (GSANode n in nodes)
-            //    BucketObjects["Nodes"].Add(n.ToSpeckle());
+            List<GSANode> nodes = GetNodes();
+            bucketObjects["Nodes"] = new List<object>();
+            foreach (GSANode n in nodes)
+                bucketObjects["Nodes"].Add(n.ToSpeckle());
 
-            // Add lines
-            List<GSALine> lines = GetLines(nodes);
-            BucketObjects["Lines"] = new List<object>();
-            foreach (GSALine l in lines)
-                BucketObjects["Lines"].Add(l.ToSpeckle());
-
-            // Add areas
-            List<GSAArea> areas = GetAreas(lines);
-            BucketObjects["Areas"] = new List<object>();
-            foreach (GSAArea a in areas)
-                BucketObjects["Areas"].Add(a.ToSpeckle());
+            if (!senders.ContainsKey("Nodes"))
+            {
+                senders["Nodes"] = new Sender(userManager.ServerAddress, userManager.ApiToken);
+                await senders["Nodes"].InitializeSender();
+            }
+            objectIDs = senders["Nodes"].UpdateData(projectName + ".nodes", bucketObjects);
+            nodes = UpdateObjectIDs(objectIDs["Nodes"], nodes.ToArray()).Select(n => n as GSANode).ToList();
+            bucketObjects.Remove("Nodes");
 
             // Add elements
+            List<GSALine> lines = GetLines(nodes);
+            bucketObjects["Lines"] = new List<object>();
+            foreach (GSALine l in lines)
+                bucketObjects["Lines"].Add(l.ToSpeckle());
+            
+            List<GSAArea> areas = GetAreas(lines);
+            bucketObjects["Areas"] = new List<object>();
+            foreach (GSAArea a in areas)
+                bucketObjects["Areas"].Add(a.ToSpeckle());
+            
             List<GSAElement> elements = GetElements(nodes);
-            BucketObjects["Elements"] = new List<object>();
+            bucketObjects["Elements"] = new List<object>();
             foreach (GSAElement e in elements)
-                BucketObjects["Elements"].Add(e.ToSpeckle());
+                bucketObjects["Elements"].Add(e.ToSpeckle());
 
-            return BucketObjects;
+            if (!senders.ContainsKey("Elements"))
+            {
+                senders["Elements"] = new Sender(userManager.ServerAddress, userManager.ApiToken);
+                await senders["Elements"].InitializeSender();
+            }
+            objectIDs = senders["Elements"].UpdateData(projectName + ".elements", bucketObjects);
+            lines = UpdateObjectIDs(objectIDs["Lines"], lines.ToArray()).Select(n => n as GSALine).ToList();
+            areas = UpdateObjectIDs(objectIDs["Areas"], areas.ToArray()).Select(n => n as GSAArea).ToList();
+            elements = UpdateObjectIDs(objectIDs["Elements"], elements.ToArray()).Select(n => n as GSAElement).ToList();
         }
 
         #endregion
@@ -401,17 +425,26 @@ namespace SpeckleGSA
             return element.Ref;
         }
 
-        public void ImportObjects(List<object> ConvertedObjects)
+        public async Task ImportObjects(Dictionary<string, string> streamIDs)
         {
             Dictionary<string, object> objects = new Dictionary<string, object>();
+            List<object> convertedObjects = new List<object>();
 
             objects["Nodes"] = new List<GSANode>();
             objects["Lines"] = new List<GSALine>();
             objects["Areas"] = new List<GSAArea>();
             objects["Elements"] = new List<GSAElement>();
 
+            receivers["Nodes"] = new Receiver(userManager.ServerAddress, userManager.ApiToken);
+            await receivers["Nodes"].InitializeReceiver(streamIDs["Nodes"]);
+            convertedObjects.AddRange(receivers["Nodes"].UpdateData());
+
+            receivers["Elements"] = new Receiver(userManager.ServerAddress, userManager.ApiToken);
+            await receivers["Elements"].InitializeReceiver(streamIDs["Elements"]);
+            convertedObjects.AddRange(receivers["Elements"].UpdateData());
+            
             // Populate list
-            foreach (object obj in ConvertedObjects)
+            foreach (object obj in convertedObjects)
             {
                 if (obj == null) continue;
 
@@ -447,7 +480,27 @@ namespace SpeckleGSA
         #endregion
 
         #region Update GSA
-        
+        public GSAObject[] UpdateObjectIDs(string[] keys, GSAObject[] objects)
+        {
+            if (keys.Length == 0) return objects;
+            if (objects.Length == 0) return objects;
+
+            string[] newIDs = keys.Where(k => !objects.Select(g => g.SpeckleID).ToList().Contains(k)).ToArray();
+
+            int counter = 0;
+            foreach(GSAObject o in objects)
+            {
+                if (o.SpeckleID=="")
+                {
+                    o.SpeckleID = newIDs[counter++];
+                    o.Name = o.SpeckleID;
+                    gsaObj.GwaCommand(o.GetGWACommand());
+                }
+                if (counter >= newIDs.Length) break;
+            }
+
+            return objects;
+        }
         #endregion
     }
 

@@ -11,7 +11,6 @@ C:\Speckle\SpeckleGSA\SpeckleGSAUI\bin\Debug\SpeckleGSA.dll.config
 C:\Speckle\SpeckleGSA\SpeckleGSAUI\bin\Debug\SpeckleGSAConverter.pdb
 C:\Speckle\SpeckleGSA\SpeckleGSAUI\bin\Debug\SpeckleGSAConverter.dll.config
 C:\Speckle\SpeckleGSA\SpeckleGSAUI\bin\Debug\SpeckleCore.pdb
-C:\Speckle\SpeckleGSA\SpeckleGSAUI\bin\Debug\Newtonsoft.Json.xml
 C:\Speckle\SpeckleGSA\SpeckleGSAUI\obj\Debug\SpeckleGSAUI.csprojAssemblyReference.cache
 C:\Speckle\SpeckleGSA\SpeckleGSAUI\obj\Debug\MainWindow.g.cs
 C:\Speckle\SpeckleGSA\SpeckleGSAUI\obj\Debug\App.g.cs
@@ -25,3 +24,4 @@ C:\Speckle\SpeckleGSA\SpeckleGSAUI\obj\Debug\SpeckleGSAUI.csproj.CoreCompileInpu
 C:\Speckle\SpeckleGSA\SpeckleGSAUI\obj\Debug\SpeckleGSAUI.csproj.CopyComplete
 C:\Speckle\SpeckleGSA\SpeckleGSAUI\obj\Debug\SpeckleGSAUI.exe
 C:\Speckle\SpeckleGSA\SpeckleGSAUI\obj\Debug\SpeckleGSAUI.pdb
+C:\Speckle\SpeckleGSA\SpeckleGSAUI\bin\Debug\Newtonsoft.Json.xml

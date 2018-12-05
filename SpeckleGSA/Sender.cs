@@ -6,9 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using SpeckleCore;
-using Interop.Gsa_9_0;
 
 namespace SpeckleGSA
 {
@@ -34,16 +32,16 @@ namespace SpeckleGSA
             Console.WriteLine(res);
         }
 
-        public string UpdateData(GSAController gsa, string streamName)
+        public Dictionary<string,string[]> UpdateData(string streamName, Dictionary<string,List<object>> bucketObjects)
         {
-            Dictionary<string, List<object>> BucketObjects = gsa.ExportObjects();
-            
+            Dictionary<string, string[]> objectIDs = new Dictionary<string, string[]>();
+
             List<Layer> bucketLayers = new List<Layer>();
             List<SpeckleObject> payload = new List<SpeckleObject>();
 
             int objectCount = 0;
 
-            foreach(KeyValuePair<string,List<object>> layer in BucketObjects)
+            foreach (KeyValuePair<string, List<object>> layer in bucketObjects)
             {
                 List<SpeckleObject> layerPayload = GetPayload(layer.Value);
 
@@ -60,8 +58,10 @@ namespace SpeckleGSA
                 objectCount += layerPayload.Count();
 
                 payload.AddRange(layerPayload);
+
+                objectIDs[layer.Key] = payload.Select(p => p._id).ToArray();
             }
-            
+
             SpeckleStream updateStream = new SpeckleStream()
             {
                 Layers = bucketLayers,
@@ -73,9 +73,9 @@ namespace SpeckleGSA
             if (response.Success == false)
                 throw new Exception(response.Message);
 
-            return response.Message;
+            return objectIDs;
         }
-        
+       
         public List<SpeckleObject> GetPayload(List<object> bucketObjects)
         {
             ConverterHack n = new ConverterHack();
