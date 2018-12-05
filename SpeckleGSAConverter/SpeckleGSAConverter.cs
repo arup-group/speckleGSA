@@ -350,6 +350,8 @@ namespace SpeckleGSA
 
                 object value = structuralDict[key];
 
+                if (value == null) continue;
+
                 if (prop.PropertyType.IsArray)
                 {
                     Type type = prop.GetValue(obj).GetType().GetElementType();
@@ -424,6 +426,7 @@ namespace SpeckleGSA
         {
             SpecklePoint p = new SpecklePoint(node.Coor[0], node.Coor[1], node.Coor[2], "", node.GetSpeckleProperties());
             node.SpeckleHash = p.Hash;
+            p._id = node.Name;
             return p;
         }
         
@@ -439,6 +442,7 @@ namespace SpeckleGSA
                         element.Ref.ToString(),
                         element.GetSpeckleProperties());
                     element.SpeckleHash = p.Hash;
+                    p._id = element.Name;
                     return p;
                 case 2:
                     SpeckleLine l = new SpeckleLine(
@@ -446,6 +450,7 @@ namespace SpeckleGSA
                         element.Ref.ToString(),
                         element.GetSpeckleProperties());
                     element.SpeckleHash = l.Hash;
+                    l._id = element.Name;
                     return l;
                 default:
                     SpeckleMesh m = new SpeckleMesh(
@@ -460,6 +465,7 @@ namespace SpeckleGSA
                         element.Ref.ToString(),
                         element.GetSpeckleProperties());
                     element.SpeckleHash = m.Hash;
+                    m._id = element.Name;
                     return m;
             }
         }
@@ -474,6 +480,7 @@ namespace SpeckleGSA
                         line.Ref.ToString(),
                         line.GetSpeckleProperties());
                     line.SpeckleHash = l.Hash;
+                    l._id = line.Name;
                     return l;
                 case "ARC_RADIUS":
                     SpeckleArc arcR = ArcRadiustoSpeckleArc(line.Coor, line.Radius);
@@ -481,6 +488,7 @@ namespace SpeckleGSA
                     arcR.Properties = line.GetSpeckleProperties();
                     arcR.GenerateHash();
                     line.SpeckleHash = arcR.Hash;
+                    arcR._id = line.Name;
                     return arcR;
                 case "ARC_THIRD_PT":
                     SpeckleArc arc3 = Arc3PointtoSpeckleArc(line.Coor);
@@ -488,6 +496,7 @@ namespace SpeckleGSA
                     arc3.Properties = line.GetSpeckleProperties();
                     arc3.GenerateHash();
                     line.SpeckleHash = arc3.Hash;
+                    arc3._id = line.Name;
                     return arc3;
                 default:
                     return null;
@@ -507,6 +516,7 @@ namespace SpeckleGSA
             mesh.Properties = area.GetSpeckleProperties();
             mesh.GenerateHash();
             area.SpeckleHash = mesh.Hash;
+            mesh._id = area.Name;
             return mesh;
         }
         #endregion
@@ -519,6 +529,7 @@ namespace SpeckleGSA
                 GSANode n = new GSANode();
                 n.Coor = point.Value.ToArray();
                 n.SpeckleHash = point.Hash;
+                n.Name = point._id;
                 return n;
             }
 
@@ -531,12 +542,14 @@ namespace SpeckleGSA
                     n.SetSpeckleProperties(point.Properties);
                     n.Coor = point.Value.ToArray();
                     n.SpeckleHash = point.Hash;
+                    n.Name = point._id;
                     return n;
                 case "ELEMENT":
                     GSAElement e = new GSAElement();
                     e.SetSpeckleProperties(point.Properties);
                     e.Coor = point.Value.ToArray();
                     e.SpeckleHash = point.Hash;
+                    e.Name = point._id;
                     return e;
                 default:
                     return null;
@@ -550,6 +563,7 @@ namespace SpeckleGSA
                 GSALine l = new GSALine();
                 l.Coor = line.Value.ToArray();
                 l.SpeckleHash = line.Hash;
+                l.Name = line._id;
                 return l;
             }
 
@@ -562,12 +576,14 @@ namespace SpeckleGSA
                     e.SetSpeckleProperties(line.Properties);
                     e.Coor = line.Value.ToArray();
                     e.SpeckleHash = line.Hash;
+                    e.Name = line._id;
                     return e;
                 case "LINE":
                     GSALine l = new GSALine();
                     l.SetSpeckleProperties(line.Properties);
                     l.Coor = line.Value.ToArray();
                     l.SpeckleHash = line.Hash;
+                    l.Name = line._id;
                     return l;
                 default:
                     return null;
@@ -582,6 +598,7 @@ namespace SpeckleGSA
                 l.Coor = SpeckleArctoArc3Point(arc);
                 l.Type = "ARC_THIRD_PT";
                 l.SpeckleHash = arc.Hash;
+                l.Name = arc._id;
                 return l;
             }
 
@@ -594,6 +611,7 @@ namespace SpeckleGSA
                     l.SetSpeckleProperties(arc.Properties);
                     l.Coor = SpeckleArctoArc3Point(arc);
                     l.SpeckleHash = arc.Hash;
+                    l.Name = arc._id;
                     return l;
                 default:
                     return null;
@@ -624,7 +642,7 @@ namespace SpeckleGSA
                         coorCounter++;
                     }
                     a.Coor = aCoor.ToArray();
-                    a.Lines = new int[aCoor.Count / 3];
+                    a.Connectivity = new int[aCoor.Count / 3];
                     areas.Add(a);
                 }
                 return areas.ToArray();
@@ -639,13 +657,15 @@ namespace SpeckleGSA
                     GSAElement e = new GSAElement();
                     e.SetSpeckleProperties(mesh.Properties);
                     e.Coor = mesh.Vertices.ToArray();
-                        e.Color = Math.Max(mesh.Colors[0], 0);
+                    e.Color = Math.Max(mesh.Colors[0], 0);
+                    e.Name = mesh._id;
                     return e;
                 case "AREA":
                     GSAArea a = new GSAArea();
                     a.SetSpeckleProperties(mesh.Properties);
                     a.Coor = mesh.Vertices.ToArray();
                     a.Color = Math.Max(mesh.Colors[0],0);
+                    a.Name = mesh._id;
                     return a;
                 default:
                     return null;

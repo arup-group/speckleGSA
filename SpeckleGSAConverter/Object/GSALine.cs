@@ -9,7 +9,6 @@ namespace SpeckleGSA
     public class GSALine : GSAObject
     {
         public string Type { get; set; }
-        public int[] Topo { get; set; }
         public double Radius { get; set; }
         public string Axis { get; set; }
         public Dictionary<string, object> Restraint { get; set; }
@@ -19,7 +18,6 @@ namespace SpeckleGSA
         public GSALine():base("LINE")
         {
             Type = "LINE";
-            Topo = new int[3];
             Radius = 0;
             Axis = "GLOBAL";
             Restraint = new Dictionary<string, object>()
@@ -59,9 +57,9 @@ namespace SpeckleGSA
             Name = pieces[counter++].Trim(new char[] { '"' });
             Color = pieces[counter++].ParseGSAColor();
             Type = pieces[counter++];
-            Topo = new int[(int)Enum.Parse(typeof(LineNumNodes), Type)];
-            for (int i = 0; i < Topo.Length; i++)
-                Topo[i] = Convert.ToInt32(pieces[counter++]);
+            Connectivity = new int[(int)Enum.Parse(typeof(LineNumNodes), Type)];
+            for (int i = 0; i < Connectivity.Length; i++)
+                Connectivity[i] = Convert.ToInt32(pieces[counter++]);
             if ((int)Enum.Parse(typeof(LineNumNodes), Type) == 2) counter++;
             Radius = Convert.ToDouble(pieces[counter++]);
             Axis = pieces[counter++];
@@ -98,9 +96,9 @@ namespace SpeckleGSA
             else
                 ls.Add(((int)Color).ToString());
             ls.Add(Type);
-            ls.Add(Topo[0].ToString());
-            ls.Add(Topo[1].ToString());
-            ls.Add(Topo.Length == 2 ? "0" : Topo[2].ToString());
+            ls.Add(Connectivity[0].ToString());
+            ls.Add(Connectivity[1].ToString());
+            ls.Add(Connectivity.Length == 2 ? "0" : Connectivity[2].ToString());
             ls.Add(Radius.ToString());
             ls.Add(Axis);
             ls.Add(((bool)Restraint["x"])? "1" : "0");

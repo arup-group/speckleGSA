@@ -29,9 +29,7 @@ namespace SpeckleGSAUI
     public partial class MainWindow : Window
     {
         const int UPDATE_INTERVAL = 2000;
-
-        public bool SendDesignLayer { get; set; }
-        public bool SendAnalysisLayer { get; set; }
+        
         public string ReceiveNodeTolerance { get; set; }
         public string StreamName { get; set; }
         public ObservableCollection<string> Messages { get; set; }
@@ -49,9 +47,7 @@ namespace SpeckleGSAUI
             ServerAddress.Text = "https://hestia.speckle.works/api/v1";
             EmailAddress.Text = "mishael.nuh@arup.com";
             Password.Password = "temporaryPassword";
-
-            SendDesignLayer = false;
-            SendAnalysisLayer = false;
+            
             ReceiveNodeTolerance = "0";
             StreamName = "";
             Messages = new ObservableCollection<string>();
@@ -139,23 +135,15 @@ namespace SpeckleGSAUI
                 AddError("Create new stream first");
                 return;
             }
-
-            gsa.SendDesignLayer = SendDesignLayer;
-            if (gsa.SendDesignLayer)
-                AddMessage("Sending design layer");
-
-            gsa.SendAnalysisLayer = SendAnalysisLayer;
-            if (gsa.SendAnalysisLayer)
-                AddMessage("Sending analysis layer");
-
-            try
-            {
+            
+            //try
+            //{
                 AddMessage(speckleSender.UpdateData(gsa, StreamName));
-            }
-            catch (Exception ex)
-            {
-                AddError(ex.Message);
-            }
+            //}
+            //catch (Exception ex)
+            //{
+            //    AddError(ex.Message);
+            //}
         }
         #endregion
 

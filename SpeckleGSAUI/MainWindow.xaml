@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SpeckleGSAUI"
         mc:Ignorable="d"
-        Title="SpeckleGSA" x:Name="SpeckleGSAUI" Height="600" Width="350" WindowStyle="SingleBorderWindow">
+        Title="SpeckleGSA" x:Name="SpeckleGSAUI" Height="878" Width="584" WindowStyle="SingleBorderWindow">
     <Grid
         Background="#FF0057FF" Margin="0,0,0,0">
         <Grid.ColumnDefinitions>
@@ -61,21 +61,112 @@
                             Content="Login"/>
                     </StackPanel>
                 </TabItem>
-                <TabItem Header="GSA">
-                    <StackPanel
+                <TabItem Header="Speckle">
+                    <Grid
                         Margin="10,10,10,10">
-                        <Button
-                            Click="LinkGSA"
-                            Content="Link to GSA"/>
-                        <Separator Height="10" Background="Transparent"/>
-                        <Button
-                            Click="NewGSAFile"
-                            Content="New File"/>
-                        <Separator Height="10" Background="Transparent"/>
-                        <Button
-                            Click="OpenGSAFile"
-                            Content="Open File"/>
-                    </StackPanel>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <GroupBox
+                            Header="Speckle Settings"
+                            Grid.Row="0"
+                            Grid.ColumnSpan="2">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="auto"/>
+                                    <RowDefinition Height="auto"/>
+                                </Grid.RowDefinitions>
+                                <Label Grid.Row="0" Grid.Column="0" Content="Project Name"/>
+                                <TextBox Grid.Row="0" Grid.Column="1" Margin="2,2,2,2"/>
+                                <Button Grid.Row="1" Grid.ColumnSpan="2" Content="Update Stream List" Margin="2,2,2,2"/>
+                            </Grid>
+                        </GroupBox>
+                        <GroupBox
+                            Header="GSA "
+                            Grid.Row="1"
+                            Grid.ColumnSpan="2">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="auto"/>
+                                    <RowDefinition Height="auto"/>
+                                    <RowDefinition Height="auto"/>
+                                </Grid.RowDefinitions>
+                                <Button Grid.Row="0" Content="Link GSA" Click="LinkGSA" Margin="2,2,2,2"/>
+                                <Button Grid.Row="1" Content="New File" Click="NewGSAFile" Margin="2,2,2,2"/>
+                                <Button Grid.Row="2" Content="Open File" Click="OpenGSAFile" Margin="2,2,2,2"/>
+                            </Grid>
+                        </GroupBox>
+                        <DataGrid
+                            Grid.Row="2"
+                            Grid.ColumnSpan="2">
+                        </DataGrid>
+                        <GroupBox
+                            Header="Sender"
+                            Grid.Row="3"
+                            Grid.Column="0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="auto"/>
+                                    <RowDefinition Height="auto"/>
+                                    <RowDefinition Height="auto"/>
+                                </Grid.RowDefinitions>
+                                <Label Grid.Row="0" Grid.Column="0" Content="Node"/>
+                                <TextBox Grid.Row="0" Grid.Column="1" IsReadOnly="True" BorderThickness="0" Margin="2,2,2,2"/>
+                                <Button Grid.Row="0" Grid.Column="2" Content="Send" Margin="2,2,2,2"/>
+                                <Label Grid.Row="1" Grid.Column="0" Content="Section Property"/>
+                                <TextBox Grid.Row="1" Grid.Column="1" IsReadOnly="True" BorderThickness="0" Margin="2,2,2,2"/>
+                                <Button Grid.Row="1" Grid.Column="2" Content="Send" Margin="2,2,2,2"/>
+                                <Label Grid.Row="2" Grid.Column="0" Content="Elements"/>
+                                <TextBox Grid.Row="2" Grid.Column="1" IsReadOnly="True" BorderThickness="0" Margin="2,2,2,2"/>
+                                <Button Grid.Row="2" Grid.Column="2" Content="Send" Margin="2,2,2,2"/>
+                            </Grid>
+                        </GroupBox>
+                        <GroupBox
+                            Header="Receiver"
+                            Grid.Row="3"
+                            Grid.Column="1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="auto"/>
+                                    <RowDefinition Height="auto"/>
+                                    <RowDefinition Height="auto"/>
+                                </Grid.RowDefinitions>
+                                <Label Grid.Row="0" Grid.Column="0" Content="Node"/>
+                                <TextBox Grid.Row="0" Grid.Column="1" Margin="2,2,2,2"/>
+                                <Button Grid.Row="0" Grid.Column="2" Content="Receive" Margin="2,2,2,2"/>
+                                <Label Grid.Row="1" Grid.Column="0" Content="Section Property"/>
+                                <TextBox Grid.Row="1" Grid.Column="1" Margin="2,2,2,2"/>
+                                <Button Grid.Row="1" Grid.Column="2" Content="Receive" Margin="2,2,2,2"/>
+                                <Label Grid.Row="2" Grid.Column="0" Content="Elements"/>
+                                <TextBox Grid.Row="2" Grid.Column="1" Margin="2,2,2,2"/>
+                                <Button Grid.Row="2" Grid.Column="2" Content="Receive" Margin="2,2,2,2"/>
+                            </Grid>
+                        </GroupBox>
+                    </Grid>
                 </TabItem>
                 <TabItem Header="Sender">
                     <StackPanel
@@ -93,14 +184,8 @@
                         <TextBox
                             IsReadOnly="True"
                             x:Name="SenderStreamID"
-                            BorderBrush="White"/>
+                            BorderThickness="0"/>
                         <Separator Height="10" Background="Transparent"/>
-                        <CheckBox
-                            IsChecked="{Binding ElementName=SpeckleGSAUI, Path=SendDesignLayer}"
-                            Content="Design Layer"/>
-                        <CheckBox
-                            IsChecked="{Binding ElementName=SpeckleGSAUI, Path=SendAnalysisLayer}"
-                            Content="Analysis Layer"/>
                         <Separator Height="10" Background="Transparent"/>
                         <Button
                             Click="SendNewStream"

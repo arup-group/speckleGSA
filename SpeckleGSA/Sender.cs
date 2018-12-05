@@ -15,8 +15,6 @@ namespace SpeckleGSA
     public class Sender
     {
         private SpeckleApiClient mySender;
-        private List<object> DesignBucketObjects;
-        private List<object> AnalysisBucketObjects;
 
         private string apiToken { get; set; }
         private string serverAddress { get; set; }
@@ -112,16 +110,28 @@ namespace SpeckleGSA
             if (currentBucketObjects.Count > 0)
                 objectUpdatePayloads.Add(currentBucketObjects);
 
+            // create placeholders for stream update payload
+            List<SpeckleObject> placeholders = new List<SpeckleObject>();
+
+            // create and update
             List<ResponseObject> responses = new List<ResponseObject>();
             foreach (var payload in objectUpdatePayloads)
             {
-                responses.Add(mySender.ObjectCreateAsync(payload).GetAwaiter().GetResult());
+                //foreach (var obj in payload)
+                //{
+                //    if (obj._id != "")
+                //    { 
+                //        mySender.ObjectUpdateAsync(obj._id, obj);
+                //        placeholders.Add(new SpecklePlaceholder() { _id = obj._id });
+                //    }
+                //}
+                responses.Add(mySender.ObjectCreateAsync(payload.Where(o => o._id == "")).GetAwaiter().GetResult());
+                //responses.Add(mySender.ObjectCreateAsync(payload).GetAwaiter().GetResult());
             }
 
-            // create placeholders for stream update payload
-            List<SpeckleObject> placeholders = new List<SpeckleObject>();
             foreach (var myResponse in responses)
-                foreach (var obj in myResponse.Resources) placeholders.Add(new SpecklePlaceholder() { _id = obj._id });
+                foreach (var obj in myResponse.Resources)
+                    placeholders.Add(new SpecklePlaceholder() { _id = obj._id });
 
             return placeholders;
         }

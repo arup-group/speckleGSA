@@ -10,19 +10,16 @@ namespace SpeckleGSA
 {
     public class GSAController
     {
-        public bool SendDesignLayer { get; set; }
-        public bool SendAnalysisLayer { get; set; }
         public double ReceiveNodeTolerance { get; set; }
 
         private ComAuto gsaObj;
 
+        #region GSA
         public GSAController()
         {
             gsaObj = new ComAuto();
             gsaObj.DisplayGsaWindow(true);
-
-            SendDesignLayer = false;
-            SendAnalysisLayer = false;
+           
         }
 
         public void NewFile()
@@ -36,6 +33,7 @@ namespace SpeckleGSA
             gsaObj.Open(path);
             gsaObj.DisplayGsaWindow(true);
         }
+        #endregion
 
         #region Extract GSA
         public List<GSANode> GetNodes()
@@ -77,12 +75,12 @@ namespace SpeckleGSA
                 e.ParseGWACommand(p);
 
                 e.SpeckleConnectivity = nodes
-                    .Where(n => e.Topo.Contains(n.Ref))
+                    .Where(n => e.Connectivity.Contains(n.Ref))
                     .Select(n => n.SpeckleHash)
                     .ToArray();
 
                 e.Coor = nodes
-                    .Where(n => e.Topo.Contains(n.Ref))
+                    .Where(n => e.Connectivity.Contains(n.Ref))
                     .SelectMany(n => n.Coor)
                     .ToArray();
                 
@@ -109,12 +107,12 @@ namespace SpeckleGSA
                 l.ParseGWACommand(p);
 
                 l.SpeckleConnectivity = nodes
-                    .Where(n => l.Topo.Contains(n.Ref))
+                    .Where(n => l.Connectivity.Contains(n.Ref))
                     .Select(n => n.SpeckleHash)
                     .ToArray();
 
                 l.Coor = nodes
-                    .Where(n => l.Topo.Contains(n.Ref))
+                    .Where(n => l.Connectivity.Contains(n.Ref))
                     .SelectMany(n => n.Coor)
                     .ToArray();
                 
@@ -126,6 +124,8 @@ namespace SpeckleGSA
 
         public List<GSAMember> GetMembers(List<GSANode> nodes)
         {
+            // PROBLEMS WITH GWA GET_ALL COMMAND FOR MEMBERS
+            // NEED WORKAROUND
             return null;
         }
 
@@ -146,12 +146,12 @@ namespace SpeckleGSA
                 a.ParseGWACommand(p);
 
                 a.SpeckleConnectivity = lines
-                    .Where(l => a.Lines.Contains(l.Ref))
+                    .Where(l => a.Connectivity.Contains(l.Ref))
                     .Select(l => l.SpeckleHash)
                     .ToArray();
 
                 List<List<double>> lineCoor = lines
-                    .Where(l => a.Lines.Contains(l.Ref))
+                    .Where(l => a.Connectivity.Contains(l.Ref))
                     .Select(l => l.Coor.Take(6).ToList())
                     .ToList();
 
@@ -220,6 +220,7 @@ namespace SpeckleGSA
 
             return bucketObjects;
         }
+
         #endregion
 
         #region Import GSA
@@ -292,13 +293,15 @@ namespace SpeckleGSA
 
                 line = counter.RefLine(line);
 
-                int[] topo = new int[line.SpeckleConnectivity.Length];
+                int[] connectivity = new int[line.SpeckleConnectivity.Length];
 
                 for (int i = 0; i < line.SpeckleConnectivity.Length; i++)
-                    topo[i] = (dict["Nodes"] as List<GSANode>)
+                    connectivity[i] = (dict["Nodes"] as List<GSANode>)
                         .Where(n => n.SpeckleHash == line.SpeckleConnectivity[i])
                         .Select(n => n.Ref).FirstOrDefault();
-                
+
+                line.Connectivity = connectivity;
+
                 gsaObj.GwaCommand(line.GetGWACommand());
                 return line.Ref;
             }
@@ -326,7 +329,7 @@ namespace SpeckleGSA
 
                     List<GSAObject> lNodes = line.GetChildren();
                     for (int i = 0; i < lNodes.Count; i++)
-                        line.Topo[i] = AddNode((lNodes[i] as GSANode), ref dict, ref counter);
+                        line.Connectivity[i] = AddNode((lNodes[i] as GSANode), ref dict, ref counter);
 
                     gsaObj.GwaCommand(line.GetGWACommand());
                     (dict["Lines"] as List<GSALine>).Add(line);
@@ -345,13 +348,15 @@ namespace SpeckleGSA
 
                 area = counter.RefArea(area);
 
-                int[] topo = new int[area.SpeckleConnectivity.Length];
+                int[] connectivity = new int[area.SpeckleConnectivity.Length];
 
                 for (int i = 0; i < area.SpeckleConnectivity.Length; i++)
-                    topo[i] = (dict["Lines"] as List<GSALine>)
+                    connectivity[i] = (dict["Lines"] as List<GSALine>)
                         .Where(l => l.SpeckleHash == area.SpeckleConnectivity[i])
                         .Select(l => l.Ref).FirstOrDefault();
-                
+
+                area.Connectivity = connectivity;
+
                 gsaObj.GwaCommand(area.GetGWACommand());
                 return area.Ref;
             }
@@ -363,7 +368,7 @@ namespace SpeckleGSA
 
                 List<GSAObject> aLines = area.GetChildren();
                 for (int i = 0; i < aLines.Count; i++)
-                    area.Lines[i] = AddLine((aLines[i] as GSALine), ref dict, ref counter);
+                    area.Connectivity[i] = AddLine((aLines[i] as GSALine), ref dict, ref counter);
                 
                 gsaObj.GwaCommand(area.GetGWACommand());
 
@@ -381,12 +386,14 @@ namespace SpeckleGSA
                 return 0;
             }
             
-            int[] topo = new int[element.SpeckleConnectivity.Length];
+            int[] connectivity = new int[element.SpeckleConnectivity.Length];
 
             for (int i = 0; i < element.SpeckleConnectivity.Length; i++)
-                topo[i] = (dict["Elements"] as List<GSAElement>)
+                connectivity[i] = (dict["Nodes"] as List<GSANode>)
                     .Where(n => n.SpeckleHash == element.SpeckleConnectivity[i])
                     .Select(n => n.Ref).FirstOrDefault();
+
+            element.Connectivity = connectivity;
 
             gsaObj.GwaCommand(element.GetGWACommand());
             return element.Ref;

@@ -12,7 +12,6 @@ namespace SpeckleGSA
         public double Span { get; set; }
         public int Property { get; set; }
         public int Group { get; set; }
-        public int[] Lines { get; set; }
         public double Coefficient { get; set; }
 
         public GSAArea():base("AREA")
@@ -21,7 +20,6 @@ namespace SpeckleGSA
             Span = 0;
             Property = 1;
             Group = 0;
-            Lines = new int[3];
             Coefficient = 0;
         }
 
@@ -37,7 +35,7 @@ namespace SpeckleGSA
             Span = Convert.ToDouble(pieces[counter++]);
             Property = Convert.ToInt32(pieces[counter++]);
             Group = Convert.ToInt32(pieces[counter++]);
-            Lines = pieces[counter++].ParseGSAList(gsa);
+            Connectivity = pieces[counter++].ParseGSAList(gsa);
             Coefficient = Convert.ToDouble(pieces[counter++]);
         }
 
@@ -58,8 +56,8 @@ namespace SpeckleGSA
             ls.Add(Property.ToString());
             ls.Add(Group.ToString());
             string lineList = "";
-            foreach (int l in Lines)
-                lineList += l.ToString() + " ";
+            foreach (int c in Connectivity)
+                lineList += c.ToString() + " ";
             ls.Add(lineList.TrimEnd());
             ls.Add(Coefficient.ToString());
             

@@ -20,6 +20,7 @@ namespace SpeckleGSA
         public int Ref;
         public double[] Coor;
         public object Color;
+        public int[] Connectivity;
 
         public ComAuto gsa;
 
@@ -65,6 +66,7 @@ namespace SpeckleGSA
             Name = "";
             Color = null;
             Coor = new double[1];
+            Connectivity = new int[0];
 
             SpeckleConnectivity = new string[0];
 

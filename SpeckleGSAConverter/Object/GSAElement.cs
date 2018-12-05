@@ -11,7 +11,6 @@ namespace SpeckleGSA
         public string Type { get; set; }
         public int Property { get; set; }
         public int Group { get; set; }
-        public int[] Topo { get; set; }
         public double Beta { get; set; }
         public int OrientNode { get; set; }
         public Dictionary<string, object> EndStiffness { get; set; }
@@ -23,7 +22,6 @@ namespace SpeckleGSA
             Type = "BEAM";
             Property = 1;
             Group = 0;
-            Topo = new int[0];
             Beta = 0;
             OrientNode = 0;
             EndStiffness = new Dictionary<string, object>()
@@ -70,9 +68,9 @@ namespace SpeckleGSA
             Type = pieces[counter++];
             Property = Convert.ToInt32(pieces[counter++]);
             Group = Convert.ToInt32(pieces[counter++]);
-            Topo = new int[(int)Enum.Parse(typeof(ElementNumNodes), Type)];
-            for (int i = 0; i < Topo.Length; i++)
-                Topo[i] = Convert.ToInt32(pieces[counter++]);
+            Connectivity = new int[(int)Enum.Parse(typeof(ElementNumNodes), Type)];
+            for (int i = 0; i < Connectivity.Length; i++)
+                Connectivity[i] = Convert.ToInt32(pieces[counter++]);
             OrientNode = Convert.ToInt32(pieces[counter++]);
             Beta = Convert.ToDouble(pieces[counter++]);
             if (pieces[counter++] != "NO_RLS")
@@ -114,8 +112,8 @@ namespace SpeckleGSA
             ls.Add(Type);
             ls.Add(Property.ToString());
             ls.Add(Group.ToString());
-            foreach (int t in Topo)
-                ls.Add(t.ToString());
+            foreach (int c in Connectivity)
+                ls.Add(c.ToString());
             ls.Add(OrientNode.ToString());
             ls.Add(Beta.ToString());
             if (Coor.Length / 3 == 2)
@@ -155,7 +153,7 @@ namespace SpeckleGSA
             ls.Add(((double)EndOffset["z"]).ToString());
 
             ls.Add(Dummy ? "DUMMY" : "");
-
+            Console.WriteLine(string.Join(",", ls));
             return string.Join(",", ls);
         }
 
