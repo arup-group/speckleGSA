@@ -11,20 +11,19 @@ namespace SpeckleGSA
     public class StreamManager
     {
         private SpeckleApiClient myClient;
-        
 
         public StreamManager(string serverAddress, string apiToken)
         {
             myClient = new SpeckleApiClient() { BaseUrl = serverAddress.ToString(), AuthToken = apiToken };
         }
 
-        public List<Tuple<string, string>> GetStreams()
+        public async Task<List<Tuple<string, string>>> GetStreams()
         {
-            ResponseStream response = myClient.StreamsGetAllAsync().GetAwaiter().GetResult();
+            ResponseStream response = await myClient.StreamsGetAllAsync();
 
             List<Tuple<string, string>> ret = new List<Tuple<string, string>>();
-            
-            foreach(SpeckleStream s in response.Resources)
+
+            foreach (SpeckleStream s in response.Resources)
                 ret.Add(new Tuple<string, string>(s.Name, s.StreamId));
 
             return ret;

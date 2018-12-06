@@ -15,33 +15,102 @@ namespace SpeckleGSA
         public string SenderSectionStreamID { get { return ""; } }
         public string SenderElementStreamID { get { return senders["Elements"].StreamID; } }
 
+        public MessageLog Messages;
+
         private UserManager userManager;
-        private Dictionary<string,Sender> senders;
+        private Dictionary<string, Sender> senders;
         private Dictionary<string, Receiver> receivers;
         private ComAuto gsaObj;
 
-        public GSAController(UserManager user)
+        public GSAController()
         {
-            userManager = user;
-
-            gsaObj = new ComAuto();
-            gsaObj.DisplayGsaWindow(true);
+            userManager = null;
 
             senders = new Dictionary<string, Sender>();
             receivers = new Dictionary<string, Receiver>();
+
+            Messages = new MessageLog();
         }
+
+        #region Server
+        public async Task Login(string email, string password, string serverAddress)
+        {
+            await Task.Run(delegate
+            {
+                userManager = new UserManager(email, password, serverAddress);
+            }).ContinueWith(delegate
+            {
+                if (userManager.Login() == 0)
+                    Messages.AddMessage("Successfully logged in");
+                else
+                    Messages.AddError("Failed to login");
+            });
+        }
+
+        public async Task<List<Tuple<string, string>>> GetStreamList()
+        {
+            if (userManager == null)
+            {
+                Messages.AddError("Not logged in");
+                return null;
+            }
+
+            Messages.AddMessage("Fetching stream list.");
+            StreamManager manager = new StreamManager(userManager.ServerAddress, userManager.ApiToken);
+            var response = await manager.GetStreams();
+            Messages.AddMessage("Finished fetching stream list.");
+            return response;
+        }
+        #endregion
 
         #region GSA
-        public void NewFile()
+        public async Task Link()
         {
-            gsaObj.NewFile();
-            gsaObj.DisplayGsaWindow(true);
+            if (userManager == null)
+            {
+                Messages.AddError("Not logged in");
+                return;
+            }
+            await Task.Run(delegate { gsaObj = new ComAuto(); }).ContinueWith(
+                delegate { 
+                    gsaObj.DisplayGsaWindow(true);
+                    Messages.AddMessage("GSA link established");
+                }
+            );
         }
 
-        public void OpenFile(string path)
+        public async Task NewFile()
         {
-            gsaObj.Open(path);
-            gsaObj.DisplayGsaWindow(true);
+            if (gsaObj == null)
+            {
+                Messages.AddError("No GSA link found");
+                return;
+            }
+
+            await Task.Run(delegate { gsaObj.NewFile(); }).ContinueWith(
+                delegate
+                {
+                    gsaObj.DisplayGsaWindow(true);
+                    Messages.AddMessage("New file created");
+                }
+            );
+        }
+
+        public async Task OpenFile(string path)
+        {
+            if (gsaObj == null)
+            {
+                Messages.AddError("No GSA link found");
+                return;
+            }
+
+            await Task.Run(delegate { gsaObj.Open(path); }).ContinueWith(
+                delegate
+                {
+                    gsaObj.DisplayGsaWindow(true);
+                    Messages.AddMessage("Opened " + path);
+                }
+            );
         }
         #endregion
 
@@ -93,7 +162,7 @@ namespace SpeckleGSA
                     .Where(n => e.Connectivity.Contains(n.Ref))
                     .SelectMany(n => n.Coor)
                     .ToArray();
-                
+
                 elements.Add(e);
             }
 
@@ -125,7 +194,7 @@ namespace SpeckleGSA
                     .Where(n => l.Connectivity.Contains(n.Ref))
                     .SelectMany(n => n.Coor)
                     .ToArray();
-                
+
                 lines.Add(l);
             }
 
@@ -165,7 +234,7 @@ namespace SpeckleGSA
                     .Select(l => l.Coor.Take(6).ToList())
                     .ToList();
 
-                for(int i = 0; i < lineCoor.Count; i++)
+                for (int i = 0; i < lineCoor.Count; i++)
                 {
                     if (i == 0)
                         lineCoor[i].RemoveRange(3, 3);
@@ -205,7 +274,15 @@ namespace SpeckleGSA
             Dictionary<string, List<object>> bucketObjects = new Dictionary<string, List<object>>();
             Dictionary<string, string[]> objectIDs;
 
+            if (gsaObj == null)
+            {
+                Messages.AddError("GSA link not found.");
+                return;
+            }
+
             // Add nodes
+            Messages.AddMessage("Sending .nodes stream.");
+
             List<GSANode> nodes = GetNodes();
             bucketObjects["Nodes"] = new List<object>();
             foreach (GSANode n in nodes)
@@ -213,24 +290,35 @@ namespace SpeckleGSA
 
             if (!senders.ContainsKey("Nodes"))
             {
+                Messages.AddMessage(".nodes sender not initialized. Creating new .nodes sender.");
                 senders["Nodes"] = new Sender(userManager.ServerAddress, userManager.ApiToken);
                 await senders["Nodes"].InitializeSender();
             }
-            objectIDs = senders["Nodes"].UpdateData(projectName + ".nodes", bucketObjects);
+
+            Messages.AddMessage(".nodes sender streamID: " + senders["Nodes"].StreamID + ".");
+
+            Messages.AddMessage("Nodes: " + bucketObjects["Nodes"].Count() + ".");
+
+            objectIDs = await senders["Nodes"].UpdateDataAsync(projectName + ".nodes", bucketObjects);
+
+            Messages.AddMessage("Streamed " + objectIDs.Count() + " objects.");
+
             nodes = UpdateObjectIDs(objectIDs["Nodes"], nodes.ToArray()).Select(n => n as GSANode).ToList();
             bucketObjects.Remove("Nodes");
 
             // Add elements
+            Messages.AddMessage("Sending .elements stream.");
+
             List<GSALine> lines = GetLines(nodes);
             bucketObjects["Lines"] = new List<object>();
             foreach (GSALine l in lines)
                 bucketObjects["Lines"].Add(l.ToSpeckle());
-            
+
             List<GSAArea> areas = GetAreas(lines);
             bucketObjects["Areas"] = new List<object>();
             foreach (GSAArea a in areas)
                 bucketObjects["Areas"].Add(a.ToSpeckle());
-            
+
             List<GSAElement> elements = GetElements(nodes);
             bucketObjects["Elements"] = new List<object>();
             foreach (GSAElement e in elements)
@@ -238,20 +326,32 @@ namespace SpeckleGSA
 
             if (!senders.ContainsKey("Elements"))
             {
+                Messages.AddMessage(".elements sender not initialized. Creating new .elements sender.");
                 senders["Elements"] = new Sender(userManager.ServerAddress, userManager.ApiToken);
                 await senders["Elements"].InitializeSender();
             }
-            objectIDs = senders["Elements"].UpdateData(projectName + ".elements", bucketObjects);
+
+            Messages.AddMessage(".elements sender streamID: " + senders["Elements"].StreamID + ".");
+
+            Messages.AddMessage("Lines: " + bucketObjects["Lines"].Count() + ".");
+            Messages.AddMessage("Areas: " + bucketObjects["Areas"].Count() + ".");
+            Messages.AddMessage("Elements: " + bucketObjects["Elements"].Count() + ".");
+
+            objectIDs = await senders["Elements"].UpdateDataAsync(projectName + ".elements", bucketObjects);
+
+            Messages.AddMessage("Streamed " + objectIDs.Count() + " objects.");
+
             lines = UpdateObjectIDs(objectIDs["Lines"], lines.ToArray()).Select(n => n as GSALine).ToList();
             areas = UpdateObjectIDs(objectIDs["Areas"], areas.ToArray()).Select(n => n as GSAArea).ToList();
             elements = UpdateObjectIDs(objectIDs["Elements"], elements.ToArray()).Select(n => n as GSAElement).ToList();
-        }
 
+            Messages.AddMessage("Sending completed!");
+        }
         #endregion
 
         #region Import GSA
 
-        public void AddGSAObj(GSAObject obj, ref Dictionary<string,object> dict)
+        public void AddGSAObj(GSAObject obj, ref Dictionary<string, object> dict)
         {
             Type t = obj.GetType();
             Console.WriteLine(t);
@@ -295,6 +395,8 @@ namespace SpeckleGSA
 
                     gsaObj.GwaCommand(node.GetGWACommand());
                     (dict["Nodes"] as List<GSANode>).Add(node);
+
+                    Messages.AddMessage("Created new node " + node.Ref.ToString() + ".");
 
                     return node.Ref;
                 }
@@ -359,6 +461,9 @@ namespace SpeckleGSA
 
                     gsaObj.GwaCommand(line.GetGWACommand());
                     (dict["Lines"] as List<GSALine>).Add(line);
+
+                    Messages.AddMessage("Created new line " + line.Ref.ToString() + ".");
+
                     return line.Ref;
                 }
                 else
@@ -395,8 +500,10 @@ namespace SpeckleGSA
                 List<GSAObject> aLines = area.GetChildren();
                 for (int i = 0; i < aLines.Count; i++)
                     area.Connectivity[i] = AddLine((aLines[i] as GSALine), ref dict, ref counter);
-                
+
                 gsaObj.GwaCommand(area.GetGWACommand());
+
+                Messages.AddMessage("Created new area " + area.Ref.ToString() + ".");
 
                 return area.Ref;
             }
@@ -409,9 +516,10 @@ namespace SpeckleGSA
             if (element.SpeckleConnectivity.Length == 0)
             {
                 // this is a bad element definition
+                Messages.AddError("Bad connectivity with element " + element.SpeckleID + ".");
                 return 0;
             }
-            
+
             int[] connectivity = new int[element.SpeckleConnectivity.Length];
 
             for (int i = 0; i < element.SpeckleConnectivity.Length; i++)
@@ -430,19 +538,63 @@ namespace SpeckleGSA
             Dictionary<string, object> objects = new Dictionary<string, object>();
             List<object> convertedObjects = new List<object>();
 
+            if (gsaObj == null)
+            {
+                Messages.AddError("GSA link not found.");
+                return;
+            }
+
             objects["Nodes"] = new List<GSANode>();
             objects["Lines"] = new List<GSALine>();
             objects["Areas"] = new List<GSAArea>();
             objects["Elements"] = new List<GSAElement>();
 
+            Messages.AddMessage("Creating .nodes receiver.");
             receivers["Nodes"] = new Receiver(userManager.ServerAddress, userManager.ApiToken);
             await receivers["Nodes"].InitializeReceiver(streamIDs["Nodes"]);
-            convertedObjects.AddRange(receivers["Nodes"].UpdateData());
 
+            if (receivers["Nodes"].StreamID == null)
+            {
+                Messages.AddError("Could not connect to .nodes stream.");
+            }
+            else
+            { 
+                Messages.AddMessage("Receiving nodes.");
+                try
+                { 
+                    await receivers["Nodes"].UpdateDataAsync().ContinueWith(res =>
+                        convertedObjects.AddRange(res.Result)
+                    );
+                }
+                catch (Exception e)
+                {
+                    Messages.AddError(e.Message);
+                }
+            }
+
+            Messages.AddMessage("Creating .elements receiver.");
             receivers["Elements"] = new Receiver(userManager.ServerAddress, userManager.ApiToken);
             await receivers["Elements"].InitializeReceiver(streamIDs["Elements"]);
-            convertedObjects.AddRange(receivers["Elements"].UpdateData());
-            
+
+            if (receivers["Elements"].StreamID == null)
+            {
+                Messages.AddError("Could not connect to .elements stream.");
+            }
+            else
+            {
+                try
+                {
+                    Messages.AddMessage("Receiving elements.");
+                    await receivers["Elements"].UpdateDataAsync().ContinueWith(res =>
+                        convertedObjects.AddRange(res.Result)
+                    );
+                }
+                catch (Exception e)
+                {
+                    Messages.AddError(e.Message);
+                }
+            }
+
             // Populate list
             foreach (object obj in convertedObjects)
             {
@@ -465,7 +617,7 @@ namespace SpeckleGSA
             // Lines 
             foreach (GSALine l in objects["Lines"] as List<GSALine>)
                 AddLine(l, ref objects, ref counter);
-            
+
             // Areas
             foreach (GSAArea a in objects["Areas"] as List<GSAArea>)
                 AddArea(a, ref objects, ref counter);
@@ -474,7 +626,11 @@ namespace SpeckleGSA
             foreach (GSAElement e in objects["Elements"] as List<GSAElement>)
                 AddElement(e, ref objects, ref counter);
 
+            Messages.AddMessage("Streamed " + counter.TotalObjects + " objects.");
+
             gsaObj.UpdateViews();
+
+            Messages.AddMessage("Receiving completed!");
         }
 
         #endregion
@@ -488,13 +644,14 @@ namespace SpeckleGSA
             string[] newIDs = keys.Where(k => !objects.Select(g => g.SpeckleID).ToList().Contains(k)).ToArray();
 
             int counter = 0;
-            foreach(GSAObject o in objects)
+            foreach (GSAObject o in objects)
             {
-                if (o.SpeckleID=="")
+                if (o.SpeckleID == null | o.SpeckleID == "")
                 {
                     o.SpeckleID = newIDs[counter++];
                     o.Name = o.SpeckleID;
                     gsaObj.GwaCommand(o.GetGWACommand());
+                    Messages.AddMessage("Updated " + o.GSAEntity + " " + o.Ref + " with ID " + o.SpeckleID + ".");
                 }
                 if (counter >= newIDs.Length) break;
             }
@@ -512,6 +669,14 @@ namespace SpeckleGSA
         private int memberCounter;
         private int areaCounter;
         private int regionCounter;
+
+        public int TotalObjects
+        {
+            get
+            {
+                return nodeCounter + elementCounter + lineCounter + memberCounter + areaCounter + regionCounter;
+            }
+        }
 
         public GSARefCounters()
         {

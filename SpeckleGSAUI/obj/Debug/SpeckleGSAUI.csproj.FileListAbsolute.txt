@@ -25,3 +25,8 @@ C:\Speckle\SpeckleGSA\SpeckleGSAUI\obj\Debug\SpeckleGSAUI.csproj.CopyComplete
 C:\Speckle\SpeckleGSA\SpeckleGSAUI\obj\Debug\SpeckleGSAUI.exe
 C:\Speckle\SpeckleGSA\SpeckleGSAUI\obj\Debug\SpeckleGSAUI.pdb
 C:\Speckle\SpeckleGSA\SpeckleGSAUI\bin\Debug\Newtonsoft.Json.xml
+C:\Speckle\SpeckleGSA\SpeckleGSAUI\bin\Debug\MaterialDesignColors.dll
+C:\Speckle\SpeckleGSA\SpeckleGSAUI\bin\Debug\MaterialDesignThemes.Wpf.dll
+C:\Speckle\SpeckleGSA\SpeckleGSAUI\bin\Debug\MaterialDesignThemes.Wpf.pdb
+C:\Speckle\SpeckleGSA\SpeckleGSAUI\bin\Debug\MaterialDesignThemes.Wpf.xml
+C:\Speckle\SpeckleGSA\SpeckleGSAUI\obj\Debug\App.baml
