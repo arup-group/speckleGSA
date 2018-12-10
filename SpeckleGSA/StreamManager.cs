@@ -28,6 +28,13 @@ namespace SpeckleGSA
 
             return ret;
         }
+
+        public async Task<string> CloneStream(string streamID)
+        {
+            ResponseStreamClone response = await myClient.StreamCloneAsync(streamID);
+
+            return response.Clone.StreamId;
+        }
     }
 
 }

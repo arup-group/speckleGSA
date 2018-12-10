@@ -17,6 +17,7 @@ namespace SpeckleGSA
 
         public MessageLog Messages;
 
+        private StreamManager streamManager;
         private UserManager userManager;
         private Dictionary<string, Sender> senders;
         private Dictionary<string, Receiver> receivers;
@@ -44,22 +45,45 @@ namespace SpeckleGSA
                     Messages.AddMessage("Successfully logged in");
                 else
                     Messages.AddError("Failed to login");
+
+                streamManager = new StreamManager(userManager.ServerAddress, userManager.ApiToken);
             });
         }
 
         public async Task<List<Tuple<string, string>>> GetStreamList()
         {
-            if (userManager == null)
+            if (userManager == null | streamManager == null)
             {
                 Messages.AddError("Not logged in");
                 return null;
             }
 
-            Messages.AddMessage("Fetching stream list.");
-            StreamManager manager = new StreamManager(userManager.ServerAddress, userManager.ApiToken);
-            var response = await manager.GetStreams();
-            Messages.AddMessage("Finished fetching stream list.");
-            return response;
+            try
+            {
+                Messages.AddMessage("Fetching stream list.");
+                var response = await streamManager.GetStreams();
+                Messages.AddMessage("Finished fetching stream list.");
+                return response;
+            }
+            catch (Exception e)
+            {
+                Messages.AddError(e.Message);
+                return null;
+            }
+        }
+
+        public async Task CloneModelStreams()
+        {
+            if (userManager == null | streamManager == null)
+            {
+                Messages.AddError("Not logged in");
+                return;
+            }
+            
+            foreach (KeyValuePair<string, Sender> kvp in senders)
+            {
+                streamManager.CloneStream(kvp.Value.StreamID).ContinueWith(res => Messages.AddMessage("Cloned " + kvp.Key + " stream to ID : " + res.Result));
+            }
         }
         #endregion
 
@@ -72,7 +96,8 @@ namespace SpeckleGSA
                 return;
             }
             await Task.Run(delegate { gsaObj = new ComAuto(); }).ContinueWith(
-                delegate { 
+                delegate
+                {
                     gsaObj.DisplayGsaWindow(true);
                     Messages.AddMessage("GSA link established");
                 }
@@ -269,7 +294,7 @@ namespace SpeckleGSA
             return areas;
         }
 
-        public async Task ExportObjects(string projectName)
+        public async Task ExportObjects(string modelName)
         {
             Dictionary<string, List<object>> bucketObjects = new Dictionary<string, List<object>>();
             Dictionary<string, string[]> objectIDs;
@@ -299,7 +324,7 @@ namespace SpeckleGSA
 
             Messages.AddMessage("Nodes: " + bucketObjects["Nodes"].Count() + ".");
 
-            objectIDs = await senders["Nodes"].UpdateDataAsync(projectName + ".nodes", bucketObjects);
+            objectIDs = await senders["Nodes"].UpdateDataAsync(modelName + ".nodes", bucketObjects);
 
             Messages.AddMessage("Streamed " + objectIDs.Count() + " objects.");
 
@@ -337,7 +362,7 @@ namespace SpeckleGSA
             Messages.AddMessage("Areas: " + bucketObjects["Areas"].Count() + ".");
             Messages.AddMessage("Elements: " + bucketObjects["Elements"].Count() + ".");
 
-            objectIDs = await senders["Elements"].UpdateDataAsync(projectName + ".elements", bucketObjects);
+            objectIDs = await senders["Elements"].UpdateDataAsync(modelName + ".elements", bucketObjects);
 
             Messages.AddMessage("Streamed " + objectIDs.Count() + " objects.");
 
@@ -558,10 +583,10 @@ namespace SpeckleGSA
                 Messages.AddError("Could not connect to .nodes stream.");
             }
             else
-            { 
+            {
                 Messages.AddMessage("Receiving nodes.");
                 try
-                { 
+                {
                     await receivers["Nodes"].UpdateDataAsync().ContinueWith(res =>
                         convertedObjects.AddRange(res.Result)
                     );

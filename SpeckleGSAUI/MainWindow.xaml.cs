@@ -33,7 +33,7 @@ namespace SpeckleGSAUI
         public ObservableCollection<Tuple<string, string>> StreamData { get; set; }
         public ObservableCollection<string> Messages { get; set; }
 
-        public string ProjectName { get; set; }
+        public string ModelName { get; set; }
         public string ReceiverNodeStreamID { get; set; }
         public string ReceiverSectionStreamID { get; set; }
         public string ReceiverElementStreamID { get; set; }
@@ -50,7 +50,7 @@ namespace SpeckleGSAUI
             EmailAddress.Text = "mishael.nuh@arup.com";
             Password.Password = "temporaryPassword";
 
-            ProjectName = "";
+            ModelName = "";
             ReceiverNodeStreamID = "";
             ReceiverSectionStreamID = "";
             ReceiverElementStreamID = "";
@@ -64,7 +64,7 @@ namespace SpeckleGSAUI
             gsa.Messages.ErrorAdded += AddError;
         }
 
-        #region Server
+        #region Speckle Operations
         private async void Login(object sender, RoutedEventArgs e)
         {
             await gsa.Login(EmailAddress.Text, Password.Password, ServerAddress.Text);
@@ -91,6 +91,12 @@ namespace SpeckleGSAUI
             }
             );
         }
+
+        private async void CloneModelStreams(object sender, RoutedEventArgs e)
+        {
+            await gsa.CloneModelStreams();
+        }
+
         #endregion
 
         #region GSA
@@ -115,7 +121,7 @@ namespace SpeckleGSAUI
         #region Sender
         private async void SendStream(object sender, RoutedEventArgs e)
         {
-            await gsa.ExportObjects(ProjectName).ContinueWith(
+            await gsa.ExportObjects(ModelName).ContinueWith(
                 delegate
                 {
                     Application.Current.Dispatcher.BeginInvoke(
@@ -168,6 +174,13 @@ namespace SpeckleGSAUI
                 }
                 )
             );
+        }
+        #endregion
+
+        #region UI
+        private void CopyStreamList(object sender, DataGridRowClipboardEventArgs e)
+        {
+            e.ClipboardRowContent.RemoveAt(0);
         }
         #endregion
     }

@@ -12,16 +12,18 @@
         TextElement.FontSize="14"
         TextOptions.TextFormattingMode="Ideal"
         TextOptions.TextRenderingMode="Auto"
-        Background="{DynamicResource MaterialDesignPaper}"
+        Background="#EEEEEE"
         FontFamily="{DynamicResource MaterialDesignFont}"
         
         mc:Ignorable="d"
         Width="800"
-        MinWidth="800"
-        MaxWidth="800"
         Title="SpeckleGSA" x:Name="SpeckleGSAUI" Height="800"  WindowStyle="ToolWindow">
     <Grid
         Margin="0,0,0,0">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="11*"/>
+            <ColumnDefinition Width="25*"/>
+        </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="auto"/>
             <RowDefinition Height="*"/>
@@ -30,7 +32,7 @@
         </Grid.RowDefinitions>
         <Grid
             Grid.Row="0"
-            Background="#FF0057FF">
+            Background="#FF0057FF" Grid.ColumnSpan="2">
             <TextBlock
             Grid.Row="0"
             Width="97"
@@ -40,85 +42,88 @@
             Margin="23,15,0,15"
             FontSize="24"
             FontWeight="Bold"
-            Foreground="White"
+            Foreground="White" 
             Text="Speckle!"
             TextWrapping="Wrap" />
         </Grid>
         <Grid
             Grid.Row="1"
-            Margin="0,0,0,0">
+            Grid.ColumnSpan="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="300"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <materialDesign:Card Grid.Column="0"
-                                Padding="10"
-                                Margin="5">
-                <Grid>
+            <Grid 
+                Grid.Column="0"
+                Background="White">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="auto"/>
+                        <RowDefinition Height="auto"/>
+                        <RowDefinition Height="auto"/>
+                        <RowDefinition Height="auto"/>
+                        <RowDefinition Height="auto"/>
+                    </Grid.RowDefinitions>
+                    <Label Grid.Row="0" Grid.ColumnSpan="2" Content="Server Settings" Margin="5,5,5,5" FontWeight="Bold"/>
+                    <Label Grid.Row="1" Grid.Column="0" Content="Server Adress" Margin="5,5,5,5"/>
+                    <TextBox Grid.Row="1" Grid.Column="1" x:Name="ServerAddress" Margin="5,5,5,5"/>
+                    <Label Grid.Row="2" Grid.Column="0" Content="Email Adress" Margin="5,5,5,5"/>
+                    <TextBox Grid.Row="2" Grid.Column="1" x:Name="EmailAddress" Margin="5,5,5,5"/>
+                    <Label Grid.Row="3" Grid.Column="0" Content="Password" Margin="5,5,5,5"/>
+                    <PasswordBox Grid.Row="3" Grid.Column="1" x:Name="Password" Margin="5,5,5,5"/>
+                    <Button Grid.Row="4" Grid.ColumnSpan="2" Click="Login"  Content="Login" Margin="5"/>
+                </Grid>
+                <Grid Grid.Row="1" Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <Grid Grid.Row="0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="auto"/>
-                            <RowDefinition Height="auto"/>
-                            <RowDefinition Height="auto"/>
-                            <RowDefinition Height="auto"/>
-                            <RowDefinition Height="auto"/>
-                        </Grid.RowDefinitions>
-                        <Label Grid.Row="0" Grid.ColumnSpan="2" Content="Server Settings" Margin="5,5,5,5"/>
-                        <Label Grid.Row="1" Grid.Column="0" Content="Server Adress" Margin="5,5,5,5"/>
-                        <TextBox Grid.Row="1" Grid.Column="1" x:Name="ServerAddress" Margin="5,5,5,5"/>
-                        <Label Grid.Row="2" Grid.Column="0" Content="Email Adress" Margin="5,5,5,5"/>
-                        <TextBox Grid.Row="2" Grid.Column="1" x:Name="EmailAddress" Margin="5,5,5,5"/>
-                        <Label Grid.Row="3" Grid.Column="0" Content="Password" Margin="5,5,5,5"/>
-                        <PasswordBox Grid.Row="3" Grid.Column="1" x:Name="Password" Margin="5,5,5,5"/>
-                        <Button Grid.Row="4" Grid.ColumnSpan="2" Click="Login"  Content="Login" Margin="5"/>
-                    </Grid>
-                    <Grid Grid.Row="1">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="auto"/>
-                            <RowDefinition Height="auto"/>
-                            <RowDefinition Height="auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <Label Grid.Row="0" Grid.ColumnSpan="2" Content="Speckle" Margin="5,5,5,5"/>
-                        <Label Grid.Row="1" Grid.Column="0" Content="Project Name" Margin="5,5,5,5"/>
-                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Path=ProjectName}" Margin="5,5,5,5"/>
-                        <Button Grid.Row="2" Grid.ColumnSpan="2" Click="UpdateStreamList"  Content="Update Stream List" Margin="5"/>
-                        <materialDesign:Card
-                            Grid.Row="3"
+                    <Button Grid.Row="0" Grid.ColumnSpan="2" Click="UpdateStreamList"  Content="Update Stream List" Margin="5"/>
+                    <materialDesign:Card
+                            Grid.Row="1"
                             Grid.ColumnSpan="2"
                             Margin="5">
-                            <DataGrid
+                        <DataGrid
                             CanUserSortColumns="False"
                             AutoGenerateColumns="False"
                             IsReadOnly="True"
-                            ItemsSource="{Binding StreamData}">
-                                <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Name" Width="*" Binding="{Binding Item1}"/>
-                                    <DataGridTextColumn Header="StreamID" Width="*" Binding="{Binding Item2}"/>
-                                </DataGrid.Columns>
-                            </DataGrid>
-                        </materialDesign:Card>
-                    </Grid>
+                            ItemsSource="{Binding StreamData}"
+                            SelectionMode="Single"
+                            CopyingRowClipboardContent="CopyStreamList"
+                            GridLinesVisibility="None">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Name" Width="*" Binding="{Binding Item1}"/>
+                                <DataGridTextColumn Header="StreamID" Width="*" Binding="{Binding Item2}"/>
+                            </DataGrid.Columns>
+                            <DataGrid.CellStyle>
+                                <Style
+                                    TargetType="DataGridCell"
+                                    BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                </Style>
+                            </DataGrid.CellStyle>
+                        </DataGrid>
+                    </materialDesign:Card>
                 </Grid>
-            </materialDesign:Card>
-
-            <ScrollViewer Grid.Column="1" >
+            </Grid>
+            <ScrollViewer Grid.Column="1">
                 <StackPanel Orientation="Vertical">
                     <materialDesign:Card
-                                        Padding="10"
-                                        Margin="5">
+                        Padding="10"
+                        Margin="10">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -129,15 +134,15 @@
                                 <RowDefinition Height="auto"/>
                                 <RowDefinition Height="auto"/>
                             </Grid.RowDefinitions>
-                            <Label Grid.Row="0" Grid.ColumnSpan="2" Content="GSA" Margin="5"/>
+                            <Label Grid.Row="0" Grid.ColumnSpan="2" Content="GSA" FontWeight="Bold"/>
                             <Button Grid.Row="1" Grid.ColumnSpan="2" Content="Link GSA" Click="LinkGSA" Margin="5"/>
                             <Button Grid.Row="2" Grid.Column="0" Content="New File" Click="NewGSAFile" Margin="5"/>
                             <Button Grid.Row="2" Grid.Column="1" Content="Open File" Click="OpenGSAFile" Margin="5"/>
                         </Grid>
                     </materialDesign:Card>
                     <materialDesign:Card
-                                        Padding="10"
-                                        Margin="5">
+                        Padding="10"
+                        Margin="10">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="auto"/>
@@ -149,20 +154,23 @@
                                 <RowDefinition Height="auto"/>
                                 <RowDefinition Height="auto"/>
                                 <RowDefinition Height="auto"/>
+                                <RowDefinition Height="auto"/>
                             </Grid.RowDefinitions>
-                            <Label Grid.Row="0" Grid.ColumnSpan="2" Content="Sender" Margin="5"/>
-                            <Label Grid.Row="1" Grid.Column="0" Content="Nodes" Margin="5"/>
-                            <TextBox Grid.Row="1" Grid.Column="1" x:Name="SenderNodeStreamID" IsReadOnly="True" BorderThickness="0" Margin="5"/>
-                            <Label Grid.Row="2" Grid.Column="0" Content="Section Properties" Margin="5"/>
-                            <TextBox Grid.Row="2" Grid.Column="1" x:Name="SenderSectionStreamID" IsReadOnly="True" BorderThickness="0" Margin="5"/>
-                            <Label Grid.Row="3" Grid.Column="0" Content="Elements" Margin="5"/>
-                            <TextBox Grid.Row="3" Grid.Column="1" x:Name="SenderElementStreamID" IsReadOnly="True" BorderThickness="0" Margin="5"/>
-                            <Button Grid.Row="4" Grid.ColumnSpan="2" Content="Send/Update Streams" Click="SendStream" Margin="5"/>
+                            <Label Grid.Row="0" Grid.ColumnSpan="2" Content="Sender" Margin="5" FontWeight="Bold"/>
+                            <Label Grid.Row="1" Grid.Column="0" Content="Model Name" Margin="5,5,5,5"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Path=ModelName}" Margin="5,5,5,5"/>
+                            <Label Grid.Row="2" Grid.Column="0" Content="Nodes" Margin="5"/>
+                            <TextBox Grid.Row="2" Grid.Column="1" x:Name="SenderNodeStreamID" IsReadOnly="True" BorderThickness="0" Margin="5"/>
+                            <Label Grid.Row="3" Grid.Column="0" Content="Section Properties" Margin="5"/>
+                            <TextBox Grid.Row="3" Grid.Column="1" x:Name="SenderSectionStreamID" IsReadOnly="True" BorderThickness="0" Margin="5"/>
+                            <Label Grid.Row="4" Grid.Column="0" Content="Elements" Margin="5"/>
+                            <TextBox Grid.Row="4" Grid.Column="1" x:Name="SenderElementStreamID" IsReadOnly="True" BorderThickness="0" Margin="5"/>
+                            <Button Grid.Row="5" Grid.ColumnSpan="2" Content="Send/Update Streams" Click="SendStream" Margin="5"/>
                         </Grid>
                     </materialDesign:Card>
                     <materialDesign:Card
-                                        Padding="10"
-                                        Margin="5">
+                        Padding="10"
+                        Margin="10">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="auto"/>
@@ -175,7 +183,7 @@
                                 <RowDefinition Height="auto"/>
                                 <RowDefinition Height="auto"/>
                             </Grid.RowDefinitions>
-                            <Label Grid.Row="0" Grid.ColumnSpan="2" Content="Receiver" Margin="5"/>
+                            <Label Grid.Row="0" Grid.ColumnSpan="2" Content="Receiver" Margin="5" FontWeight="Bold"/>
                             <Label Grid.Row="1" Grid.Column="0" Content="Nodes" Margin="5"/>
                             <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Path=ReceiverNodeStreamID}" Margin="5"/>
                             <Label Grid.Row="2" Grid.Column="0" Content="Section Properties" Margin="5"/>
@@ -185,13 +193,30 @@
                             <Button Grid.Row="4" Grid.ColumnSpan="2" Content="Receive Streams" Click="ReceiveStream" Margin="5"/>
                         </Grid>
                     </materialDesign:Card>
+                    <materialDesign:Card
+                        Padding="10"
+                        Margin="10">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="auto"/>
+                                <RowDefinition Height="auto"/>
+                                <RowDefinition Height="auto"/>
+                            </Grid.RowDefinitions>
+                            <Label Grid.Row="0" Content="Stream Operations" Margin="5" FontWeight="Bold"/>
+                            <Button Grid.Row="1" Content="Clone Model Streams" Click="CloneModelStreams" Margin="5"/>
+                            <Button Grid.Row="2" Content="Diff Model Streams" Click="CloneModelStreams" Margin="5"/>
+                        </Grid>
+                    </materialDesign:Card>
                 </StackPanel>
             </ScrollViewer>
         </Grid>
-        <GridSplitter Grid.Row="2" Height="5" Background="#FF0057FF" HorizontalAlignment="Stretch"/>
+        <GridSplitter Grid.Row="2" Height="5" Background="#FF0057FF" HorizontalAlignment="Stretch" Grid.ColumnSpan="2"/>
         <Grid
             Background="#FF0057FF"
-            Grid.Row="3" >
+            Grid.Row="3" Grid.ColumnSpan="2" >
             <Grid Margin="25,5,25,25">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="auto"/>
@@ -204,7 +229,7 @@
                 Content="Message Log"/>
                 <materialDesign:Card
                     Grid.Row="1"
-                    Height="30">
+                    Height="100">
                     <ListBox
                     x:Name="MessagePane"
                     ItemsSource="{Binding Path=Messages}">
