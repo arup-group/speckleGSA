@@ -70,8 +70,6 @@ namespace SpeckleGSA
 
             SpeckleConnectivity = new string[0];
 
-            SpeckleID = "";
-
             gsa = null;
         }
 

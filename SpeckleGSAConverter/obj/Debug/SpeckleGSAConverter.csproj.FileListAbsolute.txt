@@ -10,3 +10,7 @@ C:\Speckle\SpeckleGSA\SpeckleGSAConverter\obj\Debug\SpeckleGSAConverter.csproj.C
 C:\Speckle\SpeckleGSA\SpeckleGSAConverter\obj\Debug\SpeckleGSAConverter.csproj.CopyComplete
 C:\Speckle\SpeckleGSA\SpeckleGSAConverter\obj\Debug\SpeckleGSAConverter.dll
 C:\Speckle\SpeckleGSA\SpeckleGSAConverter\obj\Debug\SpeckleGSAConverter.pdb
+C:\Speckle\SpeckleGSA\SpeckleGSAConverter\bin\Debug\SQLite-net.dll
+C:\Speckle\SpeckleGSA\SpeckleGSAConverter\bin\Debug\SQLitePCLRaw.core.dll
+C:\Speckle\SpeckleGSA\SpeckleGSAConverter\bin\Debug\SQLitePCLRaw.batteries_v2.dll
+C:\Speckle\SpeckleGSA\SpeckleGSAConverter\bin\Debug\SQLitePCLRaw.provider.e_sqlite3.dll

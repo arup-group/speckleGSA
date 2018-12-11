@@ -30,3 +30,7 @@ C:\Speckle\SpeckleGSA\SpeckleGSAUI\bin\Debug\MaterialDesignThemes.Wpf.dll
 C:\Speckle\SpeckleGSA\SpeckleGSAUI\bin\Debug\MaterialDesignThemes.Wpf.pdb
 C:\Speckle\SpeckleGSA\SpeckleGSAUI\bin\Debug\MaterialDesignThemes.Wpf.xml
 C:\Speckle\SpeckleGSA\SpeckleGSAUI\obj\Debug\App.baml
+C:\Speckle\SpeckleGSA\SpeckleGSAUI\bin\Debug\SQLite-net.dll
+C:\Speckle\SpeckleGSA\SpeckleGSAUI\bin\Debug\SQLitePCLRaw.core.dll
+C:\Speckle\SpeckleGSA\SpeckleGSAUI\bin\Debug\SQLitePCLRaw.batteries_v2.dll
+C:\Speckle\SpeckleGSA\SpeckleGSAUI\bin\Debug\SQLitePCLRaw.provider.e_sqlite3.dll

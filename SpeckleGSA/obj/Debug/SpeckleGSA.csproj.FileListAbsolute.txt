@@ -14,3 +14,7 @@ C:\Speckle\SpeckleGSA\SpeckleGSA\obj\Debug\SpeckleGSA.csproj.CoreCompileInputs.c
 C:\Speckle\SpeckleGSA\SpeckleGSA\obj\Debug\SpeckleGSA.csproj.CopyComplete
 C:\Speckle\SpeckleGSA\SpeckleGSA\obj\Debug\SpeckleGSA.dll
 C:\Speckle\SpeckleGSA\SpeckleGSA\obj\Debug\SpeckleGSA.pdb
+C:\Speckle\SpeckleGSA\SpeckleGSA\bin\Debug\SQLite-net.dll
+C:\Speckle\SpeckleGSA\SpeckleGSA\bin\Debug\SQLitePCLRaw.core.dll
+C:\Speckle\SpeckleGSA\SpeckleGSA\bin\Debug\SQLitePCLRaw.batteries_v2.dll
+C:\Speckle\SpeckleGSA\SpeckleGSA\bin\Debug\SQLitePCLRaw.provider.e_sqlite3.dll

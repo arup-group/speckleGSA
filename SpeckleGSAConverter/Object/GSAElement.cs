@@ -64,7 +64,6 @@ namespace SpeckleGSA
             int counter = 1; // Skip identifier
             Ref = Convert.ToInt32(pieces[counter++]);
             Name = pieces[counter++].Trim(new char[] { '"' });
-            SpeckleID = Name;
             Color = pieces[counter++].ParseGSAColor();
             Type = pieces[counter++];
             Property = Convert.ToInt32(pieces[counter++]);

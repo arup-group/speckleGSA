@@ -425,35 +425,31 @@ namespace SpeckleGSA
         public static SpecklePoint ToSpeckle(this GSANode node)
         {
             SpecklePoint p = new SpecklePoint(node.Coor[0], node.Coor[1], node.Coor[2], "", node.GetSpeckleProperties());
-            p._id = node.SpeckleID == ""? p._id: node.SpeckleID;
-            node.SpeckleID = p._id;
             return p;
         }
         
         public static SpeckleObject ToSpeckle(this GSAElement element)
         {
+            SpeckleObject obj;
+
             switch (element.Coor.Length/3)
             {
                 case 1:
-                    SpecklePoint p = new SpecklePoint(
+                    obj = new SpecklePoint(
                         element.Coor[0],
                         element.Coor[1],
                         element.Coor[2],
                         element.Ref.ToString(),
                         element.GetSpeckleProperties());
-                    p._id = element.SpeckleID == "" ? p._id : element.SpeckleID;
-                    element.SpeckleID = p._id;
-                    return p;
+                    break;
                 case 2:
-                    SpeckleLine l = new SpeckleLine(
+                    obj = new SpeckleLine(
                         element.Coor,
                         element.Ref.ToString(),
                         element.GetSpeckleProperties());
-                    l._id = element.SpeckleID == "" ? l._id : element.SpeckleID;
-                    element.SpeckleID = l._id;
-                    return l;
+                    break;
                 default:
-                    SpeckleMesh m = new SpeckleMesh(
+                    obj = new SpeckleMesh(
                         element.Coor,
                         new int[] { element.Coor.Length / 3 - 3 }.Concat(
                             Enumerable.Range(0, element.Coor.Length / 3).ToArray())
@@ -464,43 +460,39 @@ namespace SpeckleGSA
                         null,
                         element.Ref.ToString(),
                         element.GetSpeckleProperties());
-                    m._id = element.SpeckleID == "" ? m._id : element.SpeckleID;
-                    element.SpeckleID = m._id;
-                    return m;
+                    break;
             }
+
+            return obj;
         }
 
         public static SpeckleObject ToSpeckle(this GSALine line)
         {
+            SpeckleObject obj;
             switch(line.Type)
             {
                 case "LINE":
-                    SpeckleLine l = new SpeckleLine(
+                    obj = new SpeckleLine(
                         line.Coor,
                         line.Ref.ToString(),
                         line.GetSpeckleProperties());
-                    l._id = line.SpeckleID == "" ? l._id : line.SpeckleID;
-                    line.SpeckleID = l._id;
-                    return l;
+                    break;
                 case "ARC_RADIUS":
-                    SpeckleArc arcR = ArcRadiustoSpeckleArc(line.Coor, line.Radius);
-                    arcR.ApplicationId = line.Ref.ToString();
-                    arcR.Properties = line.GetSpeckleProperties();
-                    arcR.GenerateHash();
-                    arcR._id = line.SpeckleID == "" ? arcR._id : line.SpeckleID;
-                    line.SpeckleID = arcR._id;
-                    return arcR;
+                    obj = ArcRadiustoSpeckleArc(line.Coor, line.Radius);
+                    obj.ApplicationId = line.Ref.ToString();
+                    obj.Properties = line.GetSpeckleProperties();
+                    obj.GenerateHash();
+                    break;
                 case "ARC_THIRD_PT":
-                    SpeckleArc arc3 = Arc3PointtoSpeckleArc(line.Coor);
-                    arc3.ApplicationId = line.Ref.ToString();
-                    arc3.Properties = line.GetSpeckleProperties();
-                    arc3.GenerateHash();
-                    arc3._id = line.SpeckleID == "" ? arc3._id : line.SpeckleID;
-                    line.SpeckleID = arc3._id;
-                    return arc3;
+                    obj = Arc3PointtoSpeckleArc(line.Coor);
+                    obj.ApplicationId = line.Ref.ToString();
+                    obj.Properties = line.GetSpeckleProperties();
+                    obj.GenerateHash();
+                    break;
                 default:
                     return null;
             }
+            return obj;
         }
 
         public static SpeckleMesh ToSpeckle(this GSAArea area)
@@ -515,8 +507,6 @@ namespace SpeckleGSA
                     (int)(area.Coor.Length / 3)).ToList();
             mesh.Properties = area.GetSpeckleProperties();
             mesh.GenerateHash();
-            mesh._id = area.SpeckleID == "" ? mesh._id : area.SpeckleID;
-            area.SpeckleID = mesh._id;
             return mesh;
         }
         #endregion
@@ -524,98 +514,91 @@ namespace SpeckleGSA
         #region
         public static GSAObject ToNative(this SpecklePoint point)
         {
+            GSAObject obj;
+
             if (point.Properties==null || !point.Properties.ContainsKey("Structural"))
-            {
-                GSANode n = new GSANode();
-                n.Coor = point.Value.ToArray();
-                n.SpeckleID = point._id;
-                n.Name = point._id;
-                return n;
+                obj = new GSANode();
+            else
+            { 
+                Dictionary<string, object> dict = point.Properties["Structural"] as Dictionary<string, object>;
+
+                switch(dict["GSAEntity"] as string)
+                {
+                    case "NODE":
+                        obj = new GSANode();
+                        break;
+                    case "ELEMENT":
+                        obj = new GSAElement();
+                        break;
+                    default:
+                        return null;
+                }
+
+                obj.SetSpeckleProperties(point.Properties);
             }
 
-            Dictionary<string, object> dict = point.Properties["Structural"] as Dictionary<string, object>;
-
-            switch(dict["GSAEntity"] as string)
-            {
-                case "NODE":
-                    GSANode n = new GSANode();
-                    n.SetSpeckleProperties(point.Properties);
-                    n.Coor = point.Value.ToArray();
-                    n.SpeckleID = point._id;
-                    n.Name = point._id;
-                    return n;
-                case "ELEMENT":
-                    GSAElement e = new GSAElement();
-                    e.SetSpeckleProperties(point.Properties);
-                    e.Coor = point.Value.ToArray();
-                    e.SpeckleID = point._id;
-                    e.Name = point._id;
-                    return e;
-                default:
-                    return null;
-            }
+            obj.Coor = point.Value.ToArray();
+            obj.SpeckleID = point._id;
+            return obj;
         }
 
         public static GSAObject ToNative(this SpeckleLine line)
         {
+            GSAObject obj;
+
             if (line.Properties == null || !line.Properties.ContainsKey("Structural"))
-            {
-                GSALine l = new GSALine();
-                l.Coor = line.Value.ToArray();
-                l.SpeckleID = line._id;
-                l.Name = line._id;
-                return l;
-            }
+                obj = new GSALine();
+            else
+            { 
+                Dictionary<string, object> dict = line.Properties["Structural"] as Dictionary<string, object>;
 
-            Dictionary<string, object> dict = line.Properties["Structural"] as Dictionary<string, object>;
+                switch (dict["GSAEntity"] as string)
+                {
+                    case "ELEMENT":
+                        obj = new GSAElement();
+                        break;
+                    case "LINE":
+                        obj = new GSALine();
+                        break;
+                    default:
+                        return null;
+                }
 
-            switch (dict["GSAEntity"] as string)
-            {
-                case "ELEMENT":
-                    GSAElement e = new GSAElement();
-                    e.SetSpeckleProperties(line.Properties);
-                    e.Coor = line.Value.ToArray();
-                    e.SpeckleID = line._id;
-                    e.Name = line._id;
-                    return e;
-                case "LINE":
-                    GSALine l = new GSALine();
-                    l.SetSpeckleProperties(line.Properties);
-                    l.Coor = line.Value.ToArray();
-                    l.SpeckleID = line._id;
-                    l.Name = line._id;
-                    return l;
-                default:
-                    return null;
+                obj.SetSpeckleProperties(line.Properties);
             }
+            obj.Coor = line.Value.ToArray();
+            obj.SpeckleID = line._id;
+            return obj;
         }
 
         public static GSALine ToNative(this SpeckleArc arc)
         {
+            GSALine obj;
+
             if (arc.Properties == null || !arc.Properties.ContainsKey("Structural"))
             {
-                GSALine l = new GSALine();
-                l.Coor = SpeckleArctoArc3Point(arc);
-                l.Type = "ARC_THIRD_PT";
-                l.SpeckleID = arc._id;
-                l.Name = arc._id;
-                return l;
+                obj = new GSALine();
+                obj.Type = "ARC_THIRD_PT";
+            }
+            else
+            { 
+                Dictionary<string, object> dict = arc.Properties["Structural"] as Dictionary<string, object>;
+
+                switch (dict["GSAEntity"] as string)
+                {
+                    case "LINE":
+                        obj = new GSALine();
+                        break;
+                    default:
+                        return null;
+                }
+
+                obj.SetSpeckleProperties(arc.Properties);
             }
 
-            Dictionary<string, object> dict = arc.Properties["Structural"] as Dictionary<string, object>;
-
-            switch (dict["GSAEntity"] as string)
-            {
-                case "LINE":
-                    GSALine l = new GSALine();
-                    l.SetSpeckleProperties(arc.Properties);
-                    l.Coor = SpeckleArctoArc3Point(arc);
-                    l.SpeckleID = arc._id;
-                    l.Name = arc._id;
-                    return l;
-                default:
-                    return null;
-            }
+            obj.Coor = SpeckleArctoArc3Point(arc);
+            obj.SpeckleID = arc._id;
+            return obj;
         }
 
         public static object ToNative(this SpeckleMesh mesh)
@@ -658,14 +641,12 @@ namespace SpeckleGSA
                     e.SetSpeckleProperties(mesh.Properties);
                     e.Coor = mesh.Vertices.ToArray();
                     e.Color = Math.Max(mesh.Colors[0], 0);
-                    e.Name = mesh._id;
                     return e;
                 case "AREA":
                     GSAArea a = new GSAArea();
                     a.SetSpeckleProperties(mesh.Properties);
                     a.Coor = mesh.Vertices.ToArray();
                     a.Color = Math.Max(mesh.Colors[0],0);
-                    a.Name = mesh._id;
                     return a;
                 default:
                     return null;
