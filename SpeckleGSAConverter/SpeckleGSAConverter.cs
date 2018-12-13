@@ -546,7 +546,7 @@ namespace SpeckleGSA
             GSAObject obj;
 
             if (line.Properties == null || !line.Properties.ContainsKey("Structural"))
-                obj = new GSALine();
+                obj = new GSAElement();
             else
             { 
                 Dictionary<string, object> dict = line.Properties["Structural"] as Dictionary<string, object>;
@@ -575,6 +575,7 @@ namespace SpeckleGSA
 
             if (arc.Properties == null || !arc.Properties.ContainsKey("Structural"))
             {
+                //TODO: Need to discretize this arc into elements!
                 obj = new GSALine();
                 obj.Type = "ARC_THIRD_PT";
             }
@@ -602,7 +603,7 @@ namespace SpeckleGSA
         {
             if (mesh.Properties == null || !mesh.Properties.ContainsKey("Structural"))
             {
-                List<GSAArea> areas = new List<GSAArea>();
+                List<GSAElement> elements = new List<GSAElement>();
 
                 List<double[]> coor = new List<double[]>();
                 for (int i = 0; i < mesh.Vertices.Count / 3; i++)
@@ -614,18 +615,22 @@ namespace SpeckleGSA
                     int val = mesh.Faces[counter++] + 3;
                     int coorCounter = 0;
 
-                    GSAArea a = new GSAArea();
-                    List<double> aCoor = new List<double>();
+                    GSAElement e = new GSAElement();
+
+                    if (val == 3) e.Type = "TRI3";
+                    else if (val == 4) e.Type = "QUAD4";
+
+                    List<double> eCoor = new List<double>();
                     while (coorCounter < val)
                     {
-                        aCoor.AddRange(coor[mesh.Faces[counter++]]);
+                        eCoor.AddRange(coor[mesh.Faces[counter++]]);
                         coorCounter++;
                     }
-                    a.Coor = aCoor.ToArray();
-                    a.Connectivity = new int[aCoor.Count / 3];
-                    areas.Add(a);
+                    e.Coor = eCoor.ToArray();
+                    e.Connectivity = new int[eCoor.Count / 3];
+                    elements.Add(e);
                 }
-                return areas.ToArray();
+                return elements.ToArray();
             }
 
 
