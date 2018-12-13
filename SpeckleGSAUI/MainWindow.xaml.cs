@@ -20,6 +20,7 @@ using System.Windows.Interop;
 using Microsoft.Win32;
 using System.Windows.Threading;
 using System.Collections.ObjectModel;
+using Dragablz;
 
 namespace SpeckleGSAUI
 {
@@ -28,126 +29,32 @@ namespace SpeckleGSAUI
     /// </summary>
     public partial class MainWindow : Window
     {
-        const int UPDATE_INTERVAL = 2000;
-
-        public ObservableCollection<Tuple<string, string>> StreamData { get; set; }
         public ObservableCollection<string> Messages { get; set; }
+        public ObservableCollection<TabItem> Tabs;
 
-        public string ModelName { get; set; }
-        public string ReceiverNodeStreamID { get; set; }
-        public string ReceiverSectionStreamID { get; set; }
-        public string ReceiverElementStreamID { get; set; }
-
-        public UserManager userManager;
-        public GSAController gsa;
-
-      public MainWindow()
+        public MainWindow()
         {
             InitializeComponent();
 
-            //For testing purposes
-            ServerAddress.Text = "https://hestia.speckle.works/api/v1";
-            EmailAddress.Text = "mishael.nuh@arup.com";
-            Password.Password = "temporaryPassword";
-
-            ModelName = "";
-            ReceiverNodeStreamID = "";
-            ReceiverSectionStreamID = "";
-            ReceiverElementStreamID = "";
-            StreamData = new ObservableCollection<Tuple<string, string>>();
-            Messages = new ObservableCollection<string>();
-
             DataContext = this;
 
-            gsa = new GSAController();
-            gsa.Messages.MessageAdded += AddMessage;
-            gsa.Messages.ErrorAdded += AddError;
+            Messages = new ObservableCollection<string>();
+            Tabs = new ObservableCollection<TabItem>();
+
+            ControlPanelContainer.ItemsSource = Tabs;
+            MessagePane.ItemsSource = Messages;
         }
 
-        #region Speckle Operations
-        private async void Login(object sender, RoutedEventArgs e)
+        private void AddControlPanel(object sender, RoutedEventArgs e)
         {
-            await gsa.Login(EmailAddress.Text, Password.Password, ServerAddress.Text);
-        }
+            TabItem tab = new TabItem();
+            tab.Header = "TEST";
+            tab.Content = new ControlPanel(AddMessage,AddError);
 
-        private async void UpdateStreamList(object sender, RoutedEventArgs e)
-        {
-            await gsa.GetStreamList().ContinueWith(res =>
-            {
-                Application.Current.Dispatcher.BeginInvoke(
-                        DispatcherPriority.Background,
-                        new Action(() =>
-                        {
-                            List<Tuple<string, string>> streams = res.Result;
-                            if (streams != null)
-                            {
-                                streams.Reverse();
-                                StreamData.Clear();
-                                foreach (Tuple<string, string> t in streams)
-                                    StreamData.Add(t);
-                            }
-                        }
-                        ));
-            }
-            );
-        }
+            Tabs.Add(tab);
 
-        private async void CloneModelStreams(object sender, RoutedEventArgs e)
-        {
-            await gsa.CloneModelStreams();
+            ControlPanelContainer.SelectedIndex += 1;
         }
-
-        #endregion
-
-        #region GSA
-        private async void LinkGSA(object sender, RoutedEventArgs e)
-        {
-            await gsa.Link();
-        }
-
-        private async void NewGSAFile(object sender, RoutedEventArgs e)
-        {
-            await gsa.NewFile();
-        }
-
-        private async void OpenGSAFile(object sender, RoutedEventArgs e)
-        {
-            OpenFileDialog openFileDialog = new OpenFileDialog();
-            if (openFileDialog.ShowDialog() == true)
-                await gsa.OpenFile(openFileDialog.FileName);
-        }
-        #endregion
-
-        #region Sender
-        private async void SendStream(object sender, RoutedEventArgs e)
-        {
-            await gsa.ExportObjects(ModelName).ContinueWith(
-                delegate
-                {
-                    Application.Current.Dispatcher.BeginInvoke(
-                        DispatcherPriority.Background,
-                        new Action(() =>
-                        {
-                            SenderNodeStreamID.Text = gsa.SenderNodeStreamID;
-                            SenderSectionStreamID.Text = gsa.SenderSectionStreamID;
-                            SenderElementStreamID.Text = gsa.SenderElementStreamID;
-                        }
-                        ));
-                }
-            );
-        }
-        #endregion
-
-        #region Receiver
-        private async void ReceiveStream(object sender, RoutedEventArgs e)
-        {
-            await gsa.ImportObjects(new Dictionary<string, string>()
-            {
-                { "Nodes", ReceiverNodeStreamID },
-                { "Elements", ReceiverElementStreamID },
-            });
-        }
-        #endregion
 
         #region Log
         private void AddMessage(object sender, MessageEventArgs e)
@@ -174,13 +81,6 @@ namespace SpeckleGSAUI
                 }
                 )
             );
-        }
-        #endregion
-
-        #region UI
-        private void CopyStreamList(object sender, DataGridRowClipboardEventArgs e)
-        {
-            e.ClipboardRowContent.RemoveAt(0);
         }
         #endregion
     }

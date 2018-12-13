@@ -14,3 +14,5 @@ C:\Speckle\SpeckleGSA\SpeckleGSAConverter\bin\Debug\SQLite-net.dll
 C:\Speckle\SpeckleGSA\SpeckleGSAConverter\bin\Debug\SQLitePCLRaw.core.dll
 C:\Speckle\SpeckleGSA\SpeckleGSAConverter\bin\Debug\SQLitePCLRaw.batteries_v2.dll
 C:\Speckle\SpeckleGSA\SpeckleGSAConverter\bin\Debug\SQLitePCLRaw.provider.e_sqlite3.dll
+C:\Speckle\SpeckleGSA\SpeckleGSAConverter\bin\Debug\x86\e_sqlite3.dll
+C:\Speckle\SpeckleGSA\SpeckleGSAConverter\bin\Debug\x64\e_sqlite3.dll

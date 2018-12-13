@@ -19,7 +19,7 @@ namespace SpeckleGSA
 
         public async Task<List<Tuple<string, string>>> GetStreams()
         {
-            ResponseStream response = await myClient.StreamsGetAllAsync();
+            ResponseStream response = await myClient.StreamsGetAllAsync(null);
 
             List<Tuple<string, string>> ret = new List<Tuple<string, string>>();
 
