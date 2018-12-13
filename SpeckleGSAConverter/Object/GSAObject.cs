@@ -14,13 +14,11 @@ namespace SpeckleGSA
         public string GSAEntity { get; set; }
         public string Name { get; set; }
 
-        public string[] SpeckleConnectivity { get; set; }
+        public int Reference { get; set; }
+        public int[] Connectivity { get; set; }
     
-        public string SpeckleID;
-        public int Ref;
         public double[] Coor;
         public object Color;
-        public int[] Connectivity;
 
         public ComAuto gsa;
 
@@ -62,13 +60,11 @@ namespace SpeckleGSA
         public GSAObject(string entity)
         {
             GSAEntity = entity;
-            Ref = 0;
+            Reference = 0;
             Name = "";
             Color = null;
-            Coor = new double[1];
+            Coor = new double[0];
             Connectivity = new int[0];
-
-            SpeckleConnectivity = new string[0];
 
             gsa = null;
         }

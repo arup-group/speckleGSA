@@ -439,13 +439,13 @@ namespace SpeckleGSA
                         element.Coor[0],
                         element.Coor[1],
                         element.Coor[2],
-                        element.Ref.ToString(),
+                        element.Reference.ToString(),
                         element.GetSpeckleProperties());
                     break;
                 case 2:
                     obj = new SpeckleLine(
                         element.Coor,
-                        element.Ref.ToString(),
+                        element.Reference.ToString(),
                         element.GetSpeckleProperties());
                     break;
                 default:
@@ -458,7 +458,7 @@ namespace SpeckleGSA
                             element.Color.ToSpeckleColor(),
                             element.Coor.Length / 3).ToArray(),
                         null,
-                        element.Ref.ToString(),
+                        element.Reference.ToString(),
                         element.GetSpeckleProperties());
                     break;
             }
@@ -474,18 +474,18 @@ namespace SpeckleGSA
                 case "LINE":
                     obj = new SpeckleLine(
                         line.Coor,
-                        line.Ref.ToString(),
+                        line.Reference.ToString(),
                         line.GetSpeckleProperties());
                     break;
                 case "ARC_RADIUS":
                     obj = ArcRadiustoSpeckleArc(line.Coor, line.Radius);
-                    obj.ApplicationId = line.Ref.ToString();
+                    obj.ApplicationId = line.Reference.ToString();
                     obj.Properties = line.GetSpeckleProperties();
                     obj.GenerateHash();
                     break;
                 case "ARC_THIRD_PT":
                     obj = Arc3PointtoSpeckleArc(line.Coor);
-                    obj.ApplicationId = line.Ref.ToString();
+                    obj.ApplicationId = line.Reference.ToString();
                     obj.Properties = line.GetSpeckleProperties();
                     obj.GenerateHash();
                     break;
@@ -501,7 +501,7 @@ namespace SpeckleGSA
             mesh.Vertices = area.Coor.ToList();
             mesh.Faces = (new int[] { area.Coor.Length / 3 - 3 }.Concat(
                     Enumerable.Range(0, area.Coor.Length / 3).ToArray())).ToList();
-            mesh.ApplicationId = area.Ref.ToString();
+            mesh.ApplicationId = area.Reference.ToString();
             mesh.Colors = Enumerable.Repeat(
                     area.Color.ToSpeckleColor(),
                     (int)(area.Coor.Length / 3)).ToList();
@@ -538,7 +538,6 @@ namespace SpeckleGSA
             }
 
             obj.Coor = point.Value.ToArray();
-            obj.SpeckleID = point._id;
             return obj;
         }
 
@@ -567,7 +566,6 @@ namespace SpeckleGSA
                 obj.SetSpeckleProperties(line.Properties);
             }
             obj.Coor = line.Value.ToArray();
-            obj.SpeckleID = line._id;
             return obj;
         }
 
@@ -597,7 +595,6 @@ namespace SpeckleGSA
             }
 
             obj.Coor = SpeckleArctoArc3Point(arc);
-            obj.SpeckleID = arc._id;
             return obj;
         }
 

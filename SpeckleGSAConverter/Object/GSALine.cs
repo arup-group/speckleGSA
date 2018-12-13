@@ -53,7 +53,7 @@ namespace SpeckleGSA
             string[] pieces = command.ListSplit(",");
 
             int counter = 1; // Skip identifier
-            Ref = Convert.ToInt32(pieces[counter++]);
+            Reference = Convert.ToInt32(pieces[counter++]);
             Name = pieces[counter++].Trim(new char[] { '"' });
             Color = pieces[counter++].ParseGSAColor();
             Type = pieces[counter++];
@@ -89,7 +89,7 @@ namespace SpeckleGSA
 
             ls.Add("SET");
             ls.Add("LINE.3");
-            ls.Add(Ref.ToString());
+            ls.Add(Reference.ToString());
             ls.Add(Name);
             if (Color == null)
                 ls.Add("NO_RGB");

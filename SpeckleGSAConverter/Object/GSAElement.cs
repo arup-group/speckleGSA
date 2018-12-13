@@ -15,6 +15,7 @@ namespace SpeckleGSA
         public int OrientNode { get; set; }
         public Dictionary<string, object> EndStiffness { get; set; }
         public Dictionary<string, object> EndOffset { get; set; }
+        public string Action { get; set; }
         public bool Dummy { get; set; }
 
         public GSAElement() : base("ELEMENT")
@@ -54,6 +55,7 @@ namespace SpeckleGSA
                 { "y", 0.0 },
                 { "z", 0.0 },
             };
+            Action = "NORMAL";
             Dummy = false;
         }
 
@@ -62,7 +64,7 @@ namespace SpeckleGSA
             string[] pieces = command.ListSplit(",");
 
             int counter = 1; // Skip identifier
-            Ref = Convert.ToInt32(pieces[counter++]);
+            Reference = Convert.ToInt32(pieces[counter++]);
             Name = pieces[counter++].Trim(new char[] { '"' });
             Color = pieces[counter++].ParseGSAColor();
             Type = pieces[counter++];
@@ -94,6 +96,7 @@ namespace SpeckleGSA
             EndOffset["x-end"] = Convert.ToDouble(pieces[counter++]);
             EndOffset["y"] = Convert.ToDouble(pieces[counter++]);
             EndOffset["z"] = Convert.ToDouble(pieces[counter++]);
+            Action = pieces[counter++];
             Dummy = pieces[counter++] == "DUMMY";
         }
 
@@ -103,7 +106,7 @@ namespace SpeckleGSA
 
             ls.Add("SET");
             ls.Add("EL.3");
-            ls.Add(Ref.ToString());
+            ls.Add(Reference.ToString());
             ls.Add(Name);
             if (Color == null)
                 ls.Add("NO_RGB");
@@ -152,6 +155,7 @@ namespace SpeckleGSA
             ls.Add(((double)EndOffset["y"]).ToString());
             ls.Add(((double)EndOffset["z"]).ToString());
 
+            ls.Add(Action);
             ls.Add(Dummy ? "DUMMY" : "");
             Console.WriteLine(string.Join(",", ls));
             return string.Join(",", ls);

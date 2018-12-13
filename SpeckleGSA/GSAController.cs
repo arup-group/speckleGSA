@@ -178,13 +178,8 @@ namespace SpeckleGSA
                 GSAElement e = new GSAElement();
                 e.ParseGWACommand(p);
 
-                e.SpeckleConnectivity = nodes
-                    .Where(n => e.Connectivity.Contains(n.Ref))
-                    .Select(n => n.SpeckleID)
-                    .ToArray();
-
                 e.Coor = nodes
-                    .Where(n => e.Connectivity.Contains(n.Ref))
+                    .Where(n => e.Connectivity.Contains(n.Reference))
                     .SelectMany(n => n.Coor)
                     .ToArray();
 
@@ -210,13 +205,8 @@ namespace SpeckleGSA
                 GSALine l = new GSALine();
                 l.ParseGWACommand(p);
 
-                l.SpeckleConnectivity = nodes
-                    .Where(n => l.Connectivity.Contains(n.Ref))
-                    .Select(n => n.SpeckleID)
-                    .ToArray();
-
                 l.Coor = nodes
-                    .Where(n => l.Connectivity.Contains(n.Ref))
+                    .Where(n => l.Connectivity.Contains(n.Reference))
                     .SelectMany(n => n.Coor)
                     .ToArray();
 
@@ -249,13 +239,8 @@ namespace SpeckleGSA
                 GSAArea a = new GSAArea();
                 a.ParseGWACommand(p);
 
-                a.SpeckleConnectivity = lines
-                    .Where(l => a.Connectivity.Contains(l.Ref))
-                    .Select(l => l.SpeckleID)
-                    .ToArray();
-
                 List<List<double>> lineCoor = lines
-                    .Where(l => a.Connectivity.Contains(l.Ref))
+                    .Where(l => a.Connectivity.Contains(l.Reference))
                     .Select(l => l.Coor.Take(6).ToList())
                     .ToList();
 
@@ -328,17 +313,26 @@ namespace SpeckleGSA
             objectIDs = await senders["Nodes"].UpdateDataAsync(modelName + ".nodes", bucketObjects);
 
             Messages.AddMessage("Streamed " + objectIDs.Count() + " objects.");
-
-            nodes = UpdateObjectIDs(objectIDs["Nodes"], nodes.ToArray()).Select(n => n as GSANode).ToList();
+            
             bucketObjects.Remove("Nodes");
 
-            // Add lines to .elements
+            // Add .elements
             Messages.AddMessage("Sending .elements stream.");
 
             List<GSALine> lines = GetLines(nodes);
             bucketObjects["Lines"] = new List<object>();
             foreach (GSALine l in lines)
                 bucketObjects["Lines"].Add(l.ToSpeckle());
+
+            List<GSAArea> areas = GetAreas(lines);
+            bucketObjects["Areas"] = new List<object>();
+            foreach (GSAArea a in areas)
+                bucketObjects["Areas"].Add(a.ToSpeckle());
+
+            List<GSAElement> elements = GetElements(nodes);
+            bucketObjects["Elements"] = new List<object>();
+            foreach (GSAElement e in elements)
+                bucketObjects["Elements"].Add(e.ToSpeckle());
 
             if (!senders.ContainsKey("Elements"))
             {
@@ -350,33 +344,12 @@ namespace SpeckleGSA
             Messages.AddMessage(".elements sender streamID: " + senders["Elements"].StreamID + ".");
 
             Messages.AddMessage("Lines: " + bucketObjects["Lines"].Count() + ".");
-
-            objectIDs = await senders["Elements"].UpdateDataAsync(modelName + ".elements", bucketObjects);
-
-            Messages.AddMessage("Streamed " + objectIDs.Count() + " objects.");
-
-            lines = UpdateObjectIDs(objectIDs["Lines"], lines.ToArray()).Select(n => n as GSALine).ToList();
-
-            // Add areas and elements to .elements
-            List<GSAArea> areas = GetAreas(lines);
-            bucketObjects["Areas"] = new List<object>();
-            foreach (GSAArea a in areas)
-                bucketObjects["Areas"].Add(a.ToSpeckle());
-
-            List<GSAElement> elements = GetElements(nodes);
-            bucketObjects["Elements"] = new List<object>();
-            foreach (GSAElement e in elements)
-                bucketObjects["Elements"].Add(e.ToSpeckle());
-            
             Messages.AddMessage("Areas: " + bucketObjects["Areas"].Count() + ".");
             Messages.AddMessage("Elements: " + bucketObjects["Elements"].Count() + ".");
 
             objectIDs = await senders["Elements"].UpdateDataAsync(modelName + ".elements", bucketObjects);
 
             Messages.AddMessage("Streamed " + objectIDs.Count() + " objects.");
-
-            areas = UpdateObjectIDs(objectIDs["Areas"], areas.ToArray()).Select(n => n as GSAArea).ToList();
-            elements = UpdateObjectIDs(objectIDs["Elements"], elements.ToArray()).Select(n => n as GSAElement).ToList();
 
             Messages.AddMessage("Sending completed!");
         }
@@ -409,10 +382,9 @@ namespace SpeckleGSA
             }
         }
 
-        private int AddNode(GSANode node, ref Dictionary<string, object> dict, ref GSARefCounters counter)
+        private int AddNode(GSANode node, ref Dictionary<string, object> dict, ref GSARefCounters counter, bool addToDict)
         {
-
-            if (node.SpeckleID == "")
+            if (node.Reference == 0)
             {
                 List<GSANode> matches = (dict["Nodes"] as List<GSANode>)
                     .Where(n => (Math.Pow(n.Coor[0] - node.Coor[0], 2) +
@@ -424,60 +396,33 @@ namespace SpeckleGSA
                 if (matches.Count == 0)
                 {
                     node = counter.RefNode(node);
+                    if (addToDict)
+                        (dict["Nodes"] as List<GSANode>).Add(node);
 
                     gsaObj.GwaCommand(node.GetGWACommand());
-                    (dict["Nodes"] as List<GSANode>).Add(node);
 
-                    Messages.AddMessage("Created new node " + node.Ref.ToString() + ".");
+                    Messages.AddMessage("Created new node " + node.Reference.ToString() + ".");
 
-                    return node.Ref;
+                    return node.Reference;
                 }
                 else
-                    return matches[0].Ref;
+                    return matches[0].Reference;
             }
 
-            // Node from SpeckleServer
             else
             {
                 node = counter.RefNode(node);
 
                 gsaObj.GwaCommand(node.GetGWACommand());
 
-                return node.Ref;
+                return node.Reference;
             }
         }
 
-        private int AddLine(GSALine line, ref Dictionary<string, object> dict, ref GSARefCounters counter)
+        private int AddLine(GSALine line, ref Dictionary<string, object> dict, ref GSARefCounters counter, bool addToDict)
         {
-            if (line.SpeckleConnectivity.Length > 0)
+            if (line.Reference == 0)
             {
-                // Add based on connectivity
-                int[] connectivity = new int[line.SpeckleConnectivity.Length];
-
-                for (int i = 0; i < line.SpeckleConnectivity.Length; i++)
-                    connectivity[i] = (dict["Nodes"] as List<GSANode>)
-                        .Where(n => n.SpeckleID == line.SpeckleConnectivity[i])
-                        .Select(n => n.Ref).FirstOrDefault();
-
-                if (connectivity.Contains(0))
-                {
-                    List<GSAObject> lNodes = line.GetChildren();
-                    line.Connectivity = new int[lNodes.Count];
-                    for (int i = 0; i < lNodes.Count; i++)
-                        line.Connectivity[i] = AddNode((lNodes[i] as GSANode), ref dict, ref counter);
-                }
-                else
-                    line.Connectivity = connectivity;
-
-                line = counter.RefLine(line);
-
-                gsaObj.GwaCommand(line.GetGWACommand());
-
-                return line.Ref;
-            }
-            else
-            {
-                // Line generated by SpeckleGSA containing only coor
                 List<GSALine> matches = (dict["Lines"] as List<GSALine>).Where(
                             l => l.Type == line.Type &
                             ((l.Coor[0] == line.Coor[0] &
@@ -498,109 +443,129 @@ namespace SpeckleGSA
                     List<GSAObject> lNodes = line.GetChildren();
                     line.Connectivity = new int[lNodes.Count];
                     for (int i = 0; i < lNodes.Count; i++)
-                        line.Connectivity[i] = AddNode((lNodes[i] as GSANode), ref dict, ref counter);
+                        line.Connectivity[i] = AddNode((lNodes[i] as GSANode), ref dict, ref counter, true);
 
                     line = counter.RefLine(line);
-                    
+                    if (addToDict)
+                        (dict["Lines"] as List<GSALine>).Add(line);
+
                     gsaObj.GwaCommand(line.GetGWACommand());
 
-                    (dict["Lines"] as List<GSALine>).Add(line);
+                    Messages.AddMessage("Created new line " + line.Reference.ToString() + ".");
 
-                    Messages.AddMessage("Created new line " + line.Ref.ToString() + ".");
-
-                    return line.Ref;
+                    return line.Reference;
                 }
                 else
-                    return matches[0].Ref;
-            }
-        }
-
-        private int AddArea(GSAArea area, ref Dictionary<string, object> dict, ref GSARefCounters counter)
-        {
-            if (area.SpeckleConnectivity.Length > 0)
-            {
-                // Add based on connectivity
-                int[] connectivity = new int[area.SpeckleConnectivity.Length];
-
-                for (int i = 0; i < area.SpeckleConnectivity.Length; i++)
-                    connectivity[i] = (dict["Lines"] as List<GSALine>)
-                        .Where(l => l.SpeckleID == area.SpeckleConnectivity[i])
-                        .Select(l => l.Ref).FirstOrDefault();
-
-                if (connectivity.Contains(0))
-                {
-                    List<GSAObject> aLines = area.GetChildren();
-                    area.Connectivity = new int[aLines.Count];
-                    for (int i = 0; i < aLines.Count; i++)
-                        area.Connectivity[i] = AddLine((aLines[i] as GSALine), ref dict, ref counter);
-                }
-                else
-                    area.Connectivity = connectivity;
-
-                area = counter.RefArea(area);
-
-                gsaObj.GwaCommand(area.GetGWACommand());
-                return area.Ref;
+                    return matches[0].Reference;
             }
             else
             {
-                // Area generated by SpeckleGSA containing only coor
+                for (int i = 0; i < line.Connectivity.Length; i++)
+                    line.Connectivity[i] = (dict["Nodes"] as List<GSANode>)
+                        .Where(n => n.Reference == line.Connectivity[i])
+                        .Select(n => n.Reference).FirstOrDefault();
+
+                if (line.Connectivity.Contains(0))
+                {
+                    List<GSAObject> lNodes = line.GetChildren();
+                    for (int i = 0; i < line.Connectivity.Length; i++)
+                        if (line.Connectivity[i] == 0)
+                            line.Connectivity[i] = AddNode((lNodes[i] as GSANode), ref dict, ref counter, true);
+                }
+
+                line = counter.RefLine(line);
+
+                gsaObj.GwaCommand(line.GetGWACommand());
+
+                return line.Reference;
+            }
+        }
+
+        private int AddArea(GSAArea area, ref Dictionary<string, object> dict, ref GSARefCounters counter, bool addToDict)
+        {
+            if (area.Reference == 0)
+            {
                 // No clash or overlap check
                 area = counter.RefArea(area);
 
                 List<GSAObject> aLines = area.GetChildren();
                 area.Connectivity = new int[aLines.Count];
                 for (int i = 0; i < aLines.Count; i++)
-                    area.Connectivity[i] = AddLine((aLines[i] as GSALine), ref dict, ref counter);
+                    area.Connectivity[i] = AddLine((aLines[i] as GSALine), ref dict, ref counter, true);
 
                 gsaObj.GwaCommand(area.GetGWACommand());
+                if (addToDict)
+                    (dict["Areas"] as List<GSAArea>).Add(area);
 
-                Messages.AddMessage("Created new area " + area.Ref.ToString() + ".");
+                Messages.AddMessage("Created new area " + area.Reference.ToString() + ".");
 
-                return area.Ref;
+                return area.Reference;
+            }
+
+            else
+            {
+                for (int i = 0; i < area.Connectivity.Length; i++)
+                    area.Connectivity[i] = (dict["Lines"] as List<GSALine>)
+                        .Where(l => l.Reference == area.Connectivity[i])
+                        .Select(l => l.Reference).FirstOrDefault();
+
+                if (area.Connectivity.Contains(0))
+                {
+                    List<GSAObject> aLines = area.GetChildren();
+                    for (int i = 0; i < area.Connectivity.Length; i++)
+                        if (area.Connectivity[i] == 0)
+                            area.Connectivity[i] = AddLine((aLines[i] as GSALine), ref dict, ref counter, true);
+                }
+
+                area = counter.RefArea(area);
+
+                gsaObj.GwaCommand(area.GetGWACommand());
+                return area.Reference;
             }
         }
 
-        private int AddElement(GSAElement element, ref Dictionary<string, object> dict, ref GSARefCounters counter)
+        private int AddElement(GSAElement element, ref Dictionary<string, object> dict, ref GSARefCounters counter, bool addToDict)
         {
-
-            if (element.SpeckleConnectivity.Length == 0)
+            if (element.Reference == 0)
             {
                 // this is a bad element definition
-                Messages.AddError("Bad connectivity with element " + element.SpeckleID + ".");
+                Messages.AddError("Bad connectivity with element.");
 
                 List<GSAObject> eNodes = element.GetChildren();
                 element.Connectivity = new int[eNodes.Count];
                 for (int i = 0; i < eNodes.Count; i++)
-                    element.Connectivity[i] = AddNode((eNodes[i] as GSANode), ref dict, ref counter);
+                    element.Connectivity[i] = AddNode((eNodes[i] as GSANode), ref dict, ref counter, true);
 
                 element = counter.RefElement(element);
+                if (addToDict)
+                    (dict["Element"] as List<GSAElement>).Add(element);
                 gsaObj.GwaCommand(element.GetGWACommand());
 
-                Messages.AddMessage("Created new element " + element.Ref.ToString() + ".");
+                Messages.AddMessage("Created new element " + element.Reference.ToString() + ".");
 
-                return element.Ref;
+                return element.Reference;
             }
-
-            int[] connectivity = new int[element.SpeckleConnectivity.Length];
-
-            for (int i = 0; i < element.SpeckleConnectivity.Length; i++)
-                connectivity[i] = (dict["Nodes"] as List<GSANode>)
-                    .Where(n => n.SpeckleID == element.SpeckleConnectivity[i])
-                    .Select(n => n.Ref).FirstOrDefault();
-
-            if (connectivity.Contains(0))
+            else
             {
-                element.SpeckleConnectivity = new string[0];
-                return AddElement(element, ref dict, ref counter);
+                for (int i = 0; i < element.Connectivity.Length; i++)
+                    element.Connectivity[i] = (dict["Nodes"] as List<GSANode>)
+                        .Where(n => n.Reference == element.Connectivity[i])
+                        .Select(n => n.Reference).FirstOrDefault();
+
+                if (element.Connectivity.Contains(0))
+                {
+                    List<GSAObject> eNodes = element.GetChildren();
+                    for (int i = 0; i < element.Connectivity.Length; i++)
+                        if (element.Connectivity[i] == 0)
+                            element.Connectivity[i] = AddNode((eNodes[i] as GSANode), ref dict, ref counter, true);
+                }
+
+                element = counter.RefElement(element);
+
+                gsaObj.GwaCommand(element.GetGWACommand());
+
+                return element.Reference;
             }
-
-            element.Connectivity = connectivity;
-
-            element = counter.RefElement(element);
-
-            gsaObj.GwaCommand(element.GetGWACommand());
-            return element.Ref;
         }
 
         public async Task ImportObjects(Dictionary<string, string> streamIDs)
@@ -683,22 +648,22 @@ namespace SpeckleGSA
             // Nodes
             if (objects.ContainsKey("Nodes"))
                 foreach (GSANode n in objects["Nodes"] as List<GSANode>)
-                    AddNode(n, ref objects, ref counter);
+                    AddNode(n, ref objects, ref counter, false);
 
             // Lines 
             if (objects.ContainsKey("Lines"))
                 foreach (GSALine l in objects["Lines"] as List<GSALine>)
-                    AddLine(l, ref objects, ref counter);
+                    AddLine(l, ref objects, ref counter, false);
 
             // Areas
             if (objects.ContainsKey("Areas"))
                 foreach (GSAArea a in objects["Areas"] as List<GSAArea>)
-                    AddArea(a, ref objects, ref counter);
+                    AddArea(a, ref objects, ref counter, false);
 
             // Elements
             if (objects.ContainsKey("Elements"))
                 foreach (GSAElement e in objects["Elements"] as List<GSAElement>)
-                    AddElement(e, ref objects, ref counter);
+                    AddElement(e, ref objects, ref counter, false);
 
             Messages.AddMessage("Streamed " + counter.TotalObjects + " objects.");
 
@@ -710,27 +675,27 @@ namespace SpeckleGSA
         #endregion
 
         #region Update GSA
-        public GSAObject[] UpdateObjectIDs(string[] keys, GSAObject[] objects)
-        {
-            if (keys.Length == 0) return objects;
-            if (objects.Length == 0) return objects;
+        //public GSAObject[] UpdateObjectIDs(string[] keys, GSAObject[] objects)
+        //{
+        //    if (keys.Length == 0) return objects;
+        //    if (objects.Length == 0) return objects;
 
-            string[] newIDs = keys.Where(k => !objects.Select(g => g.SpeckleID).ToList().Contains(k)).ToArray();
+        //    string[] newIDs = keys.Where(k => !objects.Select(g => g.Reference).ToList().Contains(k)).ToArray();
 
-            int counter = 0;
-            foreach (GSAObject o in objects)
-            {
-                if (o.SpeckleID == null | o.SpeckleID == "")
-                {
-                    o.SpeckleID = newIDs[counter++];
-                    gsaObj.GwaCommand(o.GetGWACommand());
-                    Messages.AddMessage("Updated " + o.GSAEntity + " " + o.Ref + " with ID " + o.SpeckleID + ".");
-                }
-                if (counter >= newIDs.Length) break;
-            }
+        //    int counter = 0;
+        //    foreach (GSAObject o in objects)
+        //    {
+        //        if (o.SpeckleID == null | o.SpeckleID == "")
+        //        {
+        //            o.SpeckleID = newIDs[counter++];
+        //            gsaObj.GwaCommand(o.GetGWACommand());
+        //            Messages.AddMessage("Updated " + o.GSAEntity + " " + o.Ref + " with ID " + o.SpeckleID + ".");
+        //        }
+        //        if (counter >= newIDs.Length) break;
+        //    }
 
-            return objects;
-        }
+        //    return objects;
+        //}
         #endregion
     }
 
@@ -742,6 +707,13 @@ namespace SpeckleGSA
         private int memberCounter;
         private int areaCounter;
         private int regionCounter;
+
+        private List<int> nodeRefsUsed;
+        private List<int> elementRefsUsed;
+        private List<int> lineRefsUsed;
+        private List<int> memberRefsUsed;
+        private List<int> areaRefsUsed;
+        private List<int> regionRefsUsed;
 
         public int TotalObjects
         {
@@ -759,42 +731,109 @@ namespace SpeckleGSA
             memberCounter = 1;
             areaCounter = 1;
             regionCounter = 1;
+
+            nodeRefsUsed = new List<int>();
+            elementRefsUsed = new List<int>();
+            lineRefsUsed = new List<int>();
+            memberRefsUsed = new List<int>();
+            areaRefsUsed = new List<int>();
+            regionRefsUsed = new List<int>();
         }
 
         public GSANode RefNode(GSANode node)
         {
-            node.Ref = nodeCounter++;
+            if (node.Reference > 0) return node;
+            while (nodeRefsUsed.Contains(nodeCounter))
+                nodeCounter++;
+            node.Reference = nodeCounter++;
+            nodeRefsUsed.Add(node.Reference);
             return node;
         }
 
         public GSAElement RefElement(GSAElement element)
         {
-            element.Ref = elementCounter++;
+            if (element.Reference > 0) return element;
+            while (elementRefsUsed.Contains(elementCounter))
+                elementCounter++;
+            element.Reference = elementCounter++;
+            elementRefsUsed.Add(element.Reference);
             return element;
         }
 
         public GSALine RefLine(GSALine line)
         {
-            line.Ref = lineCounter++;
+            if (line.Reference > 0) return line;
+            while (lineRefsUsed.Contains(lineCounter))
+                lineCounter++;
+            line.Reference = lineCounter++;
+            lineRefsUsed.Add(line.Reference);
             return line;
         }
 
         public GSAMember RefMember(GSAMember member)
         {
-            member.Ref = memberCounter++;
+            if (member.Reference > 0) return member;
+            while (memberRefsUsed.Contains(memberCounter))
+                memberCounter++;
+            member.Reference = memberCounter++;
+            memberRefsUsed.Add(member.Reference);
             return member;
         }
 
         public GSAArea RefArea(GSAArea area)
         {
-            area.Ref = areaCounter++;
+            if (area.Reference > 0) return area;
+            while (areaRefsUsed.Contains(areaCounter))
+                areaCounter++;
+            area.Reference = areaCounter++;
+            areaRefsUsed.Add(area.Reference);
             return area;
         }
 
         public GSARegion RefRegion(GSARegion region)
         {
-            region.Ref = regionCounter++;
+            if (region.Reference > 0) return region;
+            while (regionRefsUsed.Contains(regionCounter))
+                regionCounter++;
+            region.Reference = regionCounter++;
+            regionRefsUsed.Add(region.Reference);
             return region;
+        }
+
+        public void AddNodeRefs(List<int> refs)
+        {
+            nodeRefsUsed.AddRange(refs);
+            nodeRefsUsed = nodeRefsUsed.Distinct().ToList();
+        }
+
+        public void AddElementRefs(List<int> refs)
+        {
+            elementRefsUsed.AddRange(refs);
+            elementRefsUsed = elementRefsUsed.Distinct().ToList();
+        }
+
+        public void AddLineRefs(List<int> refs)
+        {
+            lineRefsUsed.AddRange(refs);
+            lineRefsUsed = lineRefsUsed.Distinct().ToList();
+        }
+
+        public void AddNemberRefs(List<int> refs)
+        {
+            memberRefsUsed.AddRange(refs);
+            memberRefsUsed = memberRefsUsed.Distinct().ToList();
+        }
+
+        public void AddAreaRefs(List<int> refs)
+        {
+            areaRefsUsed.AddRange(refs);
+            areaRefsUsed = areaRefsUsed.Distinct().ToList();
+        }
+
+        public void AddRegionRefs(List<int> refs)
+        {
+            regionRefsUsed.AddRange(refs);
+            regionRefsUsed = regionRefsUsed.Distinct().ToList();
         }
     }
 }

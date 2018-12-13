@@ -24,7 +24,6 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="5"/>
             <RowDefinition Height="auto"/>
         </Grid.RowDefinitions>
         <Grid
@@ -48,31 +47,28 @@
                 TextWrapping="Wrap" />
         </Grid>
         <dragablz:TabablzControl Grid.Row="1" 
-            x:Name="ControlPanelContainer">
-            <dragablz:TabablzControl.InterTabController>
-                <dragablz:InterTabController />
-            </dragablz:TabablzControl.InterTabController>
+            x:Name="ControlPanelContainer"
+            ShowDefaultCloseButton="True">
             <dragablz:TabablzControl.HeaderSuffixContent>
                 <Button 
                         Background="Transparent"
-                        HorizontalAlignment="Left"
+                        HorizontalAlignment="Right"
                         BorderBrush="White"
                         BorderThickness="0"
-                        Width="30"
                         Height="40"
                         Foreground="White"
                         FontWeight="Black"
                         FontSize="25"
                         Padding="0"
+                        Margin="25,0,25,0"
                         Content="+"
                         Click="AddControlPanel">
                 </Button>
             </dragablz:TabablzControl.HeaderSuffixContent>
         </dragablz:TabablzControl>
-        <GridSplitter Grid.Row="2" Height="5" Background="#FF0057FF" HorizontalAlignment="Stretch"/>
         <Grid
             Background="#FF0057FF"
-            Grid.Row="3">
+            Grid.Row="2">
             <Grid Margin="25,5,25,25">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="auto"/>

@@ -48,12 +48,12 @@ namespace SpeckleGSAUI
         private void AddControlPanel(object sender, RoutedEventArgs e)
         {
             TabItem tab = new TabItem();
+            tab.Content = new ControlPanel(AddMessage, AddError);
             tab.Header = "TEST";
-            tab.Content = new ControlPanel(AddMessage,AddError);
 
             Tabs.Add(tab);
 
-            ControlPanelContainer.SelectedIndex += 1;
+            ControlPanelContainer.SelectedIndex  = Tabs.Count() - 1;
         }
 
         #region Log
