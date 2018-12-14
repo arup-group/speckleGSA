@@ -512,32 +512,15 @@ namespace SpeckleGSA
         #endregion
 
         #region
-        public static GSAObject ToNative(this SpecklePoint point)
+        public static GSANode ToNative(this SpecklePoint point)
         {
-            GSAObject obj;
+            GSANode obj = new GSANode();
 
-            if (point.Properties==null || !point.Properties.ContainsKey("Structural"))
-                obj = new GSANode();
-            else
-            { 
-                Dictionary<string, object> dict = point.Properties["Structural"] as Dictionary<string, object>;
-
-                switch(dict["GSAEntity"] as string)
-                {
-                    case "NODE":
-                        obj = new GSANode();
-                        break;
-                    case "ELEMENT":
-                        obj = new GSAElement();
-                        break;
-                    default:
-                        return null;
-                }
-
+            if (point.Properties!=null && point.Properties.ContainsKey("Structural"))
                 obj.SetSpeckleProperties(point.Properties);
-            }
 
             obj.Coor = point.Value.ToArray();
+
             return obj;
         }
 

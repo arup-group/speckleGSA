@@ -105,13 +105,13 @@ namespace SpeckleGSA
             List<string> ls = new List<string>();
 
             ls.Add("SET");
-            ls.Add("EL.3");
+            ls.Add("EL.4");
             ls.Add(Reference.ToString());
             ls.Add(Name);
             if (Color == null)
                 ls.Add("NO_RGB");
             else
-                ls.Add(((int)Color).ToString());
+                ls.Add(Color.ToNumString());
             ls.Add(Type);
             ls.Add(Property.ToString());
             ls.Add(Group.ToString());
@@ -150,14 +150,14 @@ namespace SpeckleGSA
             else
                 ls.Add("NO_RLS");
 
-            ls.Add(((double)EndOffset["x-start"]).ToString());
-            ls.Add(((double)EndOffset["x-end"]).ToString());
-            ls.Add(((double)EndOffset["y"]).ToString());
-            ls.Add(((double)EndOffset["z"]).ToString());
+            ls.Add(EndOffset["x-start"].ToNumString());
+            ls.Add(EndOffset["x-end"].ToNumString());
+            ls.Add(EndOffset["y"].ToNumString());
+            ls.Add(EndOffset["z"].ToNumString());
 
             ls.Add(Action);
             ls.Add(Dummy ? "DUMMY" : "");
-            Console.WriteLine(string.Join(",", ls));
+
             return string.Join(",", ls);
         }
 

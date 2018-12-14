@@ -178,12 +178,19 @@ namespace SpeckleGSA
                 GSAElement e = new GSAElement().AttachGSA(gsaObj);
                 e.ParseGWACommand(p);
 
-                e.Coor = nodes
-                    .Where(n => e.Connectivity.Contains(n.Reference))
-                    .SelectMany(n => n.Coor)
-                    .ToArray();
+                if (e.Connectivity.Length == 1)
+                {
+                    nodes.Where(n => e.Connectivity.Contains(n.Reference)).First().Merge0DElement(e);
+                }
+                else
+                {
+                    e.Coor = nodes
+                        .Where(n => e.Connectivity.Contains(n.Reference))
+                        .SelectMany(n => n.Coor)
+                        .ToArray();
 
-                elements.Add(e);
+                    elements.Add(e);
+                }
             }
 
             return elements;
@@ -291,14 +298,16 @@ namespace SpeckleGSA
                 return;
             }
 
-            // Add nodes
-            Messages.AddMessage("Sending .nodes stream.");
+            Messages.AddMessage("Converting objects.");
 
             List<GSANode> nodes = GetNodes();
-            bucketObjects["Nodes"] = new List<object>();
-            foreach (GSANode n in nodes)
-                bucketObjects["Nodes"].Add(n.ToSpeckle());
-
+            List<GSALine> lines = GetLines(nodes);
+            List<GSAArea> areas = GetAreas(lines);
+            List<GSAElement> elements = GetElements(nodes);
+            
+            // Send nodes
+            Messages.AddMessage("Sending .nodes stream.");
+            
             if (!senders.ContainsKey("Nodes"))
             {
                 Messages.AddMessage(".nodes sender not initialized. Creating new .nodes sender.");
@@ -308,6 +317,10 @@ namespace SpeckleGSA
 
             Messages.AddMessage(".nodes sender streamID: " + senders["Nodes"].StreamID + ".");
 
+            bucketObjects["Nodes"] = new List<object>();
+            foreach (GSANode n in nodes)
+                bucketObjects["Nodes"].Add(n.ToSpeckle());
+
             Messages.AddMessage("Nodes: " + bucketObjects["Nodes"].Count() + ".");
 
             objectIDs = await senders["Nodes"].UpdateDataAsync(modelName + ".nodes", bucketObjects);
@@ -316,24 +329,9 @@ namespace SpeckleGSA
             
             bucketObjects.Remove("Nodes");
 
-            // Add .elements
+            // Send .elements
             Messages.AddMessage("Sending .elements stream.");
-
-            List<GSALine> lines = GetLines(nodes);
-            bucketObjects["Lines"] = new List<object>();
-            foreach (GSALine l in lines)
-                bucketObjects["Lines"].Add(l.ToSpeckle());
-
-            List<GSAArea> areas = GetAreas(lines);
-            bucketObjects["Areas"] = new List<object>();
-            foreach (GSAArea a in areas)
-                bucketObjects["Areas"].Add(a.ToSpeckle());
-
-            List<GSAElement> elements = GetElements(nodes);
-            bucketObjects["Elements"] = new List<object>();
-            foreach (GSAElement e in elements)
-                bucketObjects["Elements"].Add(e.ToSpeckle());
-
+            
             if (!senders.ContainsKey("Elements"))
             {
                 Messages.AddMessage(".elements sender not initialized. Creating new .elements sender.");
@@ -342,6 +340,18 @@ namespace SpeckleGSA
             }
 
             Messages.AddMessage(".elements sender streamID: " + senders["Elements"].StreamID + ".");
+
+            bucketObjects["Lines"] = new List<object>();
+            foreach (GSALine l in lines)
+                bucketObjects["Lines"].Add(l.ToSpeckle());
+
+            bucketObjects["Areas"] = new List<object>();
+            foreach (GSAArea a in areas)
+                bucketObjects["Areas"].Add(a.ToSpeckle());
+
+            bucketObjects["Elements"] = new List<object>();
+            foreach (GSAElement e in elements)
+                bucketObjects["Elements"].Add(e.ToSpeckle());
 
             Messages.AddMessage("Lines: " + bucketObjects["Lines"].Count() + ".");
             Messages.AddMessage("Areas: " + bucketObjects["Areas"].Count() + ".");
@@ -369,6 +379,7 @@ namespace SpeckleGSA
             {
                 case "NODE":
                     (dict["Nodes"] as List<GSANode>).Add(obj as GSANode);
+                    (dict["Elements"] as List<GSAElement>).AddRange((obj as GSANode).Extract0DElement());
                     break;
                 case "LINE":
                     (dict["Lines"] as List<GSALine>).Add(obj as GSALine);
@@ -409,7 +420,7 @@ namespace SpeckleGSA
                 }
                 else
                 {
-                    (dict["Nodes"] as List<GSANode>).Where(n => n.Reference == matches[0].Reference).First().Merge(node);
+                    //(dict["Nodes"] as List<GSANode>).Where(n => n.Reference == matches[0].Reference).First().Merge(node);
                     return matches[0].Reference;
                 }
             }
@@ -531,46 +542,35 @@ namespace SpeckleGSA
 
         private int AddElement(GSAElement element, ref Dictionary<string, object> dict, ref GSARefCounters counter, bool addToDict)
         {
-            if (element.Reference == 0)
+            for (int i = 0; i < element.Connectivity.Length; i++)
+                element.Connectivity[i] = (dict["Nodes"] as List<GSANode>)
+                    .Where(n => n.Reference == element.Connectivity[i])
+                    .Select(n => n.Reference).FirstOrDefault();
+            
+            if (element.Connectivity.Length==0 | element.Connectivity.Contains(0))
             {
-                // this is a bad element definition
-                Messages.AddError("Bad connectivity with element.");
-
                 List<GSAObject> eNodes = element.GetChildren();
-                element.Connectivity = new int[eNodes.Count];
-                for (int i = 0; i < eNodes.Count; i++)
-                    element.Connectivity[i] = AddNode((eNodes[i] as GSANode).AttachGSA(gsaObj), ref dict, ref counter, true);
 
+                if (element.Connectivity.Length==0)
+                    element.Connectivity = new int[eNodes.Count];
+
+                for (int i = 0; i < element.Connectivity.Length; i++)
+                    if (element.Connectivity[i] == 0)
+                        element.Connectivity[i] = AddNode((eNodes[i] as GSANode).AttachGSA(gsaObj), ref dict, ref counter, true);
+            }
+
+            if (element.Reference == 0 & addToDict)
+            {
                 element = counter.RefElement(element);
-                if (addToDict)
-                    (dict["Element"] as List<GSAElement>).Add(element);
-                gsaObj.GwaCommand(element.GetGWACommand());
-
-                Messages.AddMessage("Created new element " + element.Reference.ToString() + ".");
-
-                return element.Reference;
+                (dict["Element"] as List<GSAElement>).Add(element);
             }
             else
-            {
-                for (int i = 0; i < element.Connectivity.Length; i++)
-                    element.Connectivity[i] = (dict["Nodes"] as List<GSANode>)
-                        .Where(n => n.Reference == element.Connectivity[i])
-                        .Select(n => n.Reference).FirstOrDefault();
-
-                if (element.Connectivity.Contains(0))
-                {
-                    List<GSAObject> eNodes = element.GetChildren();
-                    for (int i = 0; i < element.Connectivity.Length; i++)
-                        if (element.Connectivity[i] == 0)
-                            element.Connectivity[i] = AddNode((eNodes[i] as GSANode).AttachGSA(gsaObj), ref dict, ref counter, true);
-                }
-
                 element = counter.RefElement(element);
 
-                gsaObj.GwaCommand(element.GetGWACommand());
 
-                return element.Reference;
-            }
+            gsaObj.GwaCommand(element.GetGWACommand());
+
+            return element.Reference;
         }
 
         public async Task ImportObjects(Dictionary<string, string> streamIDs)
@@ -612,28 +612,28 @@ namespace SpeckleGSA
                 }
             }
 
-            //Messages.AddMessage("Creating .elements receiver.");
-            //receivers["Elements"] = new Receiver(userManager.ServerAddress, userManager.ApiToken);
-            //await receivers["Elements"].InitializeReceiver(streamIDs["Elements"]);
+            Messages.AddMessage("Creating .elements receiver.");
+            receivers["Elements"] = new Receiver(userManager.ServerAddress, userManager.ApiToken);
+            await receivers["Elements"].InitializeReceiver(streamIDs["Elements"]);
 
-            //if (receivers["Elements"].StreamID == null || receivers["Elements"].StreamID == "")
-            //{
-            //    Messages.AddError("Could not connect to .elements stream.");
-            //}
-            //else
-            //{
-            //    try
-            //    {
-            //        Messages.AddMessage("Receiving elements.");
-            //        await receivers["Elements"].UpdateDataAsync().ContinueWith(res =>
-            //            convertedObjects.AddRange(res.Result)
-            //        );
-            //    }
-            //    catch (Exception e)
-            //    {
-            //        Messages.AddError(e.Message);
-            //    }
-            //}
+            if (receivers["Elements"].StreamID == null || receivers["Elements"].StreamID == "")
+            {
+                Messages.AddError("Could not connect to .elements stream.");
+            }
+            else
+            {
+                try
+                {
+                    Messages.AddMessage("Receiving elements.");
+                    await receivers["Elements"].UpdateDataAsync().ContinueWith(res =>
+                        convertedObjects.AddRange(res.Result)
+                    );
+                }
+                catch (Exception e)
+                {
+                    Messages.AddError(e.Message);
+                }
+            }
 
             // Populate list
             foreach (object obj in convertedObjects)

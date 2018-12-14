@@ -242,12 +242,22 @@ namespace SpeckleGSA
             }
         }
 
-        public static int AddAxistoGSA(this Dictionary<string,object> axis, ComAuto gsaObj)
+        public static int AddAxistoGSA(this Dictionary<string, object> axis, ComAuto gsaObj)
         {
+            Dictionary<string, object> X = axis["X"] as Dictionary<string, object>;
+            Dictionary<string, object> Y = axis["Y"] as Dictionary<string, object>;
+            Dictionary<string, object> Z = axis["Z"] as Dictionary<string, object>;
+
+            if (X["x"].Equal(1) & X["y"].Equal(0) & X["z"].Equal(0) &
+                Y["x"].Equal(0) & Y["y"].Equal(1) & Y["z"].Equal(0) &
+                Z["x"].Equal(0) & Z["y"].Equal(0) & Z["z"].Equal(1))
+            {
+                return 0;
+            }
+
             List<string> ls = new List<string>();
 
             int res = gsaObj.GwaCommand("HIGHEST,AXIS");
-            Console.WriteLine("HIGHEST IS :" + res.ToString());
 
             ls.Add("AXIS");
             ls.Add((res + 1).ToString());
@@ -257,21 +267,60 @@ namespace SpeckleGSA
             ls.Add("0");
             ls.Add("0");
             ls.Add("0");
-
-            Dictionary<string, object> X = axis["X"] as Dictionary<string, object>;
-            ls.Add(((double)X["x"]).ToString());
-            ls.Add(((double)X["y"]).ToString());
-            ls.Add(((double)X["z"]).ToString());
-
-            Dictionary<string, object> Y = axis["Y"] as Dictionary<string, object>;
-            ls.Add(((double)Y["x"]).ToString());
-            ls.Add(((double)Y["y"]).ToString());
-            ls.Add(((double)Y["z"]).ToString());
+            
+            ls.Add(X["x"].ToNumString());
+            ls.Add(X["y"].ToNumString());
+            ls.Add(X["z"].ToNumString());
+            
+            ls.Add(Y["x"].ToNumString());
+            ls.Add(Y["y"].ToNumString());
+            ls.Add(Y["z"].ToNumString());
 
             gsaObj.GwaCommand(string.Join(",", ls));
 
             return res + 1;
         }
+        #endregion
+
+        #region Mass
+        public static double GetGSAMass(this GSAElement elem, ComAuto gsaObj)
+        {
+            string res = gsaObj.GwaCommand("GET,PROP_MASS," + elem.Property.ToString());
+            string[] pieces = res.ListSplit(",");
+
+            return Convert.ToDouble(pieces[5]);
+        }
+
+        public static int AddMasstoGSA(this double mass, ComAuto gsaObj)
+        {
+            List<string> ls = new List<string>();
+
+            int res = gsaObj.GwaCommand("HIGHEST,PROP_MASS");
+
+            ls.Add("SET");
+            ls.Add("PROP_MASS.2");
+            ls.Add((res + 1).ToString());
+            ls.Add("");
+            ls.Add("NO_RGB");
+            ls.Add("GLOBAL");
+            ls.Add(mass.ToString());
+            ls.Add("0");
+            ls.Add("0");
+            ls.Add("0");
+            ls.Add("0");
+            ls.Add("0");
+            ls.Add("0");
+
+            ls.Add("MOD");
+            ls.Add("100%");
+            ls.Add("100%");
+            ls.Add("100%");
+
+            gsaObj.GwaCommand(string.Join(",", ls));
+
+            return res + 1;
+        }
+
         #endregion
 
         #region Lists
@@ -370,6 +419,28 @@ namespace SpeckleGSA
         public static int ParseElementType(this string type)
         {
             return (int)((ElementType)Enum.Parse(typeof(ElementType), type));
+        }
+        #endregion
+
+        #region Type Conversion
+        public static string ToNumString(this object obj)
+        {
+            if (obj.GetType() == typeof(int))
+                return ((int)obj).ToString();
+            else if (obj.GetType() == typeof(double))
+                return ((double)obj).ToString();
+            else
+                return "0";
+        }
+
+        public static bool Equal(this object obj, double val)
+        {
+            if (obj.GetType() == typeof(int))
+                return (int)obj == Math.Round(val);
+            else if (obj.GetType() == typeof(double))
+                return (double)obj == val;
+            else
+                return false;
         }
         #endregion
     }

@@ -107,18 +107,18 @@ namespace SpeckleGSA
             ls.Add(((bool)Restraint["xx"]) ? "1" : "0");
             ls.Add(((bool)Restraint["yy"]) ? "1" : "0");
             ls.Add(((bool)Restraint["zz"]) ? "1" : "0");
-            ls.Add(((double)Stiffness["x"]).ToString());
-            ls.Add(((double)Stiffness["y"]).ToString());
-            ls.Add(((double)Stiffness["z"]).ToString());
-            ls.Add(((double)Stiffness["xx"]).ToString());
-            ls.Add(((double)Stiffness["yy"]).ToString());
-            ls.Add(((double)Stiffness["zz"]).ToString());
+            ls.Add(Stiffness["x"].ToNumString());
+            ls.Add(Stiffness["y"].ToNumString());
+            ls.Add(Stiffness["z"].ToNumString());
+            ls.Add(Stiffness["xx"].ToNumString());
+            ls.Add(Stiffness["yy"].ToNumString());
+            ls.Add(Stiffness["zz"].ToNumString());
             ls.Add("CM2_MESHTOOLS");
 
             ls.Add((string)MeshData["StepDefinition"]);
-            ls.Add(((double)MeshData["ElemLenStart"]).ToString());
-            ls.Add(((double)MeshData["ElemLenEnd"]).ToString());
-            ls.Add(((double)MeshData["ElemNum"]).ToString());
+            ls.Add(MeshData["ElemLenStart"].ToNumString());
+            ls.Add(MeshData["ElemLenEnd"].ToNumString());
+            ls.Add(MeshData["ElemNum"].ToNumString());
             ls.Add(((bool)MeshData["TieMesh"]) == false ? "NO" : "YES");
 
             return string.Join(",", ls);

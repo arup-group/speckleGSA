@@ -11,7 +11,7 @@ namespace SpeckleGSA
         public Dictionary<string, object> Axis { get; set; }
         public Dictionary<string, object> Restraint { get; set; }
         public Dictionary<string, object> Stiffness { get; set; }
-        public int Mass { get; set; }
+        public double Mass { get; set; }
 
         public Dictionary<string, object> GridData;// { get; set; }
         public Dictionary<string, object> MeshData;// { get; set; }
@@ -152,12 +152,12 @@ namespace SpeckleGSA
             else
             {
                 ls.Add("STIFF");
-                ls.Add(((double)Stiffness["x"]).ToString());
-                ls.Add(((double)Stiffness["y"]).ToString());
-                ls.Add(((double)Stiffness["z"]).ToString());
-                ls.Add(((double)Stiffness["xx"]).ToString());
-                ls.Add(((double)Stiffness["yy"]).ToString());
-                ls.Add(((double)Stiffness["zz"]).ToString());
+                ls.Add(Stiffness["x"].ToNumString());
+                ls.Add(Stiffness["y"].ToNumString());
+                ls.Add(Stiffness["z"].ToNumString());
+                ls.Add(Stiffness["xx"].ToNumString());
+                ls.Add(Stiffness["yy"].ToNumString());
+                ls.Add(Stiffness["zz"].ToNumString());
             }
 
             if (MeshData.Count == 0)
@@ -185,13 +185,44 @@ namespace SpeckleGSA
             return null;
         }
 
+        public void Merge0DElement(GSAElement elem)
+        {
+            if (elem.Type == "MASS")
+            {
+                Mass = elem.GetGSAMass(gsa);
+            }
+        }
+
+        public List<GSAElement> Extract0DElement()
+        {
+            List<GSAElement> elemList = new List<GSAElement>();
+
+            if (Mass > 0)
+            {
+                GSAElement massElem = new GSAElement().AttachGSA(gsa);
+                massElem.Type = "MASS";
+                massElem.Connectivity = new int[] { Reference };
+                massElem.Property = Mass.AddMasstoGSA(gsa);
+                elemList.Add(massElem);
+            }
+            return elemList;
+        }
+
         public void Merge(GSANode mergeNode)
         {
+            Dictionary<string, object> temp = new Dictionary<string, object>();
             foreach (string key in Restraint.Keys)
-                Restraint[key] = (bool)Restraint[key] | (bool)mergeNode.Restraint[key];
+                temp[key] = (bool)Restraint[key] | (bool)mergeNode.Restraint[key];
+            Restraint = temp;
 
+            temp = new Dictionary<string, object>();
             foreach (string key in Stiffness.Keys)
-                Stiffness[key] = Math.Max((double)Stiffness[key], (double)mergeNode.Stiffness[key]);
+                temp[key] = Math.Max((double)Stiffness[key], (double)mergeNode.Stiffness[key]);
+            Stiffness = temp;
+
+            Mass += mergeNode.Mass;
+
+            gsa.GwaCommand(GetGWACommand());
         }
     }
 }
