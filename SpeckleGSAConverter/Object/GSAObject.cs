@@ -6,15 +6,16 @@ using System.Threading.Tasks;
 using Interop.Gsa_9_0;
 using System.Text.RegularExpressions;
 using System.Drawing;
+using System.Windows.Media.Media3D;
 
 namespace SpeckleGSA
 {
     public abstract class GSAObject
     {
         public string GSAEntity { get; set; }
-        public string Name { get; set; }
 
         public int Reference { get; set; }
+        public string Name { get; set; }
         public int[] Connectivity { get; set; }
     
         public double[] Coor;
@@ -69,11 +70,6 @@ namespace SpeckleGSA
             gsa = null;
         }
 
-        public void AttachGSA(ComAuto gsa)
-        {
-            this.gsa = gsa;
-        }
-
         public abstract void ParseGWACommand(string command);
 
         public abstract string GetGWACommand();
@@ -83,6 +79,201 @@ namespace SpeckleGSA
 
     public static class HelperFunctions
     {
+        #region GSA
+        public static GSAObject AttachGSA(this GSAObject obj, ComAuto gsa)
+        {
+            obj.gsa = gsa;
+            return obj;
+        }
+
+        public static GSANode AttachGSA(this GSANode obj, ComAuto gsa)
+        {
+            obj.gsa = gsa;
+            return obj;
+        }
+
+        public static GSALine AttachGSA(this GSALine obj, ComAuto gsa)
+        {
+            obj.gsa = gsa;
+            return obj;
+        }
+
+        public static GSAArea AttachGSA(this GSAArea obj, ComAuto gsa)
+        {
+            obj.gsa = gsa;
+            return obj;
+        }
+
+        public static GSARegion AttachGSA(this GSARegion obj, ComAuto gsa)
+        {
+            obj.gsa = gsa;
+            return obj;
+        }
+
+        public static GSAElement AttachGSA(this GSAElement obj, ComAuto gsa)
+        {
+            obj.gsa = gsa;
+            return obj;
+        }
+
+        public static GSAMember AttachGSA(this GSAMember obj, ComAuto gsa)
+        {
+            obj.gsa = gsa;
+            return obj;
+        }
+        #endregion
+
+        #region Axis
+        public static Dictionary<string,object> EvaluateGSAAxis(this int axis, ComAuto gsaObj, double[] evalAtCoor = null)
+        {
+            // Returns unit vector of each X, Y, Z axis
+            Dictionary<string, object> axisVectors = new Dictionary<string, object>();
+
+            Vector3D x;
+            Vector3D y;
+            Vector3D z;
+
+            switch (axis)
+            {
+                case 0:
+                    // Global
+                    axisVectors["X"] = new Dictionary<string, object> { { "x", 1 }, { "y", 0 }, { "z", 0 } };
+                    axisVectors["Y"] = new Dictionary<string, object> { { "x", 0 }, { "y", 1 }, { "z", 0 } };
+                    axisVectors["Z"] = new Dictionary<string, object> { { "x", 0 }, { "y", 0 }, { "z", 1 } };
+                    return axisVectors;
+                case -11:
+                    // X elevation
+                    axisVectors["X"] = new Dictionary<string, object> { { "x", 0 }, { "y", -1 }, { "z", 0 } };
+                    axisVectors["Y"] = new Dictionary<string, object> { { "x", 0 }, { "y", 0 }, { "z", 1 } };
+                    axisVectors["Z"] = new Dictionary<string, object> { { "x", -1 }, { "y", 0 }, { "z", 0 } };
+                    return axisVectors;
+                case -12:
+                    // Y elevation
+                    axisVectors["X"] = new Dictionary<string, object> { { "x", 1 }, { "y", 0 }, { "z", 0 } };
+                    axisVectors["Y"] = new Dictionary<string, object> { { "x", 0 }, { "y", 0 }, { "z", 1 } };
+                    axisVectors["Z"] = new Dictionary<string, object> { { "x", 0 }, { "y", -1 }, { "z", 0 } };
+                    return axisVectors;
+                case -14:
+                    // Vertical
+                    axisVectors["X"] = new Dictionary<string, object> { { "x", 0 }, { "y", 0 }, { "z", 1 } };
+                    axisVectors["Y"] = new Dictionary<string, object> { { "x", 1 }, { "y", 0 }, { "z", 0 } };
+                    axisVectors["Z"] = new Dictionary<string, object> { { "x", 0 }, { "y", 1 }, { "z", 0 } };
+                    return axisVectors;
+                case -13:
+                    // Global cylindrical
+                    x = new Vector3D(evalAtCoor[0], evalAtCoor[1], 0);
+                    x.Normalize();
+                    z = new Vector3D(0, 0, 1);
+                    y = Vector3D.CrossProduct(z, x);
+
+                    axisVectors["X"] = new Dictionary<string, object> { { "x", x.X }, { "y", x.Y }, { "z", x.Z } };
+                    axisVectors["Y"] = new Dictionary<string, object> { { "x", y.X }, { "y", y.Y }, { "z", y.Z } };
+                    axisVectors["Z"] = new Dictionary<string, object> { { "x", z.X }, { "y", z.Y }, { "z", z.Z } };
+                    return axisVectors;
+                default:
+                    string res = gsaObj.GwaCommand("GET,AXIS," + axis.ToString());
+                    string[] pieces = res.Split(new char[] { ',' });
+                    if (pieces.Length < 13)
+                    {
+                        axisVectors["X"] = new Dictionary<string, object> { { "x", 1 }, { "y", 0 }, { "z", 0 } };
+                        axisVectors["Y"] = new Dictionary<string, object> { { "x", 0 }, { "y", 1 }, { "z", 0 } };
+                        axisVectors["Z"] = new Dictionary<string, object> { { "x", 0 }, { "y", 0 }, { "z", 1 } };
+                        return axisVectors;
+                    }
+                    Vector3D origin = new Vector3D(Convert.ToDouble(pieces[4]), Convert.ToDouble(pieces[5]), Convert.ToDouble(pieces[6]));
+
+                    Vector3D X = new Vector3D(Convert.ToDouble(pieces[7]), Convert.ToDouble(pieces[8]), Convert.ToDouble(pieces[9]));
+                    X.Normalize();
+
+
+                    Vector3D Yp = new Vector3D(Convert.ToDouble(pieces[10]), Convert.ToDouble(pieces[11]), Convert.ToDouble(pieces[12]));
+                    Vector3D Z = Vector3D.CrossProduct(X, Yp);
+                    Z.Normalize();
+
+                    Vector3D Y = Vector3D.CrossProduct(Z, X);
+
+                    Vector3D pos = new Vector3D(0,0,0);
+
+                    if (evalAtCoor == null)
+                        pieces[3] = "CART";
+                    else
+                    {
+                        pos = new Vector3D(evalAtCoor[0] - origin.X, evalAtCoor[1] - origin.Y, evalAtCoor[2] - origin.Z);
+                        if (pos.Length == 0)
+                            pieces[3] = "CART";
+                    }
+
+                    switch (pieces[3])
+                    {
+                        case "CART":
+                            axisVectors["X"] = new Dictionary<string, object> { { "x", X.X }, { "y", X.Y }, { "z", X.Z } };
+                            axisVectors["Y"] = new Dictionary<string, object> { { "x", Y.X }, { "y", Y.Y }, { "z", Y.Z } };
+                            axisVectors["Z"] = new Dictionary<string, object> { { "x", Z.X }, { "y", Z.Y }, { "z", Z.Z } };
+                            return axisVectors;
+                        case "CYL":
+                            x = new Vector3D(pos.X, pos.Y, 0);
+                            x.Normalize();
+                            z = Z;
+                            y = Vector3D.CrossProduct(Z, x);
+                            y.Normalize();
+
+                            axisVectors["X"] = new Dictionary<string, object> { { "x", x.X }, { "y", x.Y }, { "z", x.Z } };
+                            axisVectors["Y"] = new Dictionary<string, object> { { "x", y.X }, { "y", y.Y }, { "z", y.Z } };
+                            axisVectors["Z"] = new Dictionary<string, object> { { "x", z.X }, { "y", z.Y }, { "z", z.Z } };
+                            return axisVectors;
+                        case "SPH":
+                            x = pos;
+                            x.Normalize();
+                            z = Vector3D.CrossProduct(Z, x);
+                            z.Normalize();
+                            y = Vector3D.CrossProduct(z, x);
+                            z.Normalize();
+
+                            axisVectors["X"] = new Dictionary<string, object> { { "x", x.X }, { "y", x.Y }, { "z", x.Z } };
+                            axisVectors["Y"] = new Dictionary<string, object> { { "x", y.X }, { "y", y.Y }, { "z", y.Z } };
+                            axisVectors["Z"] = new Dictionary<string, object> { { "x", z.X }, { "y", z.Y }, { "z", z.Z } };
+                            return axisVectors;
+                        default:
+                            axisVectors["X"] = new Dictionary<string, object> { { "x", 1 }, { "y", 0 }, { "z", 0 } };
+                            axisVectors["Y"] = new Dictionary<string, object> { { "x", 0 }, { "y", 1 }, { "z", 0 } };
+                            axisVectors["Z"] = new Dictionary<string, object> { { "x", 0 }, { "y", 0 }, { "z", 1 } };
+                            return axisVectors;
+                    }
+            }
+        }
+
+        public static int AddAxistoGSA(this Dictionary<string,object> axis, ComAuto gsaObj)
+        {
+            List<string> ls = new List<string>();
+
+            int res = gsaObj.GwaCommand("HIGHEST,AXIS");
+            Console.WriteLine("HIGHEST IS :" + res.ToString());
+
+            ls.Add("AXIS");
+            ls.Add((res + 1).ToString());
+            ls.Add("");
+            ls.Add("CART");
+
+            ls.Add("0");
+            ls.Add("0");
+            ls.Add("0");
+
+            Dictionary<string, object> X = axis["X"] as Dictionary<string, object>;
+            ls.Add(((double)X["x"]).ToString());
+            ls.Add(((double)X["y"]).ToString());
+            ls.Add(((double)X["z"]).ToString());
+
+            Dictionary<string, object> Y = axis["Y"] as Dictionary<string, object>;
+            ls.Add(((double)Y["x"]).ToString());
+            ls.Add(((double)Y["y"]).ToString());
+            ls.Add(((double)Y["z"]).ToString());
+
+            gsaObj.GwaCommand(string.Join(",", ls));
+
+            return res + 1;
+        }
+        #endregion
+
         #region Lists
         public static string[] ListSplit(this string list, string delimiter)
         {

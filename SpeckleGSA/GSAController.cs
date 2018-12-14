@@ -153,7 +153,7 @@ namespace SpeckleGSA
 
             foreach (string p in pieces)
             {
-                GSANode n = new GSANode();
+                GSANode n = new GSANode().AttachGSA(gsaObj);
                 n.ParseGWACommand(p);
 
                 nodes.Add(n);
@@ -175,7 +175,7 @@ namespace SpeckleGSA
 
             foreach (string p in pieces)
             {
-                GSAElement e = new GSAElement();
+                GSAElement e = new GSAElement().AttachGSA(gsaObj);
                 e.ParseGWACommand(p);
 
                 e.Coor = nodes
@@ -202,7 +202,7 @@ namespace SpeckleGSA
 
             foreach (string p in pieces)
             {
-                GSALine l = new GSALine();
+                GSALine l = new GSALine().AttachGSA(gsaObj);
                 l.ParseGWACommand(p);
 
                 l.Coor = nodes
@@ -236,7 +236,7 @@ namespace SpeckleGSA
 
             foreach (string p in pieces)
             {
-                GSAArea a = new GSAArea();
+                GSAArea a = new GSAArea().AttachGSA(gsaObj);
                 a.ParseGWACommand(p);
 
                 List<List<double>> lineCoor = lines
@@ -359,6 +359,8 @@ namespace SpeckleGSA
 
         private void AddGSAObj(GSAObject obj, ref Dictionary<string, object> dict)
         {
+            obj.AttachGSA(gsaObj);
+
             Type t = obj.GetType();
             PropertyInfo p = t.GetProperty("GSAEntity");
             string type = p.GetValue(obj, null).ToString();
@@ -406,7 +408,10 @@ namespace SpeckleGSA
                     return node.Reference;
                 }
                 else
+                {
+                    (dict["Nodes"] as List<GSANode>).Where(n => n.Reference == matches[0].Reference).First().Merge(node);
                     return matches[0].Reference;
+                }
             }
 
             else
@@ -443,7 +448,7 @@ namespace SpeckleGSA
                     List<GSAObject> lNodes = line.GetChildren();
                     line.Connectivity = new int[lNodes.Count];
                     for (int i = 0; i < lNodes.Count; i++)
-                        line.Connectivity[i] = AddNode((lNodes[i] as GSANode), ref dict, ref counter, true);
+                        line.Connectivity[i] = AddNode((lNodes[i] as GSANode).AttachGSA(gsaObj), ref dict, ref counter, true);
 
                     line = counter.RefLine(line);
                     if (addToDict)
@@ -470,7 +475,7 @@ namespace SpeckleGSA
                     List<GSAObject> lNodes = line.GetChildren();
                     for (int i = 0; i < line.Connectivity.Length; i++)
                         if (line.Connectivity[i] == 0)
-                            line.Connectivity[i] = AddNode((lNodes[i] as GSANode), ref dict, ref counter, true);
+                            line.Connectivity[i] = AddNode((lNodes[i] as GSANode).AttachGSA(gsaObj), ref dict, ref counter, true);
                 }
 
                 line = counter.RefLine(line);
@@ -491,7 +496,7 @@ namespace SpeckleGSA
                 List<GSAObject> aLines = area.GetChildren();
                 area.Connectivity = new int[aLines.Count];
                 for (int i = 0; i < aLines.Count; i++)
-                    area.Connectivity[i] = AddLine((aLines[i] as GSALine), ref dict, ref counter, true);
+                    area.Connectivity[i] = AddLine((aLines[i] as GSALine).AttachGSA(gsaObj), ref dict, ref counter, true);
 
                 gsaObj.GwaCommand(area.GetGWACommand());
                 if (addToDict)
@@ -514,7 +519,7 @@ namespace SpeckleGSA
                     List<GSAObject> aLines = area.GetChildren();
                     for (int i = 0; i < area.Connectivity.Length; i++)
                         if (area.Connectivity[i] == 0)
-                            area.Connectivity[i] = AddLine((aLines[i] as GSALine), ref dict, ref counter, true);
+                            area.Connectivity[i] = AddLine((aLines[i] as GSALine).AttachGSA(gsaObj), ref dict, ref counter, true);
                 }
 
                 area = counter.RefArea(area);
@@ -534,7 +539,7 @@ namespace SpeckleGSA
                 List<GSAObject> eNodes = element.GetChildren();
                 element.Connectivity = new int[eNodes.Count];
                 for (int i = 0; i < eNodes.Count; i++)
-                    element.Connectivity[i] = AddNode((eNodes[i] as GSANode), ref dict, ref counter, true);
+                    element.Connectivity[i] = AddNode((eNodes[i] as GSANode).AttachGSA(gsaObj), ref dict, ref counter, true);
 
                 element = counter.RefElement(element);
                 if (addToDict)
@@ -557,7 +562,7 @@ namespace SpeckleGSA
                     List<GSAObject> eNodes = element.GetChildren();
                     for (int i = 0; i < element.Connectivity.Length; i++)
                         if (element.Connectivity[i] == 0)
-                            element.Connectivity[i] = AddNode((eNodes[i] as GSANode), ref dict, ref counter, true);
+                            element.Connectivity[i] = AddNode((eNodes[i] as GSANode).AttachGSA(gsaObj), ref dict, ref counter, true);
                 }
 
                 element = counter.RefElement(element);
@@ -607,28 +612,28 @@ namespace SpeckleGSA
                 }
             }
 
-            Messages.AddMessage("Creating .elements receiver.");
-            receivers["Elements"] = new Receiver(userManager.ServerAddress, userManager.ApiToken);
-            await receivers["Elements"].InitializeReceiver(streamIDs["Elements"]);
+            //Messages.AddMessage("Creating .elements receiver.");
+            //receivers["Elements"] = new Receiver(userManager.ServerAddress, userManager.ApiToken);
+            //await receivers["Elements"].InitializeReceiver(streamIDs["Elements"]);
 
-            if (receivers["Elements"].StreamID == null || receivers["Elements"].StreamID == "")
-            {
-                Messages.AddError("Could not connect to .elements stream.");
-            }
-            else
-            {
-                try
-                {
-                    Messages.AddMessage("Receiving elements.");
-                    await receivers["Elements"].UpdateDataAsync().ContinueWith(res =>
-                        convertedObjects.AddRange(res.Result)
-                    );
-                }
-                catch (Exception e)
-                {
-                    Messages.AddError(e.Message);
-                }
-            }
+            //if (receivers["Elements"].StreamID == null || receivers["Elements"].StreamID == "")
+            //{
+            //    Messages.AddError("Could not connect to .elements stream.");
+            //}
+            //else
+            //{
+            //    try
+            //    {
+            //        Messages.AddMessage("Receiving elements.");
+            //        await receivers["Elements"].UpdateDataAsync().ContinueWith(res =>
+            //            convertedObjects.AddRange(res.Result)
+            //        );
+            //    }
+            //    catch (Exception e)
+            //    {
+            //        Messages.AddError(e.Message);
+            //    }
+            //}
 
             // Populate list
             foreach (object obj in convertedObjects)

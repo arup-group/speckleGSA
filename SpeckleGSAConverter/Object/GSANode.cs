@@ -8,16 +8,22 @@ namespace SpeckleGSA
 {
     public class GSANode : GSAObject
     {
-        public Dictionary<string, object> GridData { get; set; }
-        public string ConstraintAxis { get; set; }
+        public Dictionary<string, object> Axis { get; set; }
         public Dictionary<string, object> Restraint { get; set; }
         public Dictionary<string, object> Stiffness { get; set; }
-        public Dictionary<string, object> MeshData { get; set; }
+        public int Mass { get; set; }
 
-        public GSANode():base("NODE")
+        public Dictionary<string, object> GridData;// { get; set; }
+        public Dictionary<string, object> MeshData;// { get; set; }
+
+        public GSANode() : base("NODE")
         {
-            GridData = new Dictionary<string, object>();
-            ConstraintAxis = "";
+            Axis = new Dictionary<string, object>()
+            {
+                { "X", new Dictionary<string, object> { { "x", 1 }, { "y", 0 },{ "z", 0 }  } },
+                { "Y", new Dictionary<string, object> { { "x", 0 }, { "y", 1 },{ "z", 0 }  } },
+                { "Z", new Dictionary<string, object> { { "x", 0 }, { "y", 0 },{ "z", 1 }  } },
+            };
             Restraint = new Dictionary<string, object>()
             {
                 { "x", false },
@@ -36,6 +42,9 @@ namespace SpeckleGSA
                 { "yy", 0.0 },
                 { "zz", 0.0 },
             };
+            Mass = 0;
+
+            GridData = new Dictionary<string, object>();
             MeshData = new Dictionary<string, object>();
         }
 
@@ -51,7 +60,7 @@ namespace SpeckleGSA
             Coor[0] = Convert.ToDouble(pieces[counter++]);
             Coor[1] = Convert.ToDouble(pieces[counter++]);
             Coor[2] = Convert.ToDouble(pieces[counter++]);
-            
+
             while (counter < pieces.Length)
             {
                 string s = pieces[counter++];
@@ -93,7 +102,7 @@ namespace SpeckleGSA
                     MeshData["ColumnSlabFactor"] = pieces[counter++];
                 }
                 else
-                    ConstraintAxis = pieces[counter++];
+                    Axis = Convert.ToInt32(pieces[counter++]).EvaluateGSAAxis(gsa, Coor);
             }
             return;
         }
@@ -110,7 +119,7 @@ namespace SpeckleGSA
                 ls.Add("NO_RGB");
             else
                 ls.Add(((int)Color).ToString());
-            ls.Add(string.Join(",",Coor));
+            ls.Add(string.Join(",", Coor));
 
             if (GridData.Count == 0)
                 ls.Add("NO_GRID");
@@ -123,7 +132,7 @@ namespace SpeckleGSA
                 ls.Add((string)GridData["GridLineB"]);
             }
 
-            ls.Add(ConstraintAxis);
+            ls.Add(Axis.AddAxistoGSA(gsa).ToString());
 
             if (Restraint.Count == 0)
                 ls.Add("NO_REST");
@@ -167,13 +176,22 @@ namespace SpeckleGSA
                 ls.Add((string)MeshData["ColumnSlabFactor"]);
 
             }
-            
+
             return string.Join(",", ls);
         }
 
         public override List<GSAObject> GetChildren()
         {
             return null;
+        }
+
+        public void Merge(GSANode mergeNode)
+        {
+            foreach (string key in Restraint.Keys)
+                Restraint[key] = (bool)Restraint[key] | (bool)mergeNode.Restraint[key];
+
+            foreach (string key in Stiffness.Keys)
+                Stiffness[key] = Math.Max((double)Stiffness[key], (double)mergeNode.Stiffness[key]);
         }
     }
 }
