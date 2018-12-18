@@ -102,7 +102,7 @@ namespace SpeckleGSA
                     MeshData["ColumnSlabFactor"] = pieces[counter++];
                 }
                 else
-                    Axis = Convert.ToInt32(pieces[counter++]).EvaluateGSAAxis(gsa, Coor);
+                    Axis = Convert.ToInt32(pieces[counter++]).EvaluateGSANodeAxis(gsa, Coor);
             }
             return;
         }

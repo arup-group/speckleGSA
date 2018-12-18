@@ -36,49 +36,7 @@ namespace SpeckleGSA
         {
             return ((max - min) * 0.5) + min;
         }
-
-        public static Matrix3D RotationMatrix(Vector3D zUnitVector, double angle)
-        {
-            double cos = Math.Cos(angle);
-            double sin = Math.Sin(angle);
-            
-            //return new Matrix3D(
-            //    cos + Math.Pow(zUnitVector.X, 2) * (1 - cos),
-            //    zUnitVector.X * zUnitVector.Y * (1 - cos) - zUnitVector.Z * sin,
-            //    zUnitVector.X * zUnitVector.Z * (1 - cos) + zUnitVector.Y * sin,
-            //    0,
-            //    zUnitVector.Y * zUnitVector.X * (1 - cos) + zUnitVector.Z * sin,
-            //    cos + Math.Pow(zUnitVector.Y, 2) * (1 - cos),
-            //    zUnitVector.Y * zUnitVector.Z * (1 - cos) - zUnitVector.X * sin,
-            //    0,
-            //    zUnitVector.Z * zUnitVector.X * (1 - cos) - zUnitVector.Y * sin,
-            //    zUnitVector.Z * zUnitVector.Y * (1 - cos) + zUnitVector.X * sin,
-            //    cos + Math.Pow(zUnitVector.Z, 2) * (1 - cos),
-            //    0,
-            //    0, 0, 0, 1
-            //);
-
-            // TRANSPOSED MATRIX TO ACCOMODATE MULTIPLY FUNCTION
-            return new Matrix3D(
-                cos + Math.Pow(zUnitVector.X, 2) * (1 - cos),
-                zUnitVector.Y * zUnitVector.X * (1 - cos) + zUnitVector.Z * sin,
-                zUnitVector.Z * zUnitVector.X * (1 - cos) - zUnitVector.Y * sin,
-                0,
-
-                zUnitVector.X * zUnitVector.Y * (1 - cos) - zUnitVector.Z * sin,
-                cos + Math.Pow(zUnitVector.Y, 2) * (1 - cos),
-                zUnitVector.Z * zUnitVector.Y * (1 - cos) + zUnitVector.X * sin,
-                0,
-
-                zUnitVector.X * zUnitVector.Z * (1 - cos) + zUnitVector.Y * sin,
-                zUnitVector.Y * zUnitVector.Z * (1 - cos) - zUnitVector.X * sin,
-                cos + Math.Pow(zUnitVector.Z, 2) * (1 - cos),
-                0,
-                
-                0, 0, 0, 1
-            );
-        }
-
+        
         public static SpeckleArc ArcRadiustoSpeckleArc(double[] coor, double radius, bool greaterThanHalf = false)
         {
             Point3D[] points = new Point3D[] {
@@ -99,9 +57,9 @@ namespace SpeckleGSA
 
             Matrix3D originRotMat;
             if (!greaterThanHalf)
-                originRotMat = RotationMatrix(v3, theta);
+                originRotMat = HelperFunctions.RotationMatrix(v3, theta);
             else
-                originRotMat = RotationMatrix(Vector3D.Multiply(-1, v3), theta);
+                originRotMat = HelperFunctions.RotationMatrix(Vector3D.Multiply(-1, v3), theta);
 
             Vector3D shiftToOrigin = Vector3D.Multiply(radius,Vector3D.Multiply(v1, originRotMat));
 
@@ -126,7 +84,7 @@ namespace SpeckleGSA
                 endVector = Vector3D.Multiply(-1, endVector);
 
 
-                Matrix3D reverseRotation = RotationMatrix(new Vector3D(1,0,0), Math.PI);
+                Matrix3D reverseRotation = HelperFunctions.RotationMatrix(new Vector3D(1,0,0), Math.PI);
 
                 startVector = Vector3D.Multiply(startVector, reverseRotation);
                 endVector = Vector3D.Multiply(endVector, reverseRotation);
@@ -136,7 +94,7 @@ namespace SpeckleGSA
                 Vector3D unitReverseRotationvector = Vector3D.CrossProduct(v3, new Vector3D(0, 0, 1));
                 unitReverseRotationvector.Normalize();
 
-                Matrix3D reverseRotation = RotationMatrix(unitReverseRotationvector, Vector3D.AngleBetween(v3, new Vector3D(0, 0, 1)).ToRadians());
+                Matrix3D reverseRotation = HelperFunctions.RotationMatrix(unitReverseRotationvector, Vector3D.AngleBetween(v3, new Vector3D(0, 0, 1)).ToRadians());
 
                 startVector = Vector3D.Multiply(startVector, reverseRotation);
                 endVector = Vector3D.Multiply(endVector, reverseRotation);
@@ -164,7 +122,7 @@ namespace SpeckleGSA
 
             Vector3D unitRotationvector = Vector3D.CrossProduct(new Vector3D(0, 0, 1), v3);
             unitRotationvector.Normalize();
-            Matrix3D rotation = RotationMatrix(unitRotationvector, Vector3D.AngleBetween(v3, new Vector3D(0, 0, 1)).ToRadians());
+            Matrix3D rotation = HelperFunctions.RotationMatrix(unitRotationvector, Vector3D.AngleBetween(v3, new Vector3D(0, 0, 1)).ToRadians());
 
             unitX = Vector3D.Multiply(unitX, rotation);
             unitY = Vector3D.Multiply(unitY, rotation);
@@ -244,7 +202,7 @@ namespace SpeckleGSA
                 p2 = Vector3D.Multiply(-1, p2);
                 p3 = Vector3D.Multiply(-1, p3);
 
-                Matrix3D reverseRotation = RotationMatrix(new Vector3D(1, 0, 0), Math.PI);
+                Matrix3D reverseRotation = HelperFunctions.RotationMatrix(new Vector3D(1, 0, 0), Math.PI);
 
                 p1 = Vector3D.Multiply(p1, reverseRotation);
                 p2 = Vector3D.Multiply(p2, reverseRotation);
@@ -254,7 +212,7 @@ namespace SpeckleGSA
             { 
                 Vector3D unitRotationvector = Vector3D.CrossProduct(new Vector3D(0, 0, 1), v3);
                 unitRotationvector.Normalize();
-                Matrix3D rotation = RotationMatrix(unitRotationvector, Vector3D.AngleBetween(v3, new Vector3D(0, 0, 1)).ToRadians());
+                Matrix3D rotation = HelperFunctions.RotationMatrix(unitRotationvector, Vector3D.AngleBetween(v3, new Vector3D(0, 0, 1)).ToRadians());
 
                 p1 = Vector3D.Multiply(p1, rotation);
                 p2 = Vector3D.Multiply(p2, rotation);
@@ -466,6 +424,16 @@ namespace SpeckleGSA
             return obj;
         }
 
+        public static SpeckleLine ToSpeckle(this GSA1DElement element)
+        {
+            SpeckleLine l = new SpeckleLine(
+                element.Coor,
+                element.Reference.ToString(),
+                element.GetSpeckleProperties());
+
+            return l;
+        }
+
         public static SpeckleObject ToSpeckle(this GSALine line)
         {
             SpeckleObject obj;
@@ -537,7 +505,7 @@ namespace SpeckleGSA
                 switch (dict["GSAEntity"] as string)
                 {
                     case "ELEMENT":
-                        obj = new GSAElement();
+                        obj = new GSA1DElement();
                         break;
                     case "LINE":
                         obj = new GSALine();

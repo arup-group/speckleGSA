@@ -39,6 +39,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Object\GSA1DElement.cs" />
     <Compile Include="Object\GSAArea.cs" />
     <Compile Include="Object\GSAElement.cs" />
     <Compile Include="Object\GSAObject.cs" />

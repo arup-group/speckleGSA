@@ -116,6 +116,12 @@ namespace SpeckleGSA
             return obj;
         }
 
+        public static GSA1DElement AttachGSA(this GSA1DElement obj, ComAuto gsa)
+        {
+            obj.gsa = gsa;
+            return obj;
+        }
+
         public static GSAMember AttachGSA(this GSAMember obj, ComAuto gsa)
         {
             obj.gsa = gsa;
@@ -123,8 +129,53 @@ namespace SpeckleGSA
         }
         #endregion
 
+        #region Node
+        public static double[] NodeCoor(this int node, ComAuto gsaObj)
+        {
+            string res = gsaObj.GwaCommand("GET,NODE," + node);
+
+            if (res == null || res == "")
+                return null;
+
+            string[] pieces = res.ListSplit(",");
+
+            return new double[]
+            {
+                Convert.ToDouble(pieces[4]),
+                Convert.ToDouble(pieces[5]),
+                Convert.ToDouble(pieces[6])
+            };
+        }
+        #endregion
+
         #region Axis
-        public static Dictionary<string,object> EvaluateGSAAxis(this int axis, ComAuto gsaObj, double[] evalAtCoor = null)
+        public static Matrix3D RotationMatrix(Vector3D zUnitVector, double angle)
+        {
+            double cos = Math.Cos(angle);
+            double sin = Math.Sin(angle);
+
+            // TRANSPOSED MATRIX TO ACCOMODATE MULTIPLY FUNCTION
+            return new Matrix3D(
+                cos + Math.Pow(zUnitVector.X, 2) * (1 - cos),
+                zUnitVector.Y * zUnitVector.X * (1 - cos) + zUnitVector.Z * sin,
+                zUnitVector.Z * zUnitVector.X * (1 - cos) - zUnitVector.Y * sin,
+                0,
+
+                zUnitVector.X * zUnitVector.Y * (1 - cos) - zUnitVector.Z * sin,
+                cos + Math.Pow(zUnitVector.Y, 2) * (1 - cos),
+                zUnitVector.Z * zUnitVector.Y * (1 - cos) + zUnitVector.X * sin,
+                0,
+
+                zUnitVector.X * zUnitVector.Z * (1 - cos) + zUnitVector.Y * sin,
+                zUnitVector.Y * zUnitVector.Z * (1 - cos) - zUnitVector.X * sin,
+                cos + Math.Pow(zUnitVector.Z, 2) * (1 - cos),
+                0,
+
+                0, 0, 0, 1
+            );
+        }
+
+        public static Dictionary<string,object> EvaluateGSANodeAxis(this int axis, ComAuto gsaObj, double[] evalAtCoor = null)
         {
             // Returns unit vector of each X, Y, Z axis
             Dictionary<string, object> axisVectors = new Dictionary<string, object>();
@@ -239,6 +290,93 @@ namespace SpeckleGSA
                             axisVectors["Z"] = new Dictionary<string, object> { { "x", 0 }, { "y", 0 }, { "z", 1 } };
                             return axisVectors;
                     }
+            }
+        }
+
+        public static Dictionary<string, object> EvaluateGSAElementAxis(this double[] coor, ComAuto gsaObj, double rotationAngle = 0, double[] orientationNode = null)
+        {
+            Dictionary<string, object> axisVectors = new Dictionary<string, object>();
+
+            Vector3D x;
+            Vector3D y;
+            Vector3D z;
+
+            x = new Vector3D(coor[3] - coor[0], coor[4] - coor[1], coor[5] - coor[2]);
+            x.Normalize();
+
+            if (orientationNode == null)
+            {
+                if (x.X == 0 && x.Y == 0)
+                {
+                    //Column
+                    y = new Vector3D(0, 1, 0);
+                    z = new Vector3D(1, 0, 0);
+                }
+                else
+                {
+                    //Non-Vertical
+                    Vector3D Z = new Vector3D(0, 0, 1);
+                    y = Vector3D.CrossProduct(Z, x);
+                    y.Normalize();
+                    z = Vector3D.CrossProduct(x, y);
+                    z.Normalize();
+                }
+            }
+            else
+            {
+                Vector3D Yp = new Vector3D(orientationNode[0], orientationNode[1], orientationNode[2]);
+                z = Vector3D.CrossProduct(x, Yp);
+                z.Normalize();
+                y = Vector3D.CrossProduct(z, x);
+                y.Normalize();
+            }
+
+            //Rotation
+            Matrix3D rotMat = RotationMatrix(x, rotationAngle*(Math.PI/180));
+            y = Vector3D.Multiply(y, rotMat);
+            z = Vector3D.Multiply(z, rotMat);
+
+            axisVectors["X"] = new Dictionary<string, object> { { "x", x.X }, { "y", x.Y }, { "z", x.Z } };
+            axisVectors["Y"] = new Dictionary<string, object> { { "x", y.X }, { "y", y.Y }, { "z", y.Z } };
+            axisVectors["Z"] = new Dictionary<string, object> { { "x", z.X }, { "y", z.Y }, { "z", z.Z } };
+
+            return axisVectors;
+        }
+
+        public static double GetGSAElementAngle(this Dictionary<string,object> axis, ComAuto gsaObj)
+        {
+            Dictionary<string, object> X = axis["X"] as Dictionary<string, object>;
+            Dictionary<string, object> Y = axis["Y"] as Dictionary<string, object>;
+            Dictionary<string, object> Z = axis["Z"] as Dictionary<string, object>;
+
+            Vector3D x = new Vector3D(X["x"].ToDouble(), X["y"].ToDouble(), X["z"].ToDouble());
+            Vector3D y = new Vector3D(Y["x"].ToDouble(), Y["y"].ToDouble(), Y["z"].ToDouble());
+            Vector3D z = new Vector3D(Z["x"].ToDouble(), Z["y"].ToDouble(), Z["z"].ToDouble());
+
+            if (x.X == 0 & x.Y == 0)
+            {
+                // Column
+                Vector3D Yglobal = new Vector3D(0, 1, 0);
+
+                double angle = Math.Acos(Vector3D.DotProduct(Yglobal, y) / (Yglobal.Length * y.Length)) * (180/Math.PI);
+                if (double.IsNaN(angle)) angle = 0;
+
+                Vector3D signVector = Vector3D.CrossProduct(Yglobal, y);
+                double sign = Vector3D.DotProduct(signVector, x);
+
+                return angle * sign / Math.Abs(sign);
+            }
+            else
+            {
+                Vector3D Zglobal = new Vector3D(0, 0, 1);
+                Vector3D Y0 = Vector3D.CrossProduct(Zglobal, x);
+                double angle = Math.Acos(Vector3D.DotProduct(Y0, y) / (Y0.Length * y.Length)) * (180 / Math.PI);
+                if (double.IsNaN(angle)) angle = 0;
+
+                Vector3D signVector = Vector3D.CrossProduct(Y0, y);
+                double sign = Vector3D.DotProduct(signVector, x);
+
+                return sign >= 0 ? angle : 360-angle;
             }
         }
 
@@ -423,6 +561,16 @@ namespace SpeckleGSA
         #endregion
 
         #region Type Conversion
+        public static double ToDouble(this object obj)
+        {
+            if (obj.GetType() == typeof(int))
+                return ((int)obj);
+            else if (obj.GetType() == typeof(double))
+                return ((double)obj);
+            else
+                return 0;
+        }
+
         public static string ToNumString(this object obj)
         {
             if (obj.GetType() == typeof(int))
@@ -441,6 +589,11 @@ namespace SpeckleGSA
                 return (double)obj == val;
             else
                 return false;
+        }
+
+        public static int ParseElementNumNodes(this string type)
+        {
+            return (int)((GSAObject.ElementNumNodes)Enum.Parse(typeof(GSAObject.ElementNumNodes), type));
         }
         #endregion
     }
