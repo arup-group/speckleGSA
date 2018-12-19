@@ -175,7 +175,7 @@ namespace SpeckleGSA
                 return elements;
 
             string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
-
+            
             foreach (string p in pieces)
             {
                 string[] pPieces = p.ListSplit(",");
@@ -190,19 +190,11 @@ namespace SpeckleGSA
                     case 2:
                         GSA1DElement e1D = new GSA1DElement().AttachGSA(gsaObj);
                         e1D.ParseGWACommand(p);
-                        e1D.Coor = nodes
-                            .Where(n => e1D.Connectivity.Contains(n.Reference))
-                            .SelectMany(n => n.Coor)
-                            .ToArray();
                         elements[0].Add(e1D);
                         break;
                     default:
-                        GSAElement e2D = new GSAElement().AttachGSA(gsaObj);
+                        GSA2DElement e2D = new GSA2DElement().AttachGSA(gsaObj);
                         e2D.ParseGWACommand(p);
-                        e2D.Coor = nodes
-                            .Where(n => e2D.Connectivity.Contains(n.Reference))
-                            .SelectMany(n => n.Coor)
-                            .ToArray();
                         elements[1].Add(e2D);
                         break;
                 }
@@ -316,10 +308,18 @@ namespace SpeckleGSA
             Messages.AddMessage("Converting objects.");
 
             List<GSANode> nodes = GetNodes();
+            Messages.AddMessage("Converted " + nodes.Count() + " nodes.");
+
             List<GSALine> lines = GetLines(nodes);
+            Messages.AddMessage("Converted " + lines.Count() + " lines.");
+
             List<GSAArea> areas = GetAreas(lines);
+            Messages.AddMessage("Converted " + areas.Count() + " areas.");
+
             List<GSAObject>[] elements = GetElements(nodes);
-            
+            Messages.AddMessage("Converted " + elements[0].Count() + " 1D elements.");
+            Messages.AddMessage("Converted " + elements[1].Count() + " 2D elements.");
+
             // Send nodes
             Messages.AddMessage("Sending .nodes stream.");
             
@@ -331,7 +331,7 @@ namespace SpeckleGSA
             }
 
             Messages.AddMessage(".nodes sender streamID: " + senders["Nodes"].StreamID + ".");
-
+            Console.WriteLine("TT");
             bucketObjects["Nodes"] = new List<object>();
             foreach (GSANode n in nodes)
                 bucketObjects["Nodes"].Add(n.ToSpeckle());
@@ -370,7 +370,7 @@ namespace SpeckleGSA
 
             bucketObjects["Elements - 2D"] = new List<object>();
             foreach (GSAObject e2D in elements[1])
-                bucketObjects["Elements - 2D"].Add((e2D as GSAElement).ToSpeckle());
+                bucketObjects["Elements - 2D"].Add((e2D as GSA2DElement).ToSpeckle());
 
             Messages.AddMessage("Lines: " + bucketObjects["Lines"].Count() + ".");
             Messages.AddMessage("Areas: " + bucketObjects["Areas"].Count() + ".");

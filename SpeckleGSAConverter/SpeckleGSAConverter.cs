@@ -386,28 +386,19 @@ namespace SpeckleGSA
             return p;
         }
         
-        public static SpeckleObject ToSpeckle(this GSAElement element)
+        public static SpeckleLine ToSpeckle(this GSA1DElement element)
         {
-            SpeckleObject obj;
+            SpeckleLine l = new SpeckleLine(
+                element.Coor,
+                element.Reference.ToString(),
+                element.GetSpeckleProperties());
 
-            switch (element.Coor.Length/3)
-            {
-                case 1:
-                    obj = new SpecklePoint(
-                        element.Coor[0],
-                        element.Coor[1],
-                        element.Coor[2],
-                        element.Reference.ToString(),
-                        element.GetSpeckleProperties());
-                    break;
-                case 2:
-                    obj = new SpeckleLine(
-                        element.Coor,
-                        element.Reference.ToString(),
-                        element.GetSpeckleProperties());
-                    break;
-                default:
-                    obj = new SpeckleMesh(
+            return l;
+        }
+
+        public static SpeckleMesh ToSpeckle(this GSA2DElement element)
+        {
+            SpeckleMesh m = new SpeckleMesh(
                         element.Coor,
                         new int[] { element.Coor.Length / 3 - 3 }.Concat(
                             Enumerable.Range(0, element.Coor.Length / 3).ToArray())
@@ -418,20 +409,8 @@ namespace SpeckleGSA
                         null,
                         element.Reference.ToString(),
                         element.GetSpeckleProperties());
-                    break;
-            }
-
-            return obj;
-        }
-
-        public static SpeckleLine ToSpeckle(this GSA1DElement element)
-        {
-            SpeckleLine l = new SpeckleLine(
-                element.Coor,
-                element.Reference.ToString(),
-                element.GetSpeckleProperties());
-
-            return l;
+            
+            return m;
         }
 
         public static SpeckleObject ToSpeckle(this GSALine line)
@@ -554,7 +533,7 @@ namespace SpeckleGSA
         {
             if (mesh.Properties == null || !mesh.Properties.ContainsKey("Structural"))
             {
-                List<GSAElement> elements = new List<GSAElement>();
+                List<GSA2DElement> elements = new List<GSA2DElement>();
 
                 List<double[]> coor = new List<double[]>();
                 for (int i = 0; i < mesh.Vertices.Count / 3; i++)
@@ -566,7 +545,7 @@ namespace SpeckleGSA
                     int val = mesh.Faces[counter++] + 3;
                     int coorCounter = 0;
 
-                    GSAElement e = new GSAElement();
+                    GSA2DElement e = new GSA2DElement();
 
                     if (val == 3) e.Type = "TRI3";
                     else if (val == 4) e.Type = "QUAD4";
@@ -590,7 +569,7 @@ namespace SpeckleGSA
             switch (dict["GSAEntity"] as string)
             {
                 case "ELEMENT":
-                    GSAElement e = new GSAElement();
+                    GSA2DElement e = new GSA2DElement();
                     e.SetSpeckleProperties(mesh.Properties);
                     e.Coor = mesh.Vertices.ToArray();
                     e.Color = Math.Max(mesh.Colors[0], 0);

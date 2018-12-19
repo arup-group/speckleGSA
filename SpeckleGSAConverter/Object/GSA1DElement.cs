@@ -87,7 +87,7 @@ namespace SpeckleGSA
 
             double[] orientationNode = Convert.ToInt32(pieces[counter++]).NodeCoor(gsa);
             double rotationAngle = Convert.ToDouble(pieces[counter++]);
-            Axis = Coor.EvaluateGSAElementAxis(gsa, rotationAngle, orientationNode);
+            Axis = Coor.EvaluateGSA1DElementAxis(gsa, rotationAngle, orientationNode);
 
             if (pieces[counter++] != "NO_RLS")
             {
@@ -138,7 +138,7 @@ namespace SpeckleGSA
                 ls.Add(c.ToString());
 
             ls.Add("0"); // Orientation Node
-            ls.Add(Axis.GetGSAElementAngle(gsa).ToString());
+            ls.Add(Axis.GetGSA1DElementAngle(gsa).ToString());
 
             if (Coor.Length / 3 == 2)
             {

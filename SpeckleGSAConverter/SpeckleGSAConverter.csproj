@@ -40,6 +40,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Object\GSA1DElement.cs" />
+    <Compile Include="Object\GSA1DProperty.cs" />
+    <Compile Include="Object\GSA2DElement.cs" />
     <Compile Include="Object\GSAArea.cs" />
     <Compile Include="Object\GSAElement.cs" />
     <Compile Include="Object\GSAObject.cs" />
