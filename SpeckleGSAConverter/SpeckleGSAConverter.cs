@@ -413,6 +413,33 @@ namespace SpeckleGSA
             return m;
         }
 
+        public static SpeckleMesh ToSpeckle(this GSA2DElementMesh mesh)
+        {
+            List<int> faceConnectivity = new List<int>();
+
+            for (int i = 0; i < mesh.Elements.Count; i++)
+            {
+                Dictionary<string, object> e = mesh.Elements[i.ToString()] as Dictionary<string, object>;
+                int[] eConnectivity = (int[])e["Connectivity"];
+
+                faceConnectivity.Add(eConnectivity.Length - 3);
+                foreach (int c in eConnectivity)
+                    faceConnectivity.Add(mesh.nodeMapping[c]);
+            }
+
+            SpeckleMesh m = new SpeckleMesh(
+                        mesh.Coor,
+                        faceConnectivity.ToArray(),
+                        Enumerable.Repeat(
+                            mesh.Color.ToSpeckleColor(),
+                            mesh.Coor.Length / 3).ToArray(),
+                        null,
+                        "",
+                        mesh.GetSpeckleProperties());
+
+            return m;
+        }
+   
         public static SpeckleObject ToSpeckle(this GSALine line)
         {
             SpeckleObject obj;
@@ -568,6 +595,24 @@ namespace SpeckleGSA
 
             switch (dict["GSAEntity"] as string)
             {
+                case "ELEMENTMESH":
+                    GSA2DElementMesh m = new GSA2DElementMesh();
+                    m.SetSpeckleProperties(mesh.Properties);
+                    m.Coor = mesh.Vertices.ToArray();
+                    m.Color = Math.Max(mesh.Colors[0], 0);
+
+                    int elemCounter = 0;
+                    for (int i = 0; i < mesh.Faces.Count(); i++)
+                    {
+                        i++;
+                        int[] conn = m.GetElemConnectivity(elemCounter++.ToString());
+
+                        for(int j = 0; j < conn.Length; j++)
+                            m.nodeMapping[conn[j]] = mesh.Faces[i++];
+
+                        i--;
+                    }
+                    return m;
                 case "ELEMENT":
                     GSA2DElement e = new GSA2DElement();
                     e.SetSpeckleProperties(mesh.Properties);

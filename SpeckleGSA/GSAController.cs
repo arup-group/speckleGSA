@@ -164,10 +164,11 @@ namespace SpeckleGSA
 
         private List<GSAObject>[] GetElements(List<GSANode> nodes)
         {
-            List<GSAObject>[] elements = new List<GSAObject>[2];
+            List<GSAObject>[] elements = new List<GSAObject>[3];
 
             elements[0] = new List<GSAObject>();
             elements[1] = new List<GSAObject>();
+            elements[2] = new List<GSAObject>();
 
             string res = gsaObj.GwaCommand("GET_ALL,EL");
 
@@ -199,6 +200,30 @@ namespace SpeckleGSA
                         break;
                 }
             }
+
+            List<GSA2DElementMesh> meshList = new List<GSA2DElementMesh>();
+
+            foreach (GSAObject e2D in elements[1])
+            {
+                GSA2DElementMesh mesh = new GSA2DElementMesh();
+                mesh.Property = (e2D as GSA2DElement).Property;
+                mesh.InsertionPoint = (e2D as GSA2DElement).InsertionPoint;
+                mesh.AddElement(e2D as GSA2DElement);
+                meshList.Add(mesh);
+            }
+
+            for (int i = 0; i < meshList.Count(); i++)
+            {
+                List<GSA2DElementMesh> matches = meshList.Where((m,j) => meshList[i].MeshMergeable(m) & j != i).ToList();
+                foreach(GSA2DElementMesh m in matches)
+                {
+                    meshList[i].MergeMesh(m);
+                    meshList.Remove(m);
+                }
+            }
+
+            elements[1].Clear();
+            elements[2] = meshList.Select(m => m as GSAObject).ToList();
 
             return elements;
         }
@@ -319,6 +344,7 @@ namespace SpeckleGSA
             List<GSAObject>[] elements = GetElements(nodes);
             Messages.AddMessage("Converted " + elements[0].Count() + " 1D elements.");
             Messages.AddMessage("Converted " + elements[1].Count() + " 2D elements.");
+            Messages.AddMessage("Converted " + elements[2].Count() + " Meshes.");
 
             // Send nodes
             Messages.AddMessage("Sending .nodes stream.");
@@ -331,7 +357,7 @@ namespace SpeckleGSA
             }
 
             Messages.AddMessage(".nodes sender streamID: " + senders["Nodes"].StreamID + ".");
-            Console.WriteLine("TT");
+            
             bucketObjects["Nodes"] = new List<object>();
             foreach (GSANode n in nodes)
                 bucketObjects["Nodes"].Add(n.ToSpeckle());
@@ -372,10 +398,15 @@ namespace SpeckleGSA
             foreach (GSAObject e2D in elements[1])
                 bucketObjects["Elements - 2D"].Add((e2D as GSA2DElement).ToSpeckle());
 
+            bucketObjects["Elements - 2D Mesh"] = new List<object>();
+            foreach (GSAObject eMesh in elements[2])
+                bucketObjects["Elements - 2D Mesh"].Add((eMesh as GSA2DElementMesh).ToSpeckle());
+
             Messages.AddMessage("Lines: " + bucketObjects["Lines"].Count() + ".");
             Messages.AddMessage("Areas: " + bucketObjects["Areas"].Count() + ".");
             Messages.AddMessage("Elements - 1D: " + bucketObjects["Elements - 1D"].Count() + ".");
             Messages.AddMessage("Elements - 2D: " + bucketObjects["Elements - 2D"].Count() + ".");
+            Messages.AddMessage("Elements - 2D Mesh: " + bucketObjects["Elements - 2D Mesh"].Count() + ".");
 
             objectIDs = await senders["Elements"].UpdateDataAsync(modelName + ".elements", bucketObjects);
 
@@ -409,6 +440,11 @@ namespace SpeckleGSA
                     break;
                 case "ELEMENT":
                     (dict["Elements"] as List<GSAObject>).Add(obj as GSAObject);
+                    break;
+                case "ELEMENTMESH":
+                    List<GSAObject> elems = obj.GetChildren();
+                    foreach (GSAObject e in elems)
+                        (dict["Elements"] as List<GSAObject>).Add(e);
                     break;
                 default:
                     break;
@@ -608,49 +644,63 @@ namespace SpeckleGSA
             objects["Areas"] = new List<GSAArea>();
             objects["Elements"] = new List<GSAObject>();
 
-            Messages.AddMessage("Creating .nodes receiver.");
-            receivers["Nodes"] = new Receiver(userManager.ServerAddress, userManager.ApiToken);
-            await receivers["Nodes"].InitializeReceiver(streamIDs["Nodes"]);
-
-            if (receivers["Nodes"].StreamID == null || receivers["Nodes"].StreamID == "")
+            if (streamIDs["Nodes"] == "")
             {
-                Messages.AddError("Could not connect to .nodes stream.");
+                Messages.AddMessage("No nodes stream specified.");
+            }
+            else
+            { 
+                Messages.AddMessage("Creating .nodes receiver.");
+                receivers["Nodes"] = new Receiver(userManager.ServerAddress, userManager.ApiToken);
+                await receivers["Nodes"].InitializeReceiver(streamIDs["Nodes"]);
+
+                if (receivers["Nodes"].StreamID == null || receivers["Nodes"].StreamID == "")
+                {
+                    Messages.AddError("Could not connect to .nodes stream.");
+                }
+                else
+                {
+                    Messages.AddMessage("Receiving nodes.");
+                    try
+                    {
+                        await receivers["Nodes"].UpdateDataAsync().ContinueWith(res =>
+                            convertedObjects.AddRange(res.Result)
+                        );
+                    }
+                    catch (Exception e)
+                    {
+                        Messages.AddError(e.Message);
+                    }
+                }
+            }
+
+            if (streamIDs["Elements"] == "")
+            {
+                Messages.AddMessage("No elements stream specified.");
             }
             else
             {
-                Messages.AddMessage("Receiving nodes.");
-                try
-                {
-                    await receivers["Nodes"].UpdateDataAsync().ContinueWith(res =>
-                        convertedObjects.AddRange(res.Result)
-                    );
-                }
-                catch (Exception e)
-                {
-                    Messages.AddError(e.Message);
-                }
-            }
+                Messages.AddMessage("Creating .elements receiver.");
+                receivers["Elements"] = new Receiver(userManager.ServerAddress, userManager.ApiToken);
+                await receivers["Elements"].InitializeReceiver(streamIDs["Elements"]);
 
-            Messages.AddMessage("Creating .elements receiver.");
-            receivers["Elements"] = new Receiver(userManager.ServerAddress, userManager.ApiToken);
-            await receivers["Elements"].InitializeReceiver(streamIDs["Elements"]);
-
-            if (receivers["Elements"].StreamID == null || receivers["Elements"].StreamID == "")
-            {
-                Messages.AddError("Could not connect to .elements stream.");
-            }
-            else
-            {
-                try
+                if (receivers["Elements"].StreamID == null || receivers["Elements"].StreamID == "")
                 {
-                    Messages.AddMessage("Receiving elements.");
-                    await receivers["Elements"].UpdateDataAsync().ContinueWith(res =>
-                        convertedObjects.AddRange(res.Result)
-                    );
+                    Messages.AddError("Could not connect to .elements stream.");
                 }
-                catch (Exception e)
+                else
                 {
-                    Messages.AddError(e.Message);
+                    try
+                    {
+                        Messages.AddMessage("Receiving elements.");
+                        await receivers["Elements"].UpdateDataAsync().ContinueWith(res =>
+                            convertedObjects.AddRange(res.Result)
+                        );
+                    }
+                    catch (Exception e)
+                    {
+                        Messages.AddError(e.Message);
+                    }
                 }
             }
 

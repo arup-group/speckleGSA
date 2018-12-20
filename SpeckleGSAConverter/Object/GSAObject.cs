@@ -17,7 +17,7 @@ namespace SpeckleGSA
         public int Reference { get; set; }
         public string Name { get; set; }
         public int[] Connectivity { get; set; }
-    
+
         public double[] Coor;
         public object Color;
 
