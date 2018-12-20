@@ -79,7 +79,7 @@ namespace SpeckleGSA
 
     public static class HelperFunctions
     {
-        #region GSA
+        #region Attach GSA
         public static GSAObject AttachGSA(this GSAObject obj, ComAuto gsa)
         {
             obj.gsa = gsa;
@@ -132,25 +132,6 @@ namespace SpeckleGSA
         {
             obj.gsa = gsa;
             return obj;
-        }
-        #endregion
-
-        #region Node
-        public static double[] NodeCoor(this int node, ComAuto gsaObj)
-        {
-            string res = gsaObj.GwaCommand("GET,NODE," + node);
-
-            if (res == null || res == "")
-                return null;
-
-            string[] pieces = res.ListSplit(",");
-
-            return new double[]
-            {
-                Convert.ToDouble(pieces[4]),
-                Convert.ToDouble(pieces[5]),
-                Convert.ToDouble(pieces[6])
-            };
         }
         #endregion
 
@@ -316,7 +297,7 @@ namespace SpeckleGSA
                 {
                     //Column
                     y = new Vector3D(0, 1, 0);
-                    z = new Vector3D(1, 0, 0);
+                    z = Vector3D.CrossProduct(x, y);
                 }
                 else
                 {
@@ -410,8 +391,8 @@ namespace SpeckleGSA
                 
                 if (x.Length == 0)
                 {
-                    x = new Vector3D(0, -1, 0);
-                    y = new Vector3D(0, 0, 1);
+                    x = new Vector3D(0, z.X > 0 ? -1 : 1, 0);
+                    y = Vector3D.CrossProduct(z, x);
                 }
 
                 x.Normalize();
@@ -481,7 +462,6 @@ namespace SpeckleGSA
 
         public static double GetGSA2DElementAngle(this Dictionary<string, object> axis, ComAuto gsaObj)
         {
-            // TODO!!!
             return 0;
         }
 
@@ -665,7 +645,7 @@ namespace SpeckleGSA
         }
         #endregion
 
-        #region Type Conversion
+        #region Conversion
         public static double ToDouble(this object obj)
         {
             if (obj.GetType() == typeof(int))

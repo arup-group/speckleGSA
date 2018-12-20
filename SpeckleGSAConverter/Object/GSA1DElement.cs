@@ -64,6 +64,7 @@ namespace SpeckleGSA
             EndOffsetX = new double[2];
         }
 
+        #region GSAObject Functions
         public override void ParseGWACommand(string command, GSAObject[] children = null)
         {
             string[] pieces = command.ListSplit(",");
@@ -81,13 +82,19 @@ namespace SpeckleGSA
             for (int i = 0; i < 2; i++)
             {
                 Connectivity.Add(Convert.ToInt32(pieces[counter++]));
-                Coor.AddRange(Connectivity[i].NodeCoor(gsa));
+                Coor.AddRange(children.Where(n => n.Reference == Connectivity[i]).FirstOrDefault().Coor);
             }
 
-            double[] orientationNode = Convert.ToInt32(pieces[counter++]).NodeCoor(gsa);
+            int orientationNodeRef = Convert.ToInt32(pieces[counter++]);
             double rotationAngle = Convert.ToDouble(pieces[counter++]);
-            Axis = Coor.ToArray().EvaluateGSA1DElementAxis(gsa, rotationAngle, orientationNode);
 
+            if (orientationNodeRef != 0)
+                Axis = Coor.ToArray().EvaluateGSA1DElementAxis(gsa,
+                    rotationAngle,
+                    children.Where(n => n.Reference == Convert.ToInt32(pieces[counter++])).FirstOrDefault().Coor.ToArray());
+            else
+                Axis = Coor.ToArray().EvaluateGSA1DElementAxis(gsa, rotationAngle);
+            
             if (pieces[counter++] != "NO_RLS")
             {
                 string start = pieces[counter++];
@@ -195,7 +202,9 @@ namespace SpeckleGSA
 
             return children;
         }
+        #endregion
 
+        #region Helper Functions
         private object ParseEndStiffness(char code, string[] pieces, ref int counter)
         {
             switch (code)
@@ -219,6 +228,6 @@ namespace SpeckleGSA
                 return "K";
             }
         }
-
+        #endregion
     }
 }

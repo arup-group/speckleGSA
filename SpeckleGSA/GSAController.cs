@@ -191,7 +191,7 @@ namespace SpeckleGSA
                         break;
                     case 2:
                         GSA1DElement e1D = new GSA1DElement().AttachGSA(gsaObj);
-                        e1D.ParseGWACommand(p);
+                        e1D.ParseGWACommand(p, nodes.ToArray());
                         elements[0].Add(e1D);
                         break;
                     default:
@@ -208,17 +208,6 @@ namespace SpeckleGSA
                 Console.WriteLine("E:" + counter++.ToString() + "/" + pieces.Count());
             }
             
-            //counter = 0;
-            //foreach (GSAObject e2D in elements[1])
-            //{
-            //    GSA2DElementMesh mesh = new GSA2DElementMesh();
-            //    mesh.Property = (e2D as GSA2DElement).Property;
-            //    mesh.InsertionPoint = (e2D as GSA2DElement).InsertionPoint;
-            //    mesh.AddElement(e2D as GSA2DElement);
-            //    meshList.Add(mesh);
-            //    Console.WriteLine("ECONV:" + counter++.ToString() + "/" + elements[1].Count());
-            //}
-
             for (int i = 0; i < elements[1].Count(); i++)
             {
                 List<GSAObject> matches = elements[1].Where((m,j) => (elements[1][i] as GSA2DElementMesh).MeshMergeable(m as GSA2DElementMesh) & j != i).ToList();
@@ -749,30 +738,6 @@ namespace SpeckleGSA
             Messages.AddMessage("Receiving completed!");
         }
 
-        #endregion
-
-        #region Update GSA
-        //public GSAObject[] UpdateObjectIDs(string[] keys, GSAObject[] objects)
-        //{
-        //    if (keys.Length == 0) return objects;
-        //    if (objects.Length == 0) return objects;
-
-        //    string[] newIDs = keys.Where(k => !objects.Select(g => g.Reference).ToList().Contains(k)).ToArray();
-
-        //    int counter = 0;
-        //    foreach (GSAObject o in objects)
-        //    {
-        //        if (o.SpeckleID == null | o.SpeckleID == "")
-        //        {
-        //            o.SpeckleID = newIDs[counter++];
-        //            gsaObj.GwaCommand(o.GetGWACommand());
-        //            Messages.AddMessage("Updated " + o.GSAEntity + " " + o.Ref + " with ID " + o.SpeckleID + ".");
-        //        }
-        //        if (counter >= newIDs.Length) break;
-        //    }
-
-        //    return objects;
-        //}
         #endregion
     }
 
