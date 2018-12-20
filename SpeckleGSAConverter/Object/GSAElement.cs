@@ -59,7 +59,7 @@ namespace SpeckleGSA
             Dummy = false;
         }
 
-        public override void ParseGWACommand(string command)
+        public override void ParseGWACommand(string command, GSAObject[] children = null)
         {
             string[] pieces = command.ListSplit(",");
 
@@ -70,9 +70,9 @@ namespace SpeckleGSA
             Type = pieces[counter++];
             Property = Convert.ToInt32(pieces[counter++]);
             Group = Convert.ToInt32(pieces[counter++]);
-            Connectivity = new int[(int)Enum.Parse(typeof(ElementNumNodes), Type)];
-            for (int i = 0; i < Connectivity.Length; i++)
-                Connectivity[i] = Convert.ToInt32(pieces[counter++]);
+            Connectivity.Clear();
+            for (int i = 0; i < Type.ParseElementNumNodes(); i++)
+                Connectivity.Add(Convert.ToInt32(pieces[counter++]));
             OrientNode = Convert.ToInt32(pieces[counter++]);
             Beta = Convert.ToDouble(pieces[counter++]);
             if (pieces[counter++] != "NO_RLS")
@@ -119,7 +119,7 @@ namespace SpeckleGSA
                 ls.Add(c.ToString());
             ls.Add(OrientNode.ToString());
             ls.Add(Beta.ToString());
-            if (Coor.Length / 3 == 2)
+            if (Coor.Count() / 3 == 2)
             {
                 ls.Add("RLS");
 
@@ -165,10 +165,10 @@ namespace SpeckleGSA
         {
             List<GSAObject> children = new List<GSAObject>();
 
-            for (int i = 0; i < Coor.Length/3; i++)
+            for (int i = 0; i < Coor.Count()/3; i++)
             {
                 GSANode n = new GSANode();
-                n.Coor = Coor.Skip(i * 3).Take(3).ToArray();
+                n.Coor = Coor.Skip(i * 3).Take(3).ToList();
                 children.Add(n);
             }
 

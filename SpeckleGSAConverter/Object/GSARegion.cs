@@ -13,7 +13,7 @@ namespace SpeckleGSA
 
         }
 
-        public override void ParseGWACommand(string command)
+        public override void ParseGWACommand(string command, GSAObject[] children = null)
         {
             throw new NotImplementedException();
         }

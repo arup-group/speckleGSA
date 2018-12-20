@@ -176,7 +176,8 @@ namespace SpeckleGSA
                 return elements;
 
             string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
-            
+
+            int counter = 0;
             foreach (string p in pieces)
             {
                 string[] pPieces = p.ListSplit(",");
@@ -195,14 +196,16 @@ namespace SpeckleGSA
                         break;
                     default:
                         GSA2DElement e2D = new GSA2DElement().AttachGSA(gsaObj);
-                        e2D.ParseGWACommand(p);
+                        e2D.ParseGWACommand(p, nodes.ToArray());
                         elements[1].Add(e2D);
                         break;
                 }
+                Console.WriteLine("E:" + counter++.ToString() + "/" + pieces.Count());
             }
 
             List<GSA2DElementMesh> meshList = new List<GSA2DElementMesh>();
 
+            counter = 0;
             foreach (GSAObject e2D in elements[1])
             {
                 GSA2DElementMesh mesh = new GSA2DElementMesh();
@@ -210,16 +213,22 @@ namespace SpeckleGSA
                 mesh.InsertionPoint = (e2D as GSA2DElement).InsertionPoint;
                 mesh.AddElement(e2D as GSA2DElement);
                 meshList.Add(mesh);
+                Console.WriteLine("ECONV:" + counter++.ToString() + "/" + elements[1].Count());
             }
 
             for (int i = 0; i < meshList.Count(); i++)
             {
                 List<GSA2DElementMesh> matches = meshList.Where((m,j) => meshList[i].MeshMergeable(m) & j != i).ToList();
+
                 foreach(GSA2DElementMesh m in matches)
-                {
                     meshList[i].MergeMesh(m);
+
+                foreach (GSA2DElementMesh m in matches)
                     meshList.Remove(m);
-                }
+                
+                Console.WriteLine("MESH:" + i.ToString() + "/" + meshList.Count());
+
+                if (matches.Count() > 0) i--;
             }
 
             elements[1].Clear();
@@ -247,7 +256,7 @@ namespace SpeckleGSA
                 l.Coor = nodes
                     .Where(n => l.Connectivity.Contains(n.Reference))
                     .SelectMany(n => n.Coor)
-                    .ToArray();
+                    .ToList();
 
                 lines.Add(l);
             }
@@ -311,7 +320,7 @@ namespace SpeckleGSA
                     }
                 }
 
-                a.Coor = lineCoor.SelectMany(d => d).ToArray();
+                a.Coor = lineCoor.SelectMany(d => d).ToList();
 
                 areas.Add(a);
             }
@@ -513,7 +522,7 @@ namespace SpeckleGSA
                 if (matches.Count == 0)
                 {
                     List<GSAObject> lNodes = line.GetChildren();
-                    line.Connectivity = new int[lNodes.Count];
+                    line.Connectivity = new List<int>(lNodes.Count);
                     for (int i = 0; i < lNodes.Count; i++)
                         line.Connectivity[i] = AddNode((lNodes[i] as GSANode).AttachGSA(gsaObj), ref dict, ref counter, true);
 
@@ -532,7 +541,7 @@ namespace SpeckleGSA
             }
             else
             {
-                for (int i = 0; i < line.Connectivity.Length; i++)
+                for (int i = 0; i < line.Connectivity.Count(); i++)
                     line.Connectivity[i] = (dict["Nodes"] as List<GSANode>)
                         .Where(n => n.Reference == line.Connectivity[i])
                         .Select(n => n.Reference).FirstOrDefault();
@@ -540,7 +549,7 @@ namespace SpeckleGSA
                 if (line.Connectivity.Contains(0))
                 {
                     List<GSAObject> lNodes = line.GetChildren();
-                    for (int i = 0; i < line.Connectivity.Length; i++)
+                    for (int i = 0; i < line.Connectivity.Count(); i++)
                         if (line.Connectivity[i] == 0)
                             line.Connectivity[i] = AddNode((lNodes[i] as GSANode).AttachGSA(gsaObj), ref dict, ref counter, true);
                 }
@@ -561,7 +570,7 @@ namespace SpeckleGSA
                 area = counter.RefArea(area);
 
                 List<GSAObject> aLines = area.GetChildren();
-                area.Connectivity = new int[aLines.Count];
+                area.Connectivity = new List<int>(aLines.Count);
                 for (int i = 0; i < aLines.Count; i++)
                     area.Connectivity[i] = AddLine((aLines[i] as GSALine).AttachGSA(gsaObj), ref dict, ref counter, true);
 
@@ -576,7 +585,7 @@ namespace SpeckleGSA
 
             else
             {
-                for (int i = 0; i < area.Connectivity.Length; i++)
+                for (int i = 0; i < area.Connectivity.Count(); i++)
                     area.Connectivity[i] = (dict["Lines"] as List<GSALine>)
                         .Where(l => l.Reference == area.Connectivity[i])
                         .Select(l => l.Reference).FirstOrDefault();
@@ -584,7 +593,7 @@ namespace SpeckleGSA
                 if (area.Connectivity.Contains(0))
                 {
                     List<GSAObject> aLines = area.GetChildren();
-                    for (int i = 0; i < area.Connectivity.Length; i++)
+                    for (int i = 0; i < area.Connectivity.Count(); i++)
                         if (area.Connectivity[i] == 0)
                             area.Connectivity[i] = AddLine((aLines[i] as GSALine).AttachGSA(gsaObj), ref dict, ref counter, true);
                 }
@@ -598,19 +607,19 @@ namespace SpeckleGSA
 
         private int AddElement(GSAObject element, ref Dictionary<string, object> dict, ref GSARefCounters counter, bool addToDict)
         {
-            for (int i = 0; i < element.Connectivity.Length; i++)
+            for (int i = 0; i < element.Connectivity.Count(); i++)
                 element.Connectivity[i] = (dict["Nodes"] as List<GSANode>)
                     .Where(n => n.Reference == element.Connectivity[i])
                     .Select(n => n.Reference).FirstOrDefault();
             
-            if (element.Connectivity.Length==0 | element.Connectivity.Contains(0))
+            if (element.Connectivity.Count() == 0 | element.Connectivity.Contains(0))
             {
                 List<GSAObject> eNodes = element.GetChildren();
 
-                if (element.Connectivity.Length==0)
-                    element.Connectivity = new int[eNodes.Count];
+                if (element.Connectivity.Count() == 0)
+                    element.Connectivity = new List<int>(eNodes.Count);
 
-                for (int i = 0; i < element.Connectivity.Length; i++)
+                for (int i = 0; i < element.Connectivity.Count(); i++)
                     if (element.Connectivity[i] == 0)
                         element.Connectivity[i] = AddNode((eNodes[i] as GSANode).AttachGSA(gsaObj), ref dict, ref counter, true);
             }

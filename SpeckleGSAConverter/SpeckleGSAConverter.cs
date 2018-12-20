@@ -7,6 +7,7 @@ using SpeckleCore;
 using System.Windows.Media.Media3D;
 using System.Reflection;
 using System.Collections;
+using System.Text.RegularExpressions;
 
 namespace SpeckleGSA
 {
@@ -316,17 +317,11 @@ namespace SpeckleGSA
 
             if (obj.IsDictionary())
             {
-                try
-                {
-                    List<int> intKeys = (obj as Dictionary<string, object>).Keys.Select(k => Convert.ToInt32(k)).ToList();
-
+                if ((obj as Dictionary<string, object>).Keys.Where(k => Regex.IsMatch(k, @"[0-9]+")).ToList().Count() > 0)
                     return (obj as Dictionary<string, object>).Values.Select(v => v.FromSpeckleDict()).ToArray();
-                }
-                catch
-                { 
+                else
                     return (obj as Dictionary<string, object>)
                         .ToDictionary(i => i.Key, i => i.Value.FromSpeckleDict());
-                }
             }
             else
                 return obj;
@@ -454,13 +449,13 @@ namespace SpeckleGSA
         public static SpeckleMesh ToSpeckle(this GSA2DElement element)
         {
             SpeckleMesh m = new SpeckleMesh(
-                        element.Coor,
-                        new int[] { element.Coor.Length / 3 - 3 }.Concat(
-                            Enumerable.Range(0, element.Coor.Length / 3).ToArray())
+                        element.Coor.ToArray(),
+                        new int[] { element.Coor.Count() / 3 - 3 }.Concat(
+                            Enumerable.Range(0, element.Coor.Count() / 3).ToArray())
                             .ToArray(),
                         Enumerable.Repeat(
                             element.Color.ToSpeckleColor(),
-                            element.Coor.Length / 3).ToArray(),
+                            element.Coor.Count() / 3).ToArray(),
                         null,
                         element.Reference.ToString(),
                         element.GetSpeckleProperties());
@@ -475,19 +470,19 @@ namespace SpeckleGSA
             for (int i = 0; i < mesh.Elements.Count; i++)
             {
                 Dictionary<string, object> e = mesh.Elements[i.ToString()] as Dictionary<string, object>;
-                int[] eConnectivity = (int[])e["Connectivity"];
+                List<int> eConnectivity = e["Connectivity"] as List<int>;
 
-                faceConnectivity.Add(eConnectivity.Length - 3);
+                faceConnectivity.Add(eConnectivity.Count() - 3);
                 foreach (int c in eConnectivity)
                     faceConnectivity.Add(mesh.nodeMapping[c]);
             }
 
             SpeckleMesh m = new SpeckleMesh(
-                        mesh.Coor,
+                        mesh.Coor.ToArray(),
                         faceConnectivity.ToArray(),
                         Enumerable.Repeat(
                             mesh.Color.ToSpeckleColor(),
-                            mesh.Coor.Length / 3).ToArray(),
+                            mesh.Coor.Count() / 3).ToArray(),
                         null,
                         "",
                         mesh.GetSpeckleProperties());
@@ -507,13 +502,13 @@ namespace SpeckleGSA
                         line.GetSpeckleProperties());
                     break;
                 case "ARC_RADIUS":
-                    obj = ArcRadiustoSpeckleArc(line.Coor, line.Radius);
+                    obj = ArcRadiustoSpeckleArc(line.Coor.ToArray(), line.Radius);
                     obj.ApplicationId = line.Reference.ToString();
                     obj.Properties = line.GetSpeckleProperties();
                     obj.GenerateHash();
                     break;
                 case "ARC_THIRD_PT":
-                    obj = Arc3PointtoSpeckleArc(line.Coor);
+                    obj = Arc3PointtoSpeckleArc(line.Coor.ToArray());
                     obj.ApplicationId = line.Reference.ToString();
                     obj.Properties = line.GetSpeckleProperties();
                     obj.GenerateHash();
@@ -528,12 +523,12 @@ namespace SpeckleGSA
         {
             SpeckleMesh mesh = new SpeckleMesh();
             mesh.Vertices = area.Coor.ToList();
-            mesh.Faces = (new int[] { area.Coor.Length / 3 - 3 }.Concat(
-                    Enumerable.Range(0, area.Coor.Length / 3).ToArray())).ToList();
+            mesh.Faces = (new int[] { area.Coor.Count() / 3 - 3 }.Concat(
+                    Enumerable.Range(0, area.Coor.Count() / 3).ToArray())).ToList();
             mesh.ApplicationId = area.Reference.ToString();
             mesh.Colors = Enumerable.Repeat(
                     area.Color.ToSpeckleColor(),
-                    (int)(area.Coor.Length / 3)).ToList();
+                    (int)(area.Coor.Count() / 3)).ToList();
             mesh.Properties = area.GetSpeckleProperties();
             mesh.GenerateHash();
             return mesh;
@@ -548,7 +543,7 @@ namespace SpeckleGSA
             if (point.Properties!=null && point.Properties.ContainsKey("Structural"))
                 obj.SetSpeckleProperties(point.Properties);
 
-            obj.Coor = point.Value.ToArray();
+            obj.Coor = point.Value;
 
             return obj;
         }
@@ -577,7 +572,7 @@ namespace SpeckleGSA
 
                 obj.SetSpeckleProperties(line.Properties);
             }
-            obj.Coor = line.Value.ToArray();
+            obj.Coor = line.Value;
             return obj;
         }
 
@@ -607,7 +602,7 @@ namespace SpeckleGSA
                 obj.SetSpeckleProperties(arc.Properties);
             }
 
-            obj.Coor = SpeckleArctoArc3Point(arc);
+            obj.Coor = SpeckleArctoArc3Point(arc).ToList();
             return obj;
         }
 
@@ -632,14 +627,13 @@ namespace SpeckleGSA
                     if (val == 3) e.Type = "TRI3";
                     else if (val == 4) e.Type = "QUAD4";
 
-                    List<double> eCoor = new List<double>();
+                    e.Coor.Clear();
                     while (coorCounter < val)
                     {
-                        eCoor.AddRange(coor[mesh.Faces[counter++]]);
+                        e.Coor.AddRange(coor[mesh.Faces[counter++]]);
                         coorCounter++;
                     }
-                    e.Coor = eCoor.ToArray();
-                    e.Connectivity = new int[eCoor.Count / 3];
+
                     elements.Add(e);
                 }
                 return elements.ToArray();
@@ -653,16 +647,16 @@ namespace SpeckleGSA
                 case "ELEMENTMESH":
                     GSA2DElementMesh m = new GSA2DElementMesh();
                     m.SetSpeckleProperties(mesh.Properties);
-                    m.Coor = mesh.Vertices.ToArray();
+                    m.Coor = mesh.Vertices;
                     m.Color = Math.Max(mesh.Colors[0], 0);
 
                     int elemCounter = 0;
                     for (int i = 0; i < mesh.Faces.Count(); i++)
                     {
                         i++;
-                        int[] conn = m.GetElemConnectivity(elemCounter++.ToString());
+                        List<int> conn = m.GetElemConnectivity(elemCounter++.ToString());
 
-                        for(int j = 0; j < conn.Length; j++)
+                        for(int j = 0; j < conn.Count(); j++)
                             m.nodeMapping[conn[j]] = mesh.Faces[i++];
 
                         i--;
@@ -671,13 +665,13 @@ namespace SpeckleGSA
                 case "ELEMENT":
                     GSA2DElement e = new GSA2DElement();
                     e.SetSpeckleProperties(mesh.Properties);
-                    e.Coor = mesh.Vertices.ToArray();
+                    e.Coor = mesh.Vertices;
                     e.Color = Math.Max(mesh.Colors[0], 0);
                     return e;
                 case "AREA":
                     GSAArea a = new GSAArea();
                     a.SetSpeckleProperties(mesh.Properties);
-                    a.Coor = mesh.Vertices.ToArray();
+                    a.Coor = mesh.Vertices;
                     a.Color = Math.Max(mesh.Colors[0],0);
                     return a;
                 default:

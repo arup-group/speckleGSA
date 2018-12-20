@@ -16,9 +16,9 @@ namespace SpeckleGSA
 
         public int Reference { get; set; }
         public string Name { get; set; }
-        public int[] Connectivity { get; set; }
+        public List<int> Connectivity { get; set; }
 
-        public double[] Coor;
+        public List<double> Coor;
         public object Color;
 
         public ComAuto gsa;
@@ -64,13 +64,13 @@ namespace SpeckleGSA
             Reference = 0;
             Name = "";
             Color = null;
-            Coor = new double[0];
-            Connectivity = new int[0];
+            Coor = new List<double>();
+            Connectivity = new List<int>();
 
             gsa = null;
         }
 
-        public abstract void ParseGWACommand(string command);
+        public abstract void ParseGWACommand(string command, GSAObject[] children = null);
 
         public abstract string GetGWACommand();
 
@@ -352,7 +352,7 @@ namespace SpeckleGSA
         public static Dictionary<string, object> EvaluateGSA2DElementAxis(this double[] coor, ComAuto gsaObj, double rotationAngle = 0, int property = 0)
         {
             Dictionary<string, object> axisVectors = new Dictionary<string, object>();
-
+            
             Vector3D x;
             Vector3D y;
             Vector3D z;
@@ -694,6 +694,11 @@ namespace SpeckleGSA
                 return (double)obj == val;
             else
                 return false;
+        }
+
+        public static int ParseLineNumNodes(this string type)
+        {
+            return (int)((GSAObject.LineNumNodes)Enum.Parse(typeof(GSAObject.LineNumNodes), type));
         }
 
         public static int ParseElementNumNodes(this string type)

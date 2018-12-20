@@ -43,21 +43,17 @@ namespace SpeckleGSA
         {
             edges.AddRange(mesh.edges);
 
-            List<double> tempCoor = Coor.ToList();
-            
             foreach(KeyValuePair<int, int> nMap in mesh.nodeMapping)
             {
                 if (!nodeMapping.ContainsKey(nMap.Key))
                 {
-                    nodeMapping[nMap.Key] = tempCoor.Count() / 3;
-                    tempCoor.AddRange(mesh.Coor.Skip(nMap.Value * 3).Take(3));
+                    nodeMapping[nMap.Key] = Coor.Count() / 3;
+                    Coor.AddRange(mesh.Coor.Skip(nMap.Value * 3).Take(3));
                 }
             }
 
             foreach(KeyValuePair<string, object> elem in mesh.Elements)
                 Elements[Elements.Keys.Count().ToString()] = elem.Value;
-
-            Coor = tempCoor.ToArray();
         }
 
         public bool ElementAddable(GSA2DElement element)
@@ -93,8 +89,8 @@ namespace SpeckleGSA
                 { "Connectivity", element.Connectivity },
                 { "Axis", element.Axis }
             };
-            AddEdges(element.Connectivity);
-            AddCoors(element.Coor, element.Connectivity);
+            AddEdges(element.Connectivity.ToArray());
+            AddCoors(element.Coor.ToArray(), element.Connectivity.ToArray());
             Elements[Elements.Keys.Count().ToString()] = e;
         }
 
@@ -109,18 +105,14 @@ namespace SpeckleGSA
 
         public void AddCoors(double[] coor, int[] connectivity)
         {
-            List<double> tempCoor = Coor.ToList();
-
             for (int i = 0; i < connectivity.Length; i++)
             {
                 if (!nodeMapping.ContainsKey(connectivity[i]))
                 {
-                    nodeMapping[connectivity[i]] = tempCoor.Count() / 3;
-                    tempCoor.AddRange(coor.Skip(i * 3).Take(3));
+                    nodeMapping[connectivity[i]] = Coor.Count() / 3;
+                    Coor.AddRange(coor.Skip(i * 3).Take(3));
                 }
             }
-
-            Coor = tempCoor.ToArray();
         }
 
         public override string GetGWACommand()
@@ -128,7 +120,7 @@ namespace SpeckleGSA
             throw new NotImplementedException();
         }
 
-        public override void ParseGWACommand(string command)
+        public override void ParseGWACommand(string command, GSAObject[] children = null)
         {
             throw new NotImplementedException();
         }
@@ -159,10 +151,9 @@ namespace SpeckleGSA
                         continue;
                 }
 
-                List<double> tempCoor = new List<double>();
+                elem.Coor.Clear();
                 foreach (int c in elem.Connectivity)
-                    tempCoor.AddRange(Coor.Skip(nodeMapping[c] * 3).Take(3));
-                elem.Coor = tempCoor.ToArray();
+                    elem.Coor.AddRange(Coor.Skip(nodeMapping[c] * 3).Take(3));
 
                 elements.Add(elem);
             }
@@ -171,11 +162,11 @@ namespace SpeckleGSA
             return elements;
         }
 
-        public int[] GetElemConnectivity (string key)
+        public List<int> GetElemConnectivity (string key)
         {
             Dictionary<string, object> elem = Elements[key] as Dictionary<string,object>;
             return ((IEnumerable)elem["Connectivity"]).Cast<object>()
-                .Select(e => (int)e.ToDouble()).ToArray();
+                .Select(e => (int)e.ToDouble()).ToList();
         }
     }
 }

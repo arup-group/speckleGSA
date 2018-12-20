@@ -16,6 +16,7 @@ namespace SpeckleGSA
         public int Group;
         public string Action;
         public bool Dummy;
+        public double rotationAngle;
 
         public GSA2DElement() : base("ELEMENT")
         {
@@ -35,7 +36,7 @@ namespace SpeckleGSA
             Dummy = false;
         }
 
-        public override void ParseGWACommand(string command)
+        public override void ParseGWACommand(string command, GSAObject[] children = null)
         {
             string[] pieces = command.ListSplit(",");
 
@@ -47,20 +48,19 @@ namespace SpeckleGSA
             Property = Convert.ToInt32(pieces[counter++]);
             Group = Convert.ToInt32(pieces[counter++]);
 
-            Connectivity = new int[Type.ParseElementNumNodes()];
-            List<double> tempCoor = new List<double>();
-            for (int i = 0; i < Connectivity.Length; i++)
-            {
-                Connectivity[i] = Convert.ToInt32(pieces[counter++]);
-                tempCoor.AddRange(Connectivity[i].NodeCoor(gsa));
+            Connectivity.Clear();
+            Coor.Clear();
+            for (int i = 0; i < Type.ParseElementNumNodes(); i++)
+            { 
+                Connectivity.Add(Convert.ToInt32(pieces[counter++]));
+                Coor.AddRange(children.Where(n => n.Reference == Connectivity[i]).FirstOrDefault().Coor);
             }
-            Coor = tempCoor.ToArray();
 
             counter++; // Orientation node
 
-            double rotationAngle = Convert.ToDouble(pieces[counter++]);
+            rotationAngle = Convert.ToDouble(pieces[counter++]);
 
-            Axis = Coor.EvaluateGSA2DElementAxis(gsa, rotationAngle, Property);
+            Axis = Coor.ToArray().EvaluateGSA2DElementAxis(gsa, rotationAngle, Property);
 
             if (pieces[counter++] != "NO_RLS")
             {
@@ -116,10 +116,10 @@ namespace SpeckleGSA
         {
             List<GSAObject> children = new List<GSAObject>();
 
-            for (int i = 0; i < Coor.Length / 3; i++)
+            for (int i = 0; i < Coor.Count() / 3; i++)
             {
                 GSANode n = new GSANode();
-                n.Coor = Coor.Skip(i * 3).Take(3).ToArray();
+                n.Coor = Coor.Skip(i * 3).Take(3).ToList();
                 children.Add(n);
             }
 

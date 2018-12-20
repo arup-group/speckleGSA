@@ -23,7 +23,7 @@ namespace SpeckleGSA
             AnalMaterial = 0;
         }
 
-        public override void ParseGWACommand(string command)
+        public override void ParseGWACommand(string command, GSAObject[] children = null)
         {
             string[] pieces = command.ListSplit(",");
             int counter = 1; // Skip identifier

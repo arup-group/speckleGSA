@@ -48,7 +48,7 @@ namespace SpeckleGSA
             MeshData = new Dictionary<string, object>();
         }
 
-        public override void ParseGWACommand(string command)
+        public override void ParseGWACommand(string command, GSAObject[] children = null)
         {
             string[] pieces = command.ListSplit(",");
 
@@ -56,10 +56,10 @@ namespace SpeckleGSA
             Reference = Convert.ToInt32(pieces[counter++]);
             Name = pieces[counter++].Trim(new char[] { '"' });
             Color = pieces[counter++].ParseGSAColor();
-            Coor = new double[3];
-            Coor[0] = Convert.ToDouble(pieces[counter++]);
-            Coor[1] = Convert.ToDouble(pieces[counter++]);
-            Coor[2] = Convert.ToDouble(pieces[counter++]);
+            Coor = new List<double>();
+            Coor.Add(Convert.ToDouble(pieces[counter++]));
+            Coor.Add(Convert.ToDouble(pieces[counter++]));
+            Coor.Add(Convert.ToDouble(pieces[counter++]));
 
             while (counter < pieces.Length)
             {
@@ -102,7 +102,7 @@ namespace SpeckleGSA
                     MeshData["ColumnSlabFactor"] = pieces[counter++];
                 }
                 else
-                    Axis = Convert.ToInt32(pieces[counter++]).EvaluateGSANodeAxis(gsa, Coor);
+                    Axis = Convert.ToInt32(pieces[counter++]).EvaluateGSANodeAxis(gsa, Coor.ToArray());
             }
             return;
         }
@@ -201,7 +201,7 @@ namespace SpeckleGSA
             {
                 GSAElement massElem = new GSAElement().AttachGSA(gsa);
                 massElem.Type = "MASS";
-                massElem.Connectivity = new int[] { Reference };
+                massElem.Connectivity = new List<int>() { Reference };
                 massElem.Property = Mass.AddMasstoGSA(gsa);
                 elemList.Add(massElem);
             }

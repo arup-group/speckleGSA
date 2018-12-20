@@ -48,7 +48,7 @@ namespace SpeckleGSA
             };
         }
 
-        public override void ParseGWACommand(string command)
+        public override void ParseGWACommand(string command, GSAObject[] children = null)
         {
             string[] pieces = command.ListSplit(",");
 
@@ -57,10 +57,10 @@ namespace SpeckleGSA
             Name = pieces[counter++].Trim(new char[] { '"' });
             Color = pieces[counter++].ParseGSAColor();
             Type = pieces[counter++];
-            Connectivity = new int[(int)Enum.Parse(typeof(LineNumNodes), Type)];
-            for (int i = 0; i < Connectivity.Length; i++)
-                Connectivity[i] = Convert.ToInt32(pieces[counter++]);
-            if ((int)Enum.Parse(typeof(LineNumNodes), Type) == 2) counter++;
+            Connectivity.Clear();
+            for (int i = 0; i < Type.ParseLineNumNodes(); i++)
+                Connectivity.Add(Convert.ToInt32(pieces[counter++]));
+            if (Type.ParseLineNumNodes() == 2) counter++;
             Radius = Convert.ToDouble(pieces[counter++]);
             Axis = pieces[counter++];
             Restraint["x"] = pieces[counter++] == "0" ? false: true;
@@ -98,7 +98,7 @@ namespace SpeckleGSA
             ls.Add(Type);
             ls.Add(Connectivity[0].ToString());
             ls.Add(Connectivity[1].ToString());
-            ls.Add(Connectivity.Length == 2 ? "0" : Connectivity[2].ToString());
+            ls.Add(Connectivity.Count() == 2 ? "0" : Connectivity[2].ToString());
             ls.Add(Radius.ToString());
             ls.Add(Axis);
             ls.Add(((bool)Restraint["x"])? "1" : "0");
@@ -131,7 +131,7 @@ namespace SpeckleGSA
             for (int i = 0; i < (int)Enum.Parse(typeof(LineNumNodes), Type); i++)
             {
                 GSANode n = new GSANode();
-                n.Coor = Coor.Skip(i * 3).Take(3).ToArray();
+                n.Coor = Coor.Skip(i * 3).Take(3).ToList();
                 children.Add(n);
             }
 

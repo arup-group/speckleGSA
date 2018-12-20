@@ -23,7 +23,7 @@ namespace SpeckleGSA
             Coefficient = 0;
         }
 
-        public override void ParseGWACommand(string command)
+        public override void ParseGWACommand(string command, GSAObject[] children = null)
         {
             string[] pieces = command.ListSplit(",");
 
@@ -35,7 +35,7 @@ namespace SpeckleGSA
             Span = Convert.ToDouble(pieces[counter++]);
             Property = Convert.ToInt32(pieces[counter++]);
             Group = Convert.ToInt32(pieces[counter++]);
-            Connectivity = pieces[counter++].ParseGSAList(gsa);
+            Connectivity = pieces[counter++].ParseGSAList(gsa).ToList();
             Coefficient = Convert.ToDouble(pieces[counter++]);
         }
 
@@ -69,17 +69,17 @@ namespace SpeckleGSA
             List<GSAObject> children = new List<GSAObject>();
             GSALine l;
 
-            for (int i = 0; i < Coor.Length/3-1; i++)
+            for (int i = 0; i < Coor.Count()/3-1; i++)
             {
                 l = new GSALine();
-                l.Coor = Coor.Skip(i * 3).Take(6).ToArray();
+                l.Coor = Coor.Skip(i * 3).Take(6).ToList();
                 children.Add(l);
             }
 
             l = new GSALine();
-            List<double> coor = Coor.Skip(Coor.Length - 3).Take(3).ToList();
+            List<double> coor = Coor.Skip(Coor.Count() - 3).Take(3).ToList();
             coor.AddRange(Coor.Take(3));
-            l.Coor = coor.ToArray();
+            l.Coor = coor.ToList();
             children.Add(l);
 
             return children;
