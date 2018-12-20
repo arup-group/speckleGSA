@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -143,11 +144,7 @@ namespace SpeckleGSA
                 elem.InsertionPoint = InsertionPoint;
                 elem.Name = (string)((e.Value as Dictionary<string,object>)["Name"]);
                 elem.Reference = (int)(((e.Value as Dictionary<string, object>)["Reference"]).ToDouble());
-                Dictionary<string, object> conn = (e.Value as Dictionary<string, object>)["Connectivity"] as Dictionary<string, object>;
-                List<int> tempConn = new List<int>();
-                for (int i = 0; i < conn.Keys.Count(); i++)
-                    tempConn.Add((int)(conn[i.ToString()].ToDouble()));
-                elem.Connectivity = tempConn.ToArray();
+                elem.Connectivity = GetElemConnectivity(e.Key);
                 elem.Axis = (Dictionary<string, object>)((e.Value as Dictionary<string, object>)["Axis"]);
 
                 switch(elem.Connectivity.Count())
@@ -177,12 +174,8 @@ namespace SpeckleGSA
         public int[] GetElemConnectivity (string key)
         {
             Dictionary<string, object> elem = Elements[key] as Dictionary<string,object>;
-            Dictionary<string, object> conn = elem["Connectivity"] as Dictionary<string, object>;
-
-            List<int> tempConn = new List<int>();
-            for (int i = 0; i < conn.Keys.Count(); i++)
-                tempConn.Add((int)(conn[i.ToString()].ToDouble()));
-            return tempConn.ToArray();
+            return ((IEnumerable)elem["Connectivity"]).Cast<object>()
+                .Select(e => (int)e.ToDouble()).ToArray();
         }
     }
 }

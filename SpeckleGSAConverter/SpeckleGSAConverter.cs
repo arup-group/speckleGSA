@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using SpeckleCore;
 using System.Windows.Media.Media3D;
 using System.Reflection;
+using System.Collections;
 
 namespace SpeckleGSA
 {
@@ -36,7 +37,8 @@ namespace SpeckleGSA
         {
             return ((max - min) * 0.5) + min;
         }
-        
+
+
         public static SpeckleArc ArcRadiustoSpeckleArc(double[] coor, double radius, bool greaterThanHalf = false)
         {
             Point3D[] points = new Point3D[] {
@@ -231,38 +233,59 @@ namespace SpeckleGSA
             };
         }
 
-        public static Dictionary<string,object> ToSpeckle(this Array arr)
+        public static bool IsList(this object o)
         {
-            if (arr == null) return null;
-
-            int count = 0;
-            var speckleDict = new Dictionary<string, object>();
-            foreach(var value in arr)
-            {
-                string key = count.ToString();
-                speckleDict.Add(key, value);
-                count++;
-            }
-            return speckleDict;
+            if (o == null) return false;
+            return o.GetType().IsGenericType &&
+                   o.GetType().GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
         }
 
-        public static Dictionary<string,object> ToSpeckle(this Dictionary<string, object> dict)
+        public static bool IsList(this PropertyInfo prop)
         {
-            if (dict == null) return null;
+            if (prop == null) return false;
+            return prop.PropertyType.IsGenericType &&
+                   prop.PropertyType.GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
+        }
 
-            var speckleDict = new Dictionary<string, object>();
-            foreach (string key in dict.Keys)
+        public static bool IsDictionary(this object o)
+        {
+            if (o == null) return false;
+            return o.GetType().IsGenericType &&
+                   o.GetType().GetGenericTypeDefinition().IsAssignableFrom(typeof(Dictionary<,>));
+        }
+
+        public static bool IsDictionary(this PropertyInfo prop)
+        {
+            if (prop == null) return false;
+            return prop.PropertyType.IsGenericType &&
+                   prop.PropertyType.GetGenericTypeDefinition().IsAssignableFrom(typeof(Dictionary<,>));
+        }
+
+        public static object ToSpeckleDict(this object obj)
+        {
+            if (obj == null) { return null; }
+            
+            if (obj.GetType().IsArray)
             {
-                object value = dict[key];
-                Type t = value.GetType();
-
-                if (t.IsArray)
-                    value = ((Array)value).ToSpeckle();
-                else if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(Dictionary<,>))
-                    value = (value as Dictionary<string, object>).ToSpeckle();
-                speckleDict.Add(key, value);
+                if (((IEnumerable)obj).Cast<object>().ToList().Count() == 0) return null;
+                return ((IEnumerable)obj).Cast<object>().ToList().Select((x, i) => new { x, i })
+                    .ToDictionary(n => n.i.ToString(), n => n.x.ToSpeckleDict());
             }
-            return speckleDict;
+            else if (obj.IsDictionary())
+            {
+                if ((obj as Dictionary<string, object>).Keys.Count() == 0) return null;
+                return (obj as Dictionary<string, object>)
+                    .ToDictionary(i => i.Key, i => i.Value.ToSpeckleDict());
+            }
+            else if (obj.IsList())
+            {
+                if (((IEnumerable)obj).Cast<object>().ToList().Count() == 0) return null;
+                return ((IEnumerable)obj).Cast<object>().ToList().Select((x, i) => new { x, i })
+                    .ToDictionary(n => n.i.ToString(), n => n.x.ToSpeckleDict());
+            }
+
+            else
+                return obj;
         }
 
         public static Dictionary<string,object> GetSpeckleProperties(this object obj)
@@ -274,14 +297,9 @@ namespace SpeckleGSA
             {
                 string key = prop.Name;
                 
-                object value = prop.GetValue(obj, null);
-                Type t = value.GetType();
-
-                if (t.IsArray)
-                    value = ((Array)value).ToSpeckle();
-                else if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(Dictionary<,>))
-                    value = (value as Dictionary<string, object>).ToSpeckle();
-                structuralDict.Add(key, value);
+                object value = prop.GetValue(obj, null).ToSpeckleDict();
+                if (value != null)
+                    structuralDict.Add(key, value);
             }
 
             var speckleDict = new Dictionary<string, object>()
@@ -291,7 +309,29 @@ namespace SpeckleGSA
             
             return speckleDict;
         }
-        
+
+        public static object FromSpeckleDict(this object obj)
+        {
+            if (obj == null) { return null; }
+
+            if (obj.IsDictionary())
+            {
+                try
+                {
+                    List<int> intKeys = (obj as Dictionary<string, object>).Keys.Select(k => Convert.ToInt32(k)).ToList();
+
+                    return (obj as Dictionary<string, object>).Values.Select(v => v.FromSpeckleDict()).ToArray();
+                }
+                catch
+                { 
+                    return (obj as Dictionary<string, object>)
+                        .ToDictionary(i => i.Key, i => i.Value.FromSpeckleDict());
+                }
+            }
+            else
+                return obj;
+        }
+
         public static void SetSpeckleProperties(this object obj, Dictionary<string, object> dict)
         {
             if (obj == null) return;
@@ -313,17 +353,32 @@ namespace SpeckleGSA
                 if (prop.PropertyType.IsArray)
                 {
                     Type type = prop.GetValue(obj).GetType().GetElementType();
-                    var arr = Array.CreateInstance(type, (value as Dictionary<string, object>).Count);
-                    
-                    foreach (KeyValuePair<string, object> kp in (value as Dictionary<string, object>))
-                        arr.SetValue(Convert.ChangeType(kp.Value, type), Convert.ToInt32(kp.Key));
-                    
-                    prop.SetValue(obj, arr);
+
+                    Dictionary<string, object>.ValueCollection vals = (value as Dictionary<string, object>).Values;
+
+                    prop.SetValue(obj, vals.Select(x => Convert.ChangeType(value.FromSpeckleDict(), type)).ToArray());
+                }
+                else if (prop.IsList())
+                {
+                    Type type = prop.GetValue(obj).GetType().GetGenericArguments()[0];
+                    Dictionary<string, object>.ValueCollection vals = (value as Dictionary<string, object>).Values;
+
+                    Type genericListType = typeof(List<>).MakeGenericType(type);
+                    IList tempList = (IList)Activator.CreateInstance(genericListType);
+                    foreach (object x in vals)
+                        tempList.Add(Convert.ChangeType(x.FromSpeckleDict(), type));
+
+                    prop.SetValue(obj, tempList);
+                }
+                else if (prop.IsDictionary())
+                {
+                    prop.SetValue(obj,
+                        Convert.ChangeType((value as Dictionary<string, object>)
+                        .ToDictionary(i => i.Key, i => i.Value.FromSpeckleDict()),
+                        prop.PropertyType));
                 }
                 else
-                {
                     prop.SetValue(obj, Convert.ChangeType(value, prop.PropertyType));
-                }
             }
         }
         #endregion
