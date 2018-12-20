@@ -10,9 +10,24 @@ namespace SpeckleGSA
 {
     public class GSAController
     {
-        public string SenderNodeStreamID { get { return senders["Nodes"].StreamID; } }
+        public string SenderNodeStreamID { get
+            {
+                if (senders.ContainsKey("Nodes"))
+                    return senders["Nodes"].StreamID;
+                else
+                    return "";
+            }
+        }
         public string SenderSectionStreamID { get { return ""; } }
-        public string SenderElementStreamID { get { return senders["Elements"].StreamID; } }
+        public string SenderElementStreamID {
+            get
+            {
+                if (senders.ContainsKey("Elements"))
+                    return senders["Elements"].StreamID;
+                else
+                    return "";
+            }
+        }
 
         public MessageLog Messages;
 
