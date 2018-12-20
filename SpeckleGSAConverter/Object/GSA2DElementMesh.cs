@@ -129,17 +129,22 @@ namespace SpeckleGSA
         {
             List<GSAObject> elements = new List<GSAObject>();
 
-            foreach (KeyValuePair<string,object> e in Elements)
+            foreach (KeyValuePair<string, object> e in Elements)
             {
                 GSA2DElement elem = new GSA2DElement();
                 elem.Property = Property;
                 elem.InsertionPoint = InsertionPoint;
-                elem.Name = (string)((e.Value as Dictionary<string,object>)["Name"]);
+                elem.Name = (string)((e.Value as Dictionary<string, object>)["Name"]);
                 elem.Reference = (int)(((e.Value as Dictionary<string, object>)["Reference"]).ToDouble());
-                elem.Connectivity = GetElemConnectivity(e.Key);
+                if ((e.Value as Dictionary<string, object>).ContainsKey("Connectivity"))
+                    elem.Connectivity = GetElemConnectivity(e.Key);
+                else if ((e.Value as Dictionary<string, object>).ContainsKey("Coor"))
+                    elem.Coor = GetElemCoor(e.Key);
+                else
+                    continue;
                 elem.Axis = (Dictionary<string, object>)((e.Value as Dictionary<string, object>)["Axis"]);
 
-                switch(elem.Connectivity.Count())
+                switch (elem.Connectivity.Count() + elem.Coor.Count() / 3)
                 {
                     case 3:
                         elem.Type = "TRI3";
@@ -151,9 +156,12 @@ namespace SpeckleGSA
                         continue;
                 }
 
-                elem.Coor.Clear();
-                foreach (int c in elem.Connectivity)
-                    elem.Coor.AddRange(Coor.Skip(nodeMapping[c] * 3).Take(3));
+                if (elem.Coor.Count == 0)
+                {
+                    elem.Coor.Clear();
+                    foreach (int c in elem.Connectivity)
+                        elem.Coor.AddRange(Coor.Skip(nodeMapping[c] * 3).Take(3));
+                }
 
                 elements.Add(elem);
             }
@@ -167,6 +175,13 @@ namespace SpeckleGSA
             Dictionary<string, object> elem = Elements[key] as Dictionary<string,object>;
             return ((IEnumerable)elem["Connectivity"]).Cast<object>()
                 .Select(e => (int)e.ToDouble()).ToList();
+        }
+
+        public List<double> GetElemCoor(string key)
+        {
+            Dictionary<string, object> elem = Elements[key] as Dictionary<string, object>;
+            return ((IEnumerable)elem["Coor"]).Cast<object>()
+                .Select(e => e.ToDouble()).ToList();
         }
     }
 }

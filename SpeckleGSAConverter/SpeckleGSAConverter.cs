@@ -610,33 +610,39 @@ namespace SpeckleGSA
         {
             if (mesh.Properties == null || !mesh.Properties.ContainsKey("Structural"))
             {
-                List<GSA2DElement> elements = new List<GSA2DElement>();
-
-                List<double[]> coor = new List<double[]>();
-                for (int i = 0; i < mesh.Vertices.Count / 3; i++)
-                    coor.Add(mesh.Vertices.ToArray().Skip(i * 3).Take(3).ToArray());
-
-                int counter = 0;
-                while (counter < mesh.Faces.Count)
+                GSA2DElementMesh m = new GSA2DElementMesh();
+                m.Coor = mesh.Vertices;
+                m.Color = mesh.Colors.Count > 0 ? Math.Max(mesh.Colors[0], 0) : 0;
+                
+                for (int i = 0; i < mesh.Faces.Count(); i++)
                 {
-                    int val = mesh.Faces[counter++] + 3;
-                    int coorCounter = 0;
-
-                    GSA2DElement e = new GSA2DElement();
-
-                    if (val == 3) e.Type = "TRI3";
-                    else if (val == 4) e.Type = "QUAD4";
-
-                    e.Coor.Clear();
-                    while (coorCounter < val)
+                    Dictionary<string, object> e = new Dictionary<string, object>()
                     {
-                        e.Coor.AddRange(coor[mesh.Faces[counter++]]);
-                        coorCounter++;
-                    }
+                        { "Name", "" },
+                        { "Reference", 0 },
+                        { "Axis", new Dictionary<string, object>()
+                            {
+                                { "X", new Dictionary<string, object> { { "x", 1 }, { "y", 0 },{ "z", 0 }  } },
+                                { "Y", new Dictionary<string, object> { { "x", 0 }, { "y", 1 },{ "z", 0 }  } },
+                                { "Z", new Dictionary<string, object> { { "x", 0 }, { "y", 0 },{ "z", 1 }  } },
+                            }
+                        }
+                    };
 
-                    elements.Add(e);
+                    int numNodes = mesh.Faces[i++] + 3;
+
+                    List<double> coor = new List<double>();
+                    for (int j = 0; j < numNodes; j++)
+                        coor.AddRange(mesh.Vertices.Skip(mesh.Faces[i++] * 3).Take(3));
+
+                    e["Coor"] = coor.ToArray();
+
+                    m.Elements[m.Elements.Count.ToString()] = e;
+
+                    i--;
                 }
-                return elements.ToArray();
+
+                return m;
             }
 
 
