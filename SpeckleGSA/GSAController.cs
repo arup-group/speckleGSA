@@ -197,43 +197,43 @@ namespace SpeckleGSA
                     default:
                         GSA2DElement e2D = new GSA2DElement().AttachGSA(gsaObj);
                         e2D.ParseGWACommand(p, nodes.ToArray());
-                        elements[1].Add(e2D);
+
+                        GSA2DElementMesh mesh = new GSA2DElementMesh();
+                        mesh.Property = (e2D as GSA2DElement).Property;
+                        mesh.InsertionPoint = (e2D as GSA2DElement).InsertionPoint;
+                        mesh.AddElement(e2D as GSA2DElement);
+                        elements[1].Add(mesh);
                         break;
                 }
                 Console.WriteLine("E:" + counter++.ToString() + "/" + pieces.Count());
             }
+            
+            //counter = 0;
+            //foreach (GSAObject e2D in elements[1])
+            //{
+            //    GSA2DElementMesh mesh = new GSA2DElementMesh();
+            //    mesh.Property = (e2D as GSA2DElement).Property;
+            //    mesh.InsertionPoint = (e2D as GSA2DElement).InsertionPoint;
+            //    mesh.AddElement(e2D as GSA2DElement);
+            //    meshList.Add(mesh);
+            //    Console.WriteLine("ECONV:" + counter++.ToString() + "/" + elements[1].Count());
+            //}
 
-            List<GSA2DElementMesh> meshList = new List<GSA2DElementMesh>();
-
-            counter = 0;
-            foreach (GSAObject e2D in elements[1])
+            for (int i = 0; i < elements[1].Count(); i++)
             {
-                GSA2DElementMesh mesh = new GSA2DElementMesh();
-                mesh.Property = (e2D as GSA2DElement).Property;
-                mesh.InsertionPoint = (e2D as GSA2DElement).InsertionPoint;
-                mesh.AddElement(e2D as GSA2DElement);
-                meshList.Add(mesh);
-                Console.WriteLine("ECONV:" + counter++.ToString() + "/" + elements[1].Count());
-            }
+                List<GSAObject> matches = elements[1].Where((m,j) => (elements[1][i] as GSA2DElementMesh).MeshMergeable(m as GSA2DElementMesh) & j != i).ToList();
 
-            for (int i = 0; i < meshList.Count(); i++)
-            {
-                List<GSA2DElementMesh> matches = meshList.Where((m,j) => meshList[i].MeshMergeable(m) & j != i).ToList();
+                foreach(GSAObject m in matches)
+                    (elements[1][i] as GSA2DElementMesh).MergeMesh(m as GSA2DElementMesh);
 
-                foreach(GSA2DElementMesh m in matches)
-                    meshList[i].MergeMesh(m);
-
-                foreach (GSA2DElementMesh m in matches)
-                    meshList.Remove(m);
+                foreach (GSAObject m in matches)
+                    elements[1].Remove(m);
                 
-                Console.WriteLine("MESH:" + i.ToString() + "/" + meshList.Count());
+                Console.WriteLine("MESH:" + (i+1).ToString() + "/" + elements[1].Count());
 
                 if (matches.Count() > 0) i--;
             }
-
-            elements[1].Clear();
-            elements[2] = meshList.Select(m => m as GSAObject).ToList();
-
+            
             return elements;
         }
 
@@ -352,8 +352,7 @@ namespace SpeckleGSA
 
             List<GSAObject>[] elements = GetElements(nodes);
             Messages.AddMessage("Converted " + elements[0].Count() + " 1D elements.");
-            Messages.AddMessage("Converted " + elements[1].Count() + " 2D elements.");
-            Messages.AddMessage("Converted " + elements[2].Count() + " Meshes.");
+            Messages.AddMessage("Converted " + elements[1].Count() + " 2D meshes.");
 
             // Send nodes
             Messages.AddMessage("Sending .nodes stream.");
@@ -391,30 +390,25 @@ namespace SpeckleGSA
 
             Messages.AddMessage(".elements sender streamID: " + senders["Elements"].StreamID + ".");
 
-            bucketObjects["Lines"] = new List<object>();
-            foreach (GSALine l in lines)
-                bucketObjects["Lines"].Add(l.ToSpeckle());
+            //bucketObjects["Lines"] = new List<object>();
+            //foreach (GSALine l in lines)
+            //    bucketObjects["Lines"].Add(l.ToSpeckle());
 
-            bucketObjects["Areas"] = new List<object>();
-            foreach (GSAArea a in areas)
-                bucketObjects["Areas"].Add(a.ToSpeckle());
+            //bucketObjects["Areas"] = new List<object>();
+            //foreach (GSAArea a in areas)
+            //    bucketObjects["Areas"].Add(a.ToSpeckle());
 
             bucketObjects["Elements - 1D"] = new List<object>();
             foreach (GSAObject e1D in elements[0])
                 bucketObjects["Elements - 1D"].Add((e1D as GSA1DElement).ToSpeckle());
-
-            bucketObjects["Elements - 2D"] = new List<object>();
-            foreach (GSAObject e2D in elements[1])
-                bucketObjects["Elements - 2D"].Add((e2D as GSA2DElement).ToSpeckle());
-
+            
             bucketObjects["Elements - 2D Mesh"] = new List<object>();
-            foreach (GSAObject eMesh in elements[2])
+            foreach (GSAObject eMesh in elements[1])
                 bucketObjects["Elements - 2D Mesh"].Add((eMesh as GSA2DElementMesh).ToSpeckle());
 
-            Messages.AddMessage("Lines: " + bucketObjects["Lines"].Count() + ".");
-            Messages.AddMessage("Areas: " + bucketObjects["Areas"].Count() + ".");
+            //Messages.AddMessage("Lines: " + bucketObjects["Lines"].Count() + ".");
+            //Messages.AddMessage("Areas: " + bucketObjects["Areas"].Count() + ".");
             Messages.AddMessage("Elements - 1D: " + bucketObjects["Elements - 1D"].Count() + ".");
-            Messages.AddMessage("Elements - 2D: " + bucketObjects["Elements - 2D"].Count() + ".");
             Messages.AddMessage("Elements - 2D Mesh: " + bucketObjects["Elements - 2D Mesh"].Count() + ".");
 
             objectIDs = await senders["Elements"].UpdateDataAsync(modelName + ".elements", bucketObjects);
