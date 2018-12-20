@@ -110,22 +110,22 @@ namespace SpeckleGSAUI
         #endregion
 
         #region Sender
-        private async void SendStream(object sender, RoutedEventArgs e)
+        private void SendStream(object sender, RoutedEventArgs e)
         {
-            await gsa.ExportObjects(ModelName).ContinueWith(
-                delegate
-                {
-                    Application.Current.Dispatcher.BeginInvoke(
-                        DispatcherPriority.Background,
-                        new Action(() =>
-                        {
-                            SenderNodeStreamID.Text = gsa.SenderNodeStreamID;
-                            SenderSectionStreamID.Text = gsa.SenderSectionStreamID;
-                            SenderElementStreamID.Text = gsa.SenderElementStreamID;
-                        }
-                        ));
-                }
-            );
+            gsa.ExportObjects(ModelName);//.ContinueWith(
+            //    delegate
+            //    {
+            //        Application.Current.Dispatcher.BeginInvoke(
+            //            DispatcherPriority.Background,
+            //            new Action(() =>
+            //            {
+            //                SenderNodeStreamID.Text = gsa.SenderNodeStreamID;
+            //                SenderSectionStreamID.Text = gsa.SenderSectionStreamID;
+            //                SenderElementStreamID.Text = gsa.SenderElementStreamID;
+            //            }
+            //            ));
+            //    }
+            //);
         }
         #endregion
 
