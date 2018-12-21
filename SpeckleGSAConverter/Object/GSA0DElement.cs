@@ -6,24 +6,20 @@ using System.Threading.Tasks;
 
 namespace SpeckleGSA
 {
-    public class GSAArea : GSAObject
+    public class GSA0DElement : GSAObject
     {
-        // DEPRECIATED. DO NOT USE.
         public string Type { get; set; }
-        public double Span { get; set; }
         public int Property { get; set; }
         public int Group { get; set; }
-        public double Coefficient { get; set; }
 
-        public GSAArea():base("AREA")
+        public GSA0DElement() : base("ELEMENT")
         {
-            Type = "TWO_WAY";
-            Span = 0;
+            Type = "MASS";
             Property = 1;
             Group = 0;
-            Coefficient = 0;
         }
 
+        #region GSAObject Functions
         public override void ParseGWACommand(string command, GSAObject[] children = null)
         {
             string[] pieces = command.ListSplit(",");
@@ -33,11 +29,13 @@ namespace SpeckleGSA
             Name = pieces[counter++].Trim(new char[] { '"' });
             Color = pieces[counter++].ParseGSAColor();
             Type = pieces[counter++];
-            Span = Convert.ToDouble(pieces[counter++]);
             Property = Convert.ToInt32(pieces[counter++]);
             Group = Convert.ToInt32(pieces[counter++]);
-            Connectivity = pieces[counter++].ParseGSAList(gsa).ToList();
-            Coefficient = Convert.ToDouble(pieces[counter++]);
+            Connectivity.Clear();
+            for (int i = 0; i < Type.ParseElementNumNodes(); i++)
+                Connectivity.Add(Convert.ToInt32(pieces[counter++]));
+            
+            // Rest is unimportant for 0D element
         }
 
         public override string GetGWACommand()
@@ -45,45 +43,40 @@ namespace SpeckleGSA
             List<string> ls = new List<string>();
 
             ls.Add("SET");
-            ls.Add("AREA.2");
+            ls.Add("EL.4");
             ls.Add(Reference.ToString());
             ls.Add(Name);
             if (Color == null)
                 ls.Add("NO_RGB");
             else
-                ls.Add(((int)Color).ToString());
+                ls.Add(Color.ToNumString());
             ls.Add(Type);
-            ls.Add(Span.ToString());
             ls.Add(Property.ToString());
             ls.Add(Group.ToString());
-            string lineList = "";
             foreach (int c in Connectivity)
-                lineList += c.ToString() + " ";
-            ls.Add(lineList.TrimEnd());
-            ls.Add(Coefficient.ToString());
-            
+                ls.Add(c.ToString());
+            ls.Add("0"); // Orient Node
+            ls.Add("0"); // Beta
+            ls.Add("NO_RLS"); // Release
+
+            ls.Add("0"); // Offset x-start
+            ls.Add("0"); // Offset y-start
+            ls.Add("0"); // Offset y
+            ls.Add("0"); // Offset z
+
+            ls.Add("NORMAL"); // Action
+            ls.Add(""); //Dummy
+
             return string.Join(",", ls);
         }
 
         public override List<GSAObject> GetChildren()
         {
-            List<GSAObject> children = new List<GSAObject>();
-            GSALine l;
+            GSANode n = new GSANode();
+            n.Coor = Coor;
 
-            for (int i = 0; i < Coor.Count()/3-1; i++)
-            {
-                l = new GSALine();
-                l.Coor = Coor.Skip(i * 3).Take(6).ToList();
-                children.Add(l);
-            }
-
-            l = new GSALine();
-            List<double> coor = Coor.Skip(Coor.Count() - 3).Take(3).ToList();
-            coor.AddRange(Coor.Take(3));
-            l.Coor = coor.ToList();
-            children.Add(l);
-
-            return children;
+            return new List<GSAObject>() { n };
         }
+        #endregion
     }
 }

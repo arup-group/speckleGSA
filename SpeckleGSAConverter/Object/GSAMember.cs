@@ -8,6 +8,7 @@ namespace SpeckleGSA
 {
     public class GSAMember : GSAObject
     {
+        // TODO: TARGET GSA 10
         public GSAMember() : base("MEMBER")
         {
         }

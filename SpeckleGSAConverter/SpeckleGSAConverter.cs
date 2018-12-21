@@ -15,31 +15,7 @@ namespace SpeckleGSA
 
     public static class SpeckleGSAConverter
     {
-        const double EPS = 1e-6;
-        const string appId = null;
-
-        #region Helper Methods
-        public static double ToDegrees(this double radians)
-        {
-            return radians * (180 / Math.PI);
-        }
-
-        public static double ToRadians(this double degrees)
-        {
-            return degrees * (Math.PI / 180);
-        }
-
-        public static bool Threshold(double value1, double value2, double error = EPS)
-        {
-            return Math.Abs(value1 - value2) <= error;
-        }
-
-        public static double Median(double min, double max)
-        {
-            return ((max - min) * 0.5) + min;
-        }
-
-
+        #region Arc Helper Methods
         public static SpeckleArc ArcRadiustoSpeckleArc(double[] coor, double radius, bool greaterThanHalf = false)
         {
             Point3D[] points = new Point3D[] {
@@ -233,7 +209,9 @@ namespace SpeckleGSA
                 p3.X,p3.Y,p3.Z,
             };
         }
+        #endregion
 
+        #region Property Conversion
         public static bool IsList(this object o)
         {
             if (o == null) return false;
@@ -351,7 +329,7 @@ namespace SpeckleGSA
 
                     Dictionary<string, object>.ValueCollection vals = (value as Dictionary<string, object>).Values;
 
-                    prop.SetValue(obj, vals.Select(x => Convert.ChangeType(value.FromSpeckleDict(), type)).ToArray());
+                    prop.SetValue(obj, vals.Select(x => Convert.ChangeType(x.FromSpeckleDict(), type)).ToArray());
                 }
                 else if (prop.IsList())
                 {
@@ -360,8 +338,13 @@ namespace SpeckleGSA
 
                     Type genericListType = typeof(List<>).MakeGenericType(type);
                     IList tempList = (IList)Activator.CreateInstance(genericListType);
-                    foreach (object x in vals)
-                        tempList.Add(Convert.ChangeType(x.FromSpeckleDict(), type));
+                    if (type == typeof(object))
+                        foreach (object x in vals)
+                            tempList.Add(x.FromSpeckleDict());
+                    else
+                        foreach (object x in vals)
+                            tempList.Add(Convert.ChangeType(x.FromSpeckleDict(), type));
+
 
                     prop.SetValue(obj, tempList);
                 }
@@ -429,7 +412,7 @@ namespace SpeckleGSA
         }
         #endregion
 
-        #region
+        #region GSA to Speckle
         public static SpecklePoint ToSpeckle(this GSANode node)
         {
             SpecklePoint p = new SpecklePoint(node.Coor[0], node.Coor[1], node.Coor[2], "", node.GetSpeckleProperties());
@@ -469,12 +452,12 @@ namespace SpeckleGSA
 
             for (int i = 0; i < mesh.Elements.Count; i++)
             {
-                Dictionary<string, object> e = mesh.Elements[i.ToString()] as Dictionary<string, object>;
+                Dictionary<string, object> e = mesh.Elements[i] as Dictionary<string, object>;
                 List<int> eConnectivity = e["Connectivity"] as List<int>;
 
                 faceConnectivity.Add(eConnectivity.Count() - 3);
                 foreach (int c in eConnectivity)
-                    faceConnectivity.Add(mesh.nodeMapping[c]);
+                    faceConnectivity.Add(mesh.NodeMapping[c]);
             }
 
             SpeckleMesh m = new SpeckleMesh(
@@ -535,7 +518,7 @@ namespace SpeckleGSA
         }
         #endregion
 
-        #region
+        #region Speckle to GSA
         public static GSANode ToNative(this SpecklePoint point)
         {
             GSANode obj = new GSANode();
@@ -553,7 +536,7 @@ namespace SpeckleGSA
             GSAObject obj;
 
             if (line.Properties == null || !line.Properties.ContainsKey("Structural"))
-                obj = new GSAElement();
+                obj = new GSA1DElement();
             else
             { 
                 Dictionary<string, object> dict = line.Properties["Structural"] as Dictionary<string, object>;
@@ -616,7 +599,13 @@ namespace SpeckleGSA
                 
                 for (int i = 0; i < mesh.Faces.Count(); i++)
                 {
-                    Dictionary<string, object> e = new Dictionary<string, object>()
+                    int numNodes = mesh.Faces[i++] + 3;
+
+                    List<double> coor = new List<double>();
+                    for (int j = 0; j < numNodes; j++)
+                        coor.AddRange(mesh.Vertices.Skip(mesh.Faces[i++] * 3).Take(3));
+
+                    m.Elements.Add(new Dictionary<string, object>()
                     {
                         { "Name", "" },
                         { "Reference", 0 },
@@ -626,18 +615,9 @@ namespace SpeckleGSA
                                 { "Y", new Dictionary<string, object> { { "x", 0 }, { "y", 1 },{ "z", 0 }  } },
                                 { "Z", new Dictionary<string, object> { { "x", 0 }, { "y", 0 },{ "z", 1 }  } },
                             }
-                        }
-                    };
-
-                    int numNodes = mesh.Faces[i++] + 3;
-
-                    List<double> coor = new List<double>();
-                    for (int j = 0; j < numNodes; j++)
-                        coor.AddRange(mesh.Vertices.Skip(mesh.Faces[i++] * 3).Take(3));
-
-                    e["Coor"] = coor.ToArray();
-
-                    m.Elements[m.Elements.Count.ToString()] = e;
+                        },
+                        { "Coor", coor.ToArray() }
+                    });
 
                     i--;
                 }
@@ -660,10 +640,10 @@ namespace SpeckleGSA
                     for (int i = 0; i < mesh.Faces.Count(); i++)
                     {
                         i++;
-                        List<int> conn = m.GetElemConnectivity(elemCounter++.ToString());
+                        List<int> conn = m.GetElemConnectivity(m.Elements[elemCounter++] as Dictionary<string,object>);
 
                         for(int j = 0; j < conn.Count(); j++)
-                            m.nodeMapping[conn[j]] = mesh.Faces[i++];
+                            m.NodeMapping[conn[j]] = mesh.Faces[i++];
 
                         i--;
                     }

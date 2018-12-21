@@ -8,6 +8,7 @@ namespace SpeckleGSA
 {
     public class GSALine : GSAObject
     {
+        // DEPRECIATED. DO NOT USE.
         public string Type { get; set; }
         public double Radius { get; set; }
         public string Axis { get; set; }
@@ -128,7 +129,7 @@ namespace SpeckleGSA
         {
             List<GSAObject> children = new List<GSAObject>();
 
-            for (int i = 0; i < (int)Enum.Parse(typeof(LineNumNodes), Type); i++)
+            for (int i = 0; i < Type.ParseLineNumNodes(); i++)
             {
                 GSANode n = new GSANode();
                 n.Coor = Coor.Skip(i * 3).Take(3).ToList();

@@ -44,7 +44,7 @@
     <Compile Include="Object\GSA2DElement.cs" />
     <Compile Include="Object\GSA2DElementMesh.cs" />
     <Compile Include="Object\GSAArea.cs" />
-    <Compile Include="Object\GSAElement.cs" />
+    <Compile Include="Object\GSA0DElement.cs" />
     <Compile Include="Object\GSAObject.cs" />
     <Compile Include="Object\GSALine.cs" />
     <Compile Include="Object\GSAMember.cs" />

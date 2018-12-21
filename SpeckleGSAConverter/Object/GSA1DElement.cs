@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Media.Media3D;
 
 namespace SpeckleGSA
 {
@@ -13,11 +14,6 @@ namespace SpeckleGSA
         public Dictionary<string, object> Axis { get; set; }
         public Dictionary<string, object> Stiffness { get; set; }
         public Dictionary<string, object> InsertionPoint { get; set; }
-
-        public int Group;
-        public string Action;
-        public bool Dummy;
-        public double[] EndOffsetX;
 
         public GSA1DElement() : base("ELEMENT")
         {
@@ -57,11 +53,6 @@ namespace SpeckleGSA
                 { "Vertical", "MID" },
                 { "Horizontal", "MID" },
             };
-
-            Group = 0;
-            Action = "NORMAL";
-            Dummy = false;
-            EndOffsetX = new double[2];
         }
 
         #region GSAObject Functions
@@ -75,7 +66,7 @@ namespace SpeckleGSA
             Color = pieces[counter++].ParseGSAColor();
             Type = pieces[counter++];
             Property = Convert.ToInt32(pieces[counter++]);
-            Group = Convert.ToInt32(pieces[counter++]);
+            counter++; // Group
 
             Connectivity.Clear();
             Coor.Clear();
@@ -89,12 +80,13 @@ namespace SpeckleGSA
             double rotationAngle = Convert.ToDouble(pieces[counter++]);
 
             if (orientationNodeRef != 0)
-                Axis = Coor.ToArray().EvaluateGSA1DElementAxis(gsa,
+                Axis = Parse1DElementAxis(Coor.ToArray(),
                     rotationAngle,
-                    children.Where(n => n.Reference == Convert.ToInt32(pieces[counter++])).FirstOrDefault().Coor.ToArray());
+                    children.Where(n => n.Reference == orientationNodeRef).FirstOrDefault().Coor.ToArray());
             else
-                Axis = Coor.ToArray().EvaluateGSA1DElementAxis(gsa, rotationAngle);
-            
+                Axis = Parse1DElementAxis(Coor.ToArray(), rotationAngle);
+
+
             if (pieces[counter++] != "NO_RLS")
             {
                 string start = pieces[counter++];
@@ -113,16 +105,14 @@ namespace SpeckleGSA
                 (Stiffness["end"] as Dictionary<string, object>)["zz"] = ParseEndStiffness(end[5], pieces, ref counter);
             }
 
-            EndOffsetX = new double[2];
-
-            EndOffsetX[0] = Convert.ToDouble(pieces[counter++]);
-            EndOffsetX[1] = Convert.ToDouble(pieces[counter++]);
+            counter++; // offset x-start
+            counter++; // offset x-end
 
             InsertionPoint["Horizontal"] = Convert.ToDouble(pieces[counter++]);
             InsertionPoint["Vertical"] = Convert.ToDouble(pieces[counter++]);
 
-            Action = pieces[counter++];
-            Dummy = pieces[counter++] == "DUMMY";
+            counter++; // Action
+            counter++; // Dummy
         }
 
         public override string GetGWACommand()
@@ -139,12 +129,12 @@ namespace SpeckleGSA
                 ls.Add(Color.ToNumString());
             ls.Add(Type);
             ls.Add(Property.ToString());
-            ls.Add(Group.ToString());
+            ls.Add("0"); // Group
             foreach (int c in Connectivity)
                 ls.Add(c.ToString());
 
             ls.Add("0"); // Orientation Node
-            ls.Add(Axis.GetGSA1DElementAngle(gsa).ToString());
+            ls.Add(GetGSA1DElementAngle(Axis).ToString());
 
             if (Coor.Count() / 3 == 2)
             {
@@ -177,14 +167,14 @@ namespace SpeckleGSA
             else
                 ls.Add("NO_RLS");
 
-            ls.Add(EndOffsetX[0].ToNumString());
-            ls.Add(EndOffsetX[1].ToNumString());
+            ls.Add("0"); // Offset x-start
+            ls.Add("0"); // Offset x-end
 
             ls.Add(InsertionPoint["Horizontal"].ToNumString());
             ls.Add(InsertionPoint["Vertical"].ToNumString());
 
-            ls.Add(Action);
-            ls.Add(Dummy ? "DUMMY" : "");
+            ls.Add("NORMAL"); // Action
+            ls.Add(""); // Dummy
 
             return string.Join(",", ls);
         }
@@ -201,6 +191,95 @@ namespace SpeckleGSA
             }
 
             return children;
+        }
+        #endregion
+
+        #region Axis
+        private Dictionary<string, object> Parse1DElementAxis(double[] coor, double rotationAngle = 0, double[] orientationNode = null)
+        {
+            Dictionary<string, object> axisVectors = new Dictionary<string, object>();
+
+            Vector3D x;
+            Vector3D y;
+            Vector3D z;
+
+            x = new Vector3D(coor[3] - coor[0], coor[4] - coor[1], coor[5] - coor[2]);
+            x.Normalize();
+
+            if (orientationNode == null)
+            {
+                if (x.X == 0 && x.Y == 0)
+                {
+                    //Column
+                    y = new Vector3D(0, 1, 0);
+                    z = Vector3D.CrossProduct(x, y);
+                }
+                else
+                {
+                    //Non-Vertical
+                    Vector3D Z = new Vector3D(0, 0, 1);
+                    y = Vector3D.CrossProduct(Z, x);
+                    y.Normalize();
+                    z = Vector3D.CrossProduct(x, y);
+                    z.Normalize();
+                }
+            }
+            else
+            {
+                Vector3D Yp = new Vector3D(orientationNode[0], orientationNode[1], orientationNode[2]);
+                z = Vector3D.CrossProduct(x, Yp);
+                z.Normalize();
+                y = Vector3D.CrossProduct(z, x);
+                y.Normalize();
+            }
+
+            //Rotation
+            Matrix3D rotMat = HelperFunctions.RotationMatrix(x, rotationAngle * (Math.PI / 180));
+            y = Vector3D.Multiply(y, rotMat);
+            z = Vector3D.Multiply(z, rotMat);
+
+            axisVectors["X"] = new Dictionary<string, object> { { "x", x.X }, { "y", x.Y }, { "z", x.Z } };
+            axisVectors["Y"] = new Dictionary<string, object> { { "x", y.X }, { "y", y.Y }, { "z", y.Z } };
+            axisVectors["Z"] = new Dictionary<string, object> { { "x", z.X }, { "y", z.Y }, { "z", z.Z } };
+
+            return axisVectors;
+        }
+
+        private double GetGSA1DElementAngle(Dictionary<string, object> axis)
+        {
+            Dictionary<string, object> X = axis["X"] as Dictionary<string, object>;
+            Dictionary<string, object> Y = axis["Y"] as Dictionary<string, object>;
+            Dictionary<string, object> Z = axis["Z"] as Dictionary<string, object>;
+
+            Vector3D x = new Vector3D(X["x"].ToDouble(), X["y"].ToDouble(), X["z"].ToDouble());
+            Vector3D y = new Vector3D(Y["x"].ToDouble(), Y["y"].ToDouble(), Y["z"].ToDouble());
+            Vector3D z = new Vector3D(Z["x"].ToDouble(), Z["y"].ToDouble(), Z["z"].ToDouble());
+
+            if (x.X == 0 & x.Y == 0)
+            {
+                // Column
+                Vector3D Yglobal = new Vector3D(0, 1, 0);
+
+                double angle = Math.Acos(Vector3D.DotProduct(Yglobal, y) / (Yglobal.Length * y.Length)) * (180 / Math.PI);
+                if (double.IsNaN(angle)) angle = 0;
+
+                Vector3D signVector = Vector3D.CrossProduct(Yglobal, y);
+                double sign = Vector3D.DotProduct(signVector, x);
+
+                return angle * sign / Math.Abs(sign);
+            }
+            else
+            {
+                Vector3D Zglobal = new Vector3D(0, 0, 1);
+                Vector3D Y0 = Vector3D.CrossProduct(Zglobal, x);
+                double angle = Math.Acos(Vector3D.DotProduct(Y0, y) / (Y0.Length * y.Length)) * (180 / Math.PI);
+                if (double.IsNaN(angle)) angle = 0;
+
+                Vector3D signVector = Vector3D.CrossProduct(Y0, y);
+                double sign = Vector3D.DotProduct(signVector, x);
+
+                return sign >= 0 ? angle : 360 - angle;
+            }
         }
         #endregion
 
@@ -229,5 +308,6 @@ namespace SpeckleGSA
             }
         }
         #endregion
+
     }
 }

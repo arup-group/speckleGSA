@@ -200,7 +200,7 @@ namespace SpeckleGSA
                 switch(numConnectivity)
                 {
                     case 1:
-                        GSAElement e0D = new GSAElement().AttachGSA(gsaObj);
+                        GSA0DElement e0D = new GSA0DElement().AttachGSA(gsaObj);
                         e0D.ParseGWACommand(p);
                         nodes.Where(n => e0D.Connectivity.Contains(n.Reference)).First().Merge0DElement(e0D);
                         break;
