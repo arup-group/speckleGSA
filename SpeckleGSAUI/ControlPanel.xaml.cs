@@ -27,9 +27,9 @@ namespace SpeckleGSAUI
         public ObservableCollection<Tuple<string, string>> StreamData { get; set; }
 
         public string ModelName { get; set; }
-        public string ReceiverNodeStreamID { get; set; }
-        public string ReceiverSectionStreamID { get; set; }
-        public string ReceiverElementStreamID { get; set; }
+        public string ReceiverNodesStreamID { get; set; }
+        public string ReceiverPropertiesStreamID { get; set; }
+        public string ReceiverElementsStreamID { get; set; }
 
         public GSAController gsa;
 
@@ -43,9 +43,9 @@ namespace SpeckleGSAUI
             Password.Password = "temporaryPassword";
 
             ModelName = "";
-            ReceiverNodeStreamID = "";
-            ReceiverSectionStreamID = "";
-            ReceiverElementStreamID = "";
+            ReceiverNodesStreamID = "";
+            ReceiverPropertiesStreamID = "";
+            ReceiverElementsStreamID = "";
             StreamData = new ObservableCollection<Tuple<string, string>>();
 
             DataContext = this;
@@ -119,9 +119,9 @@ namespace SpeckleGSAUI
                     DispatcherPriority.Background,
                     new Action(() =>
                     {
-                        SenderNodeStreamID.Text = gsa.SenderNodeStreamID;
-                        SenderSectionStreamID.Text = gsa.SenderSectionStreamID;
-                        SenderElementStreamID.Text = gsa.SenderElementStreamID;
+                        SenderNodesStreamID.Text = gsa.SenderNodesStreamID;
+                        SenderPropertiesStreamID.Text = gsa.SenderPropertiesStreamID;
+                        SenderElementsStreamID.Text = gsa.SenderElementsStreamID;
                     }
                     ));
             }
@@ -134,8 +134,9 @@ namespace SpeckleGSAUI
         {
             gsa.ImportObjects(new Dictionary<string, string>()
             {
-                { "Nodes", ReceiverNodeStreamID },
-                { "Elements", ReceiverElementStreamID },
+                { "Properties", ReceiverPropertiesStreamID },
+                { "Nodes", ReceiverNodesStreamID },
+                { "Elements", ReceiverElementsStreamID },
             });
         }
         #endregion

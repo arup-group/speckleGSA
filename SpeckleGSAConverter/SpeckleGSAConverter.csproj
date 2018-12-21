@@ -44,6 +44,8 @@
     <Compile Include="Object\GSA2DElement.cs" />
     <Compile Include="Object\GSA2DElementMesh.cs" />
     <Compile Include="Object\GSA0DElement.cs" />
+    <Compile Include="Object\GSA2DProperty.cs" />
+    <Compile Include="Object\GSAMaterial.cs" />
     <Compile Include="Object\GSAObject.cs" />
     <Compile Include="Object\GSAMember.cs" />
     <Compile Include="Object\GSANode.cs" />

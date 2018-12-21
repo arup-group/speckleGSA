@@ -12,7 +12,7 @@ namespace SpeckleGSA
         public int Property { get; set; }
         public int Group { get; set; }
 
-        public GSA0DElement() : base("ELEMENT")
+        public GSA0DElement()
         {
             Type = "MASS";
             Property = 1;

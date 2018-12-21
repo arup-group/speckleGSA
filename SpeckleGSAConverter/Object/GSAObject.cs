@@ -12,8 +12,6 @@ namespace SpeckleGSA
 {
     public abstract class GSAObject
     {
-        public string GSAEntity { get; set; }
-
         public int Reference { get; set; }
         public string Name { get; set; }
         public List<int> Connectivity { get; set; }
@@ -22,9 +20,8 @@ namespace SpeckleGSA
         public object Color;
         public ComAuto gsa;
 
-        public GSAObject(string entity)
+        public GSAObject()
         {
-            GSAEntity = entity;
             Reference = 0;
             Name = "";
             Color = null;
@@ -102,6 +99,12 @@ namespace SpeckleGSA
 
         #region Attach GSA
         public static GSAObject AttachGSA(this GSAObject obj, ComAuto gsa)
+        {
+            obj.gsa = gsa;
+            return obj;
+        }
+
+        public static GSAMaterial AttachGSA(this GSAMaterial obj, ComAuto gsa)
         {
             obj.gsa = gsa;
             return obj;

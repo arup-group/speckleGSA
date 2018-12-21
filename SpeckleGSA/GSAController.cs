@@ -10,7 +10,7 @@ namespace SpeckleGSA
 {
     public class GSAController
     {
-        public string SenderNodeStreamID { get
+        public string SenderNodesStreamID { get
             {
                 if (senders.ContainsKey("Nodes"))
                     return senders["Nodes"].StreamID;
@@ -18,8 +18,16 @@ namespace SpeckleGSA
                     return "";
             }
         }
-        public string SenderSectionStreamID { get { return ""; } }
-        public string SenderElementStreamID {
+        public string SenderPropertiesStreamID {
+            get
+            {
+                if (senders.ContainsKey("Properties"))
+                    return senders["Properties"].StreamID;
+                else
+                    return "";
+            }
+        }
+        public string SenderElementsStreamID {
             get
             {
                 if (senders.ContainsKey("Elements"))
@@ -155,6 +163,36 @@ namespace SpeckleGSA
         #endregion
 
         #region Extract GSA
+        private List<GSAMaterial> GetMaterials()
+        {
+            string[] materialIdentifier = new string[]
+                { "MAT_STEEL", "MAT_CONCRETE" };
+
+            List<GSAMaterial> materials = new List<GSAMaterial>();
+
+            List<string> pieces = new List<string>();
+            foreach (string id in materialIdentifier)
+            {
+                string res = gsaObj.GwaCommand("GET_ALL," + id);
+
+                if (res == "")
+                    continue;
+
+                pieces.AddRange(res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries));
+            }
+            pieces = pieces.Distinct().ToList();
+
+            for (int i = 0; i < pieces.Count(); i++)
+            {
+                GSAMaterial mat = new GSAMaterial().AttachGSA(gsaObj);
+                mat.ParseGWACommand(pieces[i]);
+                mat.Reference = i+1; // Offset references
+                materials.Add(mat);
+            }
+
+            return materials;
+        }
+
         private List<GSANode> GetNodes()
         {
             List<GSANode> nodes = new List<GSANode>();
@@ -181,8 +219,8 @@ namespace SpeckleGSA
         {
             List<GSAObject>[] elements = new List<GSAObject>[2];
 
-            elements[0] = new List<GSAObject>();
-            elements[1] = new List<GSAObject>();
+            elements[0] = new List<GSAObject>(); // 1D elements
+            elements[1] = new List<GSAObject>(); // 2D elements
 
             string res = gsaObj.GwaCommand("GET_ALL,EL");
 
@@ -260,12 +298,39 @@ namespace SpeckleGSA
 
             Messages.AddMessage("Converting objects.");
 
+            List<GSAMaterial> materials = GetMaterials();
+            Messages.AddMessage("Converted " + materials.Count() + " materials");
+
             List<GSANode> nodes = GetNodes();
             Messages.AddMessage("Converted " + nodes.Count() + " nodes.");
             
             List<GSAObject>[] elements = GetElements(nodes);
             Messages.AddMessage("Converted " + elements[0].Count() + " 1D elements.");
             Messages.AddMessage("Converted " + elements[1].Count() + " 2D meshes.");
+
+            // Send properties
+            Messages.AddMessage("Sending .properties stream.");
+
+            if (!senders.ContainsKey("Properties"))
+            {
+                Messages.AddMessage(".properties sender not initialized. Creating new .properties sender.");
+                senders["Properties"] = new Sender(userManager.ServerAddress, userManager.ApiToken);
+                await senders["Properties"].InitializeSender();
+            }
+
+            Messages.AddMessage(".properties sender streamID: " + senders["Properties"].StreamID + ".");
+
+            bucketObjects["Materials"] = new List<object>();
+            foreach (GSAMaterial m in materials)
+                bucketObjects["Materials"].Add(m.ToSpeckle());
+
+            Messages.AddMessage("Materials: " + bucketObjects["Materials"].Count() + ".");
+
+            objectIDs = await senders["Properties"].UpdateDataAsync(modelName + ".properties", bucketObjects);
+
+            Messages.AddMessage("Streamed " + objectIDs.Count() + " objects.");
+
+            bucketObjects.Remove("Materials");
 
             // Send nodes
             Messages.AddMessage("Sending .nodes stream.");
@@ -329,7 +394,9 @@ namespace SpeckleGSA
 
             Type t = obj.GetType();
 
-            if (t == typeof(GSANode))
+            if (t== typeof(GSAMaterial))
+                (dict["Materials"] as List<GSAMaterial>).Add(obj as GSAMaterial);
+            else if (t == typeof(GSANode))
                 (dict["Nodes"] as List<GSANode>).Add(obj as GSANode);
                 //(dict["Elements"] as List<GSAObject>).AddRange((obj as GSANode).Extract0DElement());
             else if (t == typeof(GSA1DElement))
@@ -342,6 +409,20 @@ namespace SpeckleGSA
                 foreach (GSAObject e in elems)
                     (dict["Elements"] as List<GSAObject>).Add(e.AttachGSA(gsaObj));
             }
+        }
+
+        private int AddMaterial(GSAMaterial material, Dictionary<string, object> dict, ref GSARefCounters counter)
+        {
+            int index = (dict["Materials"] as List<GSAMaterial>).IndexOf(material);
+
+            material = counter.RefMaterial(material);
+
+            if (index != -1)
+                (dict["Materials"] as List<GSAMaterial>)[index] = material;
+            else
+                (dict["Materials"] as List<GSAMaterial>).Add(material);
+
+            return material.Reference;
         }
 
         private int AddNode(GSANode node, Dictionary<string, object> dict, ref GSARefCounters counter)
@@ -418,8 +499,37 @@ namespace SpeckleGSA
                 return;
             }
 
+            objects["Materials"] = new List<GSAMaterial>();
             objects["Nodes"] = new List<GSANode>();
             objects["Elements"] = new List<GSAObject>();
+        
+            if (streamIDs["Properties"] == "")
+                Messages.AddMessage("No nodes stream specified.");
+            else
+            {
+                Messages.AddMessage("Creating .properties receiver.");
+                receivers["Properties"] = new Receiver(userManager.ServerAddress, userManager.ApiToken);
+                await receivers["Properties"].InitializeReceiver(streamIDs["Properties"]);
+
+                if (receivers["Properties"].StreamID == null || receivers["Properties"].StreamID == "")
+                {
+                    Messages.AddError("Could not connect to .properties stream.");
+                }
+                else
+                {
+                    Messages.AddMessage("Receiving properties.");
+                    try
+                    {
+                        await receivers["Properties"].UpdateDataAsync().ContinueWith(res =>
+                            convertedObjects.AddRange(res.Result)
+                        );
+                    }
+                    catch (Exception e)
+                    {
+                        Messages.AddError(e.Message);
+                    }
+                }
+            }
 
             if (streamIDs["Nodes"] == "")
                 Messages.AddMessage("No nodes stream specified.");
@@ -492,12 +602,17 @@ namespace SpeckleGSA
 
             // Set Up Counter
             GSARefCounters counter = new GSARefCounters();
+            counter.AddMaterialRefs((objects["Materials"] as List<GSAMaterial>).Select(n => n.Reference).ToList());
             counter.AddNodeRefs((objects["Nodes"] as List<GSANode>).Select(n => n.Reference).ToList());
             counter.AddNodeRefs((objects["Elements"] as List<GSAObject>).SelectMany(e => e.Connectivity).ToList()); // Reserve connectivity nodes
             counter.AddElementRefs((objects["Elements"] as List<GSAObject>).Select(e => e.Reference).ToList());
 
+            // Material
+            for (int i = 0; i < (objects["Materials"] as List<GSAMaterial>).Count(); i++)
+                AddMaterial((objects["Materials"] as List<GSAMaterial>)[i], objects, ref counter);
+
             // Nodes
-            for(int i = 0; i < (objects["Nodes"] as List<GSANode>).Count(); i++)
+            for (int i = 0; i < (objects["Nodes"] as List<GSANode>).Count(); i++)
                 AddNode((objects["Nodes"] as List<GSANode>)[i], objects, ref counter);
 
             // Elements
@@ -507,6 +622,9 @@ namespace SpeckleGSA
             Messages.AddMessage("Preparing to write " + counter.TotalObjects + " objects.");
 
             // Write objects
+            foreach (GSAMaterial m in objects["Materials"] as List<GSAMaterial>)
+                m.WritetoGSA();
+
             foreach (GSANode n in objects["Nodes"] as List<GSANode>)
                 n.WritetoGSA();
 
@@ -532,10 +650,12 @@ namespace SpeckleGSA
 
     public class GSARefCounters
     {
+        private int materialCounter;
         private int nodeCounter;
         private int elementCounter;
         private int memberCounter;
 
+        private List<int> materialRefsUsed;
         private List<int> nodeRefsUsed;
         private List<int> elementRefsUsed;
         private List<int> memberRefsUsed;
@@ -544,19 +664,35 @@ namespace SpeckleGSA
         {
             get
             {
-                return nodeRefsUsed.Count() + elementRefsUsed.Count() + memberRefsUsed.Count();
+                return materialRefsUsed.Count() + nodeRefsUsed.Count() + elementRefsUsed.Count() + memberRefsUsed.Count();
             }
         }
 
         public GSARefCounters()
         {
+            materialCounter = 1;
             nodeCounter = 1;
             elementCounter = 1;
             memberCounter = 1;
 
+            materialRefsUsed = new List<int>();
             nodeRefsUsed = new List<int>();
             elementRefsUsed = new List<int>();
             memberRefsUsed = new List<int>();
+        }
+
+        public GSAMaterial RefMaterial(GSAMaterial material)
+        {
+            if (material.Reference > 0)
+            {
+                AddMaterialRefs(new List<int> { material.Reference });
+                return material;
+            }
+            while (materialRefsUsed.Contains(materialCounter))
+                materialCounter++;
+            material.Reference = materialCounter++;
+            materialRefsUsed.Add(material.Reference);
+            return material;
         }
 
         public GSANode RefNode(GSANode node)
@@ -599,6 +735,12 @@ namespace SpeckleGSA
             member.Reference = memberCounter++;
             memberRefsUsed.Add(member.Reference);
             return member;
+        }
+
+        public void AddMaterialRefs(List<int> refs)
+        {
+            materialRefsUsed.AddRange(refs);
+            materialRefsUsed = materialRefsUsed.Distinct().ToList();
         }
 
         public void AddNodeRefs(List<int> refs)

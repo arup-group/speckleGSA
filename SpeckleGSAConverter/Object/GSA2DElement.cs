@@ -14,7 +14,7 @@ namespace SpeckleGSA
         public Dictionary<string, object> Axis { get; set; }
         public double InsertionPoint { get; set; }
 
-        public GSA2DElement() : base("ELEMENT")
+        public GSA2DElement()
         {
             Type = "QUAD4";
             Property = 1;
@@ -64,7 +64,7 @@ namespace SpeckleGSA
             counter++; //Ofsset x-end
             counter++; //Ofsset y
 
-            InsertionPoint = Convert.ToDouble(pieces[counter++]);
+            InsertionPoint = GetGSATotalElementOffset(Property,Convert.ToDouble(pieces[counter++]));
 
             counter++; // Action
             counter++; // Dummy
@@ -216,6 +216,39 @@ namespace SpeckleGSA
             string[] pieces = res.ListSplit(",");
 
             return pieces[5] == "LOCAL";
+        }
+        #endregion
+
+        #region Offset
+        private double GetGSATotalElementOffset(int prop, double insertionPointOffset)
+        {
+            double materialInsertionPointOffset = 0;
+            double zMaterialOffset = 0;
+            double materialThickness = 0;
+
+            string res = (string)RunGWACommand("GET,PROP_2D," + prop);
+
+            if (res == null || res == "")
+                return insertionPointOffset;
+
+            string[] pieces = res.ListSplit(",");
+
+            materialThickness = Convert.ToDouble(pieces[10]);
+            switch (pieces[11])
+            {
+                case "TOP_CENTRE":
+                    materialInsertionPointOffset = -materialThickness / 2;
+                    break;
+                case "BOT_CENTRE":
+                    materialInsertionPointOffset = materialThickness / 2;
+                    break;
+                default:
+                    materialInsertionPointOffset = 0;
+                    break;
+            }
+
+            zMaterialOffset = -Convert.ToDouble(pieces[12]);
+            return insertionPointOffset + zMaterialOffset + materialInsertionPointOffset;
         }
         #endregion
     }

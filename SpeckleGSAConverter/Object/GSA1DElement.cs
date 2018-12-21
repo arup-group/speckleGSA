@@ -15,7 +15,7 @@ namespace SpeckleGSA
         public Dictionary<string, object> Stiffness { get; set; }
         public Dictionary<string, object> InsertionPoint { get; set; }
 
-        public GSA1DElement() : base("ELEMENT")
+        public GSA1DElement()
         {
             Type = "BEAM";
             Property = 1;

@@ -14,7 +14,7 @@ namespace SpeckleGSA
         public int GradeMaterial;
         public int AnalMaterial;
 
-        public GSA1DProperty():base("PROPERTY")
+        public GSA1DProperty()
         {
             Material = 0;
 

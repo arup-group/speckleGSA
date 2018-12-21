@@ -17,7 +17,7 @@ namespace SpeckleGSA
         public List<int[]> Edges;
         public Dictionary<int, int> NodeMapping;
 
-        public GSA2DElementMesh() : base("ELEMENTMESH")
+        public GSA2DElementMesh()
         {
             Type = "MESH";
             Property = 1;
