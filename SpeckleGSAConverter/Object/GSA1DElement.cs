@@ -187,6 +187,7 @@ namespace SpeckleGSA
             {
                 GSANode n = new GSANode();
                 n.Coor = Coor.Skip(i * 3).Take(3).ToList();
+                n.Reference = Connectivity[i];
                 children.Add(n);
             }
 

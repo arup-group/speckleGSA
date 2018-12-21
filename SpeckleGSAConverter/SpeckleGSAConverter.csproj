@@ -43,13 +43,10 @@
     <Compile Include="Object\GSA1DProperty.cs" />
     <Compile Include="Object\GSA2DElement.cs" />
     <Compile Include="Object\GSA2DElementMesh.cs" />
-    <Compile Include="Object\_GSAArea.cs" />
     <Compile Include="Object\GSA0DElement.cs" />
     <Compile Include="Object\GSAObject.cs" />
-    <Compile Include="Object\_GSALine.cs" />
     <Compile Include="Object\GSAMember.cs" />
     <Compile Include="Object\GSANode.cs" />
-    <Compile Include="Object\_GSARegion.cs" />
     <Compile Include="SpeckleGSAConverter.cs" />
   </ItemGroup>
   <ItemGroup>

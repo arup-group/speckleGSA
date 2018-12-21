@@ -73,6 +73,7 @@ namespace SpeckleGSA
         public override List<GSAObject> GetChildren()
         {
             GSANode n = new GSANode();
+            n.Reference = n.Connectivity[0];
             n.Coor = Coor;
 
             return new List<GSAObject>() { n };
