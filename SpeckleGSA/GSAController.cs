@@ -330,10 +330,8 @@ namespace SpeckleGSA
             Type t = obj.GetType();
 
             if (t == typeof(GSANode))
-            {
                 (dict["Nodes"] as List<GSANode>).Add(obj as GSANode);
-                (dict["Elements"] as List<GSAObject>).AddRange((obj as GSANode).Extract0DElement());
-            }
+                //(dict["Elements"] as List<GSAObject>).AddRange((obj as GSANode).Extract0DElement());
             else if (t == typeof(GSA1DElement))
                 (dict["Elements"] as List<GSAObject>).Add(obj as GSAObject);
             else if (t == typeof(GSA2DElement))
@@ -342,65 +340,55 @@ namespace SpeckleGSA
             {
                 List<GSAObject> elems = obj.GetChildren();
                 foreach (GSAObject e in elems)
-                    (dict["Elements"] as List<GSAObject>).Add(e);
+                    (dict["Elements"] as List<GSAObject>).Add(e.AttachGSA(gsaObj));
             }
         }
 
-        private int AddNode(GSANode node, Dictionary<string, object> dict, ref GSARefCounters counter, bool newObj = false)
+        private int AddNode(GSANode node, Dictionary<string, object> dict, ref GSARefCounters counter)
         {
+            int index = (dict["Nodes"] as List<GSANode>).IndexOf(node);
+
             if (node.Reference == 0)
             {
                 List<GSANode> matches = (dict["Nodes"] as List<GSANode>)
-                    .Where(n => (n.Coor[0]==node.Coor[0]) &
+                    .Where(n => (n.Coor[0] == node.Coor[0]) &
                     (n.Coor[1] == node.Coor[1]) &
                     (n.Coor[2] == node.Coor[2])).ToList();
 
-                if (matches.Count == 0)
+                if (matches.Count > 0)
                 {
-                    node = counter.RefNode(node);
-
-                    gsaObj.GwaCommand(node.GetGWACommand());
-
-                    if (newObj)
-                        (dict["Nodes"] as List<GSANode>).Add(node);
-
-                    Messages.AddMessage("Created new node " + node.Reference.ToString() + ".");
-
-                    return node.Reference;
-                }
-                else
-                {
-                    //TODO: MERGE NODE
+                    int mergeIndex = (dict["Nodes"] as List<GSANode>).IndexOf(matches[0]);
+                    (dict["Nodes"] as List<GSANode>)[mergeIndex].Merge(node);
                     return matches[0].Reference;
                 }
             }
-            else
+            else if ((dict["Nodes"] as List<GSANode>).Where(n => n.Reference == node.Reference).Count() > 0)
             {
-                node = counter.RefNode(node);
+                int mergeIndex = (dict["Nodes"] as List<GSANode>).IndexOf(
+                    (dict["Nodes"] as List<GSANode>)
+                    .Where(n => n.Reference == node.Reference).First());
+                (dict["Nodes"] as List<GSANode>)[mergeIndex].Merge(node);
+                return node.Reference;
 
-                if ((dict["Nodes"] as List<GSANode>).Where(n => n.Reference == node.Reference).Count() > 0)
-                {
-                    //TODO: MERGE NODE
-                    if (newObj)
-                        gsaObj.GwaCommand(node.GetGWACommand());
-                    return node.Reference;
-                }
-
-                else
-                {
-                    gsaObj.GwaCommand(node.GetGWACommand());
-                    
-                    (dict["Nodes"] as List<GSANode>).Add(node);
-
-                    Messages.AddMessage("Created new node " + node.Reference.ToString() + ".");
-
-                    return node.Reference;
-                }
             }
+                    
+
+            node = counter.RefNode(node);
+
+            if (index != -1)
+                (dict["Nodes"] as List<GSANode>)[index] = node;
+            else
+                (dict["Nodes"] as List<GSANode>).Add(node);
+
+            Messages.AddMessage("Created new node " + node.Reference.ToString() + ".");
+
+            return node.Reference;
         }
         
-        private int AddElement(GSAObject element, Dictionary<string, object> dict, ref GSARefCounters counter, bool newObj = false)
+        private int AddElement(GSAObject element, Dictionary<string, object> dict, ref GSARefCounters counter)
         {
+            int index = (dict["Elements"] as List<GSAObject>).IndexOf(element);
+
             List<GSAObject> eNodes = element.GetChildren();
 
             if (element.Connectivity.Count() == 0)
@@ -410,8 +398,11 @@ namespace SpeckleGSA
                 element.Connectivity[i] = AddNode((eNodes[i] as GSANode).AttachGSA(gsaObj), dict, ref counter);
             
             element = counter.RefElement(element);
-            
-            gsaObj.GwaCommand(element.GetGWACommand());
+
+            if (index != -1)
+                (dict["Elements"] as List<GSAObject>)[index] = element;
+            else
+                (dict["Elements"] as List<GSAObject>).Add(element);
 
             return element.Reference;
         }
@@ -506,16 +497,30 @@ namespace SpeckleGSA
             counter.AddElementRefs((objects["Elements"] as List<GSAObject>).Select(e => e.Reference).ToList());
 
             // Nodes
-            if (objects.ContainsKey("Nodes"))
-                foreach (GSANode n in objects["Nodes"] as List<GSANode>)
-                    AddNode(n, objects, ref counter, true);
-            
-            // Elements
-            if (objects.ContainsKey("Elements"))
-                foreach (GSAObject e in objects["Elements"] as List<GSAObject>)
-                    AddElement(e, objects, ref counter, true);
+            for(int i = 0; i < (objects["Nodes"] as List<GSANode>).Count(); i++)
+                AddNode((objects["Nodes"] as List<GSANode>)[i], objects, ref counter);
 
-            Messages.AddMessage("Streamed " + counter.TotalObjects + " objects.");
+            // Elements
+            for (int i = 0; i < (objects["Elements"] as List<GSAObject>).Count(); i++)
+                AddElement((objects["Elements"] as List<GSAObject>)[i], objects, ref counter);
+
+            Messages.AddMessage("Preparing to write " + counter.TotalObjects + " objects.");
+
+            // Write objects
+            foreach (GSANode n in objects["Nodes"] as List<GSANode>)
+                n.WritetoGSA();
+
+            foreach (GSAObject e in objects["Elements"] as List<GSAObject>)
+                e.WritetoGSA();
+
+            Messages.AddMessage("Preparing to derived objects.");
+
+            // Write derived objects (e.g., section properties, 0D elements, etc.)
+            foreach (GSANode n in objects["Nodes"] as List<GSANode>)
+                n.WriteDerivedObjectstoGSA();
+
+            foreach (GSAObject e in objects["Elements"] as List<GSAObject>)
+                e.WriteDerivedObjectstoGSA();
 
             gsaObj.UpdateViews();
 
@@ -539,7 +544,7 @@ namespace SpeckleGSA
         {
             get
             {
-                return nodeCounter + elementCounter + memberCounter;
+                return nodeRefsUsed.Count() + elementRefsUsed.Count() + memberRefsUsed.Count();
             }
         }
 

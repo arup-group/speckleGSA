@@ -14,6 +14,8 @@ namespace SpeckleGSA
         public Dictionary<string, object> Stiffness { get; set; }
         public double Mass { get; set; }
 
+        private string massGWA;
+
         public GSANode() : base("NODE")
         {
             Axis = new Dictionary<string, object>()
@@ -41,6 +43,8 @@ namespace SpeckleGSA
                 { "zz", 0.0 },
             };
             Mass = 0;
+
+            massGWA = "";
         }
 
         #region GSAObject Functions
@@ -156,6 +160,13 @@ namespace SpeckleGSA
         {
             return null;
         }
+
+        public override void WriteDerivedObjectstoGSA()
+        {
+            List<GSA0DElement> e0Ds = Get0DElements();
+            foreach (GSA0DElement e in e0Ds)
+                e.WritetoGSA();
+        }
         #endregion
 
         #region 0D Element Operations
@@ -163,21 +174,6 @@ namespace SpeckleGSA
         {
             if (elem.Type == "MASS")
                 Mass = GetGSAMass(elem);
-        }
-
-        public List<GSA0DElement> Extract0DElement()
-        {
-            List<GSA0DElement> elemList = new List<GSA0DElement>();
-
-            if (Mass > 0)
-            {
-                GSA0DElement massElem = new GSA0DElement().AttachGSA(gsa);
-                massElem.Type = "MASS";
-                massElem.Connectivity = new List<int>() { Reference };
-                massElem.Property = AddMasstoGSA(Mass);
-                elemList.Add(massElem);
-            }
-            return elemList;
         }
 
         private double GetGSAMass(GSA0DElement elem)
@@ -188,7 +184,22 @@ namespace SpeckleGSA
             return Convert.ToDouble(pieces[5]);
         }
 
-        private int AddMasstoGSA(double mass)
+        public List<GSA0DElement> Get0DElements()
+        {
+            List<GSA0DElement> elemList = new List<GSA0DElement>();
+
+            if (Mass > 0)
+            {
+                GSA0DElement massElem = new GSA0DElement().AttachGSA(gsa);
+                massElem.Type = "MASS";
+                massElem.Connectivity = new List<int>() { Reference };
+                massElem.Property = WriteMassProptoGSA(Mass);
+                elemList.Add(massElem);
+            }
+            return elemList;
+        }
+
+        private int WriteMassProptoGSA(double mass)
         {
             List<string> ls = new List<string>();
 

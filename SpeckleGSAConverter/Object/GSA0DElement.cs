@@ -25,7 +25,7 @@ namespace SpeckleGSA
             string[] pieces = command.ListSplit(",");
 
             int counter = 1; // Skip identifier
-            Reference = Convert.ToInt32(pieces[counter++]);
+            counter++; // Reference
             Name = pieces[counter++].Trim(new char[] { '"' });
             Color = pieces[counter++].ParseGSAColor();
             Type = pieces[counter++];
@@ -44,7 +44,7 @@ namespace SpeckleGSA
 
             ls.Add("SET");
             ls.Add("EL.4");
-            ls.Add(Reference.ToString());
+            ls.Add(((int)RunGWACommand("HIGHEST,EL")+1).ToNumString());
             ls.Add(Name);
             if (Color == null)
                 ls.Add("NO_RGB");

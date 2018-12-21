@@ -46,6 +46,16 @@ namespace SpeckleGSA
 
             return gsa.GwaCommand(command);
         }
+
+        public void WritetoGSA()
+        {
+            RunGWACommand(GetGWACommand());
+        }
+
+        public virtual void WriteDerivedObjectstoGSA()
+        {
+            return;
+        }
     }
 
     public static class HelperFunctions
