@@ -472,50 +472,6 @@ namespace SpeckleGSA
 
             return m;
         }
-   
-        public static SpeckleObject ToSpeckle(this GSALine line)
-        {
-            SpeckleObject obj;
-            switch(line.Type)
-            {
-                case "LINE":
-                    obj = new SpeckleLine(
-                        line.Coor,
-                        line.Reference.ToString(),
-                        line.GetSpeckleProperties());
-                    break;
-                case "ARC_RADIUS":
-                    obj = ArcRadiustoSpeckleArc(line.Coor.ToArray(), line.Radius);
-                    obj.ApplicationId = line.Reference.ToString();
-                    obj.Properties = line.GetSpeckleProperties();
-                    obj.GenerateHash();
-                    break;
-                case "ARC_THIRD_PT":
-                    obj = Arc3PointtoSpeckleArc(line.Coor.ToArray());
-                    obj.ApplicationId = line.Reference.ToString();
-                    obj.Properties = line.GetSpeckleProperties();
-                    obj.GenerateHash();
-                    break;
-                default:
-                    return null;
-            }
-            return obj;
-        }
-
-        public static SpeckleMesh ToSpeckle(this GSAArea area)
-        {
-            SpeckleMesh mesh = new SpeckleMesh();
-            mesh.Vertices = area.Coor.ToList();
-            mesh.Faces = (new int[] { area.Coor.Count() / 3 - 3 }.Concat(
-                    Enumerable.Range(0, area.Coor.Count() / 3).ToArray())).ToList();
-            mesh.ApplicationId = area.Reference.ToString();
-            mesh.Colors = Enumerable.Repeat(
-                    area.Color.ToSpeckleColor(),
-                    (int)(area.Coor.Count() / 3)).ToList();
-            mesh.Properties = area.GetSpeckleProperties();
-            mesh.GenerateHash();
-            return mesh;
-        }
         #endregion
 
         #region Speckle to GSA
@@ -531,69 +487,24 @@ namespace SpeckleGSA
             return obj;
         }
 
-        public static GSAObject ToNative(this SpeckleLine line)
+        public static GSA1DElement ToNative(this SpeckleLine line)
         {
-            GSAObject obj;
+            GSA1DElement e = new GSA1DElement();
 
-            if (line.Properties == null || !line.Properties.ContainsKey("Structural"))
-                obj = new GSA1DElement();
-            else
-            { 
-                Dictionary<string, object> dict = line.Properties["Structural"] as Dictionary<string, object>;
+            if (line.Properties != null && line.Properties.ContainsKey("Structural"))
+                e.SetSpeckleProperties(line.Properties);
 
-                switch (dict["GSAEntity"] as string)
-                {
-                    case "ELEMENT":
-                        obj = new GSA1DElement();
-                        break;
-                    case "LINE":
-                        obj = new GSALine();
-                        break;
-                    default:
-                        return null;
-                }
+            e.Coor = line.Value;
 
-                obj.SetSpeckleProperties(line.Properties);
-            }
-            obj.Coor = line.Value;
-            return obj;
+            return e;
         }
-
-        public static GSALine ToNative(this SpeckleArc arc)
+        
+        public static GSA2DElementMesh ToNative(this SpeckleMesh mesh)
         {
-            GSALine obj;
+            GSA2DElementMesh m = new GSA2DElementMesh();
 
-            if (arc.Properties == null || !arc.Properties.ContainsKey("Structural"))
-            {
-                //TODO: Need to discretize this arc into elements!
-                obj = new GSALine();
-                obj.Type = "ARC_THIRD_PT";
-            }
-            else
-            { 
-                Dictionary<string, object> dict = arc.Properties["Structural"] as Dictionary<string, object>;
-
-                switch (dict["GSAEntity"] as string)
-                {
-                    case "LINE":
-                        obj = new GSALine();
-                        break;
-                    default:
-                        return null;
-                }
-
-                obj.SetSpeckleProperties(arc.Properties);
-            }
-
-            obj.Coor = SpeckleArctoArc3Point(arc).ToList();
-            return obj;
-        }
-
-        public static object ToNative(this SpeckleMesh mesh)
-        {
             if (mesh.Properties == null || !mesh.Properties.ContainsKey("Structural"))
             {
-                GSA2DElementMesh m = new GSA2DElementMesh();
                 m.Coor = mesh.Vertices;
                 m.Color = mesh.Colors.Count > 0 ? Math.Max(mesh.Colors[0], 0) : 0;
                 
@@ -621,48 +532,28 @@ namespace SpeckleGSA
 
                     i--;
                 }
-
-                return m;
             }
-
-
-            Dictionary<string, object> dict = mesh.Properties["Structural"] as Dictionary<string, object>;
-
-            switch (dict["GSAEntity"] as string)
+            else
             {
-                case "ELEMENTMESH":
-                    GSA2DElementMesh m = new GSA2DElementMesh();
-                    m.SetSpeckleProperties(mesh.Properties);
-                    m.Coor = mesh.Vertices;
-                    m.Color = Math.Max(mesh.Colors[0], 0);
+                Dictionary<string, object> dict = mesh.Properties["Structural"] as Dictionary<string, object>;
+            
+                m.SetSpeckleProperties(mesh.Properties);
+                m.Coor = mesh.Vertices;
+                m.Color = Math.Max(mesh.Colors[0], 0);
 
-                    int elemCounter = 0;
-                    for (int i = 0; i < mesh.Faces.Count(); i++)
-                    {
-                        i++;
-                        List<int> conn = m.GetElemConnectivity(m.Elements[elemCounter++] as Dictionary<string,object>);
+                int elemCounter = 0;
+                for (int i = 0; i < mesh.Faces.Count(); i++)
+                {
+                    i++;
+                    List<int> conn = m.GetElemConnectivity(m.Elements[elemCounter++] as Dictionary<string,object>);
 
-                        for(int j = 0; j < conn.Count(); j++)
-                            m.NodeMapping[conn[j]] = mesh.Faces[i++];
+                    for(int j = 0; j < conn.Count(); j++)
+                        m.NodeMapping[conn[j]] = mesh.Faces[i++];
 
-                        i--;
-                    }
-                    return m;
-                case "ELEMENT":
-                    GSA2DElement e = new GSA2DElement();
-                    e.SetSpeckleProperties(mesh.Properties);
-                    e.Coor = mesh.Vertices;
-                    e.Color = Math.Max(mesh.Colors[0], 0);
-                    return e;
-                case "AREA":
-                    GSAArea a = new GSAArea();
-                    a.SetSpeckleProperties(mesh.Properties);
-                    a.Coor = mesh.Vertices;
-                    a.Color = Math.Max(mesh.Colors[0],0);
-                    return a;
-                default:
-                    return null;
+                    i--;
+                }
             }
+            return m;
         }
         #endregion
     }

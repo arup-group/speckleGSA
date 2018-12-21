@@ -103,24 +103,6 @@ namespace SpeckleGSA
             return obj;
         }
 
-        public static GSALine AttachGSA(this GSALine obj, ComAuto gsa)
-        {
-            obj.gsa = gsa;
-            return obj;
-        }
-
-        public static GSAArea AttachGSA(this GSAArea obj, ComAuto gsa)
-        {
-            obj.gsa = gsa;
-            return obj;
-        }
-
-        public static GSARegion AttachGSA(this GSARegion obj, ComAuto gsa)
-        {
-            obj.gsa = gsa;
-            return obj;
-        }
-
         public static GSA0DElement AttachGSA(this GSA0DElement obj, ComAuto gsa)
         {
             obj.gsa = gsa;

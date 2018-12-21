@@ -240,98 +240,14 @@ namespace SpeckleGSA
             
             return elements;
         }
-
-        private List<GSALine> GetLines(List<GSANode> nodes)
-        {
-            List<GSALine> lines = new List<GSALine>();
-
-            string res = gsaObj.GwaCommand("GET_ALL,LINE");
-
-            if (res == "")
-                return lines;
-
-            string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
-
-            foreach (string p in pieces)
-            {
-                GSALine l = new GSALine().AttachGSA(gsaObj);
-                l.ParseGWACommand(p);
-
-                l.Coor = nodes
-                    .Where(n => l.Connectivity.Contains(n.Reference))
-                    .SelectMany(n => n.Coor)
-                    .ToList();
-
-                lines.Add(l);
-            }
-
-            return lines;
-        }
-
+        
         private List<GSAMember> GetMembers(List<GSANode> nodes)
         {
             // PROBLEMS WITH GWA GET_ALL COMMAND FOR MEMBERS
             // NEED WORKAROUND
             return null;
         }
-
-        private List<GSAArea> GetAreas(List<GSALine> lines)
-        {
-            List<GSAArea> areas = new List<GSAArea>();
-
-            string res = gsaObj.GwaCommand("GET_ALL,AREA");
-
-            if (res == "")
-                return areas;
-
-            string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
-
-            foreach (string p in pieces)
-            {
-                GSAArea a = new GSAArea().AttachGSA(gsaObj);
-                a.ParseGWACommand(p);
-
-                List<List<double>> lineCoor = lines
-                    .Where(l => a.Connectivity.Contains(l.Reference))
-                    .Select(l => l.Coor.Take(6).ToList())
-                    .ToList();
-
-                // Culls unique list of boundary points for areas
-                for (int i = 0; i < lineCoor.Count; i++)
-                {
-                    if (i == 0)
-                        lineCoor[i].RemoveRange(3, 3);
-                    else if (i == lineCoor.Count - 1)
-                    {
-                        if ((lineCoor[0][0] == lineCoor[i][0] &
-                            lineCoor[0][1] == lineCoor[i][1] &
-                            lineCoor[0][2] == lineCoor[i][2]) ||
-                            (lineCoor[i - 1][0] == lineCoor[i][0] &
-                            lineCoor[i - 1][1] == lineCoor[i][1] &
-                            lineCoor[i - 1][2] == lineCoor[i][2]))
-                            lineCoor[i].RemoveRange(0, 3);
-                        else
-                            lineCoor[i].RemoveRange(3, 3);
-                    }
-                    else
-                    {
-                        if (lineCoor[i - 1][0] == lineCoor[i][0] &
-                            lineCoor[i - 1][1] == lineCoor[i][1] &
-                            lineCoor[i - 1][2] == lineCoor[i][2])
-                            lineCoor[i].RemoveRange(0, 3);
-                        else
-                            lineCoor[i].RemoveRange(3, 3);
-                    }
-                }
-
-                a.Coor = lineCoor.SelectMany(d => d).ToList();
-
-                areas.Add(a);
-            }
-
-            return areas;
-        }
-
+        
         public async Task ExportObjects(string modelName)
         {
             Dictionary<string, List<object>> bucketObjects = new Dictionary<string, List<object>>();
@@ -347,13 +263,7 @@ namespace SpeckleGSA
 
             List<GSANode> nodes = GetNodes();
             Messages.AddMessage("Converted " + nodes.Count() + " nodes.");
-
-            List<GSALine> lines = GetLines(nodes);
-            Messages.AddMessage("Converted " + lines.Count() + " lines.");
-
-            List<GSAArea> areas = GetAreas(lines);
-            Messages.AddMessage("Converted " + areas.Count() + " areas.");
-
+            
             List<GSAObject>[] elements = GetElements(nodes);
             Messages.AddMessage("Converted " + elements[0].Count() + " 1D elements.");
             Messages.AddMessage("Converted " + elements[1].Count() + " 2D meshes.");
@@ -393,15 +303,7 @@ namespace SpeckleGSA
             }
 
             Messages.AddMessage(".elements sender streamID: " + senders["Elements"].StreamID + ".");
-
-            //bucketObjects["Lines"] = new List<object>();
-            //foreach (GSALine l in lines)
-            //    bucketObjects["Lines"].Add(l.ToSpeckle());
-
-            //bucketObjects["Areas"] = new List<object>();
-            //foreach (GSAArea a in areas)
-            //    bucketObjects["Areas"].Add(a.ToSpeckle());
-
+            
             bucketObjects["Elements - 1D"] = new List<object>();
             foreach (GSAObject e1D in elements[0])
                 bucketObjects["Elements - 1D"].Add((e1D as GSA1DElement).ToSpeckle());
@@ -409,9 +311,7 @@ namespace SpeckleGSA
             bucketObjects["Elements - 2D Mesh"] = new List<object>();
             foreach (GSAObject eMesh in elements[1])
                 bucketObjects["Elements - 2D Mesh"].Add((eMesh as GSA2DElementMesh).ToSpeckle());
-
-            //Messages.AddMessage("Lines: " + bucketObjects["Lines"].Count() + ".");
-            //Messages.AddMessage("Areas: " + bucketObjects["Areas"].Count() + ".");
+            
             Messages.AddMessage("Elements - 1D: " + bucketObjects["Elements - 1D"].Count() + ".");
             Messages.AddMessage("Elements - 2D Mesh: " + bucketObjects["Elements - 2D Mesh"].Count() + ".");
 
@@ -430,31 +330,21 @@ namespace SpeckleGSA
             obj.AttachGSA(gsaObj);
 
             Type t = obj.GetType();
-            PropertyInfo p = t.GetProperty("GSAEntity");
-            string type = p.GetValue(obj, null).ToString();
 
-            switch (type)
+            if (t == typeof(GSANode))
             {
-                case "NODE":
-                    (dict["Nodes"] as List<GSANode>).Add(obj as GSANode);
-                    (dict["Elements"] as List<GSAObject>).AddRange((obj as GSANode).Extract0DElement());
-                    break;
-                case "LINE":
-                    (dict["Lines"] as List<GSALine>).Add(obj as GSALine);
-                    break;
-                case "AREA":
-                    (dict["Areas"] as List<GSAArea>).Add(obj as GSAArea);
-                    break;
-                case "ELEMENT":
-                    (dict["Elements"] as List<GSAObject>).Add(obj as GSAObject);
-                    break;
-                case "ELEMENTMESH":
-                    List<GSAObject> elems = obj.GetChildren();
-                    foreach (GSAObject e in elems)
-                        (dict["Elements"] as List<GSAObject>).Add(e);
-                    break;
-                default:
-                    break;
+                (dict["Nodes"] as List<GSANode>).Add(obj as GSANode);
+                (dict["Elements"] as List<GSAObject>).AddRange((obj as GSANode).Extract0DElement());
+            }
+            else if (t == typeof(GSA1DElement))
+                (dict["Elements"] as List<GSAObject>).Add(obj as GSAObject);
+            else if (t == typeof(GSA2DElement))
+                (dict["Elements"] as List<GSAObject>).Add(obj as GSAObject);
+            else if (t == typeof(GSA2DElementMesh))
+            {
+                List<GSAObject> elems = obj.GetChildren();
+                foreach (GSAObject e in elems)
+                    (dict["Elements"] as List<GSAObject>).Add(e);
             }
         }
 
@@ -497,112 +387,7 @@ namespace SpeckleGSA
                 return node.Reference;
             }
         }
-
-        private int AddLine(GSALine line, ref Dictionary<string, object> dict, ref GSARefCounters counter, bool addToDict)
-        {
-            if (line.Reference == 0)
-            {
-                List<GSALine> matches = (dict["Lines"] as List<GSALine>).Where(
-                            l => l.Type == line.Type &
-                            ((l.Coor[0] == line.Coor[0] &
-                            l.Coor[1] == line.Coor[1] &
-                            l.Coor[2] == line.Coor[2] &
-                            l.Coor[3] == line.Coor[3] &
-                            l.Coor[4] == line.Coor[4] &
-                            l.Coor[5] == line.Coor[5]) ||
-                            (l.Coor[0] == line.Coor[3] &
-                            l.Coor[1] == line.Coor[4] &
-                            l.Coor[2] == line.Coor[5] &
-                            l.Coor[3] == line.Coor[0] &
-                            l.Coor[4] == line.Coor[1] &
-                            l.Coor[5] == line.Coor[2]))).ToList();
-
-                if (matches.Count == 0)
-                {
-                    List<GSAObject> lNodes = line.GetChildren();
-                    line.Connectivity = new List<int>(new int[lNodes.Count]);
-                    for (int i = 0; i < lNodes.Count; i++)
-                        line.Connectivity[i] = AddNode((lNodes[i] as GSANode).AttachGSA(gsaObj), ref dict, ref counter, true);
-
-                    line = counter.RefLine(line);
-                    if (addToDict)
-                        (dict["Lines"] as List<GSALine>).Add(line);
-
-                    gsaObj.GwaCommand(line.GetGWACommand());
-
-                    Messages.AddMessage("Created new line " + line.Reference.ToString() + ".");
-
-                    return line.Reference;
-                }
-                else
-                    return matches[0].Reference;
-            }
-            else
-            {
-                for (int i = 0; i < line.Connectivity.Count(); i++)
-                    line.Connectivity[i] = (dict["Nodes"] as List<GSANode>)
-                        .Where(n => n.Reference == line.Connectivity[i])
-                        .Select(n => n.Reference).FirstOrDefault();
-
-                if (line.Connectivity.Contains(0))
-                {
-                    List<GSAObject> lNodes = line.GetChildren();
-                    for (int i = 0; i < lNodes.Count(); i++)
-                        if (line.Connectivity[i] == 0)
-                            line.Connectivity[i] = AddNode((lNodes[i] as GSANode).AttachGSA(gsaObj), ref dict, ref counter, true);
-                }
-
-                line = counter.RefLine(line);
-
-                gsaObj.GwaCommand(line.GetGWACommand());
-
-                return line.Reference;
-            }
-        }
-
-        private int AddArea(GSAArea area, ref Dictionary<string, object> dict, ref GSARefCounters counter, bool addToDict)
-        {
-            if (area.Reference == 0)
-            {
-                // No clash or overlap check
-                area = counter.RefArea(area);
-
-                List<GSAObject> aLines = area.GetChildren();
-                area.Connectivity = new List<int>(new int[aLines.Count]);
-                for (int i = 0; i < aLines.Count; i++)
-                    area.Connectivity[i] = AddLine((aLines[i] as GSALine).AttachGSA(gsaObj), ref dict, ref counter, true);
-
-                gsaObj.GwaCommand(area.GetGWACommand());
-                if (addToDict)
-                    (dict["Areas"] as List<GSAArea>).Add(area);
-
-                Messages.AddMessage("Created new area " + area.Reference.ToString() + ".");
-
-                return area.Reference;
-            }
-
-            else
-            {
-                for (int i = 0; i < area.Connectivity.Count(); i++)
-                    area.Connectivity[i] = (dict["Lines"] as List<GSALine>)
-                        .Where(l => l.Reference == area.Connectivity[i])
-                        .Select(l => l.Reference).FirstOrDefault();
-
-                if (area.Connectivity.Contains(0))
-                {
-                    List<GSAObject> aLines = area.GetChildren();
-                    for (int i = 0; i < aLines.Count(); i++)
-                        if (area.Connectivity[i] == 0)
-                            area.Connectivity[i] = AddLine((aLines[i] as GSALine).AttachGSA(gsaObj), ref dict, ref counter, true);
-                }
-
-                area = counter.RefArea(area);
-
-                gsaObj.GwaCommand(area.GetGWACommand());
-                return area.Reference;
-            }
-        }
-
+        
         private int AddElement(GSAObject element, ref Dictionary<string, object> dict, ref GSARefCounters counter, bool addToDict)
         {
             for (int i = 0; i < element.Connectivity.Count(); i++)
@@ -647,14 +432,10 @@ namespace SpeckleGSA
             }
 
             objects["Nodes"] = new List<GSANode>();
-            objects["Lines"] = new List<GSALine>();
-            objects["Areas"] = new List<GSAArea>();
             objects["Elements"] = new List<GSAObject>();
 
             if (streamIDs["Nodes"] == "")
-            {
                 Messages.AddMessage("No nodes stream specified.");
-            }
             else
             { 
                 Messages.AddMessage("Creating .nodes receiver.");
@@ -730,17 +511,7 @@ namespace SpeckleGSA
             if (objects.ContainsKey("Nodes"))
                 foreach (GSANode n in objects["Nodes"] as List<GSANode>)
                     AddNode(n, ref objects, ref counter, false);
-
-            // Lines 
-            if (objects.ContainsKey("Lines"))
-                foreach (GSALine l in objects["Lines"] as List<GSALine>)
-                    AddLine(l, ref objects, ref counter, false);
-
-            // Areas
-            if (objects.ContainsKey("Areas"))
-                foreach (GSAArea a in objects["Areas"] as List<GSAArea>)
-                    AddArea(a, ref objects, ref counter, false);
-
+            
             // Elements
             if (objects.ContainsKey("Elements"))
                 foreach (GSAObject e in objects["Elements"] as List<GSAObject>)
@@ -760,23 +531,17 @@ namespace SpeckleGSA
     {
         private int nodeCounter;
         private int elementCounter;
-        private int lineCounter;
         private int memberCounter;
-        private int areaCounter;
-        private int regionCounter;
 
         private List<int> nodeRefsUsed;
         private List<int> elementRefsUsed;
-        private List<int> lineRefsUsed;
         private List<int> memberRefsUsed;
-        private List<int> areaRefsUsed;
-        private List<int> regionRefsUsed;
 
         public int TotalObjects
         {
             get
             {
-                return nodeCounter + elementCounter + lineCounter + memberCounter + areaCounter + regionCounter;
+                return nodeCounter + elementCounter + memberCounter;
             }
         }
 
@@ -784,17 +549,11 @@ namespace SpeckleGSA
         {
             nodeCounter = 1;
             elementCounter = 1;
-            lineCounter = 1;
             memberCounter = 1;
-            areaCounter = 1;
-            regionCounter = 1;
 
             nodeRefsUsed = new List<int>();
             elementRefsUsed = new List<int>();
-            lineRefsUsed = new List<int>();
             memberRefsUsed = new List<int>();
-            areaRefsUsed = new List<int>();
-            regionRefsUsed = new List<int>();
         }
 
         public GSANode RefNode(GSANode node)
@@ -827,16 +586,6 @@ namespace SpeckleGSA
             return element;
         }
 
-        public GSALine RefLine(GSALine line)
-        {
-            if (line.Reference > 0) return line;
-            while (lineRefsUsed.Contains(lineCounter))
-                lineCounter++;
-            line.Reference = lineCounter++;
-            lineRefsUsed.Add(line.Reference);
-            return line;
-        }
-
         public GSAMember RefMember(GSAMember member)
         {
             if (member.Reference > 0) return member;
@@ -845,26 +594,6 @@ namespace SpeckleGSA
             member.Reference = memberCounter++;
             memberRefsUsed.Add(member.Reference);
             return member;
-        }
-
-        public GSAArea RefArea(GSAArea area)
-        {
-            if (area.Reference > 0) return area;
-            while (areaRefsUsed.Contains(areaCounter))
-                areaCounter++;
-            area.Reference = areaCounter++;
-            areaRefsUsed.Add(area.Reference);
-            return area;
-        }
-
-        public GSARegion RefRegion(GSARegion region)
-        {
-            if (region.Reference > 0) return region;
-            while (regionRefsUsed.Contains(regionCounter))
-                regionCounter++;
-            region.Reference = regionCounter++;
-            regionRefsUsed.Add(region.Reference);
-            return region;
         }
 
         public void AddNodeRefs(List<int> refs)
@@ -879,28 +608,10 @@ namespace SpeckleGSA
             elementRefsUsed = elementRefsUsed.Distinct().ToList();
         }
 
-        public void AddLineRefs(List<int> refs)
-        {
-            lineRefsUsed.AddRange(refs);
-            lineRefsUsed = lineRefsUsed.Distinct().ToList();
-        }
-
         public void AddNemberRefs(List<int> refs)
         {
             memberRefsUsed.AddRange(refs);
             memberRefsUsed = memberRefsUsed.Distinct().ToList();
-        }
-
-        public void AddAreaRefs(List<int> refs)
-        {
-            areaRefsUsed.AddRange(refs);
-            areaRefsUsed = areaRefsUsed.Distinct().ToList();
-        }
-
-        public void AddRegionRefs(List<int> refs)
-        {
-            regionRefsUsed.AddRange(refs);
-            regionRefsUsed = regionRefsUsed.Distinct().ToList();
         }
     }
 }
