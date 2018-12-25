@@ -37,7 +37,7 @@ namespace SpeckleGSA
             
         }
 
-        public override string GetGWACommand()
+        public override string GetGWACommand(GSAObject[] children = null)
         {
             throw new NotImplementedException();
         }

@@ -70,12 +70,12 @@ namespace SpeckleGSA
             counter++; // Dummy
         }
 
-        public override string GetGWACommand()
+        public override string GetGWACommand(GSAObject[] children = null)
         {
             List<string> ls = new List<string>();
 
             ls.Add("SET");
-            ls.Add("EL.4");
+            ls.Add("EL.3");
             ls.Add(Reference.ToString());
             ls.Add(Name);
             if (Color == null)
@@ -96,7 +96,7 @@ namespace SpeckleGSA
             ls.Add("0"); // Offset y
             ls.Add(InsertionPoint.ToNumString());
 
-            ls.Add("NORMAL"); // Action
+            //ls.Add("NORMAL"); // Action // TODO: EL.4 SUPPORT
             ls.Add(""); // Dummy
 
             return string.Join(",", ls);

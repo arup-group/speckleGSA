@@ -112,7 +112,7 @@ namespace SpeckleGSAUI
         #region Sender
         private async void SendStream(object sender, RoutedEventArgs e)
         {
-            gsa.ExportObjects(ModelName).ContinueWith(
+            await gsa.ExportObjects(ModelName).ContinueWith(
             delegate
             {
                 Application.Current.Dispatcher.BeginInvoke(
@@ -132,7 +132,7 @@ namespace SpeckleGSAUI
         #region Receiver
         private async void ReceiveStream(object sender, RoutedEventArgs e)
         {
-            gsa.ImportObjects(new Dictionary<string, string>()
+            await gsa.ImportObjects(new Dictionary<string, string>()
             {
                 { "Properties", ReceiverPropertiesStreamID },
                 { "Nodes", ReceiverNodesStreamID },

@@ -410,9 +410,16 @@ namespace SpeckleGSA
         #region GSA to Speckle
         public static SpeckleString ToSpeckle(this GSAMaterial material)
         {
-            SpeckleString a = new SpeckleString("MATERIAL", material.GetSpeckleProperties());
+            SpeckleString s = new SpeckleString("MATERIAL", material.GetSpeckleProperties());
 
-            return a;
+            return s;
+        }
+
+        public static SpeckleString ToSpeckle(this GSA2DProperty prop)
+        {
+            SpeckleString s = new SpeckleString("2D PROPERTY", prop.GetSpeckleProperties());
+
+            return s;
         }
 
         public static SpecklePoint ToSpeckle(this GSANode node)
@@ -486,6 +493,9 @@ namespace SpeckleGSA
                 case "MATERIAL":
                     obj = new GSAMaterial();
                     break;
+                case "2D PROPERTY":
+                    obj = new GSA2DProperty();
+                    break;
                 default:
                     return str.Value;
             }
@@ -493,8 +503,7 @@ namespace SpeckleGSA
             obj.SetSpeckleProperties(str.Properties);
             return obj;
         }
-
-
+        
         public static GSANode ToNative(this SpecklePoint point)
         {
             GSANode obj = new GSANode();

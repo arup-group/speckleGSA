@@ -9,19 +9,13 @@ namespace SpeckleGSA
     public class GSA2DProperty : GSAObject
     {
         public double Thickness { get; set; }
-        public Dictionary<string,object> Material { get; set; }
+        public int Material { get; set; }
 
         public GSA2DProperty()
         {
             Thickness = 0;
-
-            Material = new Dictionary<string, object>()
-            {
-                { "Type", "CONCRETE" },
-                { "Grade", "35MPa" }
-            };
+            Material = 1;
         }
-
 
         #region GSAObject Functions
         public override void ParseGWACommand(string command, GSAObject[] children = null)
@@ -34,17 +28,46 @@ namespace SpeckleGSA
             counter++; // Type
             counter++; // Axis
             counter++; // Analysis material
-            Material["Type"] = pieces[counter++];
-            Material["Grade"] = pieces[counter++].ToString(); // TODO: GRADE REFERENCE
+            string materialType = pieces[counter++];
+            int materialGrade = Convert.ToInt32(pieces[counter++]);
+
+            Material = (children as GSAMaterial[]).Where(m => m.LocalReference == materialGrade & m.Type == materialType).FirstOrDefault().Reference;
+
             counter++; // Design property
             Thickness = Convert.ToDouble(pieces[counter++]);
 
             // Ignore the rest
         }
 
-        public override string GetGWACommand()
+        public override string GetGWACommand(GSAObject[] children = null)
         {
-            throw new NotImplementedException();
+            List<string> ls = new List<string>();
+
+            ls.Add("SET");
+            ls.Add("PROP_2D.5");
+            ls.Add(Reference.ToNumString());
+            ls.Add(Name);
+            if (Color == null)
+                ls.Add("NO_RGB");
+            else
+                ls.Add(Color.ToNumString());
+            ls.Add("SHELL");
+            ls.Add("GLOBAL");
+            ls.Add("0"); // Analysis material
+            ls.Add((children as GSAMaterial[]).Where(m => m.Reference == Material).FirstOrDefault().Type);
+            ls.Add(Material.ToNumString());
+            ls.Add("1"); // Design
+            ls.Add(Thickness.ToNumString());
+            ls.Add("CENTROID"); // Reference point
+            ls.Add("0"); // Ref_z
+            ls.Add("0"); // Mass
+            ls.Add("100%"); // Flex modifier
+            ls.Add("100%"); // Shear modifier
+            ls.Add("100%"); // Inplane modifier
+            ls.Add("100%"); // Weight modifier
+            ls.Add("NO_ENV"); // Environmental data
+
+            return string.Join(",", ls);
         }
 
         public override List<GSAObject> GetChildren()
@@ -52,34 +75,5 @@ namespace SpeckleGSA
             throw new NotImplementedException();
         }
         #endregion
-
-        //#region Grade
-        //private string GetGSAGrade(int mat, string type)
-        //{
-        //    //string res;
-
-        //    //switch (type)
-        //    //{
-        //    //    case "STEEL":
-        //    //        res = (string)RunGWACommand("GET,MAT_STEEL," + mat);
-        //    //        break;
-        //    //    case "CONCRETE":
-        //    //        res = (string)RunGWACommand("GET,MAT_CONCRETE," + mat);
-        //    //        break;
-        //    //    case "FRP":
-        //    //        res = (string)
-        //    //}
-
-        //    //string res = (string)RunGWACommand("GET,PROP_2D," + prop);
-
-        //    //if (res == null || res == "")
-        //    //    return null;
-
-        //    //string[] pieces = res.ListSplit(",");
-
-        //    //return pieces[5] == "LOCAL";
-
-        //}
-        //#endregion
     }
 }

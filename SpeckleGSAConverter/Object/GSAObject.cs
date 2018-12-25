@@ -33,7 +33,7 @@ namespace SpeckleGSA
 
         public abstract void ParseGWACommand(string command, GSAObject[] children = null);
 
-        public abstract string GetGWACommand();
+        public abstract string GetGWACommand(GSAObject[] children = null);
 
         public abstract List<GSAObject> GetChildren();
 
@@ -44,9 +44,9 @@ namespace SpeckleGSA
             return gsa.GwaCommand(command);
         }
 
-        public void WritetoGSA()
+        public void WritetoGSA(GSAObject[] children = null)
         {
-            RunGWACommand(GetGWACommand());
+            RunGWACommand(GetGWACommand(children));
         }
 
         public virtual void WriteDerivedObjectstoGSA()
@@ -105,6 +105,12 @@ namespace SpeckleGSA
         }
 
         public static GSAMaterial AttachGSA(this GSAMaterial obj, ComAuto gsa)
+        {
+            obj.gsa = gsa;
+            return obj;
+        }
+
+        public static GSA2DProperty AttachGSA(this GSA2DProperty obj, ComAuto gsa)
         {
             obj.gsa = gsa;
             return obj;

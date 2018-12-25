@@ -38,7 +38,7 @@ namespace SpeckleGSA
             // Rest is unimportant for 0D element
         }
 
-        public override string GetGWACommand()
+        public override string GetGWACommand(GSAObject[] children = null)
         {
             List<string> ls = new List<string>();
 
