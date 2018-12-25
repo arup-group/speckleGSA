@@ -28,10 +28,13 @@ namespace SpeckleGSA
             counter++; // Type
             counter++; // Axis
             counter++; // Analysis material
+
             string materialType = pieces[counter++];
             int materialGrade = Convert.ToInt32(pieces[counter++]);
 
-            Material = (children as GSAMaterial[]).Where(m => m.LocalReference == materialGrade & m.Type == materialType).FirstOrDefault().Reference;
+            GSAObject matchingMaterial = (children as GSAMaterial[]).Where(m => m.LocalReference == materialGrade & m.Type == materialType).FirstOrDefault();
+
+            Material = matchingMaterial == null ? 1 : matchingMaterial.Reference;
 
             counter++; // Design property
             Thickness = Convert.ToDouble(pieces[counter++]);

@@ -66,7 +66,7 @@ namespace SpeckleGSA
 
             InsertionPoint = GetGSATotalElementOffset(Property,Convert.ToDouble(pieces[counter++]));
 
-            counter++; // Action
+            //counter++; // Action // TODO: EL.4 SUPPORT
             counter++; // Dummy
         }
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -163,6 +164,115 @@ namespace SpeckleGSA
         #endregion
 
         #region Extract GSA
+        public async Task ExportObjects(string modelName)
+        {
+            Dictionary<string, List<object>> bucketObjects = new Dictionary<string, List<object>>();
+            Dictionary<string, string[]> objectIDs;
+
+            if (gsaObj == null)
+            {
+                Messages.AddError("GSA link not found.");
+                return;
+            }
+
+            Messages.AddMessage("Converting objects.");
+
+            List<GSAMaterial> materials = GetMaterials();
+            Messages.AddMessage("Converted " + materials.Count() + " materials");
+
+            List<GSA2DProperty> props2D = Get2DProperties(materials);
+            Messages.AddMessage("Converted " + props2D.Count() + " 2D properties");
+
+            List<GSANode> nodes = GetNodes();
+            Messages.AddMessage("Converted " + nodes.Count() + " nodes.");
+
+            List<GSAObject>[] elements = GetElements(nodes);
+            Messages.AddMessage("Converted " + elements[0].Count() + " 1D elements.");
+            Messages.AddMessage("Converted " + elements[1].Count() + " 2D meshes.");
+
+            // Send properties
+            Messages.AddMessage("Sending .properties stream.");
+
+            if (!senders.ContainsKey("Properties"))
+            {
+                Messages.AddMessage(".properties sender not initialized. Creating new .properties sender.");
+                senders["Properties"] = new Sender(userManager.ServerAddress, userManager.ApiToken);
+                await senders["Properties"].InitializeSender();
+            }
+
+            Messages.AddMessage(".properties sender streamID: " + senders["Properties"].StreamID + ".");
+
+            bucketObjects["Materials"] = new List<object>();
+            foreach (GSAMaterial m in materials)
+                bucketObjects["Materials"].Add(m.ToSpeckle());
+
+            bucketObjects["2D Properties"] = new List<object>();
+            foreach (GSA2DProperty p in props2D)
+                bucketObjects["2D Properties"].Add(p.ToSpeckle());
+
+            Messages.AddMessage("Materials: " + bucketObjects["Materials"].Count() + ".");
+            Messages.AddMessage("2D Properties: " + bucketObjects["2D Properties"].Count() + ".");
+
+            objectIDs = await senders["Properties"].UpdateDataAsync(modelName + ".properties", bucketObjects);
+
+            Messages.AddMessage("Streamed " + objectIDs.Count() + " objects.");
+
+            bucketObjects.Clear();
+
+            // Send nodes
+            Messages.AddMessage("Sending .nodes stream.");
+
+            if (!senders.ContainsKey("Nodes"))
+            {
+                Messages.AddMessage(".nodes sender not initialized. Creating new .nodes sender.");
+                senders["Nodes"] = new Sender(userManager.ServerAddress, userManager.ApiToken);
+                await senders["Nodes"].InitializeSender();
+            }
+
+            Messages.AddMessage(".nodes sender streamID: " + senders["Nodes"].StreamID + ".");
+
+            bucketObjects["Nodes"] = new List<object>();
+            foreach (GSANode n in nodes)
+                bucketObjects["Nodes"].Add(n.ToSpeckle());
+
+            Messages.AddMessage("Nodes: " + bucketObjects["Nodes"].Count() + ".");
+
+            objectIDs = await senders["Nodes"].UpdateDataAsync(modelName + ".nodes", bucketObjects);
+
+            Messages.AddMessage("Streamed " + objectIDs.Count() + " objects.");
+
+            bucketObjects.Clear();
+
+            // Send .elements
+            Messages.AddMessage("Sending .elements stream.");
+
+            if (!senders.ContainsKey("Elements"))
+            {
+                Messages.AddMessage(".elements sender not initialized. Creating new .elements sender.");
+                senders["Elements"] = new Sender(userManager.ServerAddress, userManager.ApiToken);
+                await senders["Elements"].InitializeSender();
+            }
+
+            Messages.AddMessage(".elements sender streamID: " + senders["Elements"].StreamID + ".");
+
+            bucketObjects["Elements - 1D"] = new List<object>();
+            foreach (GSAObject e1D in elements[0])
+                bucketObjects["Elements - 1D"].Add((e1D as GSA1DElement).ToSpeckle());
+
+            bucketObjects["Elements - 2D Mesh"] = new List<object>();
+            foreach (GSAObject eMesh in elements[1])
+                bucketObjects["Elements - 2D Mesh"].Add((eMesh as GSA2DElementMesh).ToSpeckle());
+
+            Messages.AddMessage("Elements - 1D: " + bucketObjects["Elements - 1D"].Count() + ".");
+            Messages.AddMessage("Elements - 2D Mesh: " + bucketObjects["Elements - 2D Mesh"].Count() + ".");
+
+            objectIDs = await senders["Elements"].UpdateDataAsync(modelName + ".elements", bucketObjects);
+
+            Messages.AddMessage("Streamed " + objectIDs.Count() + " objects.");
+
+            Messages.AddMessage("Sending completed!");
+        }
+
         private List<GSAMaterial> GetMaterials()
         {
             string[] materialIdentifier = new string[]
@@ -307,236 +417,12 @@ namespace SpeckleGSA
             return null;
         }
         
-        public async Task ExportObjects(string modelName)
-        {
-            Dictionary<string, List<object>> bucketObjects = new Dictionary<string, List<object>>();
-            Dictionary<string, string[]> objectIDs;
-
-            if (gsaObj == null)
-            {
-                Messages.AddError("GSA link not found.");
-                return;
-            }
-
-            Messages.AddMessage("Converting objects.");
-
-            List<GSAMaterial> materials = GetMaterials();
-            Messages.AddMessage("Converted " + materials.Count() + " materials");
-
-            List<GSA2DProperty> props2D = Get2DProperties(materials);
-            Messages.AddMessage("Converted " + props2D.Count() + " 2D properties");
-
-            List<GSANode> nodes = GetNodes();
-            Messages.AddMessage("Converted " + nodes.Count() + " nodes.");
-            
-            List<GSAObject>[] elements = GetElements(nodes);
-            Messages.AddMessage("Converted " + elements[0].Count() + " 1D elements.");
-            Messages.AddMessage("Converted " + elements[1].Count() + " 2D meshes.");
-
-            // Send properties
-            Messages.AddMessage("Sending .properties stream.");
-
-            if (!senders.ContainsKey("Properties"))
-            {
-                Messages.AddMessage(".properties sender not initialized. Creating new .properties sender.");
-                senders["Properties"] = new Sender(userManager.ServerAddress, userManager.ApiToken);
-                await senders["Properties"].InitializeSender();
-            }
-
-            Messages.AddMessage(".properties sender streamID: " + senders["Properties"].StreamID + ".");
-
-            bucketObjects["Materials"] = new List<object>();
-            foreach (GSAMaterial m in materials)
-                bucketObjects["Materials"].Add(m.ToSpeckle());
-
-            bucketObjects["2D Properties"] = new List<object>();
-            foreach (GSA2DProperty p in props2D)
-                bucketObjects["2D Properties"].Add(p.ToSpeckle());
-
-            Messages.AddMessage("Materials: " + bucketObjects["Materials"].Count() + ".");
-            Messages.AddMessage("2D Properties: " + bucketObjects["2D Properties"].Count() + ".");
-
-            objectIDs = await senders["Properties"].UpdateDataAsync(modelName + ".properties", bucketObjects);
-
-            Messages.AddMessage("Streamed " + objectIDs.Count() + " objects.");
-
-            bucketObjects.Clear();
-
-            // Send nodes
-            Messages.AddMessage("Sending .nodes stream.");
-            
-            if (!senders.ContainsKey("Nodes"))
-            {
-                Messages.AddMessage(".nodes sender not initialized. Creating new .nodes sender.");
-                senders["Nodes"] = new Sender(userManager.ServerAddress, userManager.ApiToken);
-                await senders["Nodes"].InitializeSender();
-            }
-
-            Messages.AddMessage(".nodes sender streamID: " + senders["Nodes"].StreamID + ".");
-            
-            bucketObjects["Nodes"] = new List<object>();
-            foreach (GSANode n in nodes)
-                bucketObjects["Nodes"].Add(n.ToSpeckle());
-
-            Messages.AddMessage("Nodes: " + bucketObjects["Nodes"].Count() + ".");
-
-            objectIDs = await senders["Nodes"].UpdateDataAsync(modelName + ".nodes", bucketObjects);
-
-            Messages.AddMessage("Streamed " + objectIDs.Count() + " objects.");
-
-            bucketObjects.Clear();
-
-            // Send .elements
-            Messages.AddMessage("Sending .elements stream.");
-            
-            if (!senders.ContainsKey("Elements"))
-            {
-                Messages.AddMessage(".elements sender not initialized. Creating new .elements sender.");
-                senders["Elements"] = new Sender(userManager.ServerAddress, userManager.ApiToken);
-                await senders["Elements"].InitializeSender();
-            }
-
-            Messages.AddMessage(".elements sender streamID: " + senders["Elements"].StreamID + ".");
-            
-            bucketObjects["Elements - 1D"] = new List<object>();
-            foreach (GSAObject e1D in elements[0])
-                bucketObjects["Elements - 1D"].Add((e1D as GSA1DElement).ToSpeckle());
-            
-            bucketObjects["Elements - 2D Mesh"] = new List<object>();
-            foreach (GSAObject eMesh in elements[1])
-                bucketObjects["Elements - 2D Mesh"].Add((eMesh as GSA2DElementMesh).ToSpeckle());
-            
-            Messages.AddMessage("Elements - 1D: " + bucketObjects["Elements - 1D"].Count() + ".");
-            Messages.AddMessage("Elements - 2D Mesh: " + bucketObjects["Elements - 2D Mesh"].Count() + ".");
-
-            objectIDs = await senders["Elements"].UpdateDataAsync(modelName + ".elements", bucketObjects);
-
-            Messages.AddMessage("Streamed " + objectIDs.Count() + " objects.");
-
-            Messages.AddMessage("Sending completed!");
-        }
         #endregion
 
         #region Import GSA
-        private void AddGSAObj(GSAObject obj, Dictionary<string, object> dict)
-        {
-            obj.AttachGSA(gsaObj);
-
-            Type t = obj.GetType();
-
-            if (t== typeof(GSAMaterial))
-                (dict["Materials"] as List<GSAMaterial>).Add(obj as GSAMaterial);
-            else if (t == typeof(GSA2DProperty))
-                (dict["2D Properties"] as List<GSA2DProperty>).Add(obj as GSA2DProperty);
-            else if (t == typeof(GSANode))
-                (dict["Nodes"] as List<GSANode>).Add(obj as GSANode);
-                //(dict["Elements"] as List<GSAObject>).AddRange((obj as GSANode).Extract0DElement());
-            else if (t == typeof(GSA1DElement))
-                (dict["Elements"] as List<GSAObject>).Add(obj as GSAObject);
-            else if (t == typeof(GSA2DElement))
-                (dict["Elements"] as List<GSAObject>).Add(obj as GSAObject);
-            else if (t == typeof(GSA2DElementMesh))
-            {
-                List<GSAObject> elems = obj.GetChildren();
-                foreach (GSAObject e in elems)
-                    (dict["Elements"] as List<GSAObject>).Add(e.AttachGSA(gsaObj));
-            }
-        }
-
-        private int AddMaterial(GSAMaterial material, Dictionary<string, object> dict, ref GSARefCounters counter)
-        {
-            int index = (dict["Materials"] as List<GSAMaterial>).IndexOf(material);
-
-            material = counter.RefMaterial(material);
-
-            if (index != -1)
-                (dict["Materials"] as List<GSAMaterial>)[index] = material;
-            else
-                (dict["Materials"] as List<GSAMaterial>).Add(material);
-
-            return material.Reference;
-        }
-
-        private int AddProp2D(GSA2DProperty property, Dictionary<string, object> dict, ref GSARefCounters counter)
-        {
-            int index = (dict["2D Properties"] as List<GSA2DProperty>).IndexOf(property);
-
-            property = counter.RefMaterial(property);
-
-            if (index != -1)
-                (dict["2D Properties"] as List<GSA2DProperty>)[index] = property;
-            else
-                (dict["2D Properties"] as List<GSA2DProperty>).Add(property);
-
-            return property.Reference;
-        }
-
-        private int AddNode(GSANode node, Dictionary<string, object> dict, ref GSARefCounters counter)
-        {
-            int index = (dict["Nodes"] as List<GSANode>).IndexOf(node);
-
-            if (node.Reference == 0)
-            {
-                List<GSANode> matches = (dict["Nodes"] as List<GSANode>)
-                    .Where(n => (n.Coor[0] == node.Coor[0]) &
-                    (n.Coor[1] == node.Coor[1]) &
-                    (n.Coor[2] == node.Coor[2])).ToList();
-
-                if (matches.Count > 0)
-                {
-                    int mergeIndex = (dict["Nodes"] as List<GSANode>).IndexOf(matches[0]);
-                    (dict["Nodes"] as List<GSANode>)[mergeIndex].Merge(node);
-                    return matches[0].Reference;
-                }
-            }
-            else if ((dict["Nodes"] as List<GSANode>).Where(n => n.Reference == node.Reference).Count() > 0)
-            {
-                int mergeIndex = (dict["Nodes"] as List<GSANode>).IndexOf(
-                    (dict["Nodes"] as List<GSANode>)
-                    .Where(n => n.Reference == node.Reference).First());
-                (dict["Nodes"] as List<GSANode>)[mergeIndex].Merge(node);
-                return node.Reference;
-
-            }
-                    
-
-            node = counter.RefNode(node);
-
-            if (index != -1)
-                (dict["Nodes"] as List<GSANode>)[index] = node;
-            else
-                (dict["Nodes"] as List<GSANode>).Add(node);
-
-            Messages.AddMessage("Created new node " + node.Reference.ToString() + ".");
-
-            return node.Reference;
-        }
-        
-        private int AddElement(GSAObject element, Dictionary<string, object> dict, ref GSARefCounters counter)
-        {
-            int index = (dict["Elements"] as List<GSAObject>).IndexOf(element);
-
-            List<GSAObject> eNodes = element.GetChildren();
-
-            if (element.Connectivity.Count() == 0)
-                element.Connectivity = new List<int>(new int[eNodes.Count]);
-
-            for (int i = 0; i < eNodes.Count(); i++)
-                element.Connectivity[i] = AddNode((eNodes[i] as GSANode).AttachGSA(gsaObj), dict, ref counter);
-            
-            element = counter.RefElement(element);
-
-            if (index != -1)
-                (dict["Elements"] as List<GSAObject>)[index] = element;
-            else
-                (dict["Elements"] as List<GSAObject>).Add(element);
-
-            return element.Reference;
-        }
-
         public async Task ImportObjects(Dictionary<string, string> streamIDs)
         {
-            Dictionary<string, object> objects = new Dictionary<string, object>();
+            Dictionary<Type, object> objects = new Dictionary<Type, object>();
             List<object> convertedObjects = new List<object>();
 
             if (gsaObj == null)
@@ -545,91 +431,39 @@ namespace SpeckleGSA
                 return;
             }
 
-            objects["Materials"] = new List<GSAMaterial>();
-            objects["2D Properties"] = new List<GSA2DProperty>();
-            objects["Nodes"] = new List<GSANode>();
-            objects["Elements"] = new List<GSAObject>();
-        
-            if (streamIDs["Properties"] == "")
-                Messages.AddMessage("No nodes stream specified.");
-            else
+            // TODO: AUTOMATE THIS INSTEAD OF HARDCODE
+            objects[typeof(GSAMaterial)] = new List<GSAMaterial>();
+            objects[typeof(GSA2DProperty)] = new List<GSA2DProperty>();
+            objects[typeof(GSANode)] = new List<GSANode>();
+            objects[typeof(GSA1DElement)] = new List<GSA1DElement>();
+            objects[typeof(GSA2DElement)] = new List<GSA2DElement>();
+
+            // Pull objects from server
+            foreach (KeyValuePair<string, string> kvp in streamIDs)
             {
-                Messages.AddMessage("Creating .properties receiver.");
-                receivers["Properties"] = new Receiver(userManager.ServerAddress, userManager.ApiToken);
-                await receivers["Properties"].InitializeReceiver(streamIDs["Properties"]);
-
-                if (receivers["Properties"].StreamID == null || receivers["Properties"].StreamID == "")
-                {
-                    Messages.AddError("Could not connect to .properties stream.");
-                }
+                if (kvp.Value == "")
+                    Messages.AddMessage("No " + kvp.Key + " stream specified.");
                 else
                 {
-                    Messages.AddMessage("Receiving properties.");
-                    try
-                    {
-                        await receivers["Properties"].UpdateDataAsync().ContinueWith(res =>
-                            convertedObjects.AddRange(res.Result)
-                        );
-                    }
-                    catch (Exception e)
-                    {
-                        Messages.AddError(e.Message);
-                    }
-                }
-            }
+                    Messages.AddMessage("Creating " + kvp.Key + " receiver.");
+                    receivers[kvp.Key] = new Receiver(userManager.ServerAddress, userManager.ApiToken);
+                    await receivers[kvp.Key].InitializeReceiver(kvp.Value);
 
-            if (streamIDs["Nodes"] == "")
-                Messages.AddMessage("No nodes stream specified.");
-            else
-            { 
-                Messages.AddMessage("Creating .nodes receiver.");
-                receivers["Nodes"] = new Receiver(userManager.ServerAddress, userManager.ApiToken);
-                await receivers["Nodes"].InitializeReceiver(streamIDs["Nodes"]);
-
-                if (receivers["Nodes"].StreamID == null || receivers["Nodes"].StreamID == "")
-                {
-                    Messages.AddError("Could not connect to .nodes stream.");
-                }
-                else
-                {
-                    Messages.AddMessage("Receiving nodes.");
-                    try
+                    if (receivers[kvp.Key].StreamID == null || receivers[kvp.Key].StreamID == "")
+                        Messages.AddError("Could not connect to " + kvp.Key + " stream.");
+                    else
                     {
-                        await receivers["Nodes"].UpdateDataAsync().ContinueWith(res =>
-                            convertedObjects.AddRange(res.Result)
-                        );
-                    }
-                    catch (Exception e)
-                    {
-                        Messages.AddError(e.Message);
-                    }
-                }
-            }
-
-            if (streamIDs["Elements"] == "")
-                Messages.AddMessage("No elements stream specified.");
-            else
-            {
-                Messages.AddMessage("Creating .elements receiver.");
-                receivers["Elements"] = new Receiver(userManager.ServerAddress, userManager.ApiToken);
-                await receivers["Elements"].InitializeReceiver(streamIDs["Elements"]);
-
-                if (receivers["Elements"].StreamID == null || receivers["Elements"].StreamID == "")
-                {
-                    Messages.AddError("Could not connect to .elements stream.");
-                }
-                else
-                {
-                    try
-                    {
-                        Messages.AddMessage("Receiving elements.");
-                        await receivers["Elements"].UpdateDataAsync().ContinueWith(res =>
-                            convertedObjects.AddRange(res.Result)
-                        );
-                    }
-                    catch (Exception e)
-                    {
-                        Messages.AddError(e.Message);
+                        Messages.AddMessage("Receiving " + kvp.Key + ".");
+                        try
+                        {
+                            await receivers[kvp.Key].UpdateDataAsync().ContinueWith(res =>
+                                convertedObjects.AddRange(res.Result)
+                            );
+                        }
+                        catch (Exception e)
+                        {
+                            Messages.AddError(e.Message);
+                        }
                     }
                 }
             }
@@ -639,202 +473,219 @@ namespace SpeckleGSA
             {
                 if (obj == null) continue;
 
-                Type t = obj.GetType();
-                if (t.IsArray)
-                    foreach (GSAObject arrObj in (obj as Array))
-                        AddGSAObj(arrObj, objects);
-                else
-                    AddGSAObj(obj as GSAObject, objects);
+                AddGSAObj(obj as GSAObject, objects);
             }
 
             // Set Up Counter
             GSARefCounters counter = new GSARefCounters();
-            counter.AddMaterialRefs((objects["Materials"] as List<GSAMaterial>).Select(n => n.Reference).ToList());
-            counter.AddProp2DRefs((objects["2D Properties"] as List<GSA2DProperty>).Select(p => p.Reference).ToList());
-            counter.AddNodeRefs((objects["Nodes"] as List<GSANode>).Select(n => n.Reference).ToList());
-            counter.AddNodeRefs((objects["Elements"] as List<GSAObject>).SelectMany(e => e.Connectivity).ToList()); // Reserve connectivity nodes
-            counter.AddElementRefs((objects["Elements"] as List<GSAObject>).Select(e => e.Reference).ToList());
+            foreach (KeyValuePair<Type, object> kvp in objects)
+            {
+                Type subType = kvp.Value.GetType().GetGenericArguments()[0];
 
-            // Materials
-            for (int i = 0; i < (objects["Materials"] as List<GSAMaterial>).Count(); i++)
-                AddMaterial((objects["Materials"] as List<GSAMaterial>)[i], objects, ref counter);
+                List<int> references = (kvp.Value as IList).Cast<GSAObject>().Select(o => o.Reference).ToList();
 
-            // 2D Properties
-            for (int i = 0; i < (objects["2D Properties"] as List<GSA2DProperty>).Count(); i++)
-                AddProp2D((objects["2D Properties"] as List<GSA2DProperty>)[i], objects, ref counter);
+                counter.AddObjRefs(subType.ToString(), references);
+            }
 
-            // Nodes
-            for (int i = 0; i < (objects["Nodes"] as List<GSANode>).Count(); i++)
-                AddNode((objects["Nodes"] as List<GSANode>)[i], objects, ref counter);
+            // Reserve connectivity nodes
+            counter.AddObjRefs(
+                typeof(GSANode).ToString(),
+                (objects[typeof(GSA1DElement)] as IList).Cast<GSAObject>().SelectMany(e => e.Connectivity).ToList()
+                );
+            counter.AddObjRefs(
+                typeof(GSANode).ToString(),
+                (objects[typeof(GSA2DElement)] as IList).Cast<GSAObject>().SelectMany(e => e.Connectivity).ToList()
+                );
 
-            // Elements
-            for (int i = 0; i < (objects["Elements"] as List<GSAObject>).Count(); i++)
-                AddElement((objects["Elements"] as List<GSAObject>)[i], objects, ref counter);
+            // Prepare objects (fix connectivity, add children, etc.)
+            for (int i = 0; i < objects.Keys.Count(); i++)
+            {
+                Type key = objects.Keys.ElementAt(i);
+                List<GSAObject> value = (objects.Values.ElementAt(i) as IList).Cast<GSAObject>().ToList();
 
-            Messages.AddMessage("Preparing to write " + counter.TotalObjects + " objects.");
+                for (int j = 0; j < value.Count(); j++)
+                {
+                    GSAObject obj = value[j];
+
+                    if (obj.GetType() == typeof(GSANode))
+                        PrepareNode(obj as GSANode, objects, ref counter);
+                    else if (obj.GetType() == typeof(GSA1DElement))
+                        PrepareElement(obj, objects, ref counter);
+                    else if (obj.GetType() == typeof(GSA2DElement))
+                        PrepareElement(obj, objects, ref counter);
+                    else
+                        PrepareGeneric(obj, objects, ref counter);
+                }
+            }
 
             // Write objects
-            foreach (GSAMaterial m in objects["Materials"] as List<GSAMaterial>)
-                m.WritetoGSA();
+            foreach (KeyValuePair<Type, object> kvp in objects)
+                foreach (GSAObject obj in (kvp.Value as IList).Cast<GSAObject>())
+                {
+                    if (obj.GetType() == typeof(GSA2DProperty))
+                        obj.WritetoGSA((objects[typeof(GSAMaterial)] as List<GSAMaterial>).ToArray());
+                    else
+                        obj.WritetoGSA();
+                }
 
-            foreach (GSA2DProperty p in objects["2D Properties"] as List<GSA2DProperty>)
-                p.WritetoGSA((objects["Materials"] as List<GSAMaterial>).ToArray());
+            Messages.AddMessage("Preparing to write derived objects.");
 
-            foreach (GSANode n in objects["Nodes"] as List<GSANode>)
-                n.WritetoGSA();
-
-            foreach (GSAObject e in objects["Elements"] as List<GSAObject>)
-                e.WritetoGSA();
-
-            Messages.AddMessage("Preparing to derived objects.");
-
-            // Write derived objects (e.g., 0D elements, etc.)
-            foreach (GSANode n in objects["Nodes"] as List<GSANode>)
-                n.WriteDerivedObjectstoGSA();
+            // Write derived objects (e.g., 0D elements from nodes)
+            foreach (KeyValuePair<Type, object> kvp in objects)
+                foreach (GSAObject obj in (kvp.Value as IList).Cast<GSAObject>())
+                    obj.WriteDerivedObjectstoGSA();
 
             gsaObj.UpdateViews();
 
             Messages.AddMessage("Receiving completed!");
         }
 
+        private void AddGSAObj(GSAObject obj, Dictionary<Type, object> dict)
+        {
+            obj.AttachGSA(gsaObj);
+
+            Type t = obj.GetType();
+
+            if (t== typeof(GSA2DElementMesh))
+            {
+                List<GSAObject> elems = obj.GetChildren();
+                foreach (GSAObject e in elems)
+                    (dict[typeof(GSA2DElement)] as IList).Add(e.AttachGSA(gsaObj));
+            }
+            else
+                (dict[t] as IList).Add(obj);
+        }
+
+        private int PrepareGeneric(GSAObject obj, Dictionary<Type, object> dict, ref GSARefCounters counter)
+        {
+            int index = (dict[obj.GetType()] as IList).IndexOf(obj);
+
+            obj = counter.RefObject(obj);
+
+            if (index != -1)
+                (dict[obj.GetType()] as IList)[index] = obj;
+            else
+                (dict[obj.GetType()] as IList).Add(obj);
+
+            return obj.Reference;
+        }
+        
+        private int PrepareNode(GSANode node, Dictionary<Type, object> dict, ref GSARefCounters counter)
+        {
+            int index = (dict[typeof(GSANode)] as IList).IndexOf(node);
+
+            if (node.Reference == 0)
+            {
+                List<GSANode> matches = (dict[typeof(GSANode)] as IList)
+                    .Cast<GSANode>()
+                    .Where(n => (n.Coor[0] == node.Coor[0]) &
+                    (n.Coor[1] == node.Coor[1]) &
+                    (n.Coor[2] == node.Coor[2])).ToList();
+
+                if (matches.Count > 0)
+                {
+                    int mergeIndex = (dict[typeof(GSANode)] as IList).IndexOf(matches[0]);
+                    ((dict[typeof(GSANode)] as IList)[mergeIndex] as GSANode).Merge(node);
+                    return matches[0].Reference;
+                }
+            }
+            else if ((dict[typeof(GSANode)] as IList).Cast<GSANode>().Where(n => n.Reference == node.Reference).Count() > 0)
+            {
+                int mergeIndex = (dict[typeof(GSANode)] as IList).IndexOf(
+                    (dict[typeof(GSANode)] as IList).Cast<GSANode>()
+                    .Where(n => n.Reference == node.Reference).First());
+                ((dict[typeof(GSANode)] as IList)[mergeIndex] as GSANode).Merge(node);
+                return node.Reference;
+
+            }
+
+            node = counter.RefObject(node) as GSANode;
+
+            if (index != -1)
+                (dict[typeof(GSANode)] as IList)[index] = node;
+            else
+                (dict[typeof(GSANode)] as IList).Add(node);
+
+            Messages.AddMessage("Created new node " + node.Reference.ToString() + ".");
+
+            return node.Reference;
+        }
+        
+        private int PrepareElement(GSAObject element, Dictionary<Type, object> dict, ref GSARefCounters counter)
+        {
+            int index = (dict[element.GetType()] as IList).IndexOf(element);
+
+            List<GSAObject> eNodes = element.GetChildren();
+
+            if (element.Connectivity.Count() == 0)
+                element.Connectivity = new List<int>(new int[eNodes.Count]);
+
+            for (int i = 0; i < eNodes.Count(); i++)
+                element.Connectivity[i] = PrepareNode((eNodes[i] as GSANode).AttachGSA(gsaObj), dict, ref counter);
+            
+            element = counter.RefObject(element);
+
+            if (index != -1)
+                (dict[element.GetType()] as IList)[index] = element;
+            else
+                (dict[element.GetType()] as IList).Add(element);
+
+            return element.Reference;
+        }
         #endregion
     }
 
     public class GSARefCounters
     {
-        private int materialCounter;
-        private int prop2DCounter;
-        private int nodeCounter;
-        private int elementCounter;
-        private int memberCounter;
-
-        private List<int> materialRefsUsed;
-        private List<int> prop2DRefsUsed;
-        private List<int> nodeRefsUsed;
-        private List<int> elementRefsUsed;
-        private List<int> memberRefsUsed;
+        private Dictionary<string, int> counter;
+        private Dictionary<string, List<int>> refsUsed;
 
         public int TotalObjects
         {
             get
             {
-                return materialRefsUsed.Count() + nodeRefsUsed.Count() + elementRefsUsed.Count() + memberRefsUsed.Count();
+                int total = 0;
+
+                foreach (KeyValuePair<string, List<int>> kvp in refsUsed)
+                    total += kvp.Value.Count();
+
+                return total;
             }
         }
 
         public GSARefCounters()
         {
-            materialCounter = 1;
-            prop2DCounter = 1;
-            nodeCounter = 1;
-            elementCounter = 1;
-            memberCounter = 1;
-
-            materialRefsUsed = new List<int>();
-            prop2DRefsUsed = new List<int>();
-            nodeRefsUsed = new List<int>();
-            elementRefsUsed = new List<int>();
-            memberRefsUsed = new List<int>();
+            counter = new Dictionary<string, int>();
+            refsUsed = new Dictionary<string, List<int>>();
         }
 
-        public GSAMaterial RefMaterial(GSAMaterial material)
+        public GSAObject RefObject(GSAObject obj)
         {
-            if (material.Reference > 0)
+            string key = obj.GetType().ToString();
+
+            if (obj.Reference == 0)
             {
-                AddMaterialRefs(new List<int> { material.Reference });
-                return material;
+                if (!counter.ContainsKey(key))
+                    counter[key] = 1;
+
+                while (refsUsed[key].Contains(counter[key]))
+                    counter[key]++;
+
+                obj.Reference = counter[key]++;
             }
-            while (materialRefsUsed.Contains(materialCounter))
-                materialCounter++;
-            material.Reference = materialCounter++;
-            materialRefsUsed.Add(material.Reference);
-            return material;
-        }
 
-        public GSA2DProperty RefMaterial(GSA2DProperty property)
-        {
-            if (property.Reference > 0)
-            {
-                AddProp2DRefs(new List<int> { property.Reference });
-                return property;
-            }
-            while (prop2DRefsUsed.Contains(prop2DCounter))
-                prop2DCounter++;
-            property.Reference = prop2DCounter++;
-            prop2DRefsUsed.Add(property.Reference);
-            return property;
+            AddObjRefs(key, new List<int>() { obj.Reference });
+            return obj;
         }
-
-        public GSANode RefNode(GSANode node)
+        
+        public void AddObjRefs(string key, List<int> refs)
         {
-            if (node.Reference > 0)
-            {
-                AddNodeRefs(new List<int> { node.Reference });
-                return node;
-            }
-            while (nodeRefsUsed.Contains(nodeCounter))
-                nodeCounter++;
-            node.Reference = nodeCounter++;
-            nodeRefsUsed.Add(node.Reference);
-            return node;
-        }
+            if (!refsUsed.ContainsKey(key))
+                refsUsed[key] = refs;
+            else
+                refsUsed[key].AddRange(refs);
 
-        public GSAObject RefElement(GSAObject element)
-        {
-            if (element.Reference > 0)
-            {
-                AddElementRefs(new List<int> { element.Reference });
-                return element;
-            }
-            while (elementRefsUsed.Contains(elementCounter))
-                elementCounter++;
-            element.Reference = elementCounter++;
-            elementRefsUsed.Add(element.Reference);
-            return element;
-        }
-
-        public GSAMember RefMember(GSAMember member)
-        {
-            if (member.Reference > 0)
-            {
-                AddNemberRefs(new List<int> { member.Reference });
-                return member;
-            }
-            while (memberRefsUsed.Contains(memberCounter))
-                memberCounter++;
-            member.Reference = memberCounter++;
-            memberRefsUsed.Add(member.Reference);
-            return member;
-        }
-
-        public void AddMaterialRefs(List<int> refs)
-        {
-            materialRefsUsed.AddRange(refs);
-            materialRefsUsed = materialRefsUsed.Distinct().ToList();
-        }
-
-        public void AddProp2DRefs(List<int> refs)
-        {
-            prop2DRefsUsed.AddRange(refs);
-            prop2DRefsUsed = prop2DRefsUsed.Distinct().ToList();
-        }
-
-        public void AddNodeRefs(List<int> refs)
-        {
-            nodeRefsUsed.AddRange(refs);
-            nodeRefsUsed = nodeRefsUsed.Distinct().ToList();
-        }
-
-        public void AddElementRefs(List<int> refs)
-        {
-            elementRefsUsed.AddRange(refs);
-            elementRefsUsed = elementRefsUsed.Distinct().ToList();
-        }
-
-        public void AddNemberRefs(List<int> refs)
-        {
-            memberRefsUsed.AddRange(refs);
-            memberRefsUsed = memberRefsUsed.Distinct().ToList();
+            refsUsed[key] = refsUsed[key].Distinct().ToList();
         }
     }
 }

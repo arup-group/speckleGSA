@@ -111,7 +111,7 @@ namespace SpeckleGSA
             InsertionPoint["Horizontal"] = Convert.ToDouble(pieces[counter++]);
             InsertionPoint["Vertical"] = Convert.ToDouble(pieces[counter++]);
 
-            counter++; // Action
+            //counter++; // Action // TODO: EL.4 SUPPORT
             counter++; // Dummy
         }
 
