@@ -8,10 +8,9 @@ namespace SpeckleGSA
 {
     public class Receiver
     {
+        const int MAX_OBJ_REQUEST_COUNT = 20;
+
         private SpeckleApiClient myReceiver;
-        private List<object> ConvertedObjects;
-        private List<SpeckleObject> SpeckleObjects;
-        private Dictionary<string, SpeckleObject> ObjectCache = new Dictionary<string, SpeckleObject>();
 
         private string apiToken { get; set; }
         private string serverAddress { get; set; }
@@ -29,63 +28,63 @@ namespace SpeckleGSA
         public async Task InitializeReceiver(string streamID)
         {
             await myReceiver.IntializeReceiver(streamID, "GSA", "GSA", "none", apiToken);
-            ObjectCache = new Dictionary<string, SpeckleObject>();
-            SpeckleObjects = new List<SpeckleObject>();
-            ConvertedObjects = new List<object>();
         }
 
-        public async Task<List<object>> UpdateDataAsync()
+        public List<object> GetGSAObjects()
         {
-            List<object> convertedObjects = new List<object>();
-
             ConverterHack n = new ConverterHack();
+            UpdateDataAsync();
 
-            var getStream = await myReceiver.StreamGetAsync(myReceiver.StreamId, null);
+            return SpeckleCore.Converter.Deserialise(myReceiver.Stream.Objects);
+        }
 
-            var payload = getStream.Resource.Objects.Select(obj => obj._id).ToArray();
+        public void UpdateDataAsync()
+        {
+            ResponseStream streamGetResult = myReceiver.StreamGetAsync(myReceiver.StreamId, null).Result;
 
-            await myReceiver.ObjectGetBulkAsync(payload, "omit=displayValue").ContinueWith(res=>
+            if (streamGetResult.Success == false)
             {
-                // Add objects to cache
-                foreach (var x in res.Result.Resources)
-                    ObjectCache[x._id] = x;
+                Console.WriteLine("Could not get stream");
+            }
+            else
+            {
+                myReceiver.Stream = streamGetResult.Resource;
 
-                // Get real objects
-                SpeckleObjects.Clear();
-                foreach (var obj in getStream.Resource.Objects)
-                    SpeckleObjects.Add(ObjectCache[obj._id]);
+                LocalContext.AddOrUpdateStream(myReceiver.Stream, myReceiver.BaseUrl);
+                LocalContext.GetCachedObjects(myReceiver.Stream.Objects, myReceiver.BaseUrl);
 
-                // Convert
-                convertedObjects = SpeckleCore.Converter.Deserialise(SpeckleObjects);
-            });
+                string[] payload = myReceiver.Stream.Objects.Where(o => o.Type == SpeckleObjectType.Placeholder).Select(o => o._id).ToArray();
 
-            return convertedObjects;
-        }
+                List<SpeckleObject> receivedObjects = new List<SpeckleObject>();
 
-        public List<object> UpdateData()
-        {
-            ConverterHack n = new ConverterHack();
+                for (int i=0; i < payload.Length; i += MAX_OBJ_REQUEST_COUNT)
+                {
+                    string[] partialPayload = payload.Skip(i).Take(MAX_OBJ_REQUEST_COUNT).ToArray();
 
-            var getStream = myReceiver.StreamGetAsync(myReceiver.StreamId, null);
-            getStream.Wait();
+                    ResponseObject response = myReceiver.ObjectGetBulkAsync(partialPayload, "omit=displayValue").Result;
 
-            var payload = getStream.Result.Resource.Objects.Select(obj => obj._id).ToArray();
+                    receivedObjects.AddRange(response.Resources);
+                }
 
-            ResponseObject response = myReceiver.ObjectGetBulkAsync(payload, "omit=displayValue").GetAwaiter().GetResult();
+                foreach(SpeckleObject obj in receivedObjects)
+                {
+                    int streamLoc = myReceiver.Stream.Objects.FindIndex(o => o._id == obj._id);
+                    try
+                    {
+                        myReceiver.Stream.Objects[streamLoc] = obj;
+                    }
+                    catch
+                    { }
+                }
 
-            // Add objects to cache
-            foreach (var x in response.Resources)
-                ObjectCache[x._id] = x;
-
-            // Get real objects
-            SpeckleObjects.Clear();
-            foreach (var obj in getStream.Result.Resource.Objects)
-                SpeckleObjects.Add(ObjectCache[obj._id]);
-
-            // Convert
-            ConvertedObjects = SpeckleCore.Converter.Deserialise(SpeckleObjects);
-
-            return ConvertedObjects;
+                Task.Run( () =>
+                {
+                    foreach (SpeckleObject obj in receivedObjects)
+                    {
+                        LocalContext.AddCachedObject(obj, myReceiver.BaseUrl);
+                    }
+                });
+            }
         }
     }
 }

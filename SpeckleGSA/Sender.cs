@@ -24,6 +24,7 @@ namespace SpeckleGSA
             this.apiToken = apiToken;
 
             mySender = new SpeckleApiClient() { BaseUrl = serverAddress.ToString() };
+
         }
 
         public async Task InitializeSender()

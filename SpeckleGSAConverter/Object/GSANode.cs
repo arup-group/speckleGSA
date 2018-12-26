@@ -157,11 +157,11 @@ namespace SpeckleGSA
             return null;
         }
 
-        public override void WriteDerivedObjectstoGSA()
+        public override void WriteDerivedObjectstoGSA(Dictionary<Type, object> dict)
         {
             List<GSA0DElement> e0Ds = Get0DElements();
             foreach (GSA0DElement e in e0Ds)
-                e.WritetoGSA();
+                e.WritetoGSA(dict);
         }
         #endregion
 

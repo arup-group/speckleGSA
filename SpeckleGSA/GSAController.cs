@@ -457,9 +457,7 @@ namespace SpeckleGSA
                         Messages.AddMessage("Receiving " + kvp.Key + ".");
                         try
                         {
-                            await receivers[kvp.Key].UpdateDataAsync().ContinueWith(res =>
-                                convertedObjects.AddRange(res.Result)
-                            );
+                            convertedObjects.AddRange(receivers[kvp.Key].GetGSAObjects());
                         }
                         catch (Exception e)
                         {
