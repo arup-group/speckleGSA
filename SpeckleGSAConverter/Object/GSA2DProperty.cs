@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -76,6 +77,11 @@ namespace SpeckleGSA
         public override List<GSAObject> GetChildren()
         {
             throw new NotImplementedException();
+        }
+
+        public override void WritetoGSA(Dictionary<Type, object> dict)
+        {
+            RunGWACommand(GetGWACommand((dict[typeof(GSAMaterial)] as IList).Cast<GSAMaterial>().ToArray()));
         }
         #endregion
     }

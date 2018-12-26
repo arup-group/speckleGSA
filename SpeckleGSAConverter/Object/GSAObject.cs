@@ -44,12 +44,12 @@ namespace SpeckleGSA
             return gsa.GwaCommand(command);
         }
 
-        public void WritetoGSA(GSAObject[] children = null)
+        public virtual void WritetoGSA(Dictionary<Type, object> dict)
         {
-            RunGWACommand(GetGWACommand(children));
+            RunGWACommand(GetGWACommand());
         }
 
-        public virtual void WriteDerivedObjectstoGSA()
+        public virtual void WriteDerivedObjectstoGSA(Dictionary<Type, object> dict)
         {
             return;
         }

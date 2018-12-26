@@ -432,11 +432,12 @@ namespace SpeckleGSA
             }
 
             // TODO: AUTOMATE THIS INSTEAD OF HARDCODE
-            objects[typeof(GSAMaterial)] = new List<GSAMaterial>();
-            objects[typeof(GSA2DProperty)] = new List<GSA2DProperty>();
-            objects[typeof(GSANode)] = new List<GSANode>();
-            objects[typeof(GSA1DElement)] = new List<GSA1DElement>();
-            objects[typeof(GSA2DElement)] = new List<GSA2DElement>();
+            IEnumerable<Type> objTypes = typeof(GSAObject)
+                .Assembly.GetTypes()
+                .Where(t => t.IsSubclassOf(typeof(GSAObject)) && !t.IsAbstract);
+
+            foreach (Type t in objTypes)
+                objects[t] = new List<GSAObject>();
 
             // Pull objects from server
             foreach (KeyValuePair<string, string> kvp in streamIDs)
@@ -468,12 +469,12 @@ namespace SpeckleGSA
                 }
             }
 
-            // Populate list
+            // Populate dictionary
             foreach (object obj in convertedObjects)
             {
                 if (obj == null) continue;
 
-                AddGSAObj(obj as GSAObject, objects);
+                UnpackGSAObj(obj as GSAObject, objects);
             }
 
             // Set Up Counter
@@ -481,21 +482,15 @@ namespace SpeckleGSA
             foreach (KeyValuePair<Type, object> kvp in objects)
             {
                 Type subType = kvp.Value.GetType().GetGenericArguments()[0];
+                
+                // Reserve reference
+                counter.AddObjRefs(subType.ToString(),
+                    (kvp.Value as IList).Cast<GSAObject>().Select(o => o.Reference).ToList());
 
-                List<int> references = (kvp.Value as IList).Cast<GSAObject>().Select(o => o.Reference).ToList();
-
-                counter.AddObjRefs(subType.ToString(), references);
+                // Reserve connectivities
+                counter.AddObjRefs(subType.ToString(),
+                    (kvp.Value as IList).Cast<GSAObject>().SelectMany(e => e.Connectivity).ToList());
             }
-
-            // Reserve connectivity nodes
-            counter.AddObjRefs(
-                typeof(GSANode).ToString(),
-                (objects[typeof(GSA1DElement)] as IList).Cast<GSAObject>().SelectMany(e => e.Connectivity).ToList()
-                );
-            counter.AddObjRefs(
-                typeof(GSANode).ToString(),
-                (objects[typeof(GSA2DElement)] as IList).Cast<GSAObject>().SelectMany(e => e.Connectivity).ToList()
-                );
 
             // Prepare objects (fix connectivity, add children, etc.)
             for (int i = 0; i < objects.Keys.Count(); i++)
@@ -504,43 +499,27 @@ namespace SpeckleGSA
                 List<GSAObject> value = (objects.Values.ElementAt(i) as IList).Cast<GSAObject>().ToList();
 
                 for (int j = 0; j < value.Count(); j++)
-                {
-                    GSAObject obj = value[j];
-
-                    if (obj.GetType() == typeof(GSANode))
-                        PrepareNode(obj as GSANode, objects, ref counter);
-                    else if (obj.GetType() == typeof(GSA1DElement))
-                        PrepareElement(obj, objects, ref counter);
-                    else if (obj.GetType() == typeof(GSA2DElement))
-                        PrepareElement(obj, objects, ref counter);
-                    else
-                        PrepareGeneric(obj, objects, ref counter);
-                }
+                    PrepareGSAObj(value[j], objects, ref counter);
             }
 
             // Write objects
             foreach (KeyValuePair<Type, object> kvp in objects)
                 foreach (GSAObject obj in (kvp.Value as IList).Cast<GSAObject>())
-                {
-                    if (obj.GetType() == typeof(GSA2DProperty))
-                        obj.WritetoGSA((objects[typeof(GSAMaterial)] as List<GSAMaterial>).ToArray());
-                    else
-                        obj.WritetoGSA();
-                }
+                    obj.WritetoGSA(objects);
 
             Messages.AddMessage("Preparing to write derived objects.");
 
             // Write derived objects (e.g., 0D elements from nodes)
             foreach (KeyValuePair<Type, object> kvp in objects)
                 foreach (GSAObject obj in (kvp.Value as IList).Cast<GSAObject>())
-                    obj.WriteDerivedObjectstoGSA();
+                    obj.WriteDerivedObjectstoGSA(objects);
 
             gsaObj.UpdateViews();
 
             Messages.AddMessage("Receiving completed!");
         }
 
-        private void AddGSAObj(GSAObject obj, Dictionary<Type, object> dict)
+        private void UnpackGSAObj(GSAObject obj, Dictionary<Type, object> dict)
         {
             obj.AttachGSA(gsaObj);
 
@@ -554,6 +533,20 @@ namespace SpeckleGSA
             }
             else
                 (dict[t] as IList).Add(obj);
+        }
+
+        private int PrepareGSAObj(GSAObject obj, Dictionary<Type, object> dict, ref GSARefCounters counter)
+        {
+            obj.AttachGSA(gsaObj);
+
+            if (obj.GetType() == typeof(GSANode))
+                return PrepareNode(obj as GSANode, dict, ref counter);
+
+            else if (obj.GetType() == typeof(GSA1DElement) | obj.GetType() == typeof(GSA2DElement))
+                return PrepareElement(obj, dict, ref counter);
+
+            else
+                return PrepareGeneric(obj, dict, ref counter);
         }
 
         private int PrepareGeneric(GSAObject obj, Dictionary<Type, object> dict, ref GSARefCounters counter)
@@ -606,8 +599,6 @@ namespace SpeckleGSA
             else
                 (dict[typeof(GSANode)] as IList).Add(node);
 
-            Messages.AddMessage("Created new node " + node.Reference.ToString() + ".");
-
             return node.Reference;
         }
         
@@ -621,7 +612,7 @@ namespace SpeckleGSA
                 element.Connectivity = new List<int>(new int[eNodes.Count]);
 
             for (int i = 0; i < eNodes.Count(); i++)
-                element.Connectivity[i] = PrepareNode((eNodes[i] as GSANode).AttachGSA(gsaObj), dict, ref counter);
+                element.Connectivity[i] = PrepareGSAObj(eNodes[i], dict, ref counter);
             
             element = counter.RefObject(element);
 
