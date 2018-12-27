@@ -19,7 +19,6 @@ namespace SpeckleGSA
 
         public GSA2DElementMesh()
         {
-            Type = "MESH";
             Property = 1;
             InsertionPoint = 0;
             Elements = new List<object>();
