@@ -50,8 +50,8 @@ namespace SpeckleGSAUI
         private void AddControlPanel(object sender, RoutedEventArgs e)
         {
             TabItem tab = new TabItem();
-            tab.Content = new ControlPanel(AddMessage, AddError);
-            tab.Header = "TEST";
+            tab.Content = new ControlPanel();
+            tab.Header = Tabs.Count + 1;
 
             Tabs.Add(tab);
 

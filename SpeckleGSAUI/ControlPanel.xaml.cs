@@ -33,7 +33,7 @@ namespace SpeckleGSAUI
 
         public GSAController gsa;
 
-        public ControlPanel(EventHandler<MessageEventArgs> AddMessage, EventHandler<MessageEventArgs> AddError)
+        public ControlPanel()
         {
             InitializeComponent();
 
