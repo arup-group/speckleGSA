@@ -43,16 +43,16 @@ namespace SpeckleGSA
 
         private StreamManager streamManager;
         private UserManager userManager;
-        private Dictionary<string, Sender> senders;
-        private Dictionary<string, Receiver> receivers;
+        private Dictionary<string, SpeckleGSASender> senders;
+        private Dictionary<string, SpeckleGSAReceiver> receivers;
         private ComAuto gsaObj;
 
         public GSAController()
         {
             userManager = null;
 
-            senders = new Dictionary<string, Sender>();
-            receivers = new Dictionary<string, Receiver>();
+            senders = new Dictionary<string, SpeckleGSASender>();
+            receivers = new Dictionary<string, SpeckleGSAReceiver>();
 
             Messages = new MessageLog();
         }
@@ -104,7 +104,7 @@ namespace SpeckleGSA
                 return;
             }
             
-            foreach (KeyValuePair<string, Sender> kvp in senders)
+            foreach (KeyValuePair<string, SpeckleGSASender> kvp in senders)
             {
                 streamManager.CloneStream(kvp.Value.StreamID).ContinueWith(res => Messages.AddMessage("Cloned " + kvp.Key + " stream to ID : " + res.Result));
             }
@@ -165,7 +165,7 @@ namespace SpeckleGSA
         #endregion
 
         #region Extract GSA
-        public async Task ExportObjects(string modelName)
+        public async void ExportObjects(string modelName)
         {
             if (gsaObj == null)
             {
@@ -201,7 +201,7 @@ namespace SpeckleGSA
                 if (!senders.ContainsKey(kvp.Key))
                 {
                     Messages.AddMessage(kvp.Key + " sender not initialized. Creating new " + kvp.Key + " sender.");
-                    senders[kvp.Key] = new Sender(userManager.ServerAddress, userManager.ApiToken);
+                    senders[kvp.Key] = new SpeckleGSASender(userManager.ServerAddress, userManager.ApiToken);
                     await senders[kvp.Key].InitializeSender(modelName + "." + kvp.Key);
                 }
 
@@ -445,7 +445,7 @@ namespace SpeckleGSA
                 else
                 {
                     Messages.AddMessage("Creating " + kvp.Key + " receiver.");
-                    receivers[kvp.Key] = new Receiver(userManager.ServerAddress, userManager.ApiToken);
+                    receivers[kvp.Key] = new SpeckleGSAReceiver(userManager.ServerAddress, userManager.ApiToken);
                     await receivers[kvp.Key].InitializeReceiver(kvp.Value);
 
                     if (receivers[kvp.Key].StreamID == null || receivers[kvp.Key].StreamID == "")

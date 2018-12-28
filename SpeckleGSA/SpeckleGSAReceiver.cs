@@ -6,7 +6,7 @@ using SpeckleCore;
 
 namespace SpeckleGSA
 {
-    public class Receiver
+    public class SpeckleGSAReceiver
     {
         const int MAX_OBJ_REQUEST_COUNT = 20;
 
@@ -18,7 +18,7 @@ namespace SpeckleGSA
         public string StreamID { get => myReceiver == null? null : myReceiver.StreamId; }
         public string StreamName { get => myReceiver == null ? null : myReceiver.Stream.Name; }
 
-        public Receiver(string serverAddress, string apiToken)
+        public SpeckleGSAReceiver(string serverAddress, string apiToken)
         {
             this.apiToken = apiToken;
 

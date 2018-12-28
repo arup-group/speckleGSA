@@ -110,9 +110,9 @@ namespace SpeckleGSAUI
         #endregion
 
         #region Sender
-        private async void SendStream(object sender, RoutedEventArgs e)
+        private void SendStream(object sender, RoutedEventArgs e)
         {
-            await gsa.ExportObjects(ModelName).ContinueWith(
+            Task.Run(() => gsa.ExportObjects(ModelName)).ContinueWith(
             delegate
             {
                 Application.Current.Dispatcher.BeginInvoke(

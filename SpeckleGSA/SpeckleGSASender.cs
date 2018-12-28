@@ -10,7 +10,7 @@ using SpeckleCore;
 
 namespace SpeckleGSA
 {
-    public class Sender
+    public class SpeckleGSASender
     {
         const double MAX_BUCKET_SIZE = 5e5;
 
@@ -21,7 +21,7 @@ namespace SpeckleGSA
 
         public string StreamID { get => mySender == null ? null : mySender.StreamId; }
 
-        public Sender(string serverAddress, string apiToken)
+        public SpeckleGSASender(string serverAddress, string apiToken)
         {
             this.apiToken = apiToken;
 
