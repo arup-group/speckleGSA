@@ -41,21 +41,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="GSAController.cs" />
-    <Compile Include="HelperFunctions.cs" />
     <Compile Include="MessageLog.cs" />
-    <Compile Include="Object\GSA0DElement.cs" />
-    <Compile Include="Object\GSA1DElement.cs" />
-    <Compile Include="Object\GSA1DProperty.cs" />
-    <Compile Include="Object\GSA2DElement.cs" />
-    <Compile Include="Object\GSA2DElementMesh.cs" />
-    <Compile Include="Object\GSA2DProperty.cs" />
-    <Compile Include="Object\GSAMaterial.cs" />
-    <Compile Include="Object\GSAMember.cs" />
-    <Compile Include="Object\GSANode.cs" />
-    <Compile Include="Object\GSAObject.cs" />
     <Compile Include="SpeckleGSAReceiver.cs" />
     <Compile Include="SpeckleGSASender.cs" />
-    <Compile Include="SpeckleGSAConverter.cs" />
     <Compile Include="StreamManager.cs" />
     <Compile Include="UserManager.cs" />
   </ItemGroup>
@@ -63,6 +51,14 @@
     <ProjectReference Include="..\..\SpeckleCore\SpeckleCore\SpeckleCore.csproj">
       <Project>{cfe27d3d-8a1a-43f9-9387-8fd9e119e174}</Project>
       <Name>SpeckleCore</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SpeckleGSAConverter\SpeckleGSAConverter.csproj">
+      <Project>{df558c64-1575-4db6-a20f-93c38bd9f60c}</Project>
+      <Name>SpeckleGSAConverter</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SpeckleGSAObjects\SpeckleGSAObjects.csproj">
+      <Project>{821de1a5-1544-40f1-8754-1536069c4994}</Project>
+      <Name>SpeckleGSAObjects</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

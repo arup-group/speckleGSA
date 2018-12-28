@@ -39,13 +39,27 @@ namespace SpeckleGSA
             }
         }
 
-        public MessageLog Messages;
-
         private StreamManager streamManager;
         private UserManager userManager;
         private Dictionary<string, SpeckleGSASender> senders;
         private Dictionary<string, SpeckleGSAReceiver> receivers;
         private ComAuto gsaObj;
+
+        private Dictionary<string, List<Type>> objectsInStream = new Dictionary<string, List<Type>>()
+        {
+            { "properties", new List<Type>(){
+                typeof(GSAMaterial),
+                typeof(GSA1DProperty),
+                typeof(GSA2DProperty),
+            } },
+            { "nodes", new List<Type>(){
+                typeof(GSANode)
+            } },
+            { "elements", new List<Type>(){
+                typeof(GSA1DElement),
+                typeof(GSA2DElement),
+            } },
+        };
 
         public GSAController()
         {
@@ -53,8 +67,6 @@ namespace SpeckleGSA
 
             senders = new Dictionary<string, SpeckleGSASender>();
             receivers = new Dictionary<string, SpeckleGSAReceiver>();
-
-            Messages = new MessageLog();
         }
 
         #region Server
@@ -66,9 +78,9 @@ namespace SpeckleGSA
             }).ContinueWith(delegate
             {
                 if (userManager.Login() == 0)
-                    Messages.AddMessage("Successfully logged in");
+                    MessageLog.AddMessage("Successfully logged in");
                 else
-                    Messages.AddError("Failed to login");
+                    MessageLog.AddError("Failed to login");
 
                 streamManager = new StreamManager(userManager.ServerAddress, userManager.ApiToken);
             });
@@ -78,20 +90,20 @@ namespace SpeckleGSA
         {
             if (userManager == null | streamManager == null)
             {
-                Messages.AddError("Not logged in");
+                MessageLog.AddError("Not logged in");
                 return null;
             }
 
             try
             {
-                Messages.AddMessage("Fetching stream list.");
+                MessageLog.AddMessage("Fetching stream list.");
                 var response = await streamManager.GetStreams();
-                Messages.AddMessage("Finished fetching stream list.");
+                MessageLog.AddMessage("Finished fetching stream list.");
                 return response;
             }
             catch (Exception e)
             {
-                Messages.AddError(e.Message);
+                MessageLog.AddError(e.Message);
                 return null;
             }
         }
@@ -100,123 +112,106 @@ namespace SpeckleGSA
         {
             if (userManager == null | streamManager == null)
             {
-                Messages.AddError("Not logged in");
+                MessageLog.AddError("Not logged in");
                 return;
             }
             
             foreach (KeyValuePair<string, SpeckleGSASender> kvp in senders)
             {
-                streamManager.CloneStream(kvp.Value.StreamID).ContinueWith(res => Messages.AddMessage("Cloned " + kvp.Key + " stream to ID : " + res.Result));
+                streamManager.CloneStream(kvp.Value.StreamID).ContinueWith(res => MessageLog.AddMessage("Cloned " + kvp.Key + " stream to ID : " + res.Result));
             }
         }
         #endregion
 
         #region GSA
-        public async Task Link()
+        public void Link()
         {
             if (userManager == null)
             {
-                Messages.AddError("Not logged in");
+                MessageLog.AddError("Not logged in");
                 return;
             }
 
-            await Task.Run(delegate { gsaObj = new ComAuto(); }).ContinueWith(
-                delegate
-                {
-                    gsaObj.DisplayGsaWindow(true);
-                    Messages.AddMessage("GSA link established");
-                }
-            );
+            gsaObj = new ComAuto();
+            MessageLog.AddMessage("GSA link established");
         }
 
-        public async Task NewFile()
+        public void NewFile()
         {
             if (gsaObj == null)
             {
-                Messages.AddError("No GSA link found");
+                MessageLog.AddError("No GSA link found");
                 return;
             }
 
-            await Task.Run(delegate { gsaObj.NewFile(); }).ContinueWith(
-                delegate
-                {
-                    gsaObj.DisplayGsaWindow(true);
-                    Messages.AddMessage("New file created");
-                }
-            );
+            gsaObj.NewFile();
+            gsaObj.DisplayGsaWindow(true);
+            MessageLog.AddMessage("New file created");
         }
 
-        public async Task OpenFile(string path)
+        public void OpenFile(string path)
         {
             if (gsaObj == null)
             {
-                Messages.AddError("No GSA link found");
+                MessageLog.AddError("No GSA link found");
                 return;
             }
 
-            await Task.Run(delegate { gsaObj.Open(path); }).ContinueWith(
-                delegate
-                {
-                    gsaObj.DisplayGsaWindow(true);
-                    Messages.AddMessage("Opened " + path);
-                }
-            );
+            gsaObj.Open(path);
+            gsaObj.DisplayGsaWindow(true);
+            MessageLog.AddMessage("Opened " + path);
         }
         #endregion
 
         #region Extract GSA
-        public async void ExportObjects(string modelName)
+        public async Task ExportObjects(string modelName)
         {
-            if (gsaObj == null)
-            {
-                Messages.AddError("GSA link not found.");
-                return;
-            }
-
             List<Task> taskList = new List<Task>();
 
-            Dictionary<string, List<Type>> objectsInStream = new Dictionary<string, List<Type>>()
+            if (gsaObj == null)
             {
-                { "properties", new List<Type>(){
-                    typeof(GSAMaterial),
-                    typeof(GSA1DProperty),
-                    typeof(GSA2DProperty),
-                } },
-                { "nodes", new List<Type>(){
-                    typeof(GSANode)
-                } },
-                { "elements", new List<Type>(){
-                    typeof(GSA1DElement),
-                    typeof(GSA2DElement),
-                } },
-            };
-
+                MessageLog.AddError("GSA link not found.");
+                return;
+            }
+            
             Dictionary<Type, object> bucketObjects = new Dictionary<Type, object>();
 
             foreach (KeyValuePair<string, List<Type>> kvp in objectsInStream)
             { 
+                // Get objects belonging to that stream
                 foreach(Type t in kvp.Value)
                     bucketObjects[t] = GetObjects(t, bucketObjects);
 
+                // Create sender if not initialized
                 if (!senders.ContainsKey(kvp.Key))
                 {
-                    Messages.AddMessage(kvp.Key + " sender not initialized. Creating new " + kvp.Key + " sender.");
+                    MessageLog.AddMessage(kvp.Key + " sender not initialized. Creating new " + kvp.Key + " sender.");
                     senders[kvp.Key] = new SpeckleGSASender(userManager.ServerAddress, userManager.ApiToken);
-                    await senders[kvp.Key].InitializeSender(modelName + "." + kvp.Key);
+                    await senders[kvp.Key].InitializeSender();
                 }
 
+                senders[kvp.Key].UpdateName(modelName + "." + kvp.Key);
+
+                // Package objects for sending
                 List<object> streamObjects = new List<object>();
 
                 foreach (Type t in kvp.Value)
                     streamObjects.AddRange((bucketObjects[t] as IList).Cast<object>().ToList());
 
+                // Send package asynchronously
                 Task task = new Task(() =>
                 {
-                    senders[kvp.Key].SendGSAObjects(
-                    new Dictionary<string, List<object>>() {
-                        { "All", streamObjects}
-                    });
-                    Messages.AddMessage(kvp.Key + " completed sending.");
+                    try
+                    { 
+                        senders[kvp.Key].SendGSAObjects(
+                        new Dictionary<string, List<object>>() {
+                            { "All", streamObjects}
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageLog.AddError(ex.Message);
+                    }
                 });
                 task.Start();
                 taskList.Add(task);
@@ -224,7 +219,7 @@ namespace SpeckleGSA
 
             await Task.WhenAll(taskList);
 
-            Messages.AddMessage("Sending completed!");
+            MessageLog.AddMessage("Sending complete!");
         }
 
         private List<GSAObject> GetObjects(Type type, Dictionary<Type, object> dict)
@@ -425,7 +420,7 @@ namespace SpeckleGSA
 
             if (gsaObj == null)
             {
-                Messages.AddError("GSA link not found.");
+                MessageLog.AddError("GSA link not found.");
                 return;
             }
 
@@ -441,25 +436,24 @@ namespace SpeckleGSA
             foreach (KeyValuePair<string, string> kvp in streamIDs)
             {
                 if (kvp.Value == "")
-                    Messages.AddMessage("No " + kvp.Key + " stream specified.");
+                    MessageLog.AddMessage("No " + kvp.Key + " stream specified.");
                 else
                 {
-                    Messages.AddMessage("Creating " + kvp.Key + " receiver.");
+                    MessageLog.AddMessage("Creating " + kvp.Key + " receiver.");
                     receivers[kvp.Key] = new SpeckleGSAReceiver(userManager.ServerAddress, userManager.ApiToken);
                     await receivers[kvp.Key].InitializeReceiver(kvp.Value);
 
                     if (receivers[kvp.Key].StreamID == null || receivers[kvp.Key].StreamID == "")
-                        Messages.AddError("Could not connect to " + kvp.Key + " stream.");
+                        MessageLog.AddError("Could not connect to " + kvp.Key + " stream.");
                     else
                     {
-                        Messages.AddMessage("Receiving " + kvp.Key + ".");
                         try
                         {
                             convertedObjects.AddRange(receivers[kvp.Key].GetGSAObjects());
                         }
                         catch (Exception e)
                         {
-                            Messages.AddError(e.Message);
+                            MessageLog.AddError(e.Message);
                         }
                     }
                 }
@@ -499,11 +493,13 @@ namespace SpeckleGSA
             }
 
             // Write objects
+            MessageLog.AddMessage("Writing objects.");
+
             foreach (KeyValuePair<Type, object> kvp in objects)
                 foreach (GSAObject obj in (kvp.Value as IList).Cast<GSAObject>())
                     obj.WritetoGSA(objects);
 
-            Messages.AddMessage("Preparing to write derived objects.");
+            MessageLog.AddMessage("Writing derived objects.");
 
             // Write derived objects (e.g., 0D elements from nodes)
             foreach (KeyValuePair<Type, object> kvp in objects)
@@ -512,7 +508,7 @@ namespace SpeckleGSA
 
             gsaObj.UpdateViews();
 
-            Messages.AddMessage("Receiving completed!");
+            MessageLog.AddMessage("Receiving completed!");
         }
 
         private void UnpackGSAObj(GSAObject obj, Dictionary<Type, object> dict)

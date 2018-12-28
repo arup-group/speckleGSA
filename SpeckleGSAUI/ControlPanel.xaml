@@ -127,10 +127,10 @@
                         <Label Grid.Row="0" Grid.ColumnSpan="2" Content="Sender" Margin="5" FontWeight="Bold"/>
                         <Label Grid.Row="1" Grid.Column="0" Content="Model Name" Margin="5,5,5,5"/>
                         <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Path=ModelName}" Margin="5,5,5,5"/>
-                        <Label Grid.Row="2" Grid.Column="0" Content="Nodes" Margin="5"/>
-                        <TextBox Grid.Row="2" Grid.Column="1" x:Name="SenderNodesStreamID" IsReadOnly="True" BorderThickness="0" Margin="5"/>
-                        <Label Grid.Row="3" Grid.Column="0" Content="Properties" Margin="5"/>
-                        <TextBox Grid.Row="3" Grid.Column="1" x:Name="SenderPropertiesStreamID" IsReadOnly="True" BorderThickness="0" Margin="5"/>
+                        <Label Grid.Row="2" Grid.Column="0" Content="Properties" Margin="5"/>
+                        <TextBox Grid.Row="2" Grid.Column="1" x:Name="SenderPropertiesStreamID" IsReadOnly="True" BorderThickness="0" Margin="5"/>
+                        <Label Grid.Row="3" Grid.Column="0" Content="Nodes" Margin="5"/>
+                        <TextBox Grid.Row="3" Grid.Column="1" x:Name="SenderNodesStreamID" IsReadOnly="True" BorderThickness="0" Margin="5"/>
                         <Label Grid.Row="4" Grid.Column="0" Content="Elements" Margin="5"/>
                         <TextBox Grid.Row="4" Grid.Column="1" x:Name="SenderElementsStreamID" IsReadOnly="True" BorderThickness="0" Margin="5"/>
                         <Button Grid.Row="5" Grid.ColumnSpan="2" Content="Send/Update Streams" Click="SendStream" Margin="5"/>
@@ -152,10 +152,10 @@
                             <RowDefinition Height="auto"/>
                         </Grid.RowDefinitions>
                         <Label Grid.Row="0" Grid.ColumnSpan="2" Content="Receiver" Margin="5" FontWeight="Bold"/>
-                        <Label Grid.Row="1" Grid.Column="0" Content="Nodes" Margin="5"/>
-                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Path=ReceiverNodesStreamID}" Margin="5"/>
-                        <Label Grid.Row="2" Grid.Column="0" Content="Properties" Margin="5"/>
-                        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Path=ReceiverPropertiesStreamID}" Margin="5"/>
+                        <Label Grid.Row="1" Grid.Column="0" Content="Properties" Margin="5"/>
+                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Path=ReceiverPropertiesStreamID}" Margin="5"/>
+                        <Label Grid.Row="2" Grid.Column="0" Content="Nodes" Margin="5"/>
+                        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Path=ReceiverNodesStreamID}" Margin="5"/>
                         <Label Grid.Row="3" Grid.Column="0" Content="Elements" Margin="5"/>
                         <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Path=ReceiverElementsStreamID}" Margin="5"/>
                         <Button Grid.Row="4" Grid.ColumnSpan="2" Content="Receive Streams" Click="ReceiveStream" Margin="5"/>

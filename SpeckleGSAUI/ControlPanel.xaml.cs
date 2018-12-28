@@ -48,11 +48,9 @@ namespace SpeckleGSAUI
             ReceiverElementsStreamID = "";
             StreamData = new ObservableCollection<Tuple<string, string>>();
 
-            DataContext = this;
-
             gsa = new GSAController();
-            gsa.Messages.MessageAdded += AddMessage;
-            gsa.Messages.ErrorAdded += AddError;
+
+            DataContext = this;
         }
 
         #region Speckle Operations
@@ -91,41 +89,31 @@ namespace SpeckleGSAUI
         #endregion
 
         #region GSA
-        private async void LinkGSA(object sender, RoutedEventArgs e)
+        private void LinkGSA(object sender, RoutedEventArgs e)
         {
-            await gsa.Link();
+            Task.Run( () => gsa.Link());
         }
 
-        private async void NewGSAFile(object sender, RoutedEventArgs e)
+        private void NewGSAFile(object sender, RoutedEventArgs e)
         {
-            await gsa.NewFile();
+            Task.Run(() => gsa.NewFile());
         }
 
-        private async void OpenGSAFile(object sender, RoutedEventArgs e)
+        private void OpenGSAFile(object sender, RoutedEventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
             if (openFileDialog.ShowDialog() == true)
-                await gsa.OpenFile(openFileDialog.FileName);
+                Task.Run(() => gsa.OpenFile(openFileDialog.FileName));
         }
         #endregion
 
         #region Sender
-        private void SendStream(object sender, RoutedEventArgs e)
+        private async void SendStream(object sender, RoutedEventArgs e)
         {
-            Task.Run(() => gsa.ExportObjects(ModelName)).ContinueWith(
-            delegate
-            {
-                Application.Current.Dispatcher.BeginInvoke(
-                    DispatcherPriority.Background,
-                    new Action(() =>
-                    {
-                        SenderNodesStreamID.Text = gsa.SenderNodesStreamID;
-                        SenderPropertiesStreamID.Text = gsa.SenderPropertiesStreamID;
-                        SenderElementsStreamID.Text = gsa.SenderElementsStreamID;
-                    }
-                    ));
-            }
-            );
+            await gsa.ExportObjects(ModelName);
+            SenderNodesStreamID.Text = gsa.SenderNodesStreamID;
+            SenderPropertiesStreamID.Text = gsa.SenderPropertiesStreamID;
+            SenderElementsStreamID.Text = gsa.SenderElementsStreamID;
         }
         #endregion
 
@@ -134,9 +122,9 @@ namespace SpeckleGSAUI
         {
             await gsa.ImportObjects(new Dictionary<string, string>()
             {
-                { "Properties", ReceiverPropertiesStreamID },
-                { "Nodes", ReceiverNodesStreamID },
-                { "Elements", ReceiverElementsStreamID },
+                { "properties", ReceiverPropertiesStreamID },
+                { "nodes", ReceiverNodesStreamID },
+                { "elements", ReceiverElementsStreamID },
             });
         }
         #endregion

@@ -14,24 +14,25 @@ namespace SpeckleGSA
     {
         const double MAX_BUCKET_SIZE = 5e5;
 
-        private SpeckleApiClient mySender;
-
-        private string apiToken { get; set; }
-        private string serverAddress { get; set; }
-
         public string StreamID { get => mySender == null ? null : mySender.StreamId; }
 
+        private SpeckleApiClient mySender;
+        private string apiToken { get; set; }
+        
         public SpeckleGSASender(string serverAddress, string apiToken)
         {
             this.apiToken = apiToken;
 
             mySender = new SpeckleApiClient() { BaseUrl = serverAddress.ToString() };
-
         }
 
-        public async Task InitializeSender(string streamName)
+        public async Task InitializeSender()
         {
             await mySender.IntializeSender(apiToken, "GSA", "GSA", "none");
+        }
+
+        public void UpdateName(string streamName)
+        {
             mySender.Stream.Name = streamName;
         }
 
@@ -69,6 +70,8 @@ namespace SpeckleGSA
                 objectCounter += convertedObjects.Count;
             }
 
+            MessageLog.AddMessage("Succesfully converted: " + bucketObjects.Count() + " objects.");
+
             // Prune objects with placeholders using local DB
             LocalContext.PruneExistingObjects(bucketObjects, mySender.BaseUrl);
             
@@ -83,19 +86,26 @@ namespace SpeckleGSA
                 // Send objects which are in payload and add to local DB with updated IDs
                 foreach (List<SpeckleObject> payload in payloads)
                 {
-                    ResponseObject res = mySender.ObjectCreateAsync(payload).Result;
+                    try
+                    { 
+                        ResponseObject res = mySender.ObjectCreateAsync(payload).Result;
+                        
+                        for (int i = 0; i < payload.Count(); i++)
+                        {
+                            payload[i]._id = res.Resources[i]._id;
+                            objectsInStream.Add(payload[i]._id);
+                        }
 
-                    for (int i = 0; i < payload.Count(); i++)
-                    {
-                        payload[i]._id = res.Resources[i]._id;
-                        objectsInStream.Add(payload[i]._id);
+                        Task.Run(() =>
+                        {
+                            foreach (SpeckleObject obj in payload)
+                                LocalContext.AddSentObject(obj, mySender.BaseUrl);
+                        });
                     }
-
-                    Task.Run(() =>
+                    catch
                     {
-                        foreach (SpeckleObject obj in payload)
-                            LocalContext.AddSentObject(obj, mySender.BaseUrl);
-                    });
+                        MessageLog.AddError("Failed to send payload.");
+                    }
                 }
             }
             else
@@ -112,10 +122,18 @@ namespace SpeckleGSA
             updateStream.Objects = placeholders;
             updateStream.Name = mySender.Stream.Name;
 
-            var response = mySender.StreamUpdateAsync(mySender.Stream.StreamId, updateStream).Result;
+            try
+            { 
+                var response = mySender.StreamUpdateAsync(mySender.Stream.StreamId, updateStream).Result;
+                mySender.Stream.Layers = updateStream.Layers.ToList();
+                mySender.Stream.Objects = placeholders;
 
-            mySender.Stream.Layers = updateStream.Layers.ToList();
-            mySender.Stream.Objects = placeholders;
+                MessageLog.AddMessage("Succesfully sent " + mySender.Stream.Name + " stream with " + updateStream.Objects.Count() + " objects.");
+            }
+            catch
+            {
+                MessageLog.AddError("Failed to send " + mySender.Stream.Name + " stream.");
+            }
         }
 
         public List<List<SpeckleObject>> CreatePayloads(List<SpeckleObject> bucketObjects)
@@ -136,7 +154,7 @@ namespace SpeckleGSA
 
                 if (currentBucketSize > MAX_BUCKET_SIZE)
                 {
-                    Console.WriteLine("Reached payload limit. Making a new one, current  #: " + objectUpdatePayloads.Count);
+                    MessageLog.AddMessage("Reached payload limit. Making a new one, current  #: " + objectUpdatePayloads.Count);
                     objectUpdatePayloads.Add(currentBucketObjects);
                     currentBucketObjects = new List<SpeckleObject>();
                     currentBucketSize = 0;

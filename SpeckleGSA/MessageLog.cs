@@ -7,24 +7,37 @@ using System.Threading.Tasks;
 
 namespace SpeckleGSA
 {
-    public class MessageLog
+    public static partial class MessageLog
     {
-        public event EventHandler<MessageEventArgs> MessageAdded;
-        public event EventHandler<MessageEventArgs> ErrorAdded;
+        public static event EventHandler<MessageEventArgs> MessageAdded;
+        public static event EventHandler<MessageEventArgs> ErrorAdded;
 
-        public void AddMessage(string message)
+        private static bool IsInit;
+
+        public static void Init(EventHandler<MessageEventArgs> messageHandler, EventHandler<MessageEventArgs> errorHandler)
+        {
+            if (IsInit)
+                return;
+
+            MessageAdded += messageHandler;
+            ErrorAdded += errorHandler;
+
+            IsInit = true;
+        }
+
+        public static void AddMessage(string message)
         {
             if (MessageAdded != null)
             {
-                MessageAdded(this, new MessageEventArgs(message));
+                MessageAdded(null, new MessageEventArgs(message));
             }
         }
 
-        public void AddError(string error)
+        public static void AddError(string error)
         {
             if (MessageAdded != null)
             {
-                ErrorAdded(this, new MessageEventArgs(error));
+                ErrorAdded(null, new MessageEventArgs(error));
             }
         }
     }

@@ -43,6 +43,8 @@ namespace SpeckleGSAUI
 
             ControlPanelContainer.ItemsSource = Tabs;
             MessagePane.ItemsSource = Messages;
+            
+            MessageLog.Init(AddMessage, AddError);
         }
 
         private void AddControlPanel(object sender, RoutedEventArgs e)

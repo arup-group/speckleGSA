@@ -29,7 +29,7 @@ namespace SpeckleGSA
         {
             await myReceiver.IntializeReceiver(streamID, "GSA", "GSA", "none", apiToken);
         }
-
+        
         public List<object> GetGSAObjects()
         {
             ConverterHack n = new ConverterHack();
@@ -40,23 +40,28 @@ namespace SpeckleGSA
 
         public void UpdateDataAsync()
         {
+            // Try to get stream
             ResponseStream streamGetResult = myReceiver.StreamGetAsync(myReceiver.StreamId, null).Result;
 
             if (streamGetResult.Success == false)
             {
-                Console.WriteLine("Could not get stream");
+                MessageLog.AddError("Failed to receive " + myReceiver.Stream.Name + "stream.");
             }
             else
             {
                 myReceiver.Stream = streamGetResult.Resource;
 
+                // Store stream data in local DB
                 LocalContext.AddOrUpdateStream(myReceiver.Stream, myReceiver.BaseUrl);
+
+                // Get cached objects
                 LocalContext.GetCachedObjects(myReceiver.Stream.Objects, myReceiver.BaseUrl);
 
                 string[] payload = myReceiver.Stream.Objects.Where(o => o.Type == SpeckleObjectType.Placeholder).Select(o => o._id).ToArray();
 
                 List<SpeckleObject> receivedObjects = new List<SpeckleObject>();
 
+                // Get remaining objects from server
                 for (int i=0; i < payload.Length; i += MAX_OBJ_REQUEST_COUNT)
                 {
                     string[] partialPayload = payload.Skip(i).Take(MAX_OBJ_REQUEST_COUNT).ToArray();
@@ -84,6 +89,8 @@ namespace SpeckleGSA
                         LocalContext.AddCachedObject(obj, myReceiver.BaseUrl);
                     }
                 });
+
+                MessageLog.AddMessage("Received " + myReceiver.Stream.Name + " stream with " + myReceiver.Stream.Objects.Count() + " objects.");
             }
         }
     }
