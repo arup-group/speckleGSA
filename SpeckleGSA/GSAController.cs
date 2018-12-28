@@ -39,6 +39,8 @@ namespace SpeckleGSA
             }
         }
 
+        public event EventHandler<StatusEventArgs> StatusChanged;
+
         private StreamManager streamManager;
         private UserManager userManager;
         private Dictionary<string, SpeckleGSASender> senders;
@@ -67,6 +69,19 @@ namespace SpeckleGSA
 
             senders = new Dictionary<string, SpeckleGSASender>();
             receivers = new Dictionary<string, SpeckleGSAReceiver>();
+        }
+        
+        public void AttachStatusHandler(EventHandler<StatusEventArgs> statusHandler)
+        {
+            StatusChanged = statusHandler;
+        }
+
+        public void ChangeStatus(string eventName, double percent)
+        {
+            if (StatusChanged != null)
+            {
+                StatusChanged(null, new StatusEventArgs(eventName, percent));
+            }
         }
 
         #region Server
@@ -217,7 +232,11 @@ namespace SpeckleGSA
                 taskList.Add(task);
             }
 
+            ChangeStatus("SENDING TO SERVER", -1);
+
             await Task.WhenAll(taskList);
+
+            ChangeStatus("SENDING COMPLETE", 0);
 
             MessageLog.AddMessage("Sending complete!");
         }
@@ -242,6 +261,8 @@ namespace SpeckleGSA
 
         private List<GSAObject> GetMaterials()
         {
+            int counter;
+
             string[] materialIdentifier = new string[]
                 { "MAT_STEEL", "MAT_CONCRETE" };
 
@@ -259,12 +280,16 @@ namespace SpeckleGSA
             }
             pieces = pieces.Distinct().ToList();
 
+            counter = 1;
             for (int i = 0; i < pieces.Count(); i++)
             {
                 GSAMaterial mat = new GSAMaterial().AttachGSA(gsaObj);
                 mat.ParseGWACommand(pieces[i]);
                 mat.Reference = i+1; // Offset references
                 materials.Add(mat);
+
+                ChangeStatus("GETTING MATERIALS: " + counter.ToString() + "/" + pieces.Count().ToString(), counter * 100 / pieces.Count());
+                counter++;
             }
 
             return materials;
@@ -272,6 +297,8 @@ namespace SpeckleGSA
 
         private List<GSAObject> Get2DProperties(List<GSAMaterial> materials)
         {
+            int counter;
+
             List<GSAObject> props = new List<GSAObject>();
 
             string res = gsaObj.GwaCommand("GET_ALL,PROP_2D");
@@ -281,12 +308,16 @@ namespace SpeckleGSA
 
             string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
 
+            counter = 1;
             foreach (string p in pieces)
             {
                 GSA2DProperty prop = new GSA2DProperty().AttachGSA(gsaObj);
                 prop.ParseGWACommand(p, materials.ToArray());
 
                 props.Add(prop);
+
+                ChangeStatus("GETTING 2D PROPERTIES: " + counter.ToString() + "/" + pieces.Length.ToString(), counter * 100 / pieces.Length);
+                counter++;
             }
 
             return props;
@@ -294,6 +325,8 @@ namespace SpeckleGSA
 
         private List<GSAObject> GetNodes()
         {
+            int counter;
+
             List<GSAObject> nodes = new List<GSAObject>();
 
             string res = gsaObj.GwaCommand("GET_ALL,NODE");
@@ -303,12 +336,16 @@ namespace SpeckleGSA
 
             string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
 
+            counter = 1;
             foreach (string p in pieces)
             {
                 GSANode n = new GSANode().AttachGSA(gsaObj);
                 n.ParseGWACommand(p);
 
                 nodes.Add(n);
+
+                ChangeStatus("GETTING NODES: " + counter.ToString() + "/" + pieces.Length.ToString(), counter * 100 / pieces.Length );
+                counter++;
             }
 
             res = gsaObj.GwaCommand("GET_ALL,EL");
@@ -318,6 +355,7 @@ namespace SpeckleGSA
 
             pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
 
+            counter = 1;
             foreach (string p in pieces)
             {
                 string[] pPieces = p.ListSplit(",");
@@ -326,6 +364,7 @@ namespace SpeckleGSA
                     GSA0DElement e0D = new GSA0DElement().AttachGSA(gsaObj);
                     e0D.ParseGWACommand(p);
                     (nodes.Where(n => e0D.Connectivity.Contains(n.Reference)).First() as GSANode).Merge0DElement(e0D);
+                    ChangeStatus("GETTING 0D ELEMENTS: " + counter++.ToString(), -1);
                 }
             }
 
@@ -334,6 +373,8 @@ namespace SpeckleGSA
         
         private List<GSAObject> Get1DElements(List<GSANode> nodes)
         {
+            int counter;
+
             List<GSAObject> elements = new List<GSAObject>();
 
             string res = gsaObj.GwaCommand("GET_ALL,EL");
@@ -342,7 +383,8 @@ namespace SpeckleGSA
                 return elements;
 
             string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
-            
+
+            counter = 1;
             foreach (string p in pieces)
             {
                 string[] pPieces = p.ListSplit(",");
@@ -351,6 +393,7 @@ namespace SpeckleGSA
                     GSA1DElement e1D = new GSA1DElement().AttachGSA(gsaObj);
                     e1D.ParseGWACommand(p, nodes.ToArray());
                     elements.Add(e1D);
+                    ChangeStatus("GETTING 1D ELEMENTS: " + counter++.ToString(), -1);
                 }
             }
             
@@ -359,6 +402,8 @@ namespace SpeckleGSA
 
         private List<GSAObject> Get2DElements(List<GSANode> nodes)
         {
+            int counter;
+
             List<GSAObject> elements = new List<GSAObject>();
 
             string res = gsaObj.GwaCommand("GET_ALL,EL");
@@ -367,7 +412,8 @@ namespace SpeckleGSA
                 return elements;
 
             string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
-            
+
+            counter = 1;
             foreach (string p in pieces)
             {
                 string[] pPieces = p.ListSplit(",");
@@ -382,6 +428,8 @@ namespace SpeckleGSA
                     mesh.InsertionPoint = (e2D as GSA2DElement).InsertionPoint;
                     mesh.AddElement(e2D as GSA2DElement);
                     elements.Add(mesh);
+
+                    ChangeStatus("GETTING 2D ELEMENTS: " + counter++.ToString(), -1);
                 }
             }
             
@@ -394,8 +442,8 @@ namespace SpeckleGSA
 
                 foreach (GSAObject m in matches)
                     elements.Remove(m);
-                
-                Console.WriteLine("MESH:" + (i+1).ToString() + "/" + elements.Count());
+
+                ChangeStatus("MERGING 2D ELEMENTS: " + (i + 1).ToString() + "/" + elements.Count(), (i+1) * 100 / elements.Count());
 
                 if (matches.Count() > 0) i--;
             }
@@ -415,6 +463,10 @@ namespace SpeckleGSA
         #region Import GSA
         public async Task ImportObjects(Dictionary<string, string> streamIDs)
         {
+            int progCounter;
+
+            List<Task> taskList = new List<Task>();
+
             Dictionary<Type, object> objects = new Dictionary<Type, object>();
             List<object> convertedObjects = new List<object>();
 
@@ -432,7 +484,9 @@ namespace SpeckleGSA
             foreach (Type t in objTypes)
                 objects[t] = new List<GSAObject>();
 
-            // Pull objects from server
+            // Pull objects from server asynchronously
+            ChangeStatus("RECEIVING FROM SERVER", -1);
+
             foreach (KeyValuePair<string, string> kvp in streamIDs)
             {
                 if (kvp.Value == "")
@@ -447,17 +501,24 @@ namespace SpeckleGSA
                         MessageLog.AddError("Could not connect to " + kvp.Key + " stream.");
                     else
                     {
-                        try
+                        Task task = new Task(() =>
                         {
-                            convertedObjects.AddRange(receivers[kvp.Key].GetGSAObjects());
-                        }
-                        catch (Exception e)
-                        {
-                            MessageLog.AddError(e.Message);
-                        }
+                            try
+                            {
+                                convertedObjects.AddRange(receivers[kvp.Key].GetGSAObjects());
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageLog.AddError(ex.Message);
+                            }
+                        });
+                        task.Start();
+                        taskList.Add(task);
                     }
                 }
             }
+
+            await Task.WhenAll(taskList);
 
             // Populate dictionary
             foreach (object obj in convertedObjects)
@@ -483,31 +544,50 @@ namespace SpeckleGSA
             }
 
             // Prepare objects (fix connectivity, add children, etc.)
+            progCounter = 0;
+
             for (int i = 0; i < objects.Keys.Count(); i++)
             {
                 Type key = objects.Keys.ElementAt(i);
                 List<GSAObject> value = (objects.Values.ElementAt(i) as IList).Cast<GSAObject>().ToList();
 
                 for (int j = 0; j < value.Count(); j++)
+                { 
                     PrepareGSAObj(value[j], objects, ref counter);
+                    ChangeStatus("PREPARNG OBJECTS: " + (j + progCounter).ToString() + "/" + counter.TotalObjects.ToString(), (j + progCounter) * 100 / counter.TotalObjects);
+                }
+
+                progCounter += value.Count;
             }
 
             // Write objects
             MessageLog.AddMessage("Writing objects.");
 
+            progCounter = 1;
             foreach (KeyValuePair<Type, object> kvp in objects)
                 foreach (GSAObject obj in (kvp.Value as IList).Cast<GSAObject>())
+                { 
                     obj.WritetoGSA(objects);
+                    ChangeStatus("WRITING OBJECTS: " + progCounter.ToString() + "/" + counter.TotalObjects.ToString(), progCounter * 100 / counter.TotalObjects);
+                    progCounter++;
+                }
 
-            MessageLog.AddMessage("Writing derived objects.");
 
             // Write derived objects (e.g., 0D elements from nodes)
+            MessageLog.AddMessage("Writing derived objects.");
+
+            progCounter = 1;
             foreach (KeyValuePair<Type, object> kvp in objects)
                 foreach (GSAObject obj in (kvp.Value as IList).Cast<GSAObject>())
+                { 
                     obj.WriteDerivedObjectstoGSA(objects);
+                    ChangeStatus("WRITING DERIVED OBJECTS: " + progCounter.ToString() + "/" + counter.TotalObjects.ToString(), progCounter * 100 / counter.TotalObjects);
+                    progCounter++;
+                }
 
             gsaObj.UpdateViews();
 
+            ChangeStatus("RECEIVING COMPLETE", 0);
             MessageLog.AddMessage("Receiving completed!");
         }
 
@@ -671,4 +751,27 @@ namespace SpeckleGSA
             refsUsed[key] = refsUsed[key].Distinct().ToList();
         }
     }
+
+    public class StatusEventArgs : EventArgs
+    {
+        private readonly double percent;
+        private readonly string name;
+
+        public StatusEventArgs(string name, double percent)
+        {
+            this.name = name;
+            this.percent = percent;
+        }
+
+        public double Percent
+        {
+            get { return percent; }
+        }
+
+        public string Name
+        {
+            get { return name; }
+        }
+    }
+
 }

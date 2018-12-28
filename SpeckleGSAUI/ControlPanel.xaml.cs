@@ -91,7 +91,7 @@ namespace SpeckleGSAUI
         #region GSA
         private void LinkGSA(object sender, RoutedEventArgs e)
         {
-            Task.Run( () => gsa.Link());
+            Task.Run(() => gsa.Link());
         }
 
         private void NewGSAFile(object sender, RoutedEventArgs e)
@@ -108,24 +108,41 @@ namespace SpeckleGSAUI
         #endregion
 
         #region Sender
-        private async void SendStream(object sender, RoutedEventArgs e)
+        private void SendStream(object sender, RoutedEventArgs e)
         {
-            await gsa.ExportObjects(ModelName);
-            SenderNodesStreamID.Text = gsa.SenderNodesStreamID;
-            SenderPropertiesStreamID.Text = gsa.SenderPropertiesStreamID;
-            SenderElementsStreamID.Text = gsa.SenderElementsStreamID;
+            gsa.AttachStatusHandler(ChangeSenderProgress);
+
+            Task.Run(() => gsa.ExportObjects(ModelName)).ContinueWith(
+            delegate {
+                try
+                {
+                    Application.Current.Dispatcher.BeginInvoke(
+                        DispatcherPriority.Background,
+                        new Action(() =>
+                        {
+                            SenderNodesStreamID.Text = gsa.SenderNodesStreamID;
+                            SenderPropertiesStreamID.Text = gsa.SenderPropertiesStreamID;
+                            SenderElementsStreamID.Text = gsa.SenderElementsStreamID;
+                        }
+                        ));
+                }
+                catch
+                { }
+            });
         }
         #endregion
 
         #region Receiver
-        private async void ReceiveStream(object sender, RoutedEventArgs e)
+        private void ReceiveStream(object sender, RoutedEventArgs e)
         {
-            await gsa.ImportObjects(new Dictionary<string, string>()
+            gsa.AttachStatusHandler(ChangeReceiverProgress);
+
+            Task.Run(() => gsa.ImportObjects(new Dictionary<string, string>()
             {
                 { "properties", ReceiverPropertiesStreamID },
                 { "nodes", ReceiverNodesStreamID },
                 { "elements", ReceiverElementsStreamID },
-            });
+            }));
         }
         #endregion
 
@@ -133,6 +150,50 @@ namespace SpeckleGSAUI
         private void CopyStreamList(object sender, DataGridRowClipboardEventArgs e)
         {
             e.ClipboardRowContent.RemoveAt(0);
+        }
+
+        private void ChangeSenderProgress(object sender, StatusEventArgs e)
+        {
+            Application.Current.Dispatcher.BeginInvoke(
+                DispatcherPriority.Background,
+                new Action(() =>
+                {
+                    SenderStatus.Content = e.Name;
+                    if (e.Percent >= 0 & e.Percent <= 100)
+                    {
+                        SenderProgressBar.IsIndeterminate = false;
+                        SenderProgressBar.Value = e.Percent;
+                    }
+                    else
+                    {
+                        SenderProgressBar.IsIndeterminate = true;
+                        SenderProgressBar.Value = 0;
+                    }
+                }
+                )
+            );
+        }
+
+        private void ChangeReceiverProgress(object sender, StatusEventArgs e)
+        {
+            Application.Current.Dispatcher.BeginInvoke(
+                DispatcherPriority.Background,
+                new Action(() =>
+                {
+                    ReceiverStatus.Content = e.Name;
+                    if (e.Percent >= 0 & e.Percent <= 100)
+                    {
+                        ReceiverProgressBar.IsIndeterminate = false;
+                        ReceiverProgressBar.Value = e.Percent;
+                    }
+                    else
+                    {
+                        ReceiverProgressBar.IsIndeterminate = true;
+                        ReceiverProgressBar.Value = 0;
+                    }
+                }
+                )
+            );
         }
         #endregion
     }

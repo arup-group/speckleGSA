@@ -18,12 +18,13 @@ namespace SpeckleGSA
         {
             if (IsInit)
                 return;
-
+            
             MessageAdded += messageHandler;
             ErrorAdded += errorHandler;
 
             IsInit = true;
         }
+
 
         public static void AddMessage(string message)
         {
@@ -56,4 +57,5 @@ namespace SpeckleGSA
             get { return message; }
         }
     }
+
 }

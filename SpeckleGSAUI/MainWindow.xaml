@@ -18,13 +18,14 @@
         
         mc:Ignorable="d"
         Width="800"
-        Title="SpeckleGSA" Height="800"  WindowStyle="ToolWindow">
+        Title="SpeckleGSA" Height="800">
     <Grid
         Margin="0,0,0,0">
         <Grid.RowDefinitions>
             <RowDefinition Height="auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="auto"/>
+            <RowDefinition Height="100"/>
         </Grid.RowDefinitions>
         <Grid
             Grid.Row="0"
@@ -48,7 +49,8 @@
         </Grid>
         <dragablz:TabablzControl Grid.Row="1" 
             x:Name="ControlPanelContainer"
-            ShowDefaultCloseButton="True">
+            ShowDefaultCloseButton="True"
+            BorderThickness="0">
             <dragablz:TabablzControl.HeaderSuffixContent>
                 <Button 
                         Background="Transparent"
@@ -66,9 +68,17 @@
                 </Button>
             </dragablz:TabablzControl.HeaderSuffixContent>
         </dragablz:TabablzControl>
+        <GridSplitter
+            Height="5"
+            Background="#FF0057FF"
+            Grid.Row="2"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch">
+        </GridSplitter>
         <Grid
             Background="#FF0057FF"
-            Grid.Row="2">
+            Grid.Row="3"
+            x:Name="MessageLogContainer">
             <Grid Margin="25,5,25,25">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="auto"/>
@@ -81,7 +91,7 @@
                 Content="Message Log"/>
                 <materialDesign:Card
                     Grid.Row="1"
-                    Height="100">
+                    VerticalAlignment="Stretch">
                     <ListBox
                     x:Name="MessagePane">
                         <ListBox.Resources>

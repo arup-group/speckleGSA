@@ -21,49 +21,53 @@
             <ColumnDefinition Width="300"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
-        <Grid
+        <materialDesign:Card
             Grid.Column="0"
-            Background="White">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-            <Grid Grid.Row="0" Margin="10">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="auto"/>
-                    <RowDefinition Height="auto"/>
-                    <RowDefinition Height="auto"/>
-                    <RowDefinition Height="auto"/>
-                    <RowDefinition Height="auto"/>
-                </Grid.RowDefinitions>
-                <Label Grid.Row="0" Grid.ColumnSpan="2" Content="Server Settings" Margin="5,5,5,5" FontWeight="Bold"/>
-                <Label Grid.Row="1" Grid.Column="0" Content="Server Adress" Margin="5,5,5,5"/>
-                <TextBox Grid.Row="1" Grid.Column="1" x:Name="ServerAddress" Margin="5,5,5,5"/>
-                <Label Grid.Row="2" Grid.Column="0" Content="Email Adress" Margin="5,5,5,5"/>
-                <TextBox Grid.Row="2" Grid.Column="1" x:Name="EmailAddress" Margin="5,5,5,5"/>
-                <Label Grid.Row="3" Grid.Column="0" Content="Password" Margin="5,5,5,5"/>
-                <PasswordBox Grid.Row="3" Grid.Column="1" x:Name="Password" Margin="5,5,5,5"/>
-                <Button Grid.Row="4" Grid.ColumnSpan="2" Click="Login"  Content="Login" Margin="5"/>
-            </Grid>
-            <Grid Grid.Row="1" Margin="10">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
+            Margin="10"
+            Padding="10"
+            VerticalAlignment="Stretch">
+            <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                <Button Grid.Row="0" Grid.ColumnSpan="2" Click="UpdateStreamList"  Content="Update Stream List" Margin="5"/>
-                <materialDesign:Card
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="auto"/>
+                        <RowDefinition Height="auto"/>
+                        <RowDefinition Height="auto"/>
+                        <RowDefinition Height="auto"/>
+                        <RowDefinition Height="auto"/>
+                    </Grid.RowDefinitions>
+                    <Label Grid.Row="0" Grid.ColumnSpan="2" Content="Server Settings" Margin="5,5,5,5" FontWeight="Bold"/>
+                    <Label Grid.Row="1" Grid.Column="0" Content="Server Adress" Margin="5,5,5,5"/>
+                    <TextBox Grid.Row="1" Grid.Column="1" x:Name="ServerAddress" Margin="5,5,5,5"/>
+                    <Label Grid.Row="2" Grid.Column="0" Content="Email Adress" Margin="5,5,5,5"/>
+                    <TextBox Grid.Row="2" Grid.Column="1" x:Name="EmailAddress" Margin="5,5,5,5"/>
+                    <Label Grid.Row="3" Grid.Column="0" Content="Password" Margin="5,5,5,5"/>
+                    <PasswordBox Grid.Row="3" Grid.Column="1" x:Name="Password" Margin="5,5,5,5"/>
+                    <Button Grid.Row="4" Grid.ColumnSpan="2" Click="Login"  Content="Login" Margin="5"/>
+                </Grid>
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Button Grid.Row="0" Grid.ColumnSpan="2" Click="UpdateStreamList"  Content="Update Stream List" Margin="5"/>
+                    <materialDesign:Card
                             Grid.Row="1"
                             Grid.ColumnSpan="2"
-                            Margin="5">
-                    <DataGrid
+                            Margin="5"
+                            VerticalAlignment="Stretch">
+                        <DataGrid
                             CanUserSortColumns="False"
                             AutoGenerateColumns="False"
                             IsReadOnly="True"
@@ -71,23 +75,25 @@
                             SelectionMode="Single"
                             CopyingRowClipboardContent="CopyStreamList"
                             GridLinesVisibility="None">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Name" Width="*" Binding="{Binding Item1}"/>
-                            <DataGridTextColumn Header="StreamID" Width="*" Binding="{Binding Item2}"/>
-                        </DataGrid.Columns>
-                        <DataGrid.CellStyle>
-                            <Style
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Name" Width="*" Binding="{Binding Item1}"/>
+                                <DataGridTextColumn Header="StreamID" Width="*" Binding="{Binding Item2}"/>
+                            </DataGrid.Columns>
+                            <DataGrid.CellStyle>
+                                <Style
                                     TargetType="DataGridCell"
                                     BasedOn="{StaticResource {x:Type DataGridCell}}">
-                                <Setter Property="BorderThickness" Value="0"/>
-                                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-                            </Style>
-                        </DataGrid.CellStyle>
-                    </DataGrid>
-                </materialDesign:Card>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                </Style>
+                            </DataGrid.CellStyle>
+                        </DataGrid>
+                    </materialDesign:Card>
+                </Grid>
             </Grid>
-        </Grid>
-        <ScrollViewer Grid.Column="1">
+        </materialDesign:Card>
+        <ScrollViewer
+            Grid.Column="1">
             <StackPanel Orientation="Vertical">
                 <materialDesign:Card
                     Padding="10"
@@ -109,14 +115,16 @@
                     </Grid>
                 </materialDesign:Card>
                 <materialDesign:Card
-                        Padding="10"
-                        Margin="10">
+                    Padding="10"
+                    Margin="10">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
                             <RowDefinition Height="auto"/>
                             <RowDefinition Height="auto"/>
                             <RowDefinition Height="auto"/>
@@ -134,17 +142,41 @@
                         <Label Grid.Row="4" Grid.Column="0" Content="Elements" Margin="5"/>
                         <TextBox Grid.Row="4" Grid.Column="1" x:Name="SenderElementsStreamID" IsReadOnly="True" BorderThickness="0" Margin="5"/>
                         <Button Grid.Row="5" Grid.ColumnSpan="2" Content="Send/Update Streams" Click="SendStream" Margin="5"/>
+                        <materialDesign:Card
+                            Grid.Row="6"
+                            Grid.ColumnSpan="2"
+                            Background="#FF0057FF"
+                            Margin="5">
+                            <StackPanel>
+                                <Label
+                                    x:Name="SenderStatus"
+                                    Foreground="White"
+                                    HorizontalAlignment="Center"
+                                    Content=" ">
+                                </Label>
+                                <ProgressBar
+                                    x:Name="SenderProgressBar"
+                                    BorderThickness="0"
+                                    BorderBrush="#FF0057FF"
+                                    Height="25"
+                                    Minimum="0"
+                                    Maximum="100"
+                                    Background="White">
+                                </ProgressBar>
+                            </StackPanel>
+                        </materialDesign:Card>
                     </Grid>
                 </materialDesign:Card>
                 <materialDesign:Card
-                        Padding="10"
-                        Margin="10">
+                    Padding="10"
+                    Margin="10">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="auto"/>
                             <RowDefinition Height="auto"/>
                             <RowDefinition Height="auto"/>
                             <RowDefinition Height="auto"/>
@@ -159,6 +191,29 @@
                         <Label Grid.Row="3" Grid.Column="0" Content="Elements" Margin="5"/>
                         <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Path=ReceiverElementsStreamID}" Margin="5"/>
                         <Button Grid.Row="4" Grid.ColumnSpan="2" Content="Receive Streams" Click="ReceiveStream" Margin="5"/>
+                        <materialDesign:Card
+                            Grid.Row="5"
+                            Grid.ColumnSpan="2"
+                            Background="#FF0057FF"
+                            Margin="5">
+                            <StackPanel>
+                                <Label
+                                    x:Name="ReceiverStatus"
+                                    Foreground="White"
+                                    HorizontalAlignment="Center"
+                                    Content=" ">
+                                </Label>
+                                <ProgressBar
+                                    x:Name="ReceiverProgressBar"
+                                    BorderThickness="0"
+                                    BorderBrush="#FF0057FF"
+                                    Height="25"
+                                    Minimum="0"
+                                    Maximum="100"
+                                    Background="White">
+                                </ProgressBar>
+                            </StackPanel>
+                        </materialDesign:Card>
                     </Grid>
                 </materialDesign:Card>
                 <materialDesign:Card
@@ -180,5 +235,7 @@
                 </materialDesign:Card>
             </StackPanel>
         </ScrollViewer>
+
+        
     </Grid>
 </UserControl>
