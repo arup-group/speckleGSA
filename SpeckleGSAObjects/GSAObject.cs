@@ -30,25 +30,15 @@ namespace SpeckleGSA
 
         public abstract void ParseGWACommand(string command, GSAObject[] children = null);
 
-        public abstract string GetGWACommand(GSAObject[] children = null);
+        public abstract string GetGWACommand(Dictionary<Type, object> dict = null);
 
         public abstract List<GSAObject> GetChildren();
-
+        
         public object RunGWACommand(string command)
         {
             if (gsa == null) return null;
 
             return gsa.GwaCommand(command);
-        }
-
-        public virtual void WritetoGSA(Dictionary<Type, object> dict)
-        {
-            RunGWACommand(GetGWACommand());
-        }
-
-        public virtual void WriteDerivedObjectstoGSA(Dictionary<Type, object> dict)
-        {
-            return;
         }
     }
 }

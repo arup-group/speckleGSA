@@ -10,9 +10,10 @@ namespace SpeckleGSA
 {
     public class GSA2DProperty : GSAObject
     {
+        public static readonly string GSAKeyword = "PROP_2D";
         public static readonly string Stream = "properties";
         public static readonly int ReadPriority = 1;
-        public static readonly int WritePriority = 1;
+        public static readonly int WritePriority = 4;
 
         public double Thickness { get; set; }
         public int Material { get; set; }
@@ -47,6 +48,24 @@ namespace SpeckleGSA
             dict[typeof(GSA2DProperty)] = props;
         }
 
+        public static void WriteObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        {
+            if (!dict.ContainsKey(typeof(GSA2DProperty))) return;
+
+            List<GSAObject> props = dict[typeof(GSA2DProperty)] as List<GSAObject>;
+
+            foreach (GSAObject p in props)
+            {
+                p.AttachGSA(gsa);
+
+                GSARefCounters.RefObject(p);
+                
+                p.RunGWACommand(p.GetGWACommand(dict));
+            }
+
+            dict.Remove(typeof(GSA2DProperty));
+        }
+
         public override void ParseGWACommand(string command, GSAObject[] children = null)
         {
             string[] pieces = command.ListSplit(",");
@@ -71,12 +90,12 @@ namespace SpeckleGSA
             // Ignore the rest
         }
 
-        public override string GetGWACommand(GSAObject[] children = null)
+        public override string GetGWACommand(Dictionary<Type, object> dict = null)
         {
             List<string> ls = new List<string>();
 
             ls.Add("SET");
-            ls.Add("PROP_2D.5");
+            ls.Add(GSAKeyword);
             ls.Add(Reference.ToNumString());
             ls.Add(Name);
             if (Color == null)
@@ -86,7 +105,10 @@ namespace SpeckleGSA
             ls.Add("SHELL");
             ls.Add("GLOBAL");
             ls.Add("0"); // Analysis material
-            ls.Add((children as GSAMaterial[]).Where(m => m.Reference == Material).FirstOrDefault().Type);
+            if (dict.ContainsKey(typeof(GSAMaterial)))
+                ls.Add((dict[typeof(GSAMaterial)] as List<GSAObject>).Cast<GSAMaterial>().Where(m => m.Reference == Material).FirstOrDefault().Type);
+            else
+                ls.Add("");
             ls.Add(Material.ToNumString());
             ls.Add("1"); // Design
             ls.Add(Thickness.ToNumString());
@@ -105,11 +127,6 @@ namespace SpeckleGSA
         public override List<GSAObject> GetChildren()
         {
             throw new NotImplementedException();
-        }
-
-        public override void WritetoGSA(Dictionary<Type, object> dict)
-        {
-            RunGWACommand(GetGWACommand((dict[typeof(GSAMaterial)] as IList).Cast<GSAMaterial>().ToArray()));
         }
         #endregion
     }

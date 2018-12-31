@@ -10,9 +10,10 @@ namespace SpeckleGSA
 {
     public class GSA1DElement : GSAObject
     {
+        public static readonly string GSAKeyword  = "EL";
         public static readonly string Stream = "elements";
         public static readonly int ReadPriority = 3;
-        public static readonly int WritePriority = 3;
+        public static readonly int WritePriority = 1;
 
         public string Type { get; set; }
         public int Property { get; set; }
@@ -87,6 +88,53 @@ namespace SpeckleGSA
             dict[typeof(GSA1DElement)] = e1Ds;
         }
 
+        public static void WriteObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        {
+            if (!dict.ContainsKey(typeof(GSA1DElement))) return;
+
+            List<GSAObject> e1Ds = dict[typeof(GSA1DElement)] as List<GSAObject>;
+
+            foreach (GSAObject e in e1Ds)
+            {
+                e.AttachGSA(gsa);
+
+                GSARefCounters.RefObject(e);
+
+                List<GSAObject> nodes = e.GetChildren();
+
+                for (int i = 0; i < nodes.Count(); i++)
+                    GSARefCounters.RefObject(nodes[i]);
+
+                e.Connectivity = nodes.Select(n => n.Reference).ToList();
+
+                if (dict.ContainsKey(typeof(GSANode)))
+                { 
+                    for (int i = 0; i < nodes.Count(); i++)
+                    {
+                        List<GSAObject> matches = (dict[typeof(GSANode)] as List<GSAObject>).Where(
+                            n => n.Coor[0] == nodes[i].Coor[0] &
+                            n.Coor[1] == nodes[i].Coor[1] &
+                            n.Coor[2] == nodes[i].Coor[2]).ToList();
+
+                        if (matches.Count() > 0)
+                        { 
+                            e.Connectivity[i] = matches[0].Reference;
+                            (matches[0] as GSANode).Merge(nodes[i] as GSANode);
+                        }
+                        else
+                            (dict[typeof(GSANode)] as List<GSAObject>).Add(nodes[i]);
+                    }
+                }
+                else
+                    dict[typeof(GSANode)] = nodes;
+
+
+                e.RunGWACommand(e.GetGWACommand());
+            }
+
+            dict.Remove(typeof(GSA1DElement));
+        }
+
         public override void ParseGWACommand(string command, GSAObject[] children = null)
         {
             string[] pieces = command.ListSplit(",");
@@ -146,12 +194,12 @@ namespace SpeckleGSA
             counter++; // Dummy
         }
 
-        public override string GetGWACommand(GSAObject[] children = null)
+        public override string GetGWACommand(Dictionary<Type, object> dict = null)
         {
             List<string> ls = new List<string>();
 
             ls.Add("SET");
-            ls.Add("EL.3");
+            ls.Add(GSAKeyword);
             ls.Add(Reference.ToString());
             ls.Add(Name);
             if (Color == null)
@@ -218,7 +266,10 @@ namespace SpeckleGSA
             {
                 GSANode n = new GSANode();
                 n.Coor = Coor.Skip(i * 3).Take(3).ToList();
-                n.Reference = Connectivity[i];
+                if (Connectivity.Count() > i)
+                    n.Reference = Connectivity[i];
+                else
+                    n.Reference = 0;
                 children.Add(n);
             }
 

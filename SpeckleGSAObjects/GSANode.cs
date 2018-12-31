@@ -10,6 +10,7 @@ namespace SpeckleGSA
 {
     public class GSANode : GSAObject
     {
+        public static readonly string GSAKeyword = "NODE";
         public static readonly string Stream = "nodes";
         public static readonly int ReadPriority = 2;
         public static readonly int WritePriority = 2;
@@ -89,6 +90,44 @@ namespace SpeckleGSA
             dict[typeof(GSANode)] = nodes;
         }
 
+        public static void WriteObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        {
+            if (!dict.ContainsKey(typeof(GSANode))) return;
+
+            List<GSAObject> nodes = dict[typeof(GSANode)] as List<GSAObject>;
+
+            for (int i = 0; i < nodes.Count(); i++)
+            {
+                nodes[i].AttachGSA(gsa);
+
+                GSARefCounters.RefObject(nodes[i]);
+
+                List<GSAObject> matches = nodes.Where(
+                    (n, j) => j != i & n.Reference == nodes[i].Reference)
+                    .ToList();
+
+                foreach (GSAObject m in matches)
+                {
+                    (nodes[i] as GSANode).Merge(m as GSANode);
+                    nodes.Remove(m);
+                }
+                
+                List<GSAObject> e0Ds = nodes[i].GetChildren();
+
+                for (int j = 0; j < e0Ds.Count(); j++)
+                    GSARefCounters.RefObject(e0Ds[j]);
+
+                if (!dict.ContainsKey(typeof(GSA0DElement)))
+                    dict[typeof(GSA0DElement)] = e0Ds;
+                else
+                    (dict[typeof(GSA0DElement)] as List<GSAObject>).AddRange(e0Ds);
+
+                nodes[i].RunGWACommand(nodes[i].GetGWACommand());
+            }
+            
+            dict.Remove(typeof(GSANode));
+        }
+
         public override void ParseGWACommand(string command, GSAObject[] children = null)
         {
             string[] pieces = command.ListSplit(",");
@@ -148,12 +187,12 @@ namespace SpeckleGSA
             return;
         }
 
-        public override string GetGWACommand(GSAObject[] children = null)
+        public override string GetGWACommand(Dictionary<Type, object> dict = null)
         {
             List<string> ls = new List<string>();
 
             ls.Add("SET");
-            ls.Add("NODE.2");
+            ls.Add(GSAKeyword);
             ls.Add(Reference.ToString());
             ls.Add(Name);
             if (Color == null)
@@ -199,14 +238,18 @@ namespace SpeckleGSA
 
         public override List<GSAObject> GetChildren()
         {
-            return null;
-        }
+            List<GSAObject> elements = new List<GSAObject>();
 
-        public override void WriteDerivedObjectstoGSA(Dictionary<Type, object> dict)
-        {
-            List<GSA0DElement> e0Ds = Get0DElements();
-            foreach (GSA0DElement e in e0Ds)
-                e.WritetoGSA(dict);
+            if (Mass > 0)
+            {
+                GSA0DElement massElem = new GSA0DElement().AttachGSA(gsa);
+                massElem.Type = "MASS";
+                massElem.Connectivity = new List<int>() { Reference };
+                massElem.Mass = Mass;
+                elements.Add(massElem);
+            }
+
+            return elements;
         }
         #endregion
 
@@ -224,22 +267,7 @@ namespace SpeckleGSA
 
             return Convert.ToDouble(pieces[5]);
         }
-
-        public List<GSA0DElement> Get0DElements()
-        {
-            List<GSA0DElement> elemList = new List<GSA0DElement>();
-
-            if (Mass > 0)
-            {
-                GSA0DElement massElem = new GSA0DElement().AttachGSA(gsa);
-                massElem.Type = "MASS";
-                massElem.Connectivity = new List<int>() { Reference };
-                massElem.Property = WriteMassProptoGSA(Mass);
-                elemList.Add(massElem);
-            }
-            return elemList;
-        }
-
+        
         private int WriteMassProptoGSA(double mass)
         {
             List<string> ls = new List<string>();

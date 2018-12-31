@@ -486,4 +486,59 @@ namespace SpeckleGSA
         }
         #endregion
     }
+
+    public static class GSARefCounters
+    {
+        private static Dictionary<string, int> counter = new Dictionary<string, int>();
+        private static Dictionary<string, List<int>> refsUsed = new Dictionary<string, List<int>>();
+
+        public static int TotalObjects
+        {
+            get
+            {
+                int total = 0;
+
+                foreach (KeyValuePair<string, List<int>> kvp in refsUsed)
+                    total += kvp.Value.Count();
+
+                return total;
+            }
+        }
+
+        public static void Clear()
+        {
+            counter.Clear();
+            refsUsed.Clear();
+        }
+
+        public static GSAObject RefObject(GSAObject obj)
+        {
+            string key = (string)obj.GetType().GetField("GSAKeyword").GetValue(null);
+
+            if (obj.Reference == 0)
+            {
+                if (!counter.ContainsKey(key))
+                    counter[key] = 1;
+
+                if (refsUsed.ContainsKey(key))
+                    while (refsUsed[key].Contains(counter[key]))
+                        counter[key]++;
+
+                obj.Reference = counter[key]++;
+            }
+
+            AddObjRefs(key, new List<int>() { obj.Reference });
+            return obj;
+        }
+
+        public static void AddObjRefs(string key, List<int> refs)
+        {
+            if (!refsUsed.ContainsKey(key))
+                refsUsed[key] = refs;
+            else
+                refsUsed[key].AddRange(refs);
+
+            refsUsed[key] = refsUsed[key].Distinct().ToList();
+        }
+    }
 }

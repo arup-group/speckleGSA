@@ -10,9 +10,10 @@ namespace SpeckleGSA
 {
     public class GSA2DElementMesh : GSAObject
     {
+        public static readonly string GSAKeyword = "";
         public static readonly string Stream = "elements";
         public static readonly int ReadPriority = 3;
-        public static readonly int WritePriority = 3;
+        public static readonly int WritePriority = 0;
 
         public string Type { get; set; }
         public int Property { get; set; }
@@ -78,12 +79,36 @@ namespace SpeckleGSA
             dict[typeof(GSA2DElement)] = e2Ds;
         }
 
+        public static void WriteObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        {
+            if (!dict.ContainsKey(typeof(GSA2DElementMesh))) return;
+
+            List<GSAObject> meshes = dict[typeof(GSA2DElementMesh)] as List<GSAObject>;
+
+            foreach (GSAObject m in meshes)
+            {
+                m.AttachGSA(gsa);
+
+                List<GSAObject> e2Ds = m.GetChildren();
+
+                for (int i = 0; i < e2Ds.Count(); i++)
+                    GSARefCounters.RefObject(e2Ds[i]);
+
+                if (!dict.ContainsKey(typeof(GSA2DElement)))
+                    dict[typeof(GSA2DElement)] = e2Ds;
+                else
+                    (dict[typeof(GSA2DElement)] as List<GSAObject>).AddRange(e2Ds);
+            }
+
+            dict.Remove(typeof(GSA2DElementMesh));
+        }
+
         public override void ParseGWACommand(string command, GSAObject[] children = null)
         {
             throw new NotImplementedException();
         }
 
-        public override string GetGWACommand(GSAObject[] children = null)
+        public override string GetGWACommand(Dictionary<Type, object> dict = null)
         {
             throw new NotImplementedException();
         }
@@ -128,7 +153,6 @@ namespace SpeckleGSA
 
                 elements.Add(elem);
             }
-
 
             return elements;
         }
@@ -221,6 +245,16 @@ namespace SpeckleGSA
         #endregion
 
         #region Helper Functions
+        public List<int> GetNodeReferences()
+        {
+            List<int> nodeRefs = new List<int>();
+
+            foreach (object e in Elements)
+                nodeRefs.AddRange(GetElemConnectivity(e as Dictionary<string, object>));
+
+            return nodeRefs;
+        }
+
         public List<int> GetElemConnectivity (Dictionary<string,object> elem)
         {
             return ((IEnumerable)elem["Connectivity"]).Cast<object>()

@@ -328,8 +328,6 @@ namespace SpeckleGSA
             }
             else
             {
-                Dictionary<string, object> dict = mesh.Properties["Structural"] as Dictionary<string, object>;
-            
                 m.SetSpeckleProperties(mesh.Properties);
                 m.Coor = mesh.Vertices;
                 m.Color = Math.Max(mesh.Colors[0], 0);
@@ -345,6 +343,7 @@ namespace SpeckleGSA
 
                     i--;
                 }
+                m.Connectivity = m.GetNodeReferences();
             }
             return m;
         }

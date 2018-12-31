@@ -8,9 +8,10 @@ namespace SpeckleGSA
 {
     public class GSA1DProperty : GSAObject
     {
+        public static readonly string GSAKeyword = "";
         public static readonly string Stream = "properties";
         public static readonly int ReadPriority = 1;
-        public static readonly int WritePriority = 1;
+        public static readonly int WritePriority = 4;
 
         public int Material { get; set; }
 
@@ -41,7 +42,7 @@ namespace SpeckleGSA
             
         }
 
-        public override string GetGWACommand(GSAObject[] children = null)
+        public override string GetGWACommand(Dictionary<Type, object> dict = null)
         {
             throw new NotImplementedException();
         }

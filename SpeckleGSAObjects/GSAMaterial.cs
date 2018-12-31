@@ -9,9 +9,10 @@ namespace SpeckleGSA
 {
     public class GSAMaterial : GSAObject
     {
+        public static readonly string GSAKeyword  = "MAT";
         public static readonly string Stream = "properties";
         public static readonly int ReadPriority = 0;
-        public static readonly int WritePriority = 0;
+        public static readonly int WritePriority = 3;
 
         public string Type { get; set; }
         public string Grade { get; set; }
@@ -57,6 +58,24 @@ namespace SpeckleGSA
             dict[typeof(GSAMaterial)] = materials;
         }
 
+        public static void WriteObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        {
+            if (!dict.ContainsKey(typeof(GSAMaterial))) return;
+
+            List<GSAObject> materials = dict[typeof(GSAMaterial)] as List<GSAObject>;
+
+            foreach (GSAObject m in materials)
+            {
+                m.AttachGSA(gsa);
+
+                GSARefCounters.RefObject(m);
+
+                m.RunGWACommand(m.GetGWACommand());
+            }
+
+            dict.Remove(typeof(GSAMaterial));
+        }
+
         public override void ParseGWACommand(string command, GSAObject[] children = null)
         {
             string[] pieces = command.ListSplit(",");
@@ -83,7 +102,7 @@ namespace SpeckleGSA
             // TODO: Skip all other properties for now
         }
 
-        public override string GetGWACommand(GSAObject[] children = null)
+        public override string GetGWACommand(Dictionary<Type, object> dict = null)
         {
             List<string> ls = new List<string>();
 
