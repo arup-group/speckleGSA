@@ -91,7 +91,7 @@ namespace SpeckleGSA
             dict.Remove(typeof(GSA2DElementMesh));
         }
 
-        public override void ParseGWACommand(string command, GSAObject[] children = null)
+        public override void ParseGWACommand(string command, Dictionary<Type, object> dict = null)
         {
             throw new NotImplementedException();
         }

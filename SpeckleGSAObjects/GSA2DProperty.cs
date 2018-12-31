@@ -18,10 +18,14 @@ namespace SpeckleGSA
         public double Thickness { get; set; }
         public int Material { get; set; }
 
+        public bool IsAxisLocal;
+
         public GSA2DProperty()
         {
             Thickness = 0;
             Material = 1;
+
+            IsAxisLocal = false;
         }
 
         #region GSAObject Functions
@@ -40,7 +44,7 @@ namespace SpeckleGSA
             foreach (string p in pieces)
             {
                 GSA2DProperty prop = new GSA2DProperty().AttachGSA(gsa);
-                prop.ParseGWACommand(p, materials.ToArray());
+                prop.ParseGWACommand(p, dict);
 
                 props.Add(prop);
             }
@@ -66,7 +70,7 @@ namespace SpeckleGSA
             dict.Remove(typeof(GSA2DProperty));
         }
 
-        public override void ParseGWACommand(string command, GSAObject[] children = null)
+        public override void ParseGWACommand(string command, Dictionary<Type, object> dict = null)
         {
             string[] pieces = command.ListSplit(",");
             int counter = 1; // Skip identifier
@@ -74,13 +78,14 @@ namespace SpeckleGSA
             Name = pieces[counter++].Trim(new char[] { '"' });
             Color = pieces[counter++].ParseGSAColor();
             counter++; // Type
-            counter++; // Axis
+            IsAxisLocal = pieces[counter++] == "LOCAL"; // Axis
             counter++; // Analysis material
 
             string materialType = pieces[counter++];
             int materialGrade = Convert.ToInt32(pieces[counter++]);
-            
-            GSAObject matchingMaterial = children.Cast<GSAMaterial>().Where(m => m.LocalReference == materialGrade & m.Type == materialType).FirstOrDefault();
+
+            List<GSAObject> materials = dict[typeof(GSAMaterial)] as List<GSAObject>;
+            GSAObject matchingMaterial = materials.Cast<GSAMaterial>().Where(m => m.LocalReference == materialGrade & m.Type == materialType).FirstOrDefault();
 
             Material = matchingMaterial == null ? 1 : matchingMaterial.Reference;
 

@@ -80,7 +80,7 @@ namespace SpeckleGSA
                 if (pPieces[4].ParseElementNumNodes() == 2)
                 {
                     GSA1DElement e1D = new GSA1DElement().AttachGSA(gsa);
-                    e1D.ParseGWACommand(p, nodes.ToArray());
+                    e1D.ParseGWACommand(p, dict);
                     e1Ds.Add(e1D);
                 }
             }
@@ -135,7 +135,7 @@ namespace SpeckleGSA
             dict.Remove(typeof(GSA1DElement));
         }
 
-        public override void ParseGWACommand(string command, GSAObject[] children = null)
+        public override void ParseGWACommand(string command, Dictionary<Type, object> dict = null)
         {
             string[] pieces = command.ListSplit(",");
 
@@ -149,10 +149,12 @@ namespace SpeckleGSA
 
             Connectivity.Clear();
             Coor.Clear();
+
+            List<GSAObject> nodes = dict[typeof(GSANode)] as List<GSAObject>;
             for (int i = 0; i < 2; i++)
             {
                 Connectivity.Add(Convert.ToInt32(pieces[counter++]));
-                Coor.AddRange(children.Where(n => n.Reference == Connectivity[i]).FirstOrDefault().Coor);
+                Coor.AddRange(nodes.Where(n => n.Reference == Connectivity[i]).FirstOrDefault().Coor);
             }
 
             int orientationNodeRef = Convert.ToInt32(pieces[counter++]);
@@ -161,7 +163,7 @@ namespace SpeckleGSA
             if (orientationNodeRef != 0)
                 Axis = Parse1DElementAxis(Coor.ToArray(),
                     rotationAngle,
-                    children.Where(n => n.Reference == orientationNodeRef).FirstOrDefault().Coor.ToArray());
+                    nodes.Where(n => n.Reference == orientationNodeRef).FirstOrDefault().Coor.ToArray());
             else
                 Axis = Parse1DElementAxis(Coor.ToArray(), rotationAngle);
 
@@ -343,19 +345,19 @@ namespace SpeckleGSA
                 // Column
                 Vector3D Yglobal = new Vector3D(0, 1, 0);
 
-                double angle = Math.Acos(Vector3D.DotProduct(Yglobal, y) / (Yglobal.Length * y.Length)) * (180 / Math.PI);
-                if (double.IsNaN(angle)) angle = 0;
+                double angle = Math.Acos(Vector3D.DotProduct(Yglobal, y) / (Yglobal.Length * y.Length)).ToDegrees();
+                if (double.IsNaN(angle)) return 0;
 
                 Vector3D signVector = Vector3D.CrossProduct(Yglobal, y);
                 double sign = Vector3D.DotProduct(signVector, x);
 
-                return angle * sign / Math.Abs(sign);
+                return sign >= 0 ? angle : -angle;
             }
             else
             {
                 Vector3D Zglobal = new Vector3D(0, 0, 1);
                 Vector3D Y0 = Vector3D.CrossProduct(Zglobal, x);
-                double angle = Math.Acos(Vector3D.DotProduct(Y0, y) / (Y0.Length * y.Length)) * (180 / Math.PI);
+                double angle = Math.Acos(Vector3D.DotProduct(Y0, y) / (Y0.Length * y.Length)).ToDegrees();
                 if (double.IsNaN(angle)) angle = 0;
 
                 Vector3D signVector = Vector3D.CrossProduct(Y0, y);

@@ -40,7 +40,7 @@ namespace SpeckleGSA
             foreach (string p in pieces)
             {
                 GSAObject prop = new GSA1DProperty().AttachGSA(gsa);
-                prop.ParseGWACommand(p, materials.ToArray());
+                prop.ParseGWACommand(p, dict);
 
                 props.Add(prop);
             }
@@ -66,7 +66,7 @@ namespace SpeckleGSA
             dict.Remove(typeof(GSA1DProperty));
         }
 
-        public override void ParseGWACommand(string command, GSAObject[] children = null)
+        public override void ParseGWACommand(string command, Dictionary<Type, object> dict = null)
         {
             string[] pieces = command.ListSplit(",");
             int counter = 1; // Skip identifier
@@ -77,7 +77,8 @@ namespace SpeckleGSA
             string materialType = pieces[counter++];
             int materialGrade = Convert.ToInt32(pieces[counter++]);
 
-            GSAObject matchingMaterial = children.Cast<GSAMaterial>().Where(m => m.LocalReference == materialGrade & m.Type == materialType).FirstOrDefault();
+            List<GSAObject> materials = dict[typeof(GSAMaterial)] as List<GSAObject>;
+            GSAObject matchingMaterial = materials.Cast<GSAMaterial>().Where(m => m.LocalReference == materialGrade & m.Type == materialType).FirstOrDefault();
 
             Material = matchingMaterial == null ? 1 : matchingMaterial.Reference;
 

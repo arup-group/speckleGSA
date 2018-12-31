@@ -76,7 +76,7 @@ namespace SpeckleGSA
             dict.Remove(typeof(GSAMaterial));
         }
 
-        public override void ParseGWACommand(string command, GSAObject[] children = null)
+        public override void ParseGWACommand(string command, Dictionary<Type, object> dict = null)
         {
             string[] pieces = command.ListSplit(",");
 

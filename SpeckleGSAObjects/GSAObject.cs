@@ -28,7 +28,7 @@ namespace SpeckleGSA
             gsa = null;
         }
 
-        public abstract void ParseGWACommand(string command, GSAObject[] children = null);
+        public abstract void ParseGWACommand(string command, Dictionary<Type, object> dict = null);
 
         public abstract string GetGWACommand(Dictionary<Type, object> dict = null);
 
