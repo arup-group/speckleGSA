@@ -46,23 +46,7 @@ namespace SpeckleGSA
         private Dictionary<string, SpeckleGSASender> senders;
         private Dictionary<string, SpeckleGSAReceiver> receivers;
         private ComAuto gsaObj;
-
-        private Dictionary<string, List<Type>> objectsInStream = new Dictionary<string, List<Type>>()
-        {
-            { "properties", new List<Type>(){
-                typeof(GSAMaterial),
-                typeof(GSA1DProperty),
-                typeof(GSA2DProperty),
-            } },
-            { "nodes", new List<Type>(){
-                typeof(GSANode)
-            } },
-            { "elements", new List<Type>(){
-                typeof(GSA1DElement),
-                typeof(GSA2DElement),
-            } },
-        };
-
+        
         public GSAController()
         {
             userManager = null;
@@ -76,7 +60,7 @@ namespace SpeckleGSA
             StatusChanged = statusHandler;
         }
 
-        public void ChangeStatus(string eventName, double percent)
+        public void ChangeStatus(string eventName, double percent = -1)
         {
             if (StatusChanged != null)
             {
@@ -188,15 +172,67 @@ namespace SpeckleGSA
                 MessageLog.AddError("GSA link not found.");
                 return;
             }
-            
+
+            // Initialize object read priority list
+            SortedDictionary<int, List<Type>> typePriority = new SortedDictionary<int, List<Type>>();
+
+            IEnumerable<Type> objTypes = typeof(GSAObject)
+                .Assembly.GetTypes()
+                .Where(t => t.IsSubclassOf(typeof(GSAObject)) && !t.IsAbstract);
+
+            ChangeStatus("PREPARING TO READ GSA OBJECTS");
+
+            foreach (Type t in objTypes)
+            {
+                if (t.GetMethod("GetObjects",
+                    new Type[] { typeof(ComAuto), typeof(Dictionary<Type, object>) }) == null)
+                    continue;
+                if (t.GetField("Stream") == null) continue;
+
+                int priority = 0;
+                if (t.GetField("ReadPriority") != null)
+                    priority = (int)t.GetField("ReadPriority").GetValue(null);
+
+                if (!typePriority.ContainsKey(priority))
+                    typePriority[priority] = new List<Type>();
+
+                typePriority[priority].Add(t);
+            }
+
+            // Read objects
             Dictionary<Type, object> bucketObjects = new Dictionary<Type, object>();
 
-            foreach (KeyValuePair<string, List<Type>> kvp in objectsInStream)
-            { 
-                // Get objects belonging to that stream
-                foreach(Type t in kvp.Value)
-                    bucketObjects[t] = GetObjects(t, bucketObjects);
+            foreach (KeyValuePair<int, List<Type>> kvp in typePriority)
+            {
+                foreach (Type t in kvp.Value)
+                {
+                    ChangeStatus("READING " + t.Name);
 
+                    t.GetMethod("GetObjects",
+                        new Type[] { typeof(ComAuto), typeof(Dictionary<Type, object>)})
+                        .Invoke(null, new object[] { gsaObj, bucketObjects });
+                }
+            }
+
+            // Seperate objects into streams
+            Dictionary<string, List<object>> streamBuckets = new Dictionary<string, List<object>>();
+
+            ChangeStatus("PREPARING STREAM BUCKETS");
+
+            foreach (KeyValuePair<Type, object> kvp in bucketObjects)
+            {
+                string stream = (string)kvp.Key.GetField("Stream").GetValue(null);
+                if (!streamBuckets.ContainsKey(stream))
+                    streamBuckets[stream] = (kvp.Value as IList).Cast<object>().ToList();
+                else
+                    streamBuckets[stream].AddRange((kvp.Value as IList).Cast<object>().ToList());
+            }
+
+            // Send package
+            ChangeStatus("SENDING TO SERVER");
+
+            foreach (KeyValuePair<string, List<object>> kvp in streamBuckets)
+            {
                 // Create sender if not initialized
                 if (!senders.ContainsKey(kvp.Key))
                 {
@@ -206,13 +242,7 @@ namespace SpeckleGSA
                 }
 
                 senders[kvp.Key].UpdateName(modelName + "." + kvp.Key);
-
-                // Package objects for sending
-                List<object> streamObjects = new List<object>();
-
-                foreach (Type t in kvp.Value)
-                    streamObjects.AddRange((bucketObjects[t] as IList).Cast<object>().ToList());
-
+                
                 // Send package asynchronously
                 Task task = new Task(() =>
                 {
@@ -220,7 +250,7 @@ namespace SpeckleGSA
                     { 
                         senders[kvp.Key].SendGSAObjects(
                         new Dictionary<string, List<object>>() {
-                            { "All", streamObjects}
+                            { "All", kvp.Value }
                         });
                     }
                     catch (Exception ex)
@@ -231,233 +261,14 @@ namespace SpeckleGSA
                 task.Start();
                 taskList.Add(task);
             }
-
-            ChangeStatus("SENDING TO SERVER", -1);
-
+            
             await Task.WhenAll(taskList);
 
+            // Complete
             ChangeStatus("SENDING COMPLETE", 0);
 
             MessageLog.AddMessage("Sending complete!");
-        }
-
-        private List<GSAObject> GetObjects(Type type, Dictionary<Type, object> dict)
-        {
-            List<GSAObject> res = new List<GSAObject>();
-
-            if (type == typeof(GSAMaterial))
-                res = GetMaterials();
-            else if (type == typeof(GSA2DProperty))
-                res = Get2DProperties((dict[typeof(GSAMaterial)] as IList).Cast<GSAMaterial>().ToList());
-            else if (type == typeof(GSANode))
-                res = GetNodes();
-            else if (type == typeof(GSA1DElement))
-                res = Get1DElements((dict[typeof(GSANode)] as IList).Cast<GSANode>().ToList());
-            else if (type == typeof(GSA2DElement))
-                res = Get2DElements((dict[typeof(GSANode)] as IList).Cast<GSANode>().ToList());
-
-            return res;
-        }
-
-        private List<GSAObject> GetMaterials()
-        {
-            int counter;
-
-            string[] materialIdentifier = new string[]
-                { "MAT_STEEL", "MAT_CONCRETE" };
-
-            List<GSAObject> materials = new List<GSAObject>();
-
-            List<string> pieces = new List<string>();
-            foreach (string id in materialIdentifier)
-            {
-                string res = gsaObj.GwaCommand("GET_ALL," + id);
-
-                if (res == "")
-                    continue;
-
-                pieces.AddRange(res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries));
-            }
-            pieces = pieces.Distinct().ToList();
-
-            counter = 1;
-            for (int i = 0; i < pieces.Count(); i++)
-            {
-                GSAMaterial mat = new GSAMaterial().AttachGSA(gsaObj);
-                mat.ParseGWACommand(pieces[i]);
-                mat.Reference = i+1; // Offset references
-                materials.Add(mat);
-
-                ChangeStatus("GETTING MATERIALS: " + counter.ToString() + "/" + pieces.Count().ToString(), counter * 100 / pieces.Count());
-                counter++;
-            }
-
-            return materials;
-        }
-
-        private List<GSAObject> Get2DProperties(List<GSAMaterial> materials)
-        {
-            int counter;
-
-            List<GSAObject> props = new List<GSAObject>();
-
-            string res = gsaObj.GwaCommand("GET_ALL,PROP_2D");
-
-            if (res == "")
-                return props;
-
-            string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
-
-            counter = 1;
-            foreach (string p in pieces)
-            {
-                GSA2DProperty prop = new GSA2DProperty().AttachGSA(gsaObj);
-                prop.ParseGWACommand(p, materials.ToArray());
-
-                props.Add(prop);
-
-                ChangeStatus("GETTING 2D PROPERTIES: " + counter.ToString() + "/" + pieces.Length.ToString(), counter * 100 / pieces.Length);
-                counter++;
-            }
-
-            return props;
-        }
-
-        private List<GSAObject> GetNodes()
-        {
-            int counter;
-
-            List<GSAObject> nodes = new List<GSAObject>();
-
-            string res = gsaObj.GwaCommand("GET_ALL,NODE");
-
-            if (res == "")
-                return nodes;
-
-            string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
-
-            counter = 1;
-            foreach (string p in pieces)
-            {
-                GSANode n = new GSANode().AttachGSA(gsaObj);
-                n.ParseGWACommand(p);
-
-                nodes.Add(n);
-
-                ChangeStatus("GETTING NODES: " + counter.ToString() + "/" + pieces.Length.ToString(), counter * 100 / pieces.Length );
-                counter++;
-            }
-
-            res = gsaObj.GwaCommand("GET_ALL,EL");
-
-            if (res == "")
-                return nodes;
-
-            pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
-
-            counter = 1;
-            foreach (string p in pieces)
-            {
-                string[] pPieces = p.ListSplit(",");
-                if (pPieces[4].ParseElementNumNodes() == 1)
-                {
-                    GSA0DElement e0D = new GSA0DElement().AttachGSA(gsaObj);
-                    e0D.ParseGWACommand(p);
-                    (nodes.Where(n => e0D.Connectivity.Contains(n.Reference)).First() as GSANode).Merge0DElement(e0D);
-                    ChangeStatus("GETTING 0D ELEMENTS: " + counter++.ToString(), -1);
-                }
-            }
-
-            return nodes;
-        }
-        
-        private List<GSAObject> Get1DElements(List<GSANode> nodes)
-        {
-            int counter;
-
-            List<GSAObject> elements = new List<GSAObject>();
-
-            string res = gsaObj.GwaCommand("GET_ALL,EL");
-
-            if (res == "")
-                return elements;
-
-            string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
-
-            counter = 1;
-            foreach (string p in pieces)
-            {
-                string[] pPieces = p.ListSplit(",");
-                if (pPieces[4].ParseElementNumNodes() == 2)
-                {
-                    GSA1DElement e1D = new GSA1DElement().AttachGSA(gsaObj);
-                    e1D.ParseGWACommand(p, nodes.ToArray());
-                    elements.Add(e1D);
-                    ChangeStatus("GETTING 1D ELEMENTS: " + counter++.ToString(), -1);
-                }
-            }
-            
-            return elements;
-        }
-
-        private List<GSAObject> Get2DElements(List<GSANode> nodes)
-        {
-            int counter;
-
-            List<GSAObject> elements = new List<GSAObject>();
-
-            string res = gsaObj.GwaCommand("GET_ALL,EL");
-
-            if (res == "")
-                return elements;
-
-            string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
-
-            counter = 1;
-            foreach (string p in pieces)
-            {
-                string[] pPieces = p.ListSplit(",");
-                int numConnectivity = pPieces[4].ParseElementNumNodes();
-                if (pPieces[4].ParseElementNumNodes() >= 3 )
-                {
-                    GSA2DElement e2D = new GSA2DElement().AttachGSA(gsaObj);
-                    e2D.ParseGWACommand(p, nodes.ToArray());
-
-                    GSA2DElementMesh mesh = new GSA2DElementMesh();
-                    mesh.Property = (e2D as GSA2DElement).Property;
-                    mesh.InsertionPoint = (e2D as GSA2DElement).InsertionPoint;
-                    mesh.AddElement(e2D as GSA2DElement);
-                    elements.Add(mesh);
-
-                    ChangeStatus("GETTING 2D ELEMENTS: " + counter++.ToString(), -1);
-                }
-            }
-            
-            for (int i = 0; i < elements.Count(); i++)
-            {
-                List<GSAObject> matches = elements.Where((m,j) => (elements[i] as GSA2DElementMesh).MeshMergeable(m as GSA2DElementMesh) & j != i).ToList();
-
-                foreach(GSAObject m in matches)
-                    (elements[i] as GSA2DElementMesh).MergeMesh(m as GSA2DElementMesh);
-
-                foreach (GSAObject m in matches)
-                    elements.Remove(m);
-
-                ChangeStatus("MERGING 2D ELEMENTS: " + (i + 1).ToString() + "/" + elements.Count(), (i+1) * 100 / elements.Count());
-
-                if (matches.Count() > 0) i--;
-            }
-            
-            return elements;
-        }
-        
-        private List<GSAObject> GetMembers(List<GSANode> nodes)
-        {
-            // PROBLEMS WITH GWA GET_ALL COMMAND FOR MEMBERS
-            // NEED WORKAROUND
-            return null;
-        }
-        
+        }        
         #endregion
 
         #region Import GSA
@@ -717,6 +528,12 @@ namespace SpeckleGSA
         }
 
         public GSARefCounters()
+        {
+            counter = new Dictionary<string, int>();
+            refsUsed = new Dictionary<string, List<int>>();
+        }
+
+        public void Clear()
         {
             counter = new Dictionary<string, int>();
             refsUsed = new Dictionary<string, List<int>>();

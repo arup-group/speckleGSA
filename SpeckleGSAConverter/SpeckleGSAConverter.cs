@@ -78,6 +78,9 @@ namespace SpeckleGSA
             var structuralDict = new Dictionary<string, object>();
             foreach(var prop in obj.GetType().GetProperties())
             {
+                if (!prop.CanWrite)
+                    continue;
+
                 string key = prop.Name;
                 
                 object value = prop.GetValue(obj, null).ToSpeckleDict();
@@ -119,6 +122,9 @@ namespace SpeckleGSA
 
             foreach (var prop in obj.GetType().GetProperties())
             {
+                if (!prop.CanWrite)
+                    continue;
+
                 string key = prop.Name;
                 
                 if (!structuralDict.ContainsKey(key)) continue;
@@ -164,7 +170,7 @@ namespace SpeckleGSA
             }
         }
         #endregion
-        
+
         #region GSA to Speckle
         public static SpeckleString ToSpeckle(this GSAMaterial material)
         {

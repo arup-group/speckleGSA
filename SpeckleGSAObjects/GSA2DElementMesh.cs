@@ -4,11 +4,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Interop.Gsa_9_0;
 
 namespace SpeckleGSA
 {
     public class GSA2DElementMesh : GSAObject
     {
+        public static readonly string Stream = "elements";
+        public static readonly int ReadPriority = 3;
+        public static readonly int WritePriority = 3;
+
         public string Type { get; set; }
         public int Property { get; set; }
         public double InsertionPoint { get; set; }
@@ -28,6 +33,51 @@ namespace SpeckleGSA
         }
 
         #region GSAObject Functions
+        public static void GetObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        {
+            List<GSAObject> nodes = dict[typeof(GSANode)] as List<GSAObject>;
+            List<GSAObject> e2Ds = new List<GSAObject>();
+
+            string res = gsa.GwaCommand("GET_ALL,EL");
+
+            if (res == "")
+                return;
+
+            string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+            
+            foreach (string p in pieces)
+            {
+                string[] pPieces = p.ListSplit(",");
+                int numConnectivity = pPieces[4].ParseElementNumNodes();
+                if (pPieces[4].ParseElementNumNodes() >= 3)
+                {
+                    GSA2DElement e2D = new GSA2DElement().AttachGSA(gsa);
+                    e2D.ParseGWACommand(p, nodes.ToArray());
+
+                    GSA2DElementMesh mesh = new GSA2DElementMesh();
+                    mesh.Property = (e2D as GSA2DElement).Property;
+                    mesh.InsertionPoint = (e2D as GSA2DElement).InsertionPoint;
+                    mesh.AddElement(e2D as GSA2DElement);
+                    e2Ds.Add(mesh);
+                }
+            }
+
+            for (int i = 0; i < e2Ds.Count(); i++)
+            {
+                List<GSAObject> matches = e2Ds.Where((m, j) => (e2Ds[i] as GSA2DElementMesh).MeshMergeable(m as GSA2DElementMesh) & j != i).ToList();
+
+                foreach (GSAObject m in matches)
+                    (e2Ds[i] as GSA2DElementMesh).MergeMesh(m as GSA2DElementMesh);
+
+                foreach (GSAObject m in matches)
+                    e2Ds.Remove(m);
+                
+                if (matches.Count() > 0) i--;
+            }
+
+            dict[typeof(GSA2DElement)] = e2Ds;
+        }
+
         public override void ParseGWACommand(string command, GSAObject[] children = null)
         {
             throw new NotImplementedException();

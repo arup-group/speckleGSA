@@ -4,11 +4,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Interop.Gsa_9_0;
 
 namespace SpeckleGSA
 {
     public class GSA2DProperty : GSAObject
     {
+        public static readonly string Stream = "properties";
+        public static readonly int ReadPriority = 1;
+        public static readonly int WritePriority = 1;
+
         public double Thickness { get; set; }
         public int Material { get; set; }
 
@@ -19,6 +24,29 @@ namespace SpeckleGSA
         }
 
         #region GSAObject Functions
+        public static void GetObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        {
+            List<GSAObject> materials = dict[typeof(GSAMaterial)] as List<GSAObject>;
+            List<GSAObject> props = new List<GSAObject>();
+
+            string res = gsa.GwaCommand("GET_ALL,PROP_2D");
+
+            if (res == "")
+                return;
+
+            string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+            
+            foreach (string p in pieces)
+            {
+                GSA2DProperty prop = new GSA2DProperty().AttachGSA(gsa);
+                prop.ParseGWACommand(p, materials.ToArray());
+
+                props.Add(prop);
+            }
+
+            dict[typeof(GSA2DProperty)] = props;
+        }
+
         public override void ParseGWACommand(string command, GSAObject[] children = null)
         {
             string[] pieces = command.ListSplit(",");
@@ -32,8 +60,8 @@ namespace SpeckleGSA
 
             string materialType = pieces[counter++];
             int materialGrade = Convert.ToInt32(pieces[counter++]);
-
-            GSAObject matchingMaterial = (children as GSAMaterial[]).Where(m => m.LocalReference == materialGrade & m.Type == materialType).FirstOrDefault();
+            
+            GSAObject matchingMaterial = children.Cast<GSAMaterial>().Where(m => m.LocalReference == materialGrade & m.Type == materialType).FirstOrDefault();
 
             Material = matchingMaterial == null ? 1 : matchingMaterial.Reference;
 

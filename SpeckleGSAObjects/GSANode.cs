@@ -4,11 +4,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Media.Media3D;
+using Interop.Gsa_9_0;
 
 namespace SpeckleGSA
 {
     public class GSANode : GSAObject
     {
+        public static readonly string Stream = "nodes";
+        public static readonly int ReadPriority = 2;
+        public static readonly int WritePriority = 2;
+
         public Dictionary<string, object> Axis { get; set; }
         public Dictionary<string, object> Restraint { get; set; }
         public Dictionary<string, object> Stiffness { get; set; }
@@ -44,6 +49,46 @@ namespace SpeckleGSA
         }
 
         #region GSAObject Functions
+        public static void GetObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        {
+            List<GSAObject> nodes = new List<GSAObject>();
+
+            string res = gsa.GwaCommand("GET_ALL,NODE");
+
+            if (res == "")
+                return;
+
+            string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+            
+            foreach (string p in pieces)
+            {
+                GSANode n = new GSANode().AttachGSA(gsa);
+                n.ParseGWACommand(p);
+
+                nodes.Add(n);
+            }
+
+            res = gsa.GwaCommand("GET_ALL,EL");
+
+            if (res == "")
+                return;
+
+            pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+            
+            foreach (string p in pieces)
+            {
+                string[] pPieces = p.ListSplit(",");
+                if (pPieces[4].ParseElementNumNodes() == 1)
+                {
+                    GSA0DElement e0D = new GSA0DElement().AttachGSA(gsa);
+                    e0D.ParseGWACommand(p);
+                    (nodes.Where(n => e0D.Connectivity.Contains(n.Reference)).First() as GSANode).Merge0DElement(e0D);
+                }
+            }
+
+            dict[typeof(GSANode)] = nodes;
+        }
+
         public override void ParseGWACommand(string command, GSAObject[] children = null)
         {
             string[] pieces = command.ListSplit(",");

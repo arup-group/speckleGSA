@@ -3,11 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Interop.Gsa_9_0;
 
 namespace SpeckleGSA
 {
     public class GSAMaterial : GSAObject
     {
+        public static readonly string Stream = "properties";
+        public static readonly int ReadPriority = 0;
+        public static readonly int WritePriority = 0;
+
         public string Type { get; set; }
         public string Grade { get; set; }
 
@@ -22,6 +27,36 @@ namespace SpeckleGSA
         }
 
         #region GSAObject Functions
+        public static void GetObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        {
+            string[] materialIdentifier = new string[]
+                { "MAT_STEEL", "MAT_CONCRETE" };
+
+            List<GSAObject> materials = new List<GSAObject>();
+
+            List<string> pieces = new List<string>();
+            foreach (string id in materialIdentifier)
+            {
+                string res = gsa.GwaCommand("GET_ALL," + id);
+
+                if (res == "")
+                    continue;
+
+                pieces.AddRange(res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries));
+            }
+            pieces = pieces.Distinct().ToList();
+            
+            for (int i = 0; i < pieces.Count(); i++)
+            {
+                GSAMaterial mat = new GSAMaterial().AttachGSA(gsa);
+                mat.ParseGWACommand(pieces[i]);
+                mat.Reference = i + 1; // Offset references
+                materials.Add(mat);
+            }
+
+            dict[typeof(GSAMaterial)] = materials;
+        }
+
         public override void ParseGWACommand(string command, GSAObject[] children = null)
         {
             string[] pieces = command.ListSplit(",");

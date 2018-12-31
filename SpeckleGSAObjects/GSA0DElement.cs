@@ -8,6 +8,10 @@ namespace SpeckleGSA
 {
     public class GSA0DElement : GSAObject
     {
+        public static readonly string Stream = "elements";
+        public static readonly int ReadPriority = 3;
+        public static readonly int WritePriority = 3;
+
         public string Type { get; set; }
         public int Property { get; set; }
         public int Group { get; set; }

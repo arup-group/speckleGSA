@@ -4,11 +4,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Media.Media3D;
+using Interop.Gsa_9_0;
 
 namespace SpeckleGSA
 {
     public class GSA1DElement : GSAObject
     {
+        public static readonly string Stream = "elements";
+        public static readonly int ReadPriority = 3;
+        public static readonly int WritePriority = 3;
+
         public string Type { get; set; }
         public int Property { get; set; }
         public Dictionary<string, object> Axis { get; set; }
@@ -56,6 +61,32 @@ namespace SpeckleGSA
         }
 
         #region GSAObject Functions
+        public static void GetObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        {
+            List<GSAObject> nodes = dict[typeof(GSANode)] as List<GSAObject>;
+            List<GSAObject> e1Ds = new List<GSAObject>();
+
+            string res = gsa.GwaCommand("GET_ALL,EL");
+
+            if (res == "")
+                return;
+
+            string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+            
+            foreach (string p in pieces)
+            {
+                string[] pPieces = p.ListSplit(",");
+                if (pPieces[4].ParseElementNumNodes() == 2)
+                {
+                    GSA1DElement e1D = new GSA1DElement().AttachGSA(gsa);
+                    e1D.ParseGWACommand(p, nodes.ToArray());
+                    e1Ds.Add(e1D);
+                }
+            }
+
+            dict[typeof(GSA1DElement)] = e1Ds;
+        }
+
         public override void ParseGWACommand(string command, GSAObject[] children = null)
         {
             string[] pieces = command.ListSplit(",");
