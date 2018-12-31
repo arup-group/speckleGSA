@@ -179,6 +179,19 @@ namespace SpeckleGSA
             return s;
         }
 
+        public static SpecklePolyline ToSpeckle(this GSA1DProperty prop)
+        {
+            SpecklePolyline p = new SpecklePolyline(
+                prop.Coor.Concat(prop.Coor.Take(3)),
+                prop.Reference.ToString(),
+                prop.GetSpeckleProperties());
+
+            p.Closed = true;
+            p.GenerateHash();
+
+            return p;
+        }
+
         public static SpeckleString ToSpeckle(this GSA2DProperty prop)
         {
             SpeckleString s = new SpeckleString("2D PROPERTY", prop.GetSpeckleProperties());
@@ -261,7 +274,7 @@ namespace SpeckleGSA
                     obj = new GSA2DProperty();
                     break;
                 default:
-                    return str.Value;
+                    return null;
             }
 
             obj.SetSpeckleProperties(str.Properties);
@@ -290,6 +303,37 @@ namespace SpeckleGSA
             e.Coor = line.Value;
 
             return e;
+        }
+
+        public static object ToNative(this SpecklePolyline poly)
+        {
+            if (poly.Properties != null && poly.Properties.ContainsKey("Structural"))
+            {
+                GSA1DProperty prop = new GSA1DProperty();
+
+                prop.SetSpeckleProperties(poly.Properties);
+
+                if (poly.Closed)
+                    prop.Coor = poly.Value.Take(poly.Value.Count() - 3).ToList();
+                else
+                    prop.Coor = poly.Value.Take(poly.Value.Count()).ToList();
+                
+                return prop;
+            }
+            else
+            {
+                List<GSAObject> e1Ds = new List<GSAObject>();
+
+                for(int i = 0; i < poly.Value.Count(); i+=3)
+                {
+                    GSA1DElement e = new GSA1DElement();
+                    e.Coor = poly.Value.Skip(i).Take(3).ToList();
+                    e1Ds.Add(e);
+                }
+
+                return e1Ds;
+            }
+
         }
         
         public static GSA2DElementMesh ToNative(this SpeckleMesh mesh)

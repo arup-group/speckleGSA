@@ -12,7 +12,7 @@ namespace SpeckleGSA
         public static readonly string GSAKeyword  = "MAT";
         public static readonly string Stream = "properties";
         public static readonly int ReadPriority = 0;
-        public static readonly int WritePriority = 3;
+        public static readonly int WritePriority = 4;
 
         public string Type { get; set; }
         public string Grade { get; set; }

@@ -104,9 +104,19 @@ namespace SpeckleGSA
         #endregion
 
         #region Math
+        public static double ToDegrees(this int radians)
+        {
+            return ((double)radians).ToDegrees();
+        }
+
         public static double ToDegrees(this double radians)
         {
             return radians * (180 / Math.PI);
+        }
+
+        public static double ToRadians(this int degrees)
+        {
+            return ((double)degrees).ToRadians();
         }
 
         public static double ToRadians(this double degrees)

@@ -3,29 +3,67 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
+using Interop.Gsa_9_0;
 
 namespace SpeckleGSA
 {
     public class GSA1DProperty : GSAObject
     {
-        public static readonly string GSAKeyword = "";
+        public static readonly string GSAKeyword = "PROP_SEC";
         public static readonly string Stream = "properties";
         public static readonly int ReadPriority = 1;
-        public static readonly int WritePriority = 4;
+        public static readonly int WritePriority = 3;
 
         public int Material { get; set; }
-
-        public string Type;
-        public int GradeMaterial;
-        public int AnalMaterial;
 
         public GSA1DProperty()
         {
             Material = 0;
 
-            Type = "STEEL";
-            GradeMaterial = 0;
-            AnalMaterial = 0;
+            Coor = ParseStandardDesc("STD%C%100").ToList();
+        }
+
+        #region GSAObject Functions
+        public static void GetObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        {
+            List<GSAObject> materials = dict[typeof(GSAMaterial)] as List<GSAObject>;
+            List<GSAObject> props = new List<GSAObject>();
+
+            string res = gsa.GwaCommand("GET_ALL,PROP_SEC");
+
+            if (res == "")
+                return;
+
+            string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (string p in pieces)
+            {
+                GSAObject prop = new GSA1DProperty().AttachGSA(gsa);
+                prop.ParseGWACommand(p, materials.ToArray());
+
+                props.Add(prop);
+            }
+
+            dict[typeof(GSA1DProperty)] = props;
+        }
+
+        public static void WriteObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        {
+            if (!dict.ContainsKey(typeof(GSA1DProperty))) return;
+
+            List<GSAObject> props = dict[typeof(GSA1DProperty)] as List<GSAObject>;
+
+            foreach (GSAObject p in props)
+            {
+                p.AttachGSA(gsa);
+
+                GSARefCounters.RefObject(p);
+
+                p.RunGWACommand(p.GetGWACommand(dict));
+            }
+
+            dict.Remove(typeof(GSA1DProperty));
         }
 
         public override void ParseGWACommand(string command, GSAObject[] children = null)
@@ -35,67 +73,254 @@ namespace SpeckleGSA
             Reference = Convert.ToInt32(pieces[counter++]);
             Name = pieces[counter++].Trim(new char[] { '"' });
             Color = pieces[counter++].ParseGSAColor();
-            Type = pieces[counter++];
-            GradeMaterial = Convert.ToInt32(pieces[counter++]);
-            AnalMaterial = Convert.ToInt32(pieces[counter++]);
 
-            
+            string materialType = pieces[counter++];
+            int materialGrade = Convert.ToInt32(pieces[counter++]);
+
+            GSAObject matchingMaterial = children.Cast<GSAMaterial>().Where(m => m.LocalReference == materialGrade & m.Type == materialType).FirstOrDefault();
+
+            Material = matchingMaterial == null ? 1 : matchingMaterial.Reference;
+
+            counter++; // Analysis material
+            Coor = ParseDesc(pieces[counter++]).ToList();
+            counter++; // Cost
         }
 
         public override string GetGWACommand(Dictionary<Type, object> dict = null)
         {
-            throw new NotImplementedException();
+            List<string> ls = new List<string>();
+
+            ls.Add("SET");
+            ls.Add(GSAKeyword);
+            ls.Add(Reference.ToNumString());
+            ls.Add(Name);
+            if (Color == null)
+                ls.Add("NO_RGB");
+            else
+                ls.Add(Color.ToNumString());
+
+            GSAMaterial matchingMaterial = (dict[typeof(GSAMaterial)] as List<GSAObject>).Cast<GSAMaterial>().Where(m => m.Reference == Material).FirstOrDefault();
+            ls.Add(matchingMaterial == null ? "" : matchingMaterial.Type);
+
+            ls.Add(Material.ToNumString());
+            ls.Add("0"); // Analysis material
+            ls.Add(GetGeometryDesc(Coor.ToArray()));
+            ls.Add("0"); // Cost
+
+            return string.Join(",", ls);
         }
 
         public override List<GSAObject> GetChildren()
         {
             throw new NotImplementedException();
         }
+        #endregion
 
-        //public double[] ParsePropertyDesc(string desc)
-        //{
-        //    string[] pieces = desc.ListSplit("%");
+        #region Property Parser
+        public double[] ParseDesc(string desc)
+        {
+            string[] pieces = desc.ListSplit("%");
 
-        //    switch (pieces[0])
-        //    {
-        //        case "STD":
-        //            switch
-        //            break;
-        //    }
-        //}
+            switch (pieces[0])
+            {
+                case "STD":
+                    return ParseStandardDesc(desc);
+                case "GEO":
+                    return ParseGeometryDesc(desc);
+                default:
+                    return ParseStandardDesc("STD%C%100");
+            }
+        }
 
-        //public double[] ParseStandardDesc(string desc)
-        //{
-        //    string[] pieces = desc.ListSplit("%");
+        public double[] ParseStandardDesc(string desc)
+        {
+            string[] pieces = desc.ListSplit("%");
 
-        //    double H;
-        //    double W;
-        //    double D;
-        //    double T1;
-        //    double T2;
+            if (pieces[1] == "R")
+            {
+                // Rectangle
+                double height = Convert.ToDouble(pieces[2]);
+                double width = Convert.ToDouble(pieces[3]);
+                return new double[] {
+                    width /2, height/2 , 0,
+                    -width/2, height/2 , 0,
+                    -width/2, -height/2 , 0,
+                    width/2, -height/2 , 0};
+            }
+            else if (pieces[1] == "C")
+            {
+                // Circle
+                double diameter = Convert.ToDouble(pieces[2]);
+                List<double> coor = new List<double>();
+                for (int i = 0; i < 360; i += 10)
+                {
+                    coor.Add(diameter / 2 * Math.Cos(i.ToRadians()));
+                    coor.Add(diameter / 2 * Math.Sin(i.ToRadians()));
+                    coor.Add(0);
+                }
+                return coor.ToArray();
+            }
+            else if (pieces[1] == "I")
+            {
+                // I Section
+                double depth = Convert.ToDouble(pieces[2]);
+                double width = Convert.ToDouble(pieces[3]);
+                double webThickness = Convert.ToDouble(pieces[4]);
+                double flangeThickness = Convert.ToDouble(pieces[5]);
 
-        //    switch (pieces[1])
-        //    {
-        //        case "R":
-        //            H = Convert.ToDouble(pieces[3]);
-        //            W = Convert.ToDouble(pieces[4]);
-        //            return new double[] { W/2, H/2 , 0,
-        //                -W/2, H/2 , 0,
-        //                -W/2, -H/2 , 0,
-        //                W/2, -H/2 , 0};
-        //        case "C":
-        //            D = Convert.ToDouble(pieces[3]);
-        //            List<double> coor = new List<double>();
-        //            for (int i = 0; i < 360; i += 10)
-        //            {
-        //                coor.Add(D / 2 * Math.Cos(i * (Math.PI / 180)));
-        //                coor.Add(D / 2 * Math.Sin(i * (Math.PI / 180)));
-        //                coor.Add(0);
-        //            }
-        //            return coor.ToArray();
-        //        case "I":
-                    
-        //    }
-        //}
+                return new double[] {
+                    webThickness/2, depth/2 - flangeThickness, 0,
+                    width/2, depth/2 - flangeThickness, 0,
+                    width/2, depth/2, 0,
+                    -width/2, depth/2, 0,
+                    -width/2, depth/2 - flangeThickness, 0,
+                    -webThickness/2, depth/2 - flangeThickness, 0,
+                    -webThickness/2, -(depth/2 - flangeThickness), 0,
+                    -width/2, -(depth/2 - flangeThickness), 0,
+                    -width/2, -depth/2, 0,
+                    width/2, -depth/2, 0,
+                    width/2, -(depth/2 - flangeThickness), 0,
+                    webThickness/2, -(depth/2 - flangeThickness), 0};
+            }
+            else if (pieces[1] == "T")
+            {
+                // T Section
+                double depth = Convert.ToDouble(pieces[2]);
+                double width = Convert.ToDouble(pieces[3]);
+                double webThickness = Convert.ToDouble(pieces[4]);
+                double flangeThickness = Convert.ToDouble(pieces[5]);
+
+                return new double[] {
+                    webThickness/2, - flangeThickness, 0,
+                    width/2, - flangeThickness, 0,
+                    width/2, 0, 0,
+                    -width/2, 0, 0,
+                    -width/2, - flangeThickness, 0,
+                    -webThickness/2, - flangeThickness, 0,
+                    -webThickness/2, -depth, 0,
+                    webThickness/2, -depth, 0};
+            }
+            else if (pieces[1] == "CH")
+            {
+                // Channel Section
+                double depth = Convert.ToDouble(pieces[2]);
+                double width = Convert.ToDouble(pieces[3]);
+                double webThickness = Convert.ToDouble(pieces[4]);
+                double flangeThickness = Convert.ToDouble(pieces[5]);
+
+                return new double[] {
+                    webThickness, depth/2 - flangeThickness, 0,
+                    width, depth/2 - flangeThickness, 0,
+                    width, depth/2, 0,
+                    0, depth/2, 0,
+                    0, -depth/2, 0,
+                    width, -depth/2, 0,
+                    width, -(depth/2 - flangeThickness), 0,
+                    webThickness, -(depth/2 - flangeThickness), 0};
+            }
+            else if (pieces[1] == "A")
+            {
+                // Angle Section
+                double depth = Convert.ToDouble(pieces[2]);
+                double width = Convert.ToDouble(pieces[3]);
+                double webThickness = Convert.ToDouble(pieces[4]);
+                double flangeThickness = Convert.ToDouble(pieces[5]);
+
+                return new double[] {
+                    0, 0, 0,
+                    width, 0, 0,
+                    width, flangeThickness, 0,
+                    webThickness, flangeThickness, 0,
+                    webThickness, depth, 0,
+                    0, depth, 0};
+            }
+            else if (pieces[1] == "TR")
+            {
+                // Taper Section
+                double depth = Convert.ToDouble(pieces[2]);
+                double topWidth = Convert.ToDouble(pieces[3]);
+                double bottomWidth = Convert.ToDouble(pieces[4]);
+                return new double[] {
+                    topWidth /2, depth/2 , 0,
+                    -topWidth/2, depth/2 , 0,
+                    -bottomWidth/2, -depth/2 , 0,
+                    bottomWidth/2, -depth/2 , 0};
+            }
+            else if (pieces[1] == "E")
+            {
+                // Ellipse Section
+                double depth = Convert.ToDouble(pieces[2]);
+                double width = Convert.ToDouble(pieces[3]);
+                int index = Convert.ToInt32(pieces[4]);
+
+                List<double> coor = new List<double>();
+                for (int i = 0; i < 360; i += 10)
+                {
+                    double radius =
+                        depth * width / Math.Pow(
+                            Math.Pow(depth * Math.Cos(i.ToRadians()), index)
+                            + Math.Pow(width * Math.Sin(i.ToRadians()), index),
+                            1 / index);
+
+                    coor.Add(radius * Math.Cos(i.ToRadians()));
+                    coor.Add(radius * Math.Sin(i.ToRadians()));
+                    coor.Add(0);
+                }
+                return coor.ToArray();
+            }
+            else
+                return ParseStandardDesc("STD C 100");
+
+            // TODO: IMPLEMENT ALL SECTIONS
+        }
+
+        public double[] ParseGeometryDesc(string desc)
+        {
+            string[] pieces = desc.ListSplit("%");
+
+            if (pieces[1] == "P")
+            {
+                // Perimeter Section
+                List<double> coor = new List<double>();
+
+                MatchCollection points = Regex.Matches(desc, @"(?<=()(.*)(?=))");
+                foreach (Match point in points)
+                {
+                    string[] n = point.Value.Split(new char[] { '|' });
+
+                    coor.Add(Convert.ToDouble(n[0]));
+                    coor.Add(Convert.ToDouble(n[1]));
+                    coor.Add(0);
+                }
+
+                return coor.ToArray();
+            }
+            else
+                return ParseStandardDesc("STD C 100");
+
+            // TODO: IMPLEMENT ALL SECTIONS
+        }
+
+        public string GetGeometryDesc(double[] coor)
+        {
+            if (coor.Count() < 9) return "STD%D%100";
+
+            List<string> ls = new List<string>();
+
+            ls.Add("GEO");
+            ls.Add("P");
+
+            for(int i = 0; i < coor.Count(); i += 3)
+            {
+                string point = i == 0? "M" : "L";
+
+                point += "(" + coor[i].ToNumString() + "|" + coor[i+1].ToNumString() + ")";
+
+                ls.Add(point);
+            }
+
+            return string.Join("%", ls);
+        }
+        #endregion
     }
 }

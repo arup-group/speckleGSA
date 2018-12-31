@@ -13,7 +13,7 @@ namespace SpeckleGSA
         public static readonly string GSAKeyword = "PROP_2D";
         public static readonly string Stream = "properties";
         public static readonly int ReadPriority = 1;
-        public static readonly int WritePriority = 4;
+        public static readonly int WritePriority = 3;
 
         public double Thickness { get; set; }
         public int Material { get; set; }
@@ -105,10 +105,10 @@ namespace SpeckleGSA
             ls.Add("SHELL");
             ls.Add("GLOBAL");
             ls.Add("0"); // Analysis material
-            if (dict.ContainsKey(typeof(GSAMaterial)))
-                ls.Add((dict[typeof(GSAMaterial)] as List<GSAObject>).Cast<GSAMaterial>().Where(m => m.Reference == Material).FirstOrDefault().Type);
-            else
-                ls.Add("");
+
+            GSAMaterial matchingMaterial = (dict[typeof(GSAMaterial)] as List<GSAObject>).Cast<GSAMaterial>().Where(m => m.Reference == Material).FirstOrDefault();
+            ls.Add(matchingMaterial == null ? "" : matchingMaterial.Type);
+
             ls.Add(Material.ToNumString());
             ls.Add("1"); // Design
             ls.Add(Thickness.ToNumString());
