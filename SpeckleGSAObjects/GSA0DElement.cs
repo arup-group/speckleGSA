@@ -11,7 +11,7 @@ namespace SpeckleGSA
     {
         public static readonly string GSAKeyword = "EL";
         public static readonly string Stream = "elements";
-        public static readonly int ReadPriority = 4;
+        public static readonly int ReadPriority = 1;
         public static readonly int WritePriority = 9999;
 
         public string Type { get; set; }
@@ -30,6 +30,32 @@ namespace SpeckleGSA
         }
 
         #region GSAObject Functions
+        public static void GetObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        {
+            List<GSAObject> e0Ds = new List<GSAObject>();
+
+            string res = gsa.GwaCommand("GET_ALL,EL");
+
+            if (res == "")
+                return;
+
+            string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (string p in pieces)
+            {
+                string[] pPieces = p.ListSplit(",");
+                if (pPieces[4].ParseElementNumNodes() == 1)
+                {
+                    GSA0DElement e0D = new GSA0DElement().AttachGSA(gsa);
+                    e0D.ParseGWACommand(p);
+
+                    e0Ds.Add(e0D);
+                }
+            }
+            
+            dict[typeof(GSA0DElement)] = e0Ds;
+        }
+
         public static void WriteObjects(ComAuto gsa, Dictionary<Type, object> dict)
         {
             if (!dict.ContainsKey(typeof(GSA0DElement))) return;

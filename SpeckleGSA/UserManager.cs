@@ -17,7 +17,6 @@ namespace SpeckleGSA
         public string Password { get; set; }
         public string ApiToken { get; set; }
         public string ServerAddress { get; set; }
-        public string ServerName { get; set; }
         public string RestApi { get; set; }
 
         public UserManager(string email, string password, string serverAdress)
@@ -29,49 +28,45 @@ namespace SpeckleGSA
 
         public int Login()
         {
-            // Create user
-            User myUser = new User()
-            {
-                Email = this.Email,
-                Password = this.Password
-            };
-
             // Create Uri for server
-            Uri ServerAddress;
-            Uri.TryCreate(this.ServerAddress, UriKind.Absolute, out ServerAddress);
+            Uri serverAddress;
+            Uri.TryCreate(this.ServerAddress, UriKind.Absolute, out serverAddress);
+            RestApi = serverAddress.ToString();
 
-            userClient = new SpeckleApiClient() { BaseUrl = ServerAddress.ToString() };
-            
-            // Get server name
-            string rawPingReply = "";
-            dynamic parsedReply = null;
-            using (var client = new WebClient())
+            // Attempt to use local cache
+            Account storedAccount = LocalContext.GetAccountByEmailAndRestApi(Email, RestApi);
+
+            if (storedAccount != null)
             {
+                ApiToken = storedAccount.Token;
+                return 0;
+            }
+            else
+            { 
+                // Login and get API token
+                userClient = new SpeckleApiClient() { BaseUrl = RestApi };
+
+                User myUser = new User()
+                {
+                    Email = this.Email,
+                    Password = this.Password
+                };
+
                 try
                 {
-                    rawPingReply = client.DownloadString(ServerAddress.ToString());
-                    parsedReply = JsonConvert.DeserializeObject(rawPingReply);
+                    var response = userClient.UserLoginAsync(myUser).Result;
+                    ApiToken = response.Resource.Apitoken;
+
+                    LocalContext.AddAccount(new Account()
+                    { Email = this.Email,
+                        Token = this.ApiToken,
+                        RestApi = this.ServerAddress });
+                    return 0;
                 }
                 catch
                 {
-                    Console.Write("Failed to contact: " + ServerAddress.ToString());
                     return 1;
                 }
-            }
-            ServerName = (string)parsedReply.serverName;
-
-            // Login and get API token
-            try
-            {
-                var response = userClient.UserLoginAsync(myUser).Result;
-                ApiToken = response.Resource.Apitoken;
-                RestApi = ServerAddress.ToString();
-                return 0;
-            }
-            catch
-            {
-                Console.WriteLine("Failed to login.");
-                return 1;
             }
         }
     }

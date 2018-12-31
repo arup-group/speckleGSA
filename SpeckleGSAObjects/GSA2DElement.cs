@@ -34,6 +34,34 @@ namespace SpeckleGSA
         }
 
         #region GSAObject Functions
+        public static void GetObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        {
+            List<GSAObject> nodes = dict[typeof(GSANode)] as List<GSAObject>;
+            List<GSAObject> e2Ds = new List<GSAObject>();
+
+            string res = gsa.GwaCommand("GET_ALL,EL");
+
+            if (res == "")
+                return;
+
+            string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (string p in pieces)
+            {
+                string[] pPieces = p.ListSplit(",");
+                int numConnectivity = pPieces[4].ParseElementNumNodes();
+                if (pPieces[4].ParseElementNumNodes() >= 3)
+                {
+                    GSA2DElement e2D = new GSA2DElement().AttachGSA(gsa);
+                    e2D.ParseGWACommand(p, nodes.ToArray());
+
+                    e2Ds.Add(e2D);
+                }
+            }
+
+            dict[typeof(GSA2DElement)] = e2Ds;
+        }
+
         public static void WriteObjects(ComAuto gsa, Dictionary<Type, object> dict)
         {
             if (!dict.ContainsKey(typeof(GSA2DElement))) return;

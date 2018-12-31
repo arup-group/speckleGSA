@@ -12,7 +12,7 @@ namespace SpeckleGSA
     {
         public static readonly string GSAKeyword = "";
         public static readonly string Stream = "elements";
-        public static readonly int ReadPriority = 3;
+        public static readonly int ReadPriority = 4;
         public static readonly int WritePriority = 0;
 
         public string Type { get; set; }
@@ -36,47 +36,35 @@ namespace SpeckleGSA
         #region GSAObject Functions
         public static void GetObjects(ComAuto gsa, Dictionary<Type, object> dict)
         {
-            List<GSAObject> nodes = dict[typeof(GSANode)] as List<GSAObject>;
-            List<GSAObject> e2Ds = new List<GSAObject>();
-
-            string res = gsa.GwaCommand("GET_ALL,EL");
-
-            if (res == "")
-                return;
-
-            string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+            if (!dict.ContainsKey(typeof(GSA2DElement))) return;
             
-            foreach (string p in pieces)
+            List<GSAObject> meshes = new List<GSAObject>();
+            
+            foreach (GSAObject e2D in dict[typeof(GSA2DElement)] as List<GSAObject>)
             {
-                string[] pPieces = p.ListSplit(",");
-                int numConnectivity = pPieces[4].ParseElementNumNodes();
-                if (pPieces[4].ParseElementNumNodes() >= 3)
-                {
-                    GSA2DElement e2D = new GSA2DElement().AttachGSA(gsa);
-                    e2D.ParseGWACommand(p, nodes.ToArray());
-
-                    GSA2DElementMesh mesh = new GSA2DElementMesh();
-                    mesh.Property = (e2D as GSA2DElement).Property;
-                    mesh.InsertionPoint = (e2D as GSA2DElement).InsertionPoint;
-                    mesh.AddElement(e2D as GSA2DElement);
-                    e2Ds.Add(mesh);
-                }
+                GSA2DElementMesh mesh = new GSA2DElementMesh();
+                mesh.Property = (e2D as GSA2DElement).Property;
+                mesh.InsertionPoint = (e2D as GSA2DElement).InsertionPoint;
+                mesh.AddElement(e2D as GSA2DElement);
+                meshes.Add(mesh);
             }
 
-            for (int i = 0; i < e2Ds.Count(); i++)
+            dict.Remove(typeof(GSA2DElement));
+
+            for (int i = 0; i < meshes.Count(); i++)
             {
-                List<GSAObject> matches = e2Ds.Where((m, j) => (e2Ds[i] as GSA2DElementMesh).MeshMergeable(m as GSA2DElementMesh) & j != i).ToList();
+                List<GSAObject> matches = meshes.Where((m, j) => (meshes[i] as GSA2DElementMesh).MeshMergeable(m as GSA2DElementMesh) & j != i).ToList();
 
                 foreach (GSAObject m in matches)
-                    (e2Ds[i] as GSA2DElementMesh).MergeMesh(m as GSA2DElementMesh);
+                    (meshes[i] as GSA2DElementMesh).MergeMesh(m as GSA2DElementMesh);
 
                 foreach (GSAObject m in matches)
-                    e2Ds.Remove(m);
+                    meshes.Remove(m);
                 
                 if (matches.Count() > 0) i--;
             }
 
-            dict[typeof(GSA2DElement)] = e2Ds;
+            dict[typeof(GSA2DElementMesh)] = meshes;
         }
 
         public static void WriteObjects(ComAuto gsa, Dictionary<Type, object> dict)

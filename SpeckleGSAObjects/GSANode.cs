@@ -69,22 +69,17 @@ namespace SpeckleGSA
                 nodes.Add(n);
             }
 
-            res = gsa.GwaCommand("GET_ALL,EL");
-
-            if (res == "")
-                return;
-
-            pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
-            
-            foreach (string p in pieces)
+            if (dict.ContainsKey(typeof(GSA0DElement)))
             {
-                string[] pPieces = p.ListSplit(",");
-                if (pPieces[4].ParseElementNumNodes() == 1)
-                {
-                    GSA0DElement e0D = new GSA0DElement().AttachGSA(gsa);
-                    e0D.ParseGWACommand(p);
-                    (nodes.Where(n => e0D.Connectivity.Contains(n.Reference)).First() as GSANode).Merge0DElement(e0D);
+                foreach(GSAObject e in dict[typeof(GSA0DElement)] as List<GSAObject>)
+                { 
+                    try { 
+                        (nodes.Where(n => e.Connectivity.Contains(n.Reference)).First() as GSANode).Merge0DElement(e as GSA0DElement);
+                    }
+                    catch { }
                 }
+
+                dict.Remove(typeof(GSA0DElement));
             }
 
             dict[typeof(GSANode)] = nodes;

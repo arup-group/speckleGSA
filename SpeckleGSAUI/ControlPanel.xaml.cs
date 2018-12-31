@@ -54,14 +54,18 @@ namespace SpeckleGSAUI
         }
 
         #region Speckle Operations
-        private async void Login(object sender, RoutedEventArgs e)
+        private void Login(object sender, RoutedEventArgs e)
         {
-            await gsa.Login(EmailAddress.Text, Password.Password, ServerAddress.Text);
+            string email = EmailAddress.Text;
+            string password = Password.Password;
+            string server = ServerAddress.Text;
+
+            Task.Run( () => gsa.Login(email, password, server));
         }
 
-        private async void UpdateStreamList(object sender, RoutedEventArgs e)
+        private void UpdateStreamList(object sender, RoutedEventArgs e)
         {
-            await gsa.GetStreamList().ContinueWith(res =>
+            Task.Run(() => gsa.GetStreamList()).ContinueWith(res =>
             {
                 Application.Current.Dispatcher.BeginInvoke(
                         DispatcherPriority.Background,
@@ -81,9 +85,9 @@ namespace SpeckleGSAUI
             );
         }
 
-        private async void CloneModelStreams(object sender, RoutedEventArgs e)
+        private void CloneModelStreams(object sender, RoutedEventArgs e)
         {
-            await gsa.CloneModelStreams();
+            Task.Run(()=> gsa.CloneModelStreams());
         }
 
         #endregion

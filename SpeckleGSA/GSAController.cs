@@ -69,23 +69,21 @@ namespace SpeckleGSA
         }
 
         #region Server
-        public async Task Login(string email, string password, string serverAddress)
+        public void Login(string email, string password, string serverAddress)
         {
-            await Task.Run(delegate
-            {
-                userManager = new UserManager(email, password, serverAddress);
-            }).ContinueWith(delegate
-            {
-                if (userManager.Login() == 0)
-                    MessageLog.AddMessage("Successfully logged in");
-                else
-                    MessageLog.AddError("Failed to login");
-
+            var tempUserManager = new UserManager(email, password, serverAddress);
+            
+            if (tempUserManager.Login() == 0)
+            { 
+                MessageLog.AddMessage("Successfully logged in");
+                userManager = tempUserManager;
                 streamManager = new StreamManager(userManager.ServerAddress, userManager.ApiToken);
-            });
+            }
+            else
+                MessageLog.AddError("Failed to login");
         }
 
-        public async Task<List<Tuple<string, string>>> GetStreamList()
+        public List<Tuple<string, string>> GetStreamList()
         {
             if (userManager == null | streamManager == null)
             {
@@ -96,7 +94,7 @@ namespace SpeckleGSA
             try
             {
                 MessageLog.AddMessage("Fetching stream list.");
-                var response = await streamManager.GetStreams();
+                var response = streamManager.GetStreams().Result;
                 MessageLog.AddMessage("Finished fetching stream list.");
                 return response;
             }
@@ -107,7 +105,7 @@ namespace SpeckleGSA
             }
         }
 
-        public async Task CloneModelStreams()
+        public void CloneModelStreams()
         {
             if (userManager == null | streamManager == null)
             {
@@ -160,9 +158,7 @@ namespace SpeckleGSA
             gsaObj.DisplayGsaWindow(true);
             MessageLog.AddMessage("Opened " + path);
         }
-        #endregion
 
-        #region Extract GSA
         public async Task ExportObjects(string modelName)
         {
             List<Task> taskList = new List<Task>();
@@ -270,9 +266,7 @@ namespace SpeckleGSA
 
             MessageLog.AddMessage("Sending complete!");
         }        
-        #endregion
 
-        #region Import GSA
         public async Task ImportObjects(Dictionary<string, string> streamIDs)
         {
             List<Task> taskList = new List<Task>();
