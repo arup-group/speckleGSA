@@ -76,31 +76,34 @@ namespace SpeckleGSA
 
                 List<GSAObject> nodes = e.GetChildren();
                 
-                for (int i = 0; i < nodes.Count(); i++)
-                    GSARefCounters.RefObject(nodes[i]);
-
-                e.Connectivity = nodes.Select(n => n.Reference).ToList();
-
                 if (dict.ContainsKey(typeof(GSANode)))
                 {
                     for (int i = 0; i < nodes.Count(); i++)
                     {
                         List<GSAObject> matches = (dict[typeof(GSANode)] as List<GSAObject>).Where(
-                            n => n.Coor[0] == nodes[i].Coor[0] &
-                            n.Coor[1] == nodes[i].Coor[1] &
-                            n.Coor[2] == nodes[i].Coor[2]).ToList();
+                            n => (n as GSANode).IsCoincident(nodes[i] as GSANode)).ToList();
 
                         if (matches.Count() > 0)
                         {
-                            e.Connectivity[i] = matches[0].Reference;
+                            nodes[i].Reference = matches[0].Reference;
                             (matches[0] as GSANode).Merge(nodes[i] as GSANode);
                         }
                         else
+                        {
+                            GSARefCounters.RefObject(nodes[i]);
                             (dict[typeof(GSANode)] as List<GSAObject>).Add(nodes[i]);
+                        }
                     }
                 }
                 else
+                {
+                    for (int i = 0; i < nodes.Count(); i++)
+                        GSARefCounters.RefObject(nodes[i]);
+
                     dict[typeof(GSANode)] = nodes;
+                }
+
+                e.Connectivity = nodes.Select(n => n.Reference).ToList();
 
                 e.RunGWACommand(e.GetGWACommand());
             }
@@ -132,11 +135,20 @@ namespace SpeckleGSA
 
             counter++; // Orientation node
 
-            List<GSAObject> props = dict[typeof(GSA2DProperty)] as List<GSAObject>;
-            GSAObject prop = props.Where(p => p.Reference == Property).FirstOrDefault();
-            Axis = ParseGSA2DElementAxis(Coor.ToArray(),
-                Convert.ToDouble(pieces[counter++]),
-                prop == null ? false : (prop as GSA2DProperty).IsAxisLocal);
+            if (dict.ContainsKey(typeof(GSA2DProperty)))
+            { 
+                List<GSAObject> props = dict[typeof(GSA2DProperty)] as List<GSAObject>;
+                GSAObject prop = props.Where(p => p.Reference == Property).FirstOrDefault();
+                Axis = ParseGSA2DElementAxis(Coor.ToArray(),
+                    Convert.ToDouble(pieces[counter++]),
+                    prop == null ? false : (prop as GSA2DProperty).IsAxisLocal);
+            }
+            else
+            {
+                Axis = ParseGSA2DElementAxis(Coor.ToArray(),
+                    Convert.ToDouble(pieces[counter++]),
+                    false);
+            }
 
             if (pieces[counter++] != "NO_RLS")
             {

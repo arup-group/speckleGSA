@@ -21,7 +21,7 @@ namespace SpeckleGSA
         {
             Material = 0;
 
-            Coor = ParseStandardDesc("STD%C%100").ToList();
+            Coor = ParseStandardDesc("STD%C%100","m").ToList();
         }
 
         #region GSAObject Functions
@@ -37,6 +37,11 @@ namespace SpeckleGSA
 
             string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
 
+            // Hold temporary dimension
+            res = gsa.GwaCommand("GET,UNIT_DATA,LENGTH");
+            string dimension = res.ListSplit(",")[2];
+            dict[typeof(string)] = dimension;
+
             foreach (string p in pieces)
             {
                 GSAObject prop = new GSA1DProperty().AttachGSA(gsa);
@@ -45,6 +50,7 @@ namespace SpeckleGSA
                 props.Add(prop);
             }
 
+            dict.Remove(typeof(string));
             dict[typeof(GSA1DProperty)] = props;
         }
 
@@ -53,6 +59,11 @@ namespace SpeckleGSA
             if (!dict.ContainsKey(typeof(GSA1DProperty))) return;
 
             List<GSAObject> props = dict[typeof(GSA1DProperty)] as List<GSAObject>;
+
+            // Hold temporary dimension
+            string res = gsa.GwaCommand("GET,UNIT_DATA,LENGTH");
+            string dimension = res.ListSplit(",")[2];
+            dict[typeof(string)] = dimension;
 
             foreach (GSAObject p in props)
             {
@@ -63,6 +74,7 @@ namespace SpeckleGSA
                 p.RunGWACommand(p.GetGWACommand(dict));
             }
 
+            dict.Remove(typeof(string));
             dict.Remove(typeof(GSA1DProperty));
         }
 
@@ -77,13 +89,17 @@ namespace SpeckleGSA
             string materialType = pieces[counter++];
             int materialGrade = Convert.ToInt32(pieces[counter++]);
 
-            List<GSAObject> materials = dict[typeof(GSAMaterial)] as List<GSAObject>;
-            GSAObject matchingMaterial = materials.Cast<GSAMaterial>().Where(m => m.LocalReference == materialGrade & m.Type == materialType).FirstOrDefault();
-
-            Material = matchingMaterial == null ? 1 : matchingMaterial.Reference;
+            if (dict.ContainsKey(typeof(GSAMaterial)))
+            {
+                List<GSAObject> materials = dict[typeof(GSAMaterial)] as List<GSAObject>;
+                GSAObject matchingMaterial = materials.Cast<GSAMaterial>().Where(m => m.LocalReference == materialGrade & m.Type == materialType).FirstOrDefault();
+                Material = matchingMaterial == null ? 1 : matchingMaterial.Reference;
+            }
+            else
+                Material = 1;
 
             counter++; // Analysis material
-            Coor = ParseDesc(pieces[counter++]).ToList();
+            Coor = ParseDesc(pieces[counter++], dict[typeof(string)] as string).ToList();
             counter++; // Cost
         }
 
@@ -100,12 +116,17 @@ namespace SpeckleGSA
             else
                 ls.Add(Color.ToNumString());
 
-            GSAMaterial matchingMaterial = (dict[typeof(GSAMaterial)] as List<GSAObject>).Cast<GSAMaterial>().Where(m => m.Reference == Material).FirstOrDefault();
-            ls.Add(matchingMaterial == null ? "" : matchingMaterial.Type);
+            if (dict.ContainsKey(typeof(GSAMaterial)))
+            {
+                GSAMaterial matchingMaterial = (dict[typeof(GSAMaterial)] as List<GSAObject>).Cast<GSAMaterial>().Where(m => m.Reference == Material).FirstOrDefault();
+                ls.Add(matchingMaterial == null ? "" : matchingMaterial.Type);
+            }
+            else
+                ls.Add("");
 
             ls.Add(Material.ToNumString());
             ls.Add("0"); // Analysis material
-            ls.Add(GetGeometryDesc(Coor.ToArray()));
+            ls.Add(GetGeometryDesc(Coor.ToArray(), dict[typeof(string)] as string));
             ls.Add("0"); // Cost
 
             return string.Join(",", ls);
@@ -118,40 +139,43 @@ namespace SpeckleGSA
         #endregion
 
         #region Property Parser
-        public double[] ParseDesc(string desc)
+        public double[] ParseDesc(string desc, string globalDimension)
         {
             string[] pieces = desc.ListSplit("%");
 
             switch (pieces[0])
             {
                 case "STD":
-                    return ParseStandardDesc(desc);
+                    return ParseStandardDesc(desc, globalDimension);
                 case "GEO":
-                    return ParseGeometryDesc(desc);
+                    return ParseGeometryDesc(desc, globalDimension);
                 default:
-                    return ParseStandardDesc("STD%C%100");
+                    return ParseStandardDesc("STD%C%100", globalDimension);
             }
         }
 
-        public double[] ParseStandardDesc(string desc)
+        public double[] ParseStandardDesc(string desc, string globalDimension)
         {
             string[] pieces = desc.ListSplit("%");
 
-            if (pieces[1] == "R")
+            string unit = Regex.Match(pieces[1], @"(?<=()(.*)(?=))").Value;
+            if (unit == "") unit = "mm";
+
+            if (pieces[1][0] == 'R')
             {
                 // Rectangle
-                double height = Convert.ToDouble(pieces[2]);
-                double width = Convert.ToDouble(pieces[3]);
+                double height = Convert.ToDouble(pieces[2]).ConvertUnit(unit, globalDimension);
+                double width = Convert.ToDouble(pieces[3]).ConvertUnit(unit, globalDimension);
                 return new double[] {
                     width /2, height/2 , 0,
                     -width/2, height/2 , 0,
                     -width/2, -height/2 , 0,
                     width/2, -height/2 , 0};
             }
-            else if (pieces[1] == "C")
+            else if (pieces[1][0] == 'C')
             {
                 // Circle
-                double diameter = Convert.ToDouble(pieces[2]);
+                double diameter = Convert.ToDouble(pieces[2]).ConvertUnit(unit, globalDimension);
                 List<double> coor = new List<double>();
                 for (int i = 0; i < 360; i += 10)
                 {
@@ -161,13 +185,13 @@ namespace SpeckleGSA
                 }
                 return coor.ToArray();
             }
-            else if (pieces[1] == "I")
+            else if (pieces[1][0] == 'I')
             {
                 // I Section
-                double depth = Convert.ToDouble(pieces[2]);
-                double width = Convert.ToDouble(pieces[3]);
-                double webThickness = Convert.ToDouble(pieces[4]);
-                double flangeThickness = Convert.ToDouble(pieces[5]);
+                double depth = Convert.ToDouble(pieces[2]).ConvertUnit(unit, globalDimension);
+                double width = Convert.ToDouble(pieces[3]).ConvertUnit(unit, globalDimension);
+                double webThickness = Convert.ToDouble(pieces[4]).ConvertUnit(unit, globalDimension);
+                double flangeThickness = Convert.ToDouble(pieces[5]).ConvertUnit(unit, globalDimension);
 
                 return new double[] {
                     webThickness/2, depth/2 - flangeThickness, 0,
@@ -183,13 +207,13 @@ namespace SpeckleGSA
                     width/2, -(depth/2 - flangeThickness), 0,
                     webThickness/2, -(depth/2 - flangeThickness), 0};
             }
-            else if (pieces[1] == "T")
+            else if (pieces[1][0] == 'T')
             {
                 // T Section
-                double depth = Convert.ToDouble(pieces[2]);
-                double width = Convert.ToDouble(pieces[3]);
-                double webThickness = Convert.ToDouble(pieces[4]);
-                double flangeThickness = Convert.ToDouble(pieces[5]);
+                double depth = Convert.ToDouble(pieces[2]).ConvertUnit(unit, globalDimension);
+                double width = Convert.ToDouble(pieces[3]).ConvertUnit(unit, globalDimension);
+                double webThickness = Convert.ToDouble(pieces[4]).ConvertUnit(unit, globalDimension);
+                double flangeThickness = Convert.ToDouble(pieces[5]).ConvertUnit(unit, globalDimension);
 
                 return new double[] {
                     webThickness/2, - flangeThickness, 0,
@@ -201,13 +225,13 @@ namespace SpeckleGSA
                     -webThickness/2, -depth, 0,
                     webThickness/2, -depth, 0};
             }
-            else if (pieces[1] == "CH")
+            else if (pieces[1].Substring(0,2) == "CH")
             {
                 // Channel Section
-                double depth = Convert.ToDouble(pieces[2]);
-                double width = Convert.ToDouble(pieces[3]);
-                double webThickness = Convert.ToDouble(pieces[4]);
-                double flangeThickness = Convert.ToDouble(pieces[5]);
+                double depth = Convert.ToDouble(pieces[2]).ConvertUnit(unit, globalDimension);
+                double width = Convert.ToDouble(pieces[3]).ConvertUnit(unit, globalDimension);
+                double webThickness = Convert.ToDouble(pieces[4]).ConvertUnit(unit, globalDimension);
+                double flangeThickness = Convert.ToDouble(pieces[5]).ConvertUnit(unit, globalDimension);
 
                 return new double[] {
                     webThickness, depth/2 - flangeThickness, 0,
@@ -219,13 +243,13 @@ namespace SpeckleGSA
                     width, -(depth/2 - flangeThickness), 0,
                     webThickness, -(depth/2 - flangeThickness), 0};
             }
-            else if (pieces[1] == "A")
+            else if (pieces[1][0] == 'A')
             {
                 // Angle Section
-                double depth = Convert.ToDouble(pieces[2]);
-                double width = Convert.ToDouble(pieces[3]);
-                double webThickness = Convert.ToDouble(pieces[4]);
-                double flangeThickness = Convert.ToDouble(pieces[5]);
+                double depth = Convert.ToDouble(pieces[2]).ConvertUnit(unit, globalDimension);
+                double width = Convert.ToDouble(pieces[3]).ConvertUnit(unit, globalDimension);
+                double webThickness = Convert.ToDouble(pieces[4]).ConvertUnit(unit, globalDimension);
+                double flangeThickness = Convert.ToDouble(pieces[5]).ConvertUnit(unit, globalDimension);
 
                 return new double[] {
                     0, 0, 0,
@@ -235,23 +259,23 @@ namespace SpeckleGSA
                     webThickness, depth, 0,
                     0, depth, 0};
             }
-            else if (pieces[1] == "TR")
+            else if (pieces[1].Substring(0, 2) == "TR")
             {
                 // Taper Section
-                double depth = Convert.ToDouble(pieces[2]);
-                double topWidth = Convert.ToDouble(pieces[3]);
-                double bottomWidth = Convert.ToDouble(pieces[4]);
+                double depth = Convert.ToDouble(pieces[2]).ConvertUnit(unit, globalDimension);
+                double topWidth = Convert.ToDouble(pieces[3]).ConvertUnit(unit, globalDimension);
+                double bottomWidth = Convert.ToDouble(pieces[4]).ConvertUnit(unit, globalDimension);
                 return new double[] {
                     topWidth /2, depth/2 , 0,
                     -topWidth/2, depth/2 , 0,
                     -bottomWidth/2, -depth/2 , 0,
                     bottomWidth/2, -depth/2 , 0};
             }
-            else if (pieces[1] == "E")
+            else if (pieces[1][0] == 'E')
             {
                 // Ellipse Section
-                double depth = Convert.ToDouble(pieces[2]);
-                double width = Convert.ToDouble(pieces[3]);
+                double depth = Convert.ToDouble(pieces[2]).ConvertUnit(unit, globalDimension);
+                double width = Convert.ToDouble(pieces[3]).ConvertUnit(unit, globalDimension);
                 int index = Convert.ToInt32(pieces[4]);
 
                 List<double> coor = new List<double>();
@@ -270,46 +294,52 @@ namespace SpeckleGSA
                 return coor.ToArray();
             }
             else
-                return ParseStandardDesc("STD C 100");
+                return ParseStandardDesc("STD%C%100", globalDimension);
 
             // TODO: IMPLEMENT ALL SECTIONS
         }
 
-        public double[] ParseGeometryDesc(string desc)
+        public double[] ParseGeometryDesc(string desc, string globalDimension)
         {
             string[] pieces = desc.ListSplit("%");
+
+            string unit = Regex.Match(pieces[1], @"(?<=()(.*?)(?=))").Value;
+            if (unit == "") unit = "mm";
 
             if (pieces[1] == "P")
             {
                 // Perimeter Section
                 List<double> coor = new List<double>();
 
-                MatchCollection points = Regex.Matches(desc, @"(?<=()(.*)(?=))");
+                MatchCollection points = Regex.Matches(desc, @"(?<=\()(.*?)(?=\))");
                 foreach (Match point in points)
                 {
                     string[] n = point.Value.Split(new char[] { '|' });
 
-                    coor.Add(Convert.ToDouble(n[0]));
-                    coor.Add(Convert.ToDouble(n[1]));
+                    coor.Add(Convert.ToDouble(n[0]).ConvertUnit(unit, globalDimension));
+                    coor.Add(Convert.ToDouble(n[1]).ConvertUnit(unit, globalDimension));
                     coor.Add(0);
                 }
 
                 return coor.ToArray();
             }
             else
-                return ParseStandardDesc("STD C 100");
+                return ParseStandardDesc("STD%C%100", globalDimension);
 
             // TODO: IMPLEMENT ALL SECTIONS
         }
 
-        public string GetGeometryDesc(double[] coor)
+        public string GetGeometryDesc(double[] coor, string globalDimension)
         {
             if (coor.Count() < 9) return "STD%D%100";
 
             List<string> ls = new List<string>();
 
             ls.Add("GEO");
-            ls.Add("P");
+            if (globalDimension == "mm")
+                ls.Add("P");
+            else
+                ls.Add("P(" + globalDimension + ")");
 
             for(int i = 0; i < coor.Count(); i += 3)
             {
@@ -322,6 +352,7 @@ namespace SpeckleGSA
 
             return string.Join("%", ls);
         }
+
         #endregion
     }
 }

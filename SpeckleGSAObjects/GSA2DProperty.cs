@@ -40,7 +40,13 @@ namespace SpeckleGSA
                 return;
 
             string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
-            
+
+            // TODO: NEED TO GET UNITS OF THICKNESS SOMEHOW
+            // Hold temporary dimension
+            res = gsa.GwaCommand("GET,UNIT_DATA,LENGTH");
+            string dimension = res.ListSplit(",")[2];
+            dict[typeof(string)] = dimension;
+
             foreach (string p in pieces)
             {
                 GSA2DProperty prop = new GSA2DProperty().AttachGSA(gsa);
@@ -49,6 +55,7 @@ namespace SpeckleGSA
                 props.Add(prop);
             }
 
+            dict.Remove(typeof(string));
             dict[typeof(GSA2DProperty)] = props;
         }
 
@@ -57,6 +64,12 @@ namespace SpeckleGSA
             if (!dict.ContainsKey(typeof(GSA2DProperty))) return;
 
             List<GSAObject> props = dict[typeof(GSA2DProperty)] as List<GSAObject>;
+
+            // TODO: NEED TO GET UNITS OF THICKNESS SOMEHOW
+            // Hold temporary dimension
+            string res = gsa.GwaCommand("GET,UNIT_DATA,LENGTH");
+            string dimension = res.ListSplit(",")[2];
+            dict[typeof(string)] = dimension;
 
             foreach (GSAObject p in props)
             {
@@ -67,6 +80,7 @@ namespace SpeckleGSA
                 p.RunGWACommand(p.GetGWACommand(dict));
             }
 
+            dict.Remove(typeof(string));
             dict.Remove(typeof(GSA2DProperty));
         }
 
@@ -84,10 +98,14 @@ namespace SpeckleGSA
             string materialType = pieces[counter++];
             int materialGrade = Convert.ToInt32(pieces[counter++]);
 
-            List<GSAObject> materials = dict[typeof(GSAMaterial)] as List<GSAObject>;
-            GSAObject matchingMaterial = materials.Cast<GSAMaterial>().Where(m => m.LocalReference == materialGrade & m.Type == materialType).FirstOrDefault();
-
-            Material = matchingMaterial == null ? 1 : matchingMaterial.Reference;
+            if (dict.ContainsKey(typeof(GSAMaterial)))
+            {
+                List<GSAObject> materials = dict[typeof(GSAMaterial)] as List<GSAObject>;
+                GSAObject matchingMaterial = materials.Cast<GSAMaterial>().Where(m => m.LocalReference == materialGrade & m.Type == materialType).FirstOrDefault();
+                Material = matchingMaterial == null ? 1 : matchingMaterial.Reference;
+            }
+            else
+                Material = 1;
 
             counter++; // Design property
             Thickness = Convert.ToDouble(pieces[counter++]);
@@ -111,8 +129,13 @@ namespace SpeckleGSA
             ls.Add("GLOBAL");
             ls.Add("0"); // Analysis material
 
-            GSAMaterial matchingMaterial = (dict[typeof(GSAMaterial)] as List<GSAObject>).Cast<GSAMaterial>().Where(m => m.Reference == Material).FirstOrDefault();
-            ls.Add(matchingMaterial == null ? "" : matchingMaterial.Type);
+            if (dict.ContainsKey(typeof(GSAMaterial)))
+            {
+                GSAMaterial matchingMaterial = (dict[typeof(GSAMaterial)] as List<GSAObject>).Cast<GSAMaterial>().Where(m => m.Reference == Material).FirstOrDefault();
+                ls.Add(matchingMaterial == null ? "" : matchingMaterial.Type);
+            }
+            else
+                ls.Add("");
 
             ls.Add(Material.ToNumString());
             ls.Add("1"); // Design

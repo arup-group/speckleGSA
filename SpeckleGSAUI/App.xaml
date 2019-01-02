@@ -10,6 +10,14 @@
             <ResourceDictionary.MergedDictionaries>
                 <!-- Material Colors -->
                 <ResourceDictionary>
+                    <ResourceDictionary.MergedDictionaries>
+                        <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Light.xaml" />
+                        <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Defaults.xaml" />
+                        <ResourceDictionary Source="pack://application:,,,/MaterialDesignColors;component/Themes/Recommended/Primary/MaterialDesignColor.Blue.xaml" />
+                        <ResourceDictionary Source="pack://application:,,,/MaterialDesignColors;component/Themes/Recommended/Accent/MaterialDesignColor.LightBlue.xaml" />
+                    </ResourceDictionary.MergedDictionaries>
+                </ResourceDictionary>
+                <!--<ResourceDictionary>
                     <SolidColorBrush x:Key="PrimaryHueLightBrush" Color="#FF0057FF"/>
                     <SolidColorBrush x:Key="PrimaryHueLightForegroundBrush" Color="#FFFFFF"/>
                     <SolidColorBrush x:Key="PrimaryHueMidBrush" Color="#FF0057FF"/>
@@ -18,7 +26,7 @@
                     <SolidColorBrush x:Key="PrimaryHueDarkForegroundBrush" Color="#FFFFFF"/>
                     <SolidColorBrush x:Key="SecondaryAccentBrush" Color="#FFFFFF"/>
                     <SolidColorBrush x:Key="SecondaryAccentForegroundBrush" Color="#FFFFFF"/>
-                </ResourceDictionary>
+                </ResourceDictionary>-->
 
                 <ResourceDictionary Source="pack://application:,,,/Dragablz;component/Themes/materialdesign.xaml"/>
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Light.xaml" />

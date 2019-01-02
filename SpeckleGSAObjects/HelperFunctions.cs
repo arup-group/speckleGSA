@@ -470,16 +470,6 @@ namespace SpeckleGSA
                 return "0";
         }
 
-        public static bool Equal(this object obj, double val)
-        {
-            if (obj.GetType() == typeof(int))
-                return (int)obj == Math.Round(val);
-            else if (obj.GetType() == typeof(double))
-                return (double)obj == val;
-            else
-                return false;
-        }
-
         public static int ParseElementType(this string type)
         {
             return (int)((ElementType)Enum.Parse(typeof(ElementType), type));
@@ -493,6 +483,71 @@ namespace SpeckleGSA
         public static int ParseElementNumNodes(this string type)
         {
             return (int)((ElementNumNodes)Enum.Parse(typeof(ElementNumNodes), type));
+        }
+
+        public static double ConvertUnit(this double value, string originalDimension, string targetDimension)
+        {
+            if (originalDimension == targetDimension)
+                return value;
+
+            if (targetDimension == "m")
+            {
+                switch (originalDimension)
+                {
+                    case "mm":
+                        return value / 1000;
+                    case "cm":
+                        return value / 100;
+                    case "ft":
+                        return value / 3.281;
+                    case "in":
+                        return value / 39.37;
+                    default:
+                        return value;
+                }
+            }
+            else if (originalDimension == "m")
+            {
+                switch (targetDimension)
+                {
+                    case "mm":
+                        return value * 1000;
+                    case "cm":
+                        return value * 100;
+                    case "ft":
+                        return value * 3.281;
+                    case "in":
+                        return value * 39.37;
+                    default:
+                        return value;
+                }
+            }
+            else
+                return value.ConvertUnit(originalDimension, "m").ConvertUnit("m", targetDimension);
+
+        }
+        #endregion
+
+        #region Comparison
+
+        public static bool Equal(this object obj, double val)
+        {
+            if (obj.GetType() == typeof(int))
+                return (int)obj == Math.Round(val);
+            else if (obj.GetType() == typeof(double))
+                return (double)obj == val;
+            else
+                return false;
+        }
+
+        public static bool IsCoincident(this GSANode n1, GSANode n2)
+        {
+            if (Math.Pow(n1.Coor[0] - n2.Coor[0],2) +
+                Math.Pow(n1.Coor[1] - n2.Coor[1], 2) +
+                Math.Pow(n1.Coor[2] - n2.Coor[2], 2) < Math.Pow(EPS,2))
+                return true;
+            else
+                return false;
         }
         #endregion
     }

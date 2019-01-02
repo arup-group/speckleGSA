@@ -245,15 +245,22 @@ namespace SpeckleGSA
 
         public List<int> GetElemConnectivity (Dictionary<string,object> elem)
         {
+            try { 
             return ((IEnumerable)elem["Connectivity"]).Cast<object>()
                 .Select(e => (int)e.ToDouble()).ToList();
+            }
+            catch { return new List<int>(); }
         }
 
         public List<double> GetElemCoor(Dictionary<string, object> elem)
         {
-            return ((IEnumerable)elem["Coor"]).Cast<object>()
+            try
+            {
+                return ((IEnumerable)elem["Coor"]).Cast<object>()
                 .Select(e => e.ToDouble()).ToList();
+            }
+            catch { return new List<double>(); }
         }
-        #endregion
-    }
+    #endregion
+}
 }

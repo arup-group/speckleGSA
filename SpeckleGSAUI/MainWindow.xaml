@@ -29,7 +29,7 @@
         </Grid.RowDefinitions>
         <Grid
             Grid.Row="0"
-            Background="#FF0057FF">
+            Background="{DynamicResource PrimaryHueMidBrush}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="auto"/>
@@ -47,7 +47,8 @@
                 Text="Speckle!"
                 TextWrapping="Wrap" />
         </Grid>
-        <dragablz:TabablzControl Grid.Row="1" 
+        <dragablz:TabablzControl
+            Grid.Row="1"
             x:Name="ControlPanelContainer"
             ShowDefaultCloseButton="True"
             BorderThickness="0">
@@ -76,7 +77,7 @@
             VerticalAlignment="Stretch">
         </GridSplitter>
         <Grid
-            Background="#FF0057FF"
+            Background="{DynamicResource PrimaryHueMidBrush}"
             Grid.Row="3"
             x:Name="MessageLogContainer">
             <Grid Margin="25,5,25,25">

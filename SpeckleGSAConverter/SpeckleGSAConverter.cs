@@ -344,7 +344,7 @@ namespace SpeckleGSA
             {
                 m.Coor = mesh.Vertices;
                 m.Color = mesh.Colors.Count > 0 ? Math.Max(mesh.Colors[0], 0) : 0;
-                
+
                 for (int i = 0; i < mesh.Faces.Count(); i++)
                 {
                     int numNodes = mesh.Faces[i++] + 3;
@@ -374,21 +374,56 @@ namespace SpeckleGSA
             {
                 m.SetSpeckleProperties(mesh.Properties);
                 m.Coor = mesh.Vertices;
-                m.Color = Math.Max(mesh.Colors[0], 0);
+                m.Color = mesh.Colors.Count > 0 ? Math.Max(mesh.Colors[0], 0) : 0;
 
                 int elemCounter = 0;
                 for (int i = 0; i < mesh.Faces.Count(); i++)
                 {
-                    i++;
-                    List<int> conn = m.GetElemConnectivity(m.Elements[elemCounter++] as Dictionary<string,object>);
+                    try
+                    {
+                        int innerCounter = i;
+                        innerCounter++;
 
-                    for(int j = 0; j < conn.Count(); j++)
-                        m.NodeMapping[conn[j]] = mesh.Faces[i++];
+                        List<int> conn = m.GetElemConnectivity(m.Elements[elemCounter] as Dictionary<string, object>);
 
-                    i--;
+                        for (int j = 0; j < conn.Count(); j++)
+                            m.NodeMapping[conn[j]] = mesh.Faces[innerCounter++];
+
+                        elemCounter++;
+                        innerCounter--;
+                        i = innerCounter;
+                    }
+                    catch
+                    {
+                        int innerCounter = i;
+                        int numNodes = mesh.Faces[innerCounter++] + 3;
+
+                        List<double> coor = new List<double>();
+                        for (int j = 0; j < numNodes; j++)
+                            coor.AddRange(mesh.Vertices.Skip(mesh.Faces[innerCounter++] * 3).Take(3));
+
+                        m.Elements.Add(new Dictionary<string, object>()
+                        {
+                            { "Name", "" },
+                            { "Reference", 0 },
+                            { "Axis", new Dictionary<string, object>()
+                                {
+                                    { "X", new Dictionary<string, object> { { "x", 1 }, { "y", 0 },{ "z", 0 }  } },
+                                    { "Y", new Dictionary<string, object> { { "x", 0 }, { "y", 1 },{ "z", 0 }  } },
+                                    { "Z", new Dictionary<string, object> { { "x", 0 }, { "y", 0 },{ "z", 1 }  } },
+                                }
+                            },
+                            { "Coor", coor.ToArray() }
+                        });
+
+                        elemCounter++;
+                        innerCounter--;
+                        i = innerCounter;
+                    }
                 }
                 m.Connectivity = m.GetNodeReferences();
             }
+
             return m;
         }
         #endregion
