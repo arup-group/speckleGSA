@@ -54,6 +54,7 @@
     <Compile Include="GSA1DProperty.cs" />
     <Compile Include="GSA2DElement.cs" />
     <Compile Include="GSA2DElementMesh.cs" />
+    <Compile Include="GSA2DFaceLoad.cs" />
     <Compile Include="GSA2DProperty.cs" />
     <Compile Include="GSAMaterial.cs" />
     <Compile Include="GSAMember.cs" />

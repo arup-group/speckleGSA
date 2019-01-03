@@ -12,7 +12,7 @@ namespace SpeckleGSA
     {
         public static readonly string GSAKeyword = "";
         public static readonly string Stream = "elements";
-        public static readonly int ReadPriority = 4;
+        public static readonly int ReadPriority = 5;
         public static readonly int WritePriority = 0;
         
         public int Property { get; set; }

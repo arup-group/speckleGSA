@@ -223,7 +223,7 @@ namespace SpeckleGSA
         #endregion
 
         #region Axis
-        private Dictionary<string, object> ParseGSA2DElementAxis(double[] coor, double rotationAngle = 0, bool isLocalAxis = false)
+        public Dictionary<string, object> ParseGSA2DElementAxis(double[] coor, double rotationAngle = 0, bool isLocalAxis = false)
         {
             Dictionary<string, object> axisVectors = new Dictionary<string, object>();
 

@@ -8,22 +8,23 @@ using System.Windows.Media.Media3D;
 
 namespace SpeckleGSA
 {
-    public class GSA0DLoad : GSAObject
+    public class GSA2DFaceLoad : GSAObject
     {
-        public static readonly string GSAKeyword = "LOAD_NODE";
+        public static readonly string GSAKeyword = "LOAD_2D_FACE";
         public static readonly string Stream = "loads";
-        public static readonly int ReadPriority = 3;
+        public static readonly int ReadPriority = 4;
         public static readonly int WritePriority = 9999;
-        
-        public List<int> Nodes { get; set; }
+
+        public List<int> Elements { get; set; }
         public int Case { get; set; }
         public Dictionary<string, object> Loading { get; set; }
 
         public int Axis;
+        public bool Projected;
 
-        public GSA0DLoad()
+        public GSA2DFaceLoad()
         {
-            Nodes = new List<int>();
+            Elements = new List<int>();
             Case = 1;
 
             Loading = new Dictionary<string, object>()
@@ -31,23 +32,21 @@ namespace SpeckleGSA
                 { "x", 0.0 },
                 { "y", 0.0 },
                 { "z", 0.0 },
-                { "xx", 0.0 },
-                { "yy", 0.0 },
-                { "zz", 0.0 },
             };
 
             Axis = 0;
+            Projected = false;
         }
 
         #region GSAObject Functions
         public static void GetObjects(ComAuto gsa, Dictionary<Type, object> dict)
         {
-            List<GSAObject> nodes = dict[typeof(GSANode)] as List<GSAObject>;
-            List<int> nodeRefs = nodes.Select(n => n.Reference).ToList(); 
+            List<GSAObject> elements = dict[typeof(GSA2DElement)] as List<GSAObject>;
+            List<int> elemRefs = elements.Select(e => e.Reference).ToList();
 
             List<GSAObject> loads = new List<GSAObject>();
 
-            string res = gsa.GwaCommand("GET_ALL,LOAD_NODE");
+            string res = gsa.GwaCommand("GET_ALL,LOAD_2D_FACE");
 
             if (res == "")
                 return;
@@ -56,35 +55,39 @@ namespace SpeckleGSA
 
             foreach (string p in pieces)
             {
-                List<GSA0DLoad> loadSubList = new List<GSA0DLoad>();
+                List<GSA2DFaceLoad> loadSubList = new List<GSA2DFaceLoad>();
 
                 // Placeholder load object to get list of nodes and load values
                 // Need to transform to axis
-                GSA0DLoad initLoad = new GSA0DLoad().AttachGSA(gsa);
+                GSA2DFaceLoad initLoad = new GSA2DFaceLoad().AttachGSA(gsa);
                 initLoad.ParseGWACommand(p);
 
                 // Only send those where the nodes actually exists
-                List<int> nodesApplied = initLoad.Nodes
-                    .Where(nRef => nodeRefs.Contains(nRef)).ToList();
+                List<int> elemsApplied = initLoad.Elements
+                    .Where(eRef => elemRefs.Contains(eRef)).ToList();
 
-                foreach (int nRef in nodesApplied)
+                foreach (int eRef in elemsApplied)
                 {
-                    GSA0DLoad load = new GSA0DLoad();
+                    GSA2DFaceLoad load = new GSA2DFaceLoad();
                     load.Name = initLoad.Name;
                     load.Case = initLoad.Case;
-                    
+
                     // Transform load to defined axis
-                    GSANode node = nodes.Where(n => n.Reference == nRef).First() as GSANode;
-                    Dictionary<string, object> loadAxis = node.ParseGSANodeAxis(initLoad.Axis, node.Coor.ToArray());
-                    load.Loading = load.TransformLoading(initLoad.Loading, loadAxis);
+                    GSA2DElement elem = elements.Where(e => e.Reference == eRef).First() as GSA2DElement;
+                    Dictionary<string, object> loadAxis = elem.ParseGSA2DElementAxis(
+                        elem.Coor.ToArray(),
+                        0,
+                        load.Axis != 0); // Assumes if not global, local
+                    load.Loading = load.TransformLoading(initLoad.Loading, loadAxis, load.Projected);
 
                     // If the loading already exists, add node ref to list
-                    List<GSA0DLoad> matches = loadSubList.Where(l => l.Loading.IsAxisEqual(load.Loading)).ToList();
+                    List<GSA2DFaceLoad> matches = loadSubList.Where(l => l.Loading.IsAxisEqual(load.Loading)).ToList();
+
                     if (matches.Count() > 0)
-                        matches[0].Nodes.Add(nRef);
+                        matches[0].Elements.Add(eRef);
                     else
                     {
-                        load.Nodes.Add(nRef);
+                        load.Elements.Add(eRef);
                         loadSubList.Add(load);
                     }
                 }
@@ -92,21 +95,21 @@ namespace SpeckleGSA
                 loads.AddRange(loadSubList);
             }
 
-            dict[typeof(GSA0DLoad)] = loads;
+            dict[typeof(GSA2DFaceLoad)] = loads;
         }
 
         public static void WriteObjects(ComAuto gsa, Dictionary<Type, object> dict)
         {
-            if (!dict.ContainsKey(typeof(GSA0DLoad))) return;
+            if (!dict.ContainsKey(typeof(GSA2DFaceLoad))) return;
 
-            List<GSAObject> loads = dict[typeof(GSA0DLoad)] as List<GSAObject>;
+            List<GSAObject> loads = dict[typeof(GSA2DFaceLoad)] as List<GSAObject>;
 
             foreach (GSAObject l in loads)
             {
                 l.AttachGSA(gsa);
 
                 GSARefCounters.RefObject(l);
-                
+
                 string[] commands = l.GetGWACommand().Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
                 foreach (string c in commands)
                     l.RunGWACommand(c);
@@ -119,17 +122,24 @@ namespace SpeckleGSA
 
             int counter = 1; // Skip identifier
             Name = pieces[counter++].Trim(new char[] { '"' });
-            Nodes = pieces[counter++].ParseGSAList(gsa).ToList();
+            Elements = pieces[counter++].ParseGSAList(gsa).ToList();
             Case = Convert.ToInt32(pieces[counter++]);
 
             string axis = pieces[counter++];
-            Axis = axis == "GLOBAL" ? 0 : Convert.ToInt32(axis);
+            Axis = axis == "GLOBAL" ? 0 : 1; // 1 denotes "LOCAL"
 
+            counter++; // Type. Skipping since we're taking the average
+
+            Projected = pieces[counter++] == "YES";
+            
             string direction = pieces[counter++].ToLower();
+
+            double[] values = pieces.Skip(counter).Select(p => Convert.ToDouble(p)).ToArray();
+
             if (Loading.ContainsKey(direction))
-                Loading[direction] = Convert.ToDouble(pieces[counter++]);
+                Loading[direction] = values.Average();
             else
-                Loading["x"] = Convert.ToDouble(pieces[counter++]);
+                Loading["x"] = values.Average();
         }
 
         public override string GetGWACommand(Dictionary<Type, object> dict = null)
@@ -138,17 +148,19 @@ namespace SpeckleGSA
 
             foreach (string key in Loading.Keys)
             {
-                List<string> subLs = new List<string>(); 
+                List<string> subLs = new List<string>();
 
                 double value = Convert.ToDouble(Loading[key]);
                 if (value == 0) continue;
 
                 subLs.Add("SET");
                 subLs.Add(GSAKeyword);
-                subLs.Add(Name == ""? " ": "");
-                subLs.Add(string.Join(" ", Nodes));
+                subLs.Add(Name == "" ? " " : "");
+                subLs.Add(string.Join(" ", Elements));
                 subLs.Add(Case.ToString());
                 subLs.Add("GLOBAL"); // Axis
+                subLs.Add("CONS"); // Type
+                subLs.Add("NO"); // Projected
                 subLs.Add(key);
                 subLs.Add(value.ToString());
 
@@ -164,16 +176,14 @@ namespace SpeckleGSA
         }
 
         #endregion
-        public Dictionary<string, object> TransformLoading(Dictionary<string, object> loading, Dictionary<string, object> axis)
+
+        public Dictionary<string, object> TransformLoading(Dictionary<string, object> loading, Dictionary<string, object> axis, bool isProjected = false)
         {
             Dictionary<string, object> transformed = new Dictionary<string, object>()
             {
                 { "x", 0.0 },
                 { "y", 0.0 },
                 { "z", 0.0 },
-                { "xx", 0.0 },
-                { "yy", 0.0 },
-                { "zz", 0.0 },
             };
 
             Dictionary<string, object> X = axis["X"] as Dictionary<string, object>;
@@ -194,22 +204,13 @@ namespace SpeckleGSA
                     Convert.ToDouble(Z["x"]),
                     Convert.ToDouble(Z["y"]),
                     Convert.ToDouble(Z["z"])) },
-                {"xx", new Vector3D(
-                    Convert.ToDouble(X["x"]),
-                    Convert.ToDouble(X["y"]),
-                    Convert.ToDouble(X["z"])) },
-                {"yy", new Vector3D(
-                    Convert.ToDouble(Y["x"]),
-                    Convert.ToDouble(Y["y"]),
-                    Convert.ToDouble(Y["z"])) },
-                {"zz", new Vector3D(
-                    Convert.ToDouble(Z["x"]),
-                    Convert.ToDouble(Z["y"]),
-                    Convert.ToDouble(Z["z"])) },
             };
-            
-            foreach(string k in new string[] { "x", "y", "z" })
+
+            foreach (string k in new string[] { "x", "y", "z" })
             {
+                if (isProjected)
+                    if (k == "x" | k == "y") continue;
+
                 if (!loading.ContainsKey(k)) continue;
 
                 double load = Convert.ToDouble(loading[k]);
@@ -217,17 +218,6 @@ namespace SpeckleGSA
                 transformed["x"] = (double)transformed["x"] + axisVectors[k].X * load;
                 transformed["y"] = (double)transformed["y"] + axisVectors[k].Y * load;
                 transformed["z"] = (double)transformed["z"] + axisVectors[k].Z * load;
-            }
-
-            foreach (string k in new string[] { "xx", "yy", "zz" })
-            {
-                if (!loading.ContainsKey(k)) continue;
-
-                double load = Convert.ToDouble(loading[k]);
-
-                transformed["xx"] = (double)transformed["xx"] + axisVectors[k].X * load;
-                transformed["yy"] = (double)transformed["yy"] + axisVectors[k].Y * load;
-                transformed["zz"] = (double)transformed["zz"] + axisVectors[k].Z * load;
             }
 
             return transformed;

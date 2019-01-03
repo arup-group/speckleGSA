@@ -68,7 +68,12 @@ namespace SpeckleGSA
             return obj;
         }
 
-
+        public static GSA2DFaceLoad AttachGSA(this GSA2DFaceLoad obj, ComAuto gsa)
+        {
+            obj.gsa = gsa;
+            return obj;
+        }
+        
         public static GSAMaterial AttachGSA(this GSAMaterial obj, ComAuto gsa)
         {
             obj.gsa = gsa;
@@ -167,6 +172,27 @@ namespace SpeckleGSA
 
                 0, 0, 0, 1
             );
+        }
+
+        public static double[] Centroid (this double[] coor)
+        {
+            double[] centroid = new double[3];
+
+            int numNodes = 0;
+
+            for (int i = 0; i < coor.Length; i+=3)
+            {
+                centroid[0] = coor[i];
+                centroid[1] = coor[i+1];
+                centroid[2] = coor[i+2];
+                numNodes++;
+            }
+
+            centroid[0] /= numNodes;
+            centroid[1] /= numNodes;
+            centroid[2] /= numNodes;
+
+            return centroid;
         }
         #endregion
 

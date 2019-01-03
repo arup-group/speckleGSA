@@ -226,6 +226,12 @@ namespace SpeckleGSA
             return s;
         }
 
+        public static SpeckleString ToSpeckle(this GSA2DFaceLoad load)
+        {
+            SpeckleString s = new SpeckleString("2D FACELOAD", load.GetSpeckleProperties());
+            return s;
+        }
+
         public static SpeckleLine ToSpeckle(this GSA1DElement element)
         {
             SpeckleLine l = new SpeckleLine(
@@ -306,6 +312,9 @@ namespace SpeckleGSA
                     break;
                 case "0D LOAD":
                     obj = new GSA0DLoad();
+                    break;
+                case "2D FACELOAD":
+                    obj = new GSA2DFaceLoad();
                     break;
                 default:
                     return str.Value;
