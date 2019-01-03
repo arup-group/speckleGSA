@@ -44,36 +44,72 @@ namespace SpeckleGSA
                    prop.PropertyType.GetGenericTypeDefinition().IsAssignableFrom(typeof(Dictionary<,>));
         }
 
-        public static object ToSpeckleDict(this object obj)
+        public static IEnumerable<DictionaryEntry> CastDict(this IDictionary dictionary)
+        {
+            foreach (DictionaryEntry entry in dictionary)
+                yield return entry;
+        }
+
+        public static object UnrollAbstractRef(object obj, string path)
+        {
+            string[] pieces = path.Split(new char[] { '/' });
+
+            if (pieces.Length <= 1) // We're here!
+                return obj;
+            
+            string nextPath = pieces[1];
+
+            try
+            { 
+                return UnrollAbstractRef((obj as Dictionary<string, object>)[nextPath], string.Join("/", pieces.Skip(1)));
+            }
+            catch { return null; }
+        }
+
+        public static object ToSpeckleDict(this object obj, Dictionary<int, string> traversed, string key, string path)
         {
             if (obj == null) { return null; }
-            
+
+            if (traversed.ContainsKey(obj.GetHashCode()))
+            {
+                return new SpeckleAbstract() {
+                    _type = "ref",
+                    _ref = traversed[obj.GetHashCode()] };
+            }
+
+            traversed.Add(obj.GetHashCode(), path + "/" + key);
+
             if (obj.GetType().IsArray)
             {
                 if (((IEnumerable)obj).Cast<object>().ToList().Count() == 0) return null;
                 return ((IEnumerable)obj).Cast<object>().ToList().Select((x, i) => new { x, i })
-                    .ToDictionary(n => n.i.ToString(), n => n.x.ToSpeckleDict());
+                    .ToDictionary(n => n.i.ToString(), n => n.x.ToSpeckleDict(traversed, n.i.ToString(), path + "/" + key));
             }
             else if (obj.IsDictionary())
             {
                 if ((obj as Dictionary<string, object>).Keys.Count() == 0) return null;
                 return (obj as Dictionary<string, object>)
-                    .ToDictionary(i => i.Key, i => i.Value.ToSpeckleDict());
+                    .ToDictionary(i => i.Key, i => i.Value.ToSpeckleDict(traversed, i.Key.ToString(), path + "/" + key));
             }
             else if (obj.IsList())
             {
                 if (((IEnumerable)obj).Cast<object>().ToList().Count() == 0) return null;
                 return ((IEnumerable)obj).Cast<object>().ToList().Select((x, i) => new { x, i })
-                    .ToDictionary(n => n.i.ToString(), n => n.x.ToSpeckleDict());
+                    .ToDictionary(n => n.i.ToString(), n => n.x.ToSpeckleDict(traversed, n.i.ToString(), path + "/" + key));
             }
 
-            else
+            else if (obj is string || obj is double || obj is float || obj is int || obj is SpeckleObject)
                 return obj;
+            else
+                return Converter.Serialise(obj);
         }
 
         public static Dictionary<string,object> GetSpeckleProperties(this object obj)
         {
             if (obj == null) { return null; }
+
+            Dictionary<int, string> traversed = new Dictionary<int, string>();
+            traversed.Add(obj.GetHashCode(), "root/Structural");
 
             var structuralDict = new Dictionary<string, object>();
             foreach(var prop in obj.GetType().GetProperties())
@@ -83,7 +119,7 @@ namespace SpeckleGSA
 
                 string key = prop.Name;
                 
-                object value = prop.GetValue(obj, null).ToSpeckleDict();
+                object value = prop.GetValue(obj, null).ToSpeckleDict(traversed, key, "root/Structural");
                 if (value != null)
                     structuralDict.Add(key, value);
             }
@@ -96,20 +132,30 @@ namespace SpeckleGSA
             return speckleDict;
         }
 
-        public static object FromSpeckleDict(this object obj)
+        public static object FromSpeckleDict(this object obj, Dictionary<string, object> rootDict)
         {
             if (obj == null) { return null; }
 
             if (obj.IsDictionary())
             {
                 if ((obj as Dictionary<string, object>).Keys.Where(k => Regex.IsMatch(k, @"[0-9]+")).ToList().Count() > 0)
-                    return (obj as Dictionary<string, object>).Values.Select(v => v.FromSpeckleDict()).ToArray();
+                    return (obj as Dictionary<string, object>).Values.Select(v => v.FromSpeckleDict(rootDict)).ToArray();
                 else
                     return (obj as Dictionary<string, object>)
-                        .ToDictionary(i => i.Key, i => i.Value.FromSpeckleDict());
+                        .ToDictionary(i => i.Key, i => i.Value.FromSpeckleDict(rootDict));
             }
             else
-                return obj;
+            {
+                if (obj is SpeckleObject)
+                {
+                    if (obj is SpeckleAbstract)
+                        return UnrollAbstractRef(rootDict, (obj as SpeckleAbstract)._ref).FromSpeckleDict(rootDict);
+                    else
+                        return Converter.Deserialise(obj as SpeckleObject, rootDict);
+                }
+                else
+                    return obj;
+            }
         }
 
         public static void SetSpeckleProperties(this object obj, Dictionary<string, object> dict)
@@ -139,7 +185,7 @@ namespace SpeckleGSA
 
                     Dictionary<string, object>.ValueCollection vals = (value as Dictionary<string, object>).Values;
 
-                    prop.SetValue(obj, vals.Select(x => Convert.ChangeType(x.FromSpeckleDict(), type)).ToArray());
+                    prop.SetValue(obj, vals.Select(x => Convert.ChangeType(x.FromSpeckleDict(dict), type)).ToArray());
                 }
                 else if (prop.IsList())
                 {
@@ -150,10 +196,10 @@ namespace SpeckleGSA
                     IList tempList = (IList)Activator.CreateInstance(genericListType);
                     if (type == typeof(object))
                         foreach (object x in vals)
-                            tempList.Add(x.FromSpeckleDict());
+                            tempList.Add(x.FromSpeckleDict(dict));
                     else
                         foreach (object x in vals)
-                            tempList.Add(Convert.ChangeType(x.FromSpeckleDict(), type));
+                            tempList.Add(Convert.ChangeType(x.FromSpeckleDict(dict), type));
 
 
                     prop.SetValue(obj, tempList);
@@ -162,16 +208,62 @@ namespace SpeckleGSA
                 {
                     prop.SetValue(obj,
                         Convert.ChangeType((value as Dictionary<string, object>)
-                        .ToDictionary(i => i.Key, i => i.Value.FromSpeckleDict()),
+                        .ToDictionary(i => i.Key, i => i.Value.FromSpeckleDict(dict)),
                         prop.PropertyType));
                 }
                 else
-                    prop.SetValue(obj, Convert.ChangeType(value, prop.PropertyType));
+                {
+                    if (value is SpeckleObject)
+                    {
+                        if (value is SpeckleAbstract)
+                        {
+                            prop.SetValue(obj,
+                                Convert.ChangeType(
+                                    UnrollAbstractRef(dict, (value as SpeckleAbstract)._ref).FromSpeckleDict(dict),
+                                    prop.PropertyType));
+                        }
+                        else
+                        { 
+                            var temp = Converter.Deserialise(value as SpeckleObject, obj);
+                            prop.SetValue(obj,
+                                Convert.ChangeType(
+                                    temp == null? Activator.CreateInstance(prop.PropertyType) : temp,
+                                    prop.PropertyType));
+                        }
+                    }
+                    else
+                        prop.SetValue(obj, Convert.ChangeType(value, prop.PropertyType));
+                }
             }
         }
         #endregion
 
         #region GSA to Speckle
+        public static SpeckleBoolean ToSpeckle(this bool b)
+        {
+            return new SpeckleBoolean(b);
+        }
+
+        public static SpeckleNumber ToSpeckle(this float num)
+        {
+            return new SpeckleNumber(num);
+        }
+
+        public static SpeckleNumber ToSpeckle(this long num)
+        {
+            return new SpeckleNumber(num);
+        }
+
+        public static SpeckleNumber ToSpeckle(this int num)
+        {
+            return new SpeckleNumber(num);
+        }
+
+        public static SpeckleNumber ToSpeckle(this double num)
+        {
+            return new SpeckleNumber(num);
+        }
+
         public static SpeckleString ToSpeckle(this GSAMaterial material)
         {
             SpeckleString s = new SpeckleString("MATERIAL", material.GetSpeckleProperties());
@@ -261,6 +353,16 @@ namespace SpeckleGSA
         #endregion
 
         #region Speckle to GSA
+        public static bool? ToNative(this SpeckleBoolean b)
+        {
+            return b.Value;
+        }
+
+        public static double? ToNative(this SpeckleNumber num)
+        {
+            return num.Value;
+        }
+
         public static object ToNative(this SpeckleString str)
         {
             GSAObject obj;
@@ -274,7 +376,7 @@ namespace SpeckleGSA
                     obj = new GSA2DProperty();
                     break;
                 default:
-                    return null;
+                    return str.Value;
             }
 
             obj.SetSpeckleProperties(str.Properties);

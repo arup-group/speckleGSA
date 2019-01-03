@@ -17,7 +17,7 @@ namespace SpeckleGSA
         public string Type { get; set; }
         public string Grade { get; set; }
 
-        public int LocalReference { get; set; }
+        public int LocalReference;
 
         public GSAMaterial()
         {

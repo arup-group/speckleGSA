@@ -85,6 +85,9 @@ namespace SpeckleGSA
 
                         if (matches.Count() > 0)
                         {
+                            if (matches[0].Reference == 0)
+                                GSARefCounters.RefObject(matches[0]);
+
                             nodes[i].Reference = matches[0].Reference;
                             (matches[0] as GSANode).Merge(nodes[i] as GSANode);
                         }

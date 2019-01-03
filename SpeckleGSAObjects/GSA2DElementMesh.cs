@@ -247,7 +247,7 @@ namespace SpeckleGSA
         {
             try { 
             return ((IEnumerable)elem["Connectivity"]).Cast<object>()
-                .Select(e => (int)e.ToDouble()).ToList();
+                .Select(e => Convert.ToInt32(e)).ToList();
             }
             catch { return new List<int>(); }
         }

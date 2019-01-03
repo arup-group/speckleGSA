@@ -13,7 +13,7 @@ namespace SpeckleGSA
 {
     public static class HelperFunctions
     {
-        const double EPS = 1e-6;
+        const double EPS = 1e-3;
 
         #region Enum
         public enum LineNumNodes

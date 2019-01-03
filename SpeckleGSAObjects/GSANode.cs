@@ -205,12 +205,12 @@ namespace SpeckleGSA
             else
             {
                 ls.Add("REST");
-                ls.Add(((bool)Restraint["x"]) ? "1" : "0");
-                ls.Add(((bool)Restraint["y"]) ? "1" : "0");
-                ls.Add(((bool)Restraint["z"]) ? "1" : "0");
-                ls.Add(((bool)Restraint["xx"]) ? "1" : "0");
-                ls.Add(((bool)Restraint["yy"]) ? "1" : "0");
-                ls.Add(((bool)Restraint["zz"]) ? "1" : "0");
+                ls.Add((Convert.ToBoolean(Restraint["x"])) ? "1" : "0");
+                ls.Add((Convert.ToBoolean(Restraint["y"])) ? "1" : "0");
+                ls.Add((Convert.ToBoolean(Restraint["z"])) ? "1" : "0");
+                ls.Add((Convert.ToBoolean(Restraint["xx"])) ? "1" : "0");
+                ls.Add((Convert.ToBoolean(Restraint["yy"])) ? "1" : "0");
+                ls.Add((Convert.ToBoolean(Restraint["zz"])) ? "1" : "0");
             }
 
             if (Stiffness.Count == 0)
@@ -218,12 +218,12 @@ namespace SpeckleGSA
             else
             {
                 ls.Add("STIFF");
-                ls.Add(Stiffness["x"].ToNumString());
-                ls.Add(Stiffness["y"].ToNumString());
-                ls.Add(Stiffness["z"].ToNumString());
-                ls.Add(Stiffness["xx"].ToNumString());
-                ls.Add(Stiffness["yy"].ToNumString());
-                ls.Add(Stiffness["zz"].ToNumString());
+                ls.Add(Convert.ToDouble(Stiffness["x"]).ToNumString());
+                ls.Add(Convert.ToDouble(Stiffness["y"]).ToNumString());
+                ls.Add(Convert.ToDouble(Stiffness["z"]).ToNumString());
+                ls.Add(Convert.ToDouble(Stiffness["xx"]).ToNumString());
+                ls.Add(Convert.ToDouble(Stiffness["yy"]).ToNumString());
+                ls.Add(Convert.ToDouble(Stiffness["zz"]).ToNumString());
             }
             
             ls.Add("NO_MESH");
@@ -298,12 +298,12 @@ namespace SpeckleGSA
             Dictionary<string, object> temp = new Dictionary<string, object>();
 
             foreach (string key in Restraint.Keys)
-                temp[key] = (bool)Restraint[key] | (bool)mergeNode.Restraint[key];
+                temp[key] = Convert.ToBoolean(Restraint[key]) | Convert.ToBoolean(mergeNode.Restraint[key]);
             Restraint = temp;
 
             temp = new Dictionary<string, object>();
             foreach (string key in Stiffness.Keys)
-                temp[key] = Math.Max((double)Stiffness[key], (double)mergeNode.Stiffness[key]);
+                temp[key] = Math.Max(Convert.ToDouble(Stiffness[key]), Convert.ToDouble(mergeNode.Stiffness[key]));
             Stiffness = temp;
 
             Mass += mergeNode.Mass;
