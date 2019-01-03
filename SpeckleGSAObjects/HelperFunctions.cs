@@ -8,6 +8,8 @@ using System.Text.RegularExpressions;
 using System.Windows.Media.Media3D;
 using System.Drawing;
 using SpeckleCore;
+using System.Reflection;
+using System.Collections;
 
 namespace SpeckleGSA
 {
@@ -525,6 +527,96 @@ namespace SpeckleGSA
             else
                 return value.ConvertUnit(originalDimension, "m").ConvertUnit("m", targetDimension);
 
+        }
+
+        public static bool IsList(this PropertyInfo prop)
+        {
+            if (prop == null) return false;
+            return prop.PropertyType.IsGenericType &&
+                   prop.PropertyType.GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
+        }
+
+        public static bool IsDictionary(this PropertyInfo prop)
+        {
+            if (prop == null) return false;
+            return prop.PropertyType.IsGenericType &&
+                   prop.PropertyType.GetGenericTypeDefinition().IsAssignableFrom(typeof(Dictionary<,>));
+        }
+
+        public static Dictionary<string,object> GetPropertyDict(this object obj)
+        {
+            Dictionary<string, object> properties = new Dictionary<string, object>();
+
+            foreach(var prop in obj.GetType().GetProperties())
+            {
+                if (!prop.CanWrite)
+                    continue;
+
+                string key = prop.Name;
+                object value = prop.GetValue(obj, null);
+                properties.Add(key, value);
+            }
+
+            return properties;
+        }
+
+        public static void SetPropertyDict(this object obj, Dictionary<string, object> properties)
+        {
+            foreach (var prop in obj.GetType().GetProperties())
+            {
+                if (!prop.CanWrite)
+                    continue;
+
+                if (!properties.ContainsKey(prop.Name)) continue;
+
+                if (properties[prop.Name] == null) continue;
+                
+                try
+                { 
+                    if (prop.PropertyType.IsArray) 
+                    {
+                        Type subType = prop.PropertyType.GetElementType();
+
+                        object value = (properties[prop.Name] as IEnumerable).Cast<object>()
+                            .Select(o => Convert.ChangeType(o, subType)).ToArray();
+
+                        if ((value as Array).Length > 0)
+                            prop.SetValue(obj, value);
+                    }
+                    else if (prop.IsList())
+                    {
+                        Type subType = prop.PropertyType.GetGenericArguments()[0];
+
+                        Type genericListType = typeof(List<>).MakeGenericType(subType);
+                        IList value = (IList)Activator.CreateInstance(genericListType);
+
+                        if (subType != typeof(object))
+                            foreach (object o in (properties[prop.Name] as IList))
+                                value.Add(Convert.ChangeType(o, subType));
+                        else
+                            foreach (object o in (properties[prop.Name] as IList))
+                                value.Add(o);
+
+                        if ((value as IList).Count > 0)
+                            prop.SetValue(obj, value);
+                    }
+                    else if (prop.IsDictionary())
+                    {
+                        prop.SetValue(obj, properties[prop.Name]);
+                    }
+                    else
+                    { 
+                        object value = Convert.ChangeType(properties[prop.Name], prop.PropertyType);
+
+                        if (value != null)
+                            prop.SetValue(obj, value);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
         }
         #endregion
 

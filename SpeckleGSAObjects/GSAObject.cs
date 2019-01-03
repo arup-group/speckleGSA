@@ -40,5 +40,6 @@ namespace SpeckleGSA
 
             return gsa.GwaCommand(command);
         }
+
     }
 }

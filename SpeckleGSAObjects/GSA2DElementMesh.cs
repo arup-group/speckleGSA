@@ -14,8 +14,7 @@ namespace SpeckleGSA
         public static readonly string Stream = "elements";
         public static readonly int ReadPriority = 4;
         public static readonly int WritePriority = 0;
-
-        public string Type { get; set; }
+        
         public int Property { get; set; }
         public double InsertionPoint { get; set; }
         public List<object> Elements { get; set; }
