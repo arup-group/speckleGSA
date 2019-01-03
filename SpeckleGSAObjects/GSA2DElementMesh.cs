@@ -116,6 +116,7 @@ namespace SpeckleGSA
                 else
                     continue;
 
+                elem.MeshReference = Reference;
                 elem.Property = Property;
                 elem.InsertionPoint = InsertionPoint;
                 elem.Name = (string)elemDict["Name"];

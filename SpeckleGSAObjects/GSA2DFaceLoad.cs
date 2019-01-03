@@ -16,6 +16,7 @@ namespace SpeckleGSA
         public static readonly int WritePriority = 9999;
 
         public List<int> Elements { get; set; }
+        public List<int> Meshes { get; set; }
         public int Case { get; set; }
         public Dictionary<string, object> Loading { get; set; }
 
@@ -25,6 +26,8 @@ namespace SpeckleGSA
         public GSA2DFaceLoad()
         {
             Elements = new List<int>();
+            Meshes = new List<int>();
+
             Case = 1;
 
             Loading = new Dictionary<string, object>()
@@ -102,6 +105,8 @@ namespace SpeckleGSA
         {
             if (!dict.ContainsKey(typeof(GSA2DFaceLoad))) return;
 
+            List<GSAObject> elements = dict[typeof(GSA2DElement)] as List<GSAObject>;
+
             List<GSAObject> loads = dict[typeof(GSA2DFaceLoad)] as List<GSAObject>;
 
             foreach (GSAObject l in loads)
@@ -109,6 +114,12 @@ namespace SpeckleGSA
                 l.AttachGSA(gsa);
 
                 GSARefCounters.RefObject(l);
+
+                // Target meshes
+                List<int> matches = elements.Where(e => (l as GSA2DFaceLoad).Meshes.Contains((e as GSA2DElement).MeshReference))
+                    .Select(e => e.Reference).ToList();
+                (l as GSA2DFaceLoad).Elements.AddRange(matches);
+                (l as GSA2DFaceLoad).Elements = (l as GSA2DFaceLoad).Elements.Distinct().ToList();
 
                 string[] commands = l.GetGWACommand().Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
                 foreach (string c in commands)

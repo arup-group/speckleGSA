@@ -20,6 +20,8 @@ namespace SpeckleGSA
         public Dictionary<string, object> Axis { get; set; }
         public double InsertionPoint { get; set; }
 
+        public int MeshReference;
+
         public GSA2DElement()
         {
             Type = "QUAD4";
@@ -31,6 +33,8 @@ namespace SpeckleGSA
                 { "Z", new Dictionary<string, object> { { "x", 0 }, { "y", 0 },{ "z", 1 }  } },
             };
             InsertionPoint = 0;
+
+            MeshReference = 1;
         }
 
         #region GSAObject Functions
@@ -110,8 +114,6 @@ namespace SpeckleGSA
 
                 e.RunGWACommand(e.GetGWACommand());
             }
-
-            dict.Remove(typeof(GSA2DElement));
         }
 
         public override void ParseGWACommand(string command, Dictionary<Type, object> dict = null)
