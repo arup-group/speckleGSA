@@ -43,18 +43,18 @@ namespace SpeckleGSA
             return prop.PropertyType.IsGenericType &&
                    prop.PropertyType.GetGenericTypeDefinition().IsAssignableFrom(typeof(Dictionary<,>));
         }
-        
+
         public static object UnrollAbstractRef(object obj, string path)
         {
             string[] pieces = path.Split(new char[] { '/' });
 
             if (pieces.Length <= 1) // We're here!
                 return obj;
-            
+
             string nextPath = pieces[1];
 
             try
-            { 
+            {
                 return UnrollAbstractRef((obj as Dictionary<string, object>)[nextPath], string.Join("/", pieces.Skip(1)));
             }
             catch { return null; }
@@ -111,14 +111,14 @@ namespace SpeckleGSA
                 return Converter.Serialise(obj);
         }
 
-        public static Dictionary<string,object> GetSpeckleProperties(this object obj)
+        public static Dictionary<string, object> GetSpeckleProperties(this object obj)
         {
             if (obj == null) { return null; }
 
             Dictionary<string, object> properties = new Dictionary<string, object>();
             properties.Add("Structural", obj.GetPropertyDict());
 
-            return properties.ToSpeckleDict() as Dictionary<string,object>;
+            return properties.ToSpeckleDict() as Dictionary<string, object>;
         }
 
         public static object FromSpeckleDict(this object obj, Dictionary<string, object> rootDict = null)
@@ -126,7 +126,7 @@ namespace SpeckleGSA
             if (obj == null) { return null; }
 
             if (rootDict == null & obj.IsDictionary())
-                rootDict = obj as Dictionary<string,object>;
+                rootDict = obj as Dictionary<string, object>;
 
             if (obj.IsDictionary())
             {
@@ -141,7 +141,7 @@ namespace SpeckleGSA
             else if (obj is SpeckleObject)
                 return Converter.Deserialise(obj as SpeckleObject);
             else
-            { 
+            {
                 if (obj is string)
                     if (obj as string == "null") return null;
 
@@ -219,7 +219,13 @@ namespace SpeckleGSA
             SpecklePoint p = new SpecklePoint(node.Coor[0], node.Coor[1], node.Coor[2], "", node.GetSpeckleProperties());
             return p;
         }
-        
+
+        public static SpeckleString ToSpeckle(this GSA0DLoad load)
+        {
+            SpeckleString s = new SpeckleString("0D LOAD", load.GetSpeckleProperties());
+            return s;
+        }
+
         public static SpeckleLine ToSpeckle(this GSA1DElement element)
         {
             SpeckleLine l = new SpeckleLine(
@@ -297,6 +303,9 @@ namespace SpeckleGSA
                     break;
                 case "2D PROPERTY":
                     obj = new GSA2DProperty();
+                    break;
+                case "0D LOAD":
+                    obj = new GSA0DLoad();
                     break;
                 default:
                     return str.Value;

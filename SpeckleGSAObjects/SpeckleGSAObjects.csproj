@@ -49,6 +49,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="GSA0DElement.cs" />
+    <Compile Include="GSA0DLoad.cs" />
     <Compile Include="GSA1DElement.cs" />
     <Compile Include="GSA1DProperty.cs" />
     <Compile Include="GSA2DElement.cs" />

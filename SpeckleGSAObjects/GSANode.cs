@@ -311,7 +311,7 @@ namespace SpeckleGSA
         #endregion
 
         #region Axis
-        private Dictionary<string, object> ParseGSANodeAxis(int axis, double[] evalAtCoor = null)
+        public Dictionary<string, object> ParseGSANodeAxis(int axis, double[] evalAtCoor = null)
         {
             // Returns unit vector of each X, Y, Z axis
             Dictionary<string, object> axisVectors = new Dictionary<string, object>();

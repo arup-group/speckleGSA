@@ -62,6 +62,13 @@ namespace SpeckleGSA
             return obj;
         }
 
+        public static GSA0DLoad AttachGSA(this GSA0DLoad obj, ComAuto gsa)
+        {
+            obj.gsa = gsa;
+            return obj;
+        }
+
+
         public static GSAMaterial AttachGSA(this GSAMaterial obj, ComAuto gsa)
         {
             obj.gsa = gsa;
@@ -640,6 +647,13 @@ namespace SpeckleGSA
                 return true;
             else
                 return false;
+        }
+
+        public static bool IsAxisEqual(this Dictionary<string, object> axis1, Dictionary<string, object> axis2)
+        {
+            //TODO: NEED TO IMPLEMENT EPS
+            if (axis1.GetHashCode() == axis2.GetHashCode()) return true;
+            return false;
         }
         #endregion
     }
