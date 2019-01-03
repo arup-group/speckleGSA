@@ -27,9 +27,6 @@ namespace SpeckleGSAUI
         public ObservableCollection<Tuple<string, string>> StreamData { get; set; }
 
         public string ModelName { get; set; }
-        public string ReceiverNodesStreamID { get; set; }
-        public string ReceiverPropertiesStreamID { get; set; }
-        public string ReceiverElementsStreamID { get; set; }
 
         public GSAController gsa;
 
@@ -43,9 +40,6 @@ namespace SpeckleGSAUI
             Password.Password = "temporaryPassword";
 
             ModelName = "";
-            ReceiverNodesStreamID = "";
-            ReceiverPropertiesStreamID = "";
-            ReceiverElementsStreamID = "";
             StreamData = new ObservableCollection<Tuple<string, string>>();
 
             gsa = new GSAController();
@@ -124,9 +118,11 @@ namespace SpeckleGSAUI
                         DispatcherPriority.Background,
                         new Action(() =>
                         {
-                            SenderNodesStreamID.Text = gsa.SenderNodesStreamID;
-                            SenderPropertiesStreamID.Text = gsa.SenderPropertiesStreamID;
-                            SenderElementsStreamID.Text = gsa.SenderElementsStreamID;
+                            SenderStreams.Items.Clear();
+
+                            List<Tuple<string, string>> streams = gsa.GetSenderStreams();
+                            foreach (Tuple<string,string> stream in streams)
+                                SenderStreams.Items.Add(stream);
                         }
                         ));
                 }
@@ -139,14 +135,20 @@ namespace SpeckleGSAUI
         #region Receiver
         private void ReceiveStream(object sender, RoutedEventArgs e)
         {
+            string streamInput = new TextRange(ReceiverStreams.Document.ContentStart, ReceiverStreams.Document.ContentEnd).Text;
+            if (streamInput == null)
+                return;
+
+            string[] streams = streamInput.Split(new string[] { "\r", "\n", "," },StringSplitOptions.RemoveEmptyEntries);
+
+            Dictionary<string, string> streamDict = new Dictionary<string, string>();
+
+            for (int i = 0; i < streams.Length; i++)
+                streamDict.Add(i.ToString(), streams[i]);
+
             gsa.AttachStatusHandler(ChangeReceiverProgress);
 
-            Task.Run(() => gsa.ImportObjects(new Dictionary<string, string>()
-            {
-                { "properties", ReceiverPropertiesStreamID },
-                { "nodes", ReceiverNodesStreamID },
-                { "elements", ReceiverElementsStreamID },
-            }));
+            Task.Run(() => gsa.ImportObjects(streamDict));
         }
         #endregion
 

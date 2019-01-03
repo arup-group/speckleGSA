@@ -118,6 +118,16 @@ namespace SpeckleGSA
                 streamManager.CloneStream(kvp.Value.StreamID).ContinueWith(res => MessageLog.AddMessage("Cloned " + kvp.Key + " stream to ID : " + res.Result));
             }
         }
+
+        public List<Tuple<string,string>> GetSenderStreams()
+        {
+            List<Tuple<string, string>> streams = new List<Tuple<string, string>>();
+
+            foreach (KeyValuePair<string, SpeckleGSASender> kvp in senders)
+                streams.Add(new Tuple<string, string>(kvp.Value.StreamName, kvp.Value.StreamID));
+
+            return streams;
+        }
         #endregion
 
         #region GSA

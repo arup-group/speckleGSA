@@ -14,6 +14,7 @@ namespace SpeckleGSA
     {
         const double MAX_BUCKET_SIZE = 5e5;
 
+        public string StreamName { get => mySender == null ? null : mySender.Stream.Name; }
         public string StreamID { get => mySender == null ? null : mySender.StreamId; }
 
         private SpeckleApiClient mySender;

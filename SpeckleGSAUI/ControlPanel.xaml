@@ -120,22 +120,41 @@
                         <RowDefinition Height="auto"/>
                         <RowDefinition Height="auto"/>
                         <RowDefinition Height="auto"/>
-                        <RowDefinition Height="auto"/>
-                        <RowDefinition Height="auto"/>
-                        <RowDefinition Height="auto"/>
                     </Grid.RowDefinitions>
                     <Label Grid.Row="0" Grid.ColumnSpan="2" Content="Sender" Margin="5" FontWeight="Bold"/>
                     <Label Grid.Row="1" Grid.Column="0" Content="Model Name" Margin="5,5,5,5"/>
                     <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Path=ModelName}" Margin="5,5,5,5"/>
-                    <Label Grid.Row="2" Grid.Column="0" Content="Properties" Margin="5"/>
-                    <TextBox Grid.Row="2" Grid.Column="1" x:Name="SenderPropertiesStreamID" IsReadOnly="True" BorderThickness="0" Margin="5"/>
-                    <Label Grid.Row="3" Grid.Column="0" Content="Nodes" Margin="5"/>
-                    <TextBox Grid.Row="3" Grid.Column="1" x:Name="SenderNodesStreamID" IsReadOnly="True" BorderThickness="0" Margin="5"/>
-                    <Label Grid.Row="4" Grid.Column="0" Content="Elements" Margin="5"/>
-                    <TextBox Grid.Row="4" Grid.Column="1" x:Name="SenderElementsStreamID" IsReadOnly="True" BorderThickness="0" Margin="5"/>
-                    <Button Grid.Row="5" Grid.ColumnSpan="2" Content="Send/Update Streams" Click="SendStream" Margin="5"/>
                     <materialDesign:Card
-                            Grid.Row="6"
+                            Grid.Row="2"
+                            Grid.ColumnSpan="2"
+                            Margin="5"
+                            VerticalAlignment="Stretch">
+                        <DataGrid
+                            CanUserSortColumns="False"
+                            AutoGenerateColumns="False"
+                            IsReadOnly="True"
+                            x:Name="SenderStreams"
+                            SelectionMode="Single"
+                            CopyingRowClipboardContent="CopyStreamList"
+                            GridLinesVisibility="None"
+                            MinHeight="100">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Name" Width="*" Binding="{Binding Item1}"/>
+                                <DataGridTextColumn Header="StreamID" Width="*" Binding="{Binding Item2}"/>
+                            </DataGrid.Columns>
+                            <DataGrid.CellStyle>
+                                <Style
+                                    TargetType="DataGridCell"
+                                    BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                </Style>
+                            </DataGrid.CellStyle>
+                        </DataGrid>
+                    </materialDesign:Card>
+                    <Button Grid.Row="3" Grid.ColumnSpan="2" Content="Send/Update Streams" Click="SendStream" Margin="5"/>
+                    <materialDesign:Card
+                            Grid.Row="4"
                             Grid.ColumnSpan="2"
                             Background="{DynamicResource PrimaryHueMidBrush}"
                             Margin="5">
@@ -161,7 +180,6 @@
                 <Grid
                     Margin="10">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
@@ -169,19 +187,18 @@
                         <RowDefinition Height="auto"/>
                         <RowDefinition Height="auto"/>
                         <RowDefinition Height="auto"/>
-                        <RowDefinition Height="auto"/>
-                        <RowDefinition Height="auto"/>
                     </Grid.RowDefinitions>
-                    <Label Grid.Row="0" Grid.ColumnSpan="2" Content="Receiver" Margin="5" FontWeight="Bold"/>
-                    <Label Grid.Row="1" Grid.Column="0" Content="Properties" Margin="5"/>
-                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Path=ReceiverPropertiesStreamID}" Margin="5"/>
-                    <Label Grid.Row="2" Grid.Column="0" Content="Nodes" Margin="5"/>
-                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Path=ReceiverNodesStreamID}" Margin="5"/>
-                    <Label Grid.Row="3" Grid.Column="0" Content="Elements" Margin="5"/>
-                    <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Path=ReceiverElementsStreamID}" Margin="5"/>
-                    <Button Grid.Row="4" Grid.ColumnSpan="2" Content="Receive Streams" Click="ReceiveStream" Margin="5"/>
+                    <Label Grid.Row="0" Content="Receiver" Margin="5" FontWeight="Bold"/>
+                    <RichTextBox x:Name="ReceiverStreams" Grid.Row="1" MinHeight="100" HorizontalContentAlignment="Center" Margin="5" AcceptsReturn="True" BorderThickness="1">
+                        <RichTextBox.Resources>
+                            <Style TargetType="{x:Type Paragraph}">
+                                <Setter Property="Margin" Value="0"/>
+                            </Style>
+                        </RichTextBox.Resources>
+                    </RichTextBox>
+                    <Button Grid.Row="2" Content="Receive Streams" Click="ReceiveStream" Margin="5"/>
                     <materialDesign:Card
-                            Grid.Row="5"
+                            Grid.Row="3"
                             Grid.ColumnSpan="2"
                             Background="{DynamicResource PrimaryHueMidBrush}"
                             Margin="5">
