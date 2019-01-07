@@ -330,21 +330,24 @@ namespace SpeckleGSA
             ChangeStatus("BUCKETING OBJECTS");
             foreach (object obj in convertedObjects)
             {
+                if (obj == null) continue;
 
                 if (!objects.ContainsKey(obj.GetType()))
                 { 
                     if (obj.IsList())
+                    { 
                         objects[obj.GetType()] = (obj as IList).Cast<GSAObject>().ToList();
-                    else
-                        objects[obj.GetType()] = new List<GSAObject>() { obj as GSAObject };
+                    }
+                    else if (obj is GSAObject)
+                            objects[obj.GetType()] = new List<GSAObject>() { obj as GSAObject };
                 }
                 else
                 { 
                     if (obj.IsList())
                         (objects[obj.GetType()] as List<GSAObject>)
                             .AddRange((obj as IList).Cast<GSAObject>().ToList());
-                    else
-                        (objects[obj.GetType()] as List<GSAObject>).Add(obj as GSAObject);
+                    else if (obj is GSAObject)
+                            (objects[obj.GetType()] as List<GSAObject>).Add(obj as GSAObject);
                 }
             }
 
