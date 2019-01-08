@@ -121,7 +121,7 @@ namespace SpeckleGSA
 
             int counter = 1; // Skip identifier
             Name = pieces[counter++].Trim(new char[] { '"' });
-            Nodes = pieces[counter++].ParseGSAList(gsa).ToList();
+            Nodes = pieces[counter++].ParseGSAList(GsaEntity.NODE, gsa).ToList();
             Case = Convert.ToInt32(pieces[counter++]);
 
             string axis = pieces[counter++];

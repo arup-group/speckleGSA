@@ -401,13 +401,31 @@ namespace SpeckleGSA
                 typePriority[priority].Add(t);
             }
 
+            // Clear GSA file
+            foreach (KeyValuePair<int, List<Type>> kvp in typePriority)
+            {
+                foreach (Type t in kvp.Value)
+                {
+                    ChangeStatus("CLEARING " + t.Name);
+
+                    try
+                    {
+                        string keyword = (string)t.GetField("GSAKeyword").GetValue(null);
+                        int highestRecord = (int)gsaObj.GwaCommand("HIGHEST," + keyword);
+
+                        gsaObj.GwaCommand("BLANK," + t.GetField("GSAKeyword").GetValue(null) + ",1," + highestRecord.ToString());
+                    }
+                    catch { }
+                }
+            }
+
             // Write objects
             foreach (KeyValuePair<int, List<Type>> kvp in typePriority)
             {
                 foreach (Type t in kvp.Value)
                 {
                     ChangeStatus("WRITING " + t.Name);
-
+                    
                     t.GetMethod("WriteObjects",
                         new Type[] { typeof(ComAuto), typeof(Dictionary<Type, object>) })
                         .Invoke(null, new object[] { gsaObj, objects });

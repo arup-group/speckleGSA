@@ -398,7 +398,7 @@ namespace SpeckleGSA
             return Regex.Split(list, delimiter + "(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
         }
 
-        public static int[] ParseGSAList(this string list, ComAuto gsaObj)
+        public static int[] ParseGSAList(this string list, GsaEntity type, ComAuto gsaObj)
         {
             if (list == null) return new int[0];
 
@@ -408,9 +408,11 @@ namespace SpeckleGSA
             List<int> items = new List<int>();
             for (int i = 0; i < pieces.Length; i++)
             {
-                if (pieces[i].Contains('"'))
-                    items.AddRange(pieces[i].ConvertNamedGSAList(gsaObj));
-                if (pieces[i] == "to")
+                if (pieces[i].IsDigits())
+                    items.Add(Convert.ToInt32(pieces[i]));
+                else if (pieces[i].Contains('"'))
+                    items.AddRange(pieces[i].ConvertNamedGSAList(type, gsaObj));
+                else if (pieces[i] == "to")
                 {
                     int lowerRange = Convert.ToInt32(pieces[i - 1]);
                     int upperRange = Convert.ToInt32(pieces[i + 1]);
@@ -421,13 +423,19 @@ namespace SpeckleGSA
                     i++;
                 }
                 else
-                    items.Add(Convert.ToInt32(pieces[i]));
+                {
+                    int[] entities = new int[0];
+                    GsaEntity entType = type;
+                    Console.WriteLine(gsaObj.EntitiesInList(pieces[i], ref entType, out entities));
+
+                    items.AddRange(entities);
+                }
             }
 
             return items.ToArray();
         }
 
-        public static int[] ConvertNamedGSAList(this string list, ComAuto gsaObj)
+        public static int[] ConvertNamedGSAList(this string list, GsaEntity type, ComAuto gsaObj)
         {
             list = list.Trim(new char[] { '"' });
 
@@ -435,7 +443,7 @@ namespace SpeckleGSA
 
             string[] pieces = res.Split(new char[] { ',' });
 
-            return pieces[pieces.Length - 1].ParseGSAList(gsaObj);
+            return pieces[pieces.Length - 1].ParseGSAList(type, gsaObj);
         }
         #endregion
 
@@ -654,6 +662,18 @@ namespace SpeckleGSA
         #endregion
 
         #region Comparison
+
+        public static bool IsDigits(this string str)
+        {
+            foreach (char c in str)
+            {
+                if (c < '0' || c > '9')
+                    return false;
+            }
+
+            return true;
+        }
+
 
         public static bool Equal(this object obj, double val)
         {
