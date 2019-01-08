@@ -31,6 +31,8 @@ namespace SpeckleGSA
         #region GSAObject Functions
         public static void GetObjects(ComAuto gsa, Dictionary<Type, object> dict)
         {
+            if (!dict.ContainsKey(typeof(GSAMaterial))) return;
+
             List<GSAObject> materials = dict[typeof(GSAMaterial)] as List<GSAObject>;
             List<GSAObject> props = new List<GSAObject>();
 

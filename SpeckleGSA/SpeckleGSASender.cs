@@ -37,7 +37,7 @@ namespace SpeckleGSA
             mySender.Stream.Name = streamName;
         }
 
-        public void SendGSAObjects(Dictionary<string, List<object>> payloadObjects)
+        public void SendGSAObjects(Dictionary<string, List<object>> payloadObjects, Dictionary<string, object> baseProps)
         {
             ConverterHack n = new ConverterHack();
 
@@ -57,14 +57,11 @@ namespace SpeckleGSA
                 layers.Add(new Layer()
                 {
                     Name = kvp.Key,
-                    Guid = kvp.Key,
+                    Guid = Guid.NewGuid().ToString(),
                     ObjectCount = convertedObjects.Count,
                     StartIndex = objectCounter,
                     OrderIndex = orderIndex++,
-                    Properties = new LayerProperties()
-                    {
-                        Color = new SpeckleBaseColor()
-                    }
+                    Topology = ""
                 });
 
                 bucketObjects.AddRange(convertedObjects);
@@ -122,13 +119,14 @@ namespace SpeckleGSA
             updateStream.Layers = layers;
             updateStream.Objects = placeholders;
             updateStream.Name = mySender.Stream.Name;
+            updateStream.BaseProperties = baseProps;
 
             try
             { 
                 var response = mySender.StreamUpdateAsync(mySender.Stream.StreamId, updateStream).Result;
                 mySender.Stream.Layers = updateStream.Layers.ToList();
                 mySender.Stream.Objects = placeholders;
-
+                
                 MessageLog.AddMessage("Succesfully sent " + mySender.Stream.Name + " stream with " + updateStream.Objects.Count() + " objects.");
             }
             catch

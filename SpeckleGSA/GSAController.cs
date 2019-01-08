@@ -206,6 +206,12 @@ namespace SpeckleGSA
                 typePriority[priority].Add(t);
             }
 
+            // Getting document settings
+            Dictionary<string, object> baseProps = new Dictionary<string, object>();
+            baseProps["units"] = "Millimeters";// gsaObj.GwaCommand("GET,UNIT_DATA,LENGTH");
+            baseProps["tolerance"] = HelperFunctions.EPS;
+            baseProps["angleTolerance"] = HelperFunctions.EPS;
+
             // Read objects
             Dictionary<Type, object> bucketObjects = new Dictionary<Type, object>();
 
@@ -214,9 +220,9 @@ namespace SpeckleGSA
                 foreach (Type t in kvp.Value)
                 {
                     ChangeStatus("READING " + t.Name);
-
+                    
                     t.GetMethod("GetObjects",
-                        new Type[] { typeof(ComAuto), typeof(Dictionary<Type, object>)})
+                        new Type[] { typeof(ComAuto), typeof(Dictionary<Type, object>) })
                         .Invoke(null, new object[] { gsaObj, bucketObjects });
                 }
             }
@@ -256,9 +262,9 @@ namespace SpeckleGSA
                     try
                     { 
                         senders[kvp.Key].SendGSAObjects(
-                        new Dictionary<string, List<object>>() {
-                            { "All", kvp.Value }
-                        });
+                            new Dictionary<string, List<object>>() {
+                                { "All", kvp.Value }
+                            }, baseProps);
                     }
                     catch (Exception ex)
                     {
@@ -332,12 +338,12 @@ namespace SpeckleGSA
             {
                 if (obj == null) continue;
 
+                try
+                { 
                 if (!objects.ContainsKey(obj.GetType()))
                 { 
                     if (obj.IsList())
-                    { 
                         objects[obj.GetType()] = (obj as IList).Cast<GSAObject>().ToList();
-                    }
                     else if (obj is GSAObject)
                             objects[obj.GetType()] = new List<GSAObject>() { obj as GSAObject };
                 }
@@ -348,6 +354,11 @@ namespace SpeckleGSA
                             .AddRange((obj as IList).Cast<GSAObject>().ToList());
                     else if (obj is GSAObject)
                             (objects[obj.GetType()] as List<GSAObject>).Add(obj as GSAObject);
+                }
+                }
+                catch (Exception ex)
+                {
+                    MessageLog.AddError(ex.Message);
                 }
             }
 

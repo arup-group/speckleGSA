@@ -44,6 +44,8 @@ namespace SpeckleGSA
         #region GSAObject Functions
         public static void GetObjects(ComAuto gsa, Dictionary<Type, object> dict)
         {
+            if (!dict.ContainsKey(typeof(GSA2DElement))) return;
+
             List<GSAObject> elements = dict[typeof(GSA2DElement)] as List<GSAObject>;
             List<int> elemRefs = elements.Select(e => e.Reference).ToList();
 

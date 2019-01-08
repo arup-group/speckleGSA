@@ -216,7 +216,7 @@ namespace SpeckleGSA
 
         public static SpecklePoint ToSpeckle(this GSANode node)
         {
-            SpecklePoint p = new SpecklePoint(node.Coor[0], node.Coor[1], node.Coor[2], "", node.GetSpeckleProperties());
+            SpecklePoint p = new SpecklePoint(node.Coor[0], node.Coor[1], node.Coor[2], null, node.GetSpeckleProperties());
             return p;
         }
 
