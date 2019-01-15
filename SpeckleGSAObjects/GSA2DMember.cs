@@ -137,6 +137,7 @@ namespace SpeckleGSA
             Name = pieces[counter++].Trim(new char[] { '"' });
             Color = pieces[counter++].ParseGSAColor();
             Type = pieces[counter++];
+            Type = Type == "2D_GENERIC" ? "GENERIC" : Type;
             Property = Convert.ToInt32(pieces[counter++]);
             counter++; // Group
 
@@ -171,7 +172,7 @@ namespace SpeckleGSA
 
             // Skip to offsets at second to last
             counter = pieces.Length - 2;
-            Offset = Convert.ToDouble(counter);
+            Offset = Convert.ToDouble(pieces[counter++]);
         }
 
         public override string GetGWACommand(Dictionary<Type, object> dict = null)
@@ -186,7 +187,7 @@ namespace SpeckleGSA
                 ls.Add("NO_RGB");
             else
                 ls.Add(Color.ToNumString());
-            ls.Add(Type);
+            ls.Add(Type == "GENERIC" ? "2D_GENERIC" : Type);
             ls.Add(Property.ToString());
             ls.Add("0"); // Group
             string topo = "";

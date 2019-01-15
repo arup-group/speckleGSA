@@ -110,6 +110,12 @@ namespace SpeckleGSA
             return obj;
         }
 
+        public static GSA1DMember AttachGSA(this GSA1DMember obj, ComAuto gsa)
+        {
+            obj.gsa = gsa;
+            return obj;
+        }
+
         public static GSA2DMember AttachGSA(this GSA2DMember obj, ComAuto gsa)
         {
             obj.gsa = gsa;

@@ -286,6 +286,16 @@ namespace SpeckleGSA
             return m;
         }
 
+        public static SpeckleLine ToSpeckle(this GSA1DMember member)
+        {
+            SpeckleLine l = new SpeckleLine(
+                member.Coor,
+                member.Reference.ToString(),
+                member.GetSpeckleProperties());
+
+            return l;
+        }
+
         public static SpecklePolyline ToSpeckle(this GSA2DMember member)
         {
             SpecklePolyline p = new SpecklePolyline(
@@ -349,16 +359,26 @@ namespace SpeckleGSA
             return obj;
         }
 
-        public static GSA1DElement ToNative(this SpeckleLine line)
+        public static GSA1DMember ToNative(this SpeckleLine line)
         {
-            GSA1DElement e = new GSA1DElement();
+            // TODO: Option to import 1D Element?
+            GSA1DMember m = new GSA1DMember();
 
             if (line.Properties != null && line.Properties.ContainsKey("Structural"))
-                e.SetSpeckleProperties(line.Properties);
+                m.SetSpeckleProperties(line.Properties);
 
-            e.Coor = line.Value;
+            m.Coor = line.Value;
 
-            return e;
+            return m;
+
+            //GSA1DElement e = new GSA1DElement();
+
+            //if (line.Properties != null && line.Properties.ContainsKey("Structural"))
+            //    e.SetSpeckleProperties(line.Properties);
+
+            //e.Coor = line.Value;
+
+            //return e;
         }
 
         public static object ToNative(this SpecklePolyline poly)
