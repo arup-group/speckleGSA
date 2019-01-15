@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Media.Media3D;
-using Interop.Gsa_9_0;
+using Interop.Gsa_10_0;
 
 namespace SpeckleGSA
 {
@@ -135,6 +135,8 @@ namespace SpeckleGSA
             Coor.Add(Convert.ToDouble(pieces[counter++]));
             Coor.Add(Convert.ToDouble(pieces[counter++]));
             Coor.Add(Convert.ToDouble(pieces[counter++]));
+
+            counter += 4; // TODO: Skip unknown fields in NODE.3
 
             while (counter < pieces.Length)
             {

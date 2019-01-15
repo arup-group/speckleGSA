@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Interop.Gsa_9_0;
+using Interop.Gsa_10_0;
 using System.Text.RegularExpressions;
 using System.Windows.Media.Media3D;
 using System.Drawing;
@@ -52,7 +52,7 @@ namespace SpeckleGSA
             WEDGE15 = 15,
             WEDGE6 = 6
         };
-
+        
         #endregion
 
         #region Attach GSA
@@ -105,6 +105,12 @@ namespace SpeckleGSA
         }
 
         public static GSA2DElement AttachGSA(this GSA2DElement obj, ComAuto gsa)
+        {
+            obj.gsa = gsa;
+            return obj;
+        }
+
+        public static GSA2DMember AttachGSA(this GSA2DMember obj, ComAuto gsa)
         {
             obj.gsa = gsa;
             return obj;
@@ -526,6 +532,22 @@ namespace SpeckleGSA
         public static int ParseElementNumNodes(this string type)
         {
             return (int)((ElementNumNodes)Enum.Parse(typeof(ElementNumNodes), type));
+        }
+
+        public static bool MemberIs1D(this string type)
+        {
+            if (type == "1D_GENERIC" | type == "COLUMN" | type == "BEAM")
+                return true;
+            else
+                return false;
+        }
+
+        public static bool MemberIs2D(this string type)
+        {
+            if (type == "2D_GENERIC" | type == "SLAB" | type == "WALL")
+                return true;
+            else
+                return false;
         }
 
         public static double ConvertUnit(this double value, string originalDimension, string targetDimension)

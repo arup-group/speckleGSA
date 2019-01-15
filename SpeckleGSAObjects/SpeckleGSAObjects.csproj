@@ -32,8 +32,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Interop.Gsa_9_0">
-      <HintPath>..\Resource\Interop.Gsa_9_0.dll</HintPath>
+    <Reference Include="Interop.Gsa_10_0">
+      <HintPath>..\Resource\Interop.Gsa_10_0.dll</HintPath>
       <EmbedInteropTypes>True</EmbedInteropTypes>
     </Reference>
     <Reference Include="PresentationCore" />
@@ -51,10 +51,12 @@
     <Compile Include="GSA0DElement.cs" />
     <Compile Include="GSA0DLoad.cs" />
     <Compile Include="GSA1DElement.cs" />
+    <Compile Include="GSA1DMember.cs" />
     <Compile Include="GSA1DProperty.cs" />
     <Compile Include="GSA2DElement.cs" />
     <Compile Include="GSA2DElementMesh.cs" />
     <Compile Include="GSA2DFaceLoad.cs" />
+    <Compile Include="GSA2DMember.cs" />
     <Compile Include="GSA2DProperty.cs" />
     <Compile Include="GSAMaterial.cs" />
     <Compile Include="GSAMember.cs" />

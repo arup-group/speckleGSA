@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Media.Media3D;
-using Interop.Gsa_9_0;
+using Interop.Gsa_10_0;
 
 namespace SpeckleGSA
 {
@@ -56,8 +56,8 @@ namespace SpeckleGSA
             };
             InsertionPoint = new Dictionary<string, object>()
             {
-                { "Vertical", "MID" },
-                { "Horizontal", "MID" },
+                { "Vertical", 0 },
+                { "Horizontal", 0 },
             };
         }
 

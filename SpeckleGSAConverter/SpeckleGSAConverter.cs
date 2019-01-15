@@ -285,6 +285,19 @@ namespace SpeckleGSA
 
             return m;
         }
+
+        public static SpecklePolyline ToSpeckle(this GSA2DMember member)
+        {
+            SpecklePolyline p = new SpecklePolyline(
+                member.Coor.Concat(member.Coor.Take(3)),
+                member.Reference.ToString(),
+                member.GetSpeckleProperties());
+
+            p.Closed = true;
+            p.GenerateHash();
+
+            return p;
+        }
         #endregion
 
         #region Speckle to GSA

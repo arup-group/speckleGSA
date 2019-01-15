@@ -62,8 +62,8 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="Interop.Gsa_9_0">
-      <HintPath>..\..\..\Program Files\Oasys\GSA 9.0\Interop.Gsa_9_0.dll</HintPath>
+    <Reference Include="Interop.Gsa_10_0">
+      <HintPath>..\Resource\Interop.Gsa_10_0.dll</HintPath>
       <EmbedInteropTypes>True</EmbedInteropTypes>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
