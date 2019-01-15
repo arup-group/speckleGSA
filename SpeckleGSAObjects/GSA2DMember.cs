@@ -80,7 +80,52 @@ namespace SpeckleGSA
 
         public static void WriteObjects(ComAuto gsa, Dictionary<Type, object> dict)
         {
+            if (!dict.ContainsKey(typeof(GSA2DMember))) return;
 
+            List<GSAObject> m2Ds = dict[typeof(GSA2DMember)] as List<GSAObject>;
+
+            foreach (GSAObject m in m2Ds)
+            {
+                m.AttachGSA(gsa);
+
+                GSARefCounters.RefObject(m);
+
+                List<GSAObject> nodes = m.GetChildren();
+
+                if (dict.ContainsKey(typeof(GSANode)))
+                {
+                    for (int i = 0; i < nodes.Count(); i++)
+                    {
+                        List<GSAObject> matches = (dict[typeof(GSANode)] as List<GSAObject>).Where(
+                            n => (n as GSANode).IsCoincident(nodes[i] as GSANode)).ToList();
+
+                        if (matches.Count() > 0)
+                        {
+                            if (matches[0].Reference == 0)
+                                GSARefCounters.RefObject(matches[0]);
+
+                            nodes[i].Reference = matches[0].Reference;
+                            (matches[0] as GSANode).Merge(nodes[i] as GSANode);
+                        }
+                        else
+                        {
+                            GSARefCounters.RefObject(nodes[i]);
+                            (dict[typeof(GSANode)] as List<GSAObject>).Add(nodes[i]);
+                        }
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < nodes.Count(); i++)
+                        GSARefCounters.RefObject(nodes[i]);
+
+                    dict[typeof(GSANode)] = nodes;
+                }
+
+                m.Connectivity = nodes.Select(n => n.Reference).ToList();
+
+                m.RunGWACommand(m.GetGWACommand());
+            }
         }
 
         public override void ParseGWACommand(string command, Dictionary<Type, object> dict = null)
@@ -131,7 +176,46 @@ namespace SpeckleGSA
 
         public override string GetGWACommand(Dictionary<Type, object> dict = null)
         {
-            return "";
+            List<string> ls = new List<string>();
+
+            ls.Add("SET");
+            ls.Add(GSAKeyword);
+            ls.Add(Reference.ToString());
+            ls.Add(Name);
+            if (Color == null)
+                ls.Add("NO_RGB");
+            else
+                ls.Add(Color.ToNumString());
+            ls.Add(Type);
+            ls.Add(Property.ToString());
+            ls.Add("0"); // Group
+            string topo = "";
+            foreach (int c in Connectivity)
+                topo += c.ToString() + " ";
+            ls.Add(topo);
+            ls.Add("0"); // Orientation node
+            ls.Add(GetGSA2DMemberAngle(Coor.ToArray(), Axis).ToNumString());
+            ls.Add("0"); // Target mesh size
+            ls.Add("0"); // Fire
+            ls.Add("0"); // Time 1
+            ls.Add("0"); // Time 2
+            ls.Add("0"); // Time 3
+            ls.Add("0"); // TODO: What is this?
+            ls.Add("ACTIVE"); // Dummy
+            ls.Add("0"); // End 1 condition
+            ls.Add("0"); // End 2 condition
+            ls.Add("AUTOMATIC"); // Effective length option
+            ls.Add("0"); // Pool
+            ls.Add("0"); // Height
+            ls.Add("MAN"); // Auto offset 1
+            ls.Add("MAN"); // Auto offset 2
+            ls.Add("0"); // Offset x 1
+            ls.Add("0"); // Offset x 2
+            ls.Add("0"); // Offset y
+            ls.Add(Offset.ToNumString()); // Offset z
+            ls.Add("ALL"); // Exposure
+
+            return string.Join(",", ls);
         }
 
         public override List<GSAObject> GetChildren()

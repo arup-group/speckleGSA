@@ -136,7 +136,7 @@ namespace SpeckleGSA
             Coor.Add(Convert.ToDouble(pieces[counter++]));
             Coor.Add(Convert.ToDouble(pieces[counter++]));
 
-            counter += 4; // TODO: Skip unknown fields in NODE.3
+            counter += 3; // TODO: Skip unknown fields in NODE.3
 
             while (counter < pieces.Length)
             {
@@ -197,8 +197,12 @@ namespace SpeckleGSA
             else
                 ls.Add(((int)Color).ToString());
             ls.Add(string.Join(",", Coor));
+
+            ls.Add("0"); // TODO: Skip unknown fields in NODE.3
+            ls.Add("0"); // TODO: Skip unknown fields in NODE.3
+            ls.Add("0"); // TODO: Skip unknown fields in NODE.3
             
-            ls.Add("NO_GRID");
+            //ls.Add("NO_GRID");
 
             ls.Add(AddAxistoGSA(Axis).ToString());
 

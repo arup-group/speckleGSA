@@ -365,16 +365,34 @@ namespace SpeckleGSA
         {
             if (poly.Properties != null && poly.Properties.ContainsKey("Structural"))
             {
-                GSA1DProperty prop = new GSA1DProperty();
-
-                prop.SetSpeckleProperties(poly.Properties);
-
-                if (poly.Closed)
-                    prop.Coor = poly.Value.Take(poly.Value.Count() - 3).ToList();
-                else
-                    prop.Coor = poly.Value.Take(poly.Value.Count()).ToList();
+                Dictionary<string, object> temp = poly.Properties["Structural"] as Dictionary<string, object>;
                 
-                return prop;
+                if (temp.ContainsKey("Type"))
+                {
+                    GSA2DMember m2D = new GSA2DMember();
+
+                    m2D.SetSpeckleProperties(poly.Properties);
+
+                    if (poly.Closed)
+                        m2D.Coor = poly.Value.Take(poly.Value.Count() - 3).ToList();
+                    else
+                        m2D.Coor = poly.Value.Take(poly.Value.Count()).ToList();
+
+                    return m2D;
+                }
+                else
+                {
+                    GSA1DProperty prop = new GSA1DProperty();
+
+                    prop.SetSpeckleProperties(poly.Properties);
+
+                    if (poly.Closed)
+                        prop.Coor = poly.Value.Take(poly.Value.Count() - 3).ToList();
+                    else
+                        prop.Coor = poly.Value.Take(poly.Value.Count()).ToList();
+                
+                    return prop;
+                }
             }
             else
             {
