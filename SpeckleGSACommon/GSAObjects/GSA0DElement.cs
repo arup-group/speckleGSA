@@ -30,48 +30,52 @@ namespace SpeckleGSA
         }
 
         #region GSAObject Functions
-        public static void GetObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        public static void GetObjects(Dictionary<Type, object> dict)
         {
             List<GSAObject> e0Ds = new List<GSAObject>();
 
-            string res = gsa.GwaCommand("GET_ALL,EL");
+            string res = (string)GSA.RunGWACommand("GET_ALL,EL");
 
             if (res == "")
                 return;
 
             string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
 
+            double counter = 1;
             foreach (string p in pieces)
             {
                 string[] pPieces = p.ListSplit(",");
                 if (pPieces[4].ParseElementNumNodes() == 1)
                 {
-                    GSA0DElement e0D = new GSA0DElement().AttachGSA(gsa);
+                    GSA0DElement e0D = new GSA0DElement();
                     e0D.ParseGWACommand(p);
 
                     e0Ds.Add(e0D);
                 }
+
+                Status.ChangeStatus("Reading 0D elements", counter++ / pieces.Length * 100);
             }
             
             dict[typeof(GSA0DElement)] = e0Ds;
         }
 
-        public static void WriteObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        public static void WriteObjects(Dictionary<Type, object> dict)
         {
             if (!dict.ContainsKey(typeof(GSA0DElement))) return;
 
             List<GSAObject> e0Ds = dict[typeof(GSA0DElement)] as List<GSAObject>;
 
+            double counter = 1;
             foreach (GSAObject e in e0Ds)
             {
-                e.AttachGSA(gsa);
-
                 GSARefCounters.RefObject(e);
                 
                 if ((e as GSA0DElement).Type == "MASS")
                     (e as GSA0DElement).Property = (e as GSA0DElement).WriteMassProptoGSA((e as GSA0DElement).Mass);
 
-                e.RunGWACommand(e.GetGWACommand());
+                GSA.RunGWACommand(e.GetGWACommand());
+                
+                Status.ChangeStatus("Writing 0D elements", counter++/e0Ds.Count() * 100);
             }
 
             dict.Remove(typeof(GSA0DElement));
@@ -137,7 +141,7 @@ namespace SpeckleGSA
         {
             List<string> ls = new List<string>();
 
-            int res = (int)RunGWACommand("HIGHEST,PROP_MASS");
+            int res = (int)GSA.RunGWACommand("HIGHEST,PROP_MASS");
 
             ls.Add("SET");
             ls.Add("PROP_MASS.2");
@@ -158,7 +162,7 @@ namespace SpeckleGSA
             ls.Add("100%");
             ls.Add("100%");
 
-            RunGWACommand(string.Join(",", ls));
+            GSA.RunGWACommand(string.Join(",", ls));
 
             return res + 1;
         }

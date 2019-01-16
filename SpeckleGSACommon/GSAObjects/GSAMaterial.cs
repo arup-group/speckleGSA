@@ -28,7 +28,7 @@ namespace SpeckleGSA
         }
 
         #region GSAObject Functions
-        public static void GetObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        public static void GetObjects(Dictionary<Type, object> dict)
         {
             string[] materialIdentifier = new string[]
                 { "MAT_STEEL", "MAT_CONCRETE" };
@@ -38,7 +38,7 @@ namespace SpeckleGSA
             List<string> pieces = new List<string>();
             foreach (string id in materialIdentifier)
             {
-                string res = gsa.GwaCommand("GET_ALL," + id);
+                string res = (string)GSA.RunGWACommand("GET_ALL," + id);
 
                 if (res == "")
                     continue;
@@ -49,28 +49,30 @@ namespace SpeckleGSA
             
             for (int i = 0; i < pieces.Count(); i++)
             {
-                GSAMaterial mat = new GSAMaterial().AttachGSA(gsa);
+                GSAMaterial mat = new GSAMaterial();
                 mat.ParseGWACommand(pieces[i]);
                 mat.Reference = i + 1; // Offset references
                 materials.Add(mat);
+
+                Status.ChangeStatus("Reading materials", (double)(i+1) / pieces.Count() * 100);
             }
 
             dict[typeof(GSAMaterial)] = materials;
         }
 
-        public static void WriteObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        public static void WriteObjects(Dictionary<Type, object> dict)
         {
             if (!dict.ContainsKey(typeof(GSAMaterial))) return;
 
             List<GSAObject> materials = dict[typeof(GSAMaterial)] as List<GSAObject>;
 
+            double counter = 1;
             foreach (GSAObject m in materials)
             {
-                m.AttachGSA(gsa);
-
                 GSARefCounters.RefObject(m);
 
-                m.RunGWACommand(m.GetGWACommand());
+                GSA.RunGWACommand(m.GetGWACommand());
+                Status.ChangeStatus("Writing materials", counter++ / materials.Count() * 100);
             }
 
             dict.Remove(typeof(GSAMaterial));

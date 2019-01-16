@@ -34,7 +34,7 @@ namespace SpeckleGSA
         }
 
         #region GSAObject Functions
-        public static void GetObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        public static void GetObjects(Dictionary<Type, object> dict)
         {
             if (!dict.ContainsKey(typeof(GSANode))) return;
 
@@ -43,7 +43,7 @@ namespace SpeckleGSA
 
             // TODO: Workaround for GET_ALL,MEMB bug
             int[] memberRefs = new int[0];
-            gsa.EntitiesInList("all", GsaEntity.MEMBER, out memberRefs);
+            GSA.GSAObject.EntitiesInList("all", GsaEntity.MEMBER, out memberRefs);
 
             if (memberRefs.Length == 0)
                 return;
@@ -52,7 +52,7 @@ namespace SpeckleGSA
 
             foreach (int r in memberRefs)
             {
-                tempPieces.Add(gsa.GwaCommand("GET,MEMB," + r.ToString()));
+                tempPieces.Add((string)GSA.RunGWACommand("GET,MEMB," + r.ToString()));
             }
 
             string[] pieces = tempPieces.ToArray();
@@ -64,30 +64,32 @@ namespace SpeckleGSA
 
             //string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
 
+            double counter = 1;
             foreach (string p in pieces)
             {
                 string[] pPieces = p.ListSplit(",");
                 if (pPieces[4].MemberIs2D())
                 {
-                    GSA2DMember m2D = new GSA2DMember().AttachGSA(gsa);
+                    GSA2DMember m2D = new GSA2DMember();
                     m2D.ParseGWACommand(p, dict);
                     m2Ds.Add(m2D);
                 }
+
+                Status.ChangeStatus("Reading 2D members", counter++ / pieces.Length * 100);
             }
 
             dict[typeof(GSA2DMember)] = m2Ds;
         }
 
-        public static void WriteObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        public static void WriteObjects(Dictionary<Type, object> dict)
         {
             if (!dict.ContainsKey(typeof(GSA2DMember))) return;
 
             List<GSAObject> m2Ds = dict[typeof(GSA2DMember)] as List<GSAObject>;
 
+            double counter = 1;
             foreach (GSAObject m in m2Ds)
             {
-                m.AttachGSA(gsa);
-
                 GSARefCounters.RefObject(m);
 
                 List<GSAObject> nodes = m.GetChildren();
@@ -124,7 +126,8 @@ namespace SpeckleGSA
 
                 m.Connectivity = nodes.Select(n => n.Reference).ToList();
 
-                m.RunGWACommand(m.GetGWACommand());
+                GSA.RunGWACommand(m.GetGWACommand());
+                Status.ChangeStatus("Writing 2D members", counter++ / m2Ds.Count() * 100);
             }
         }
 
@@ -159,13 +162,13 @@ namespace SpeckleGSA
             {
                 List<GSAObject> props = dict[typeof(GSA2DProperty)] as List<GSAObject>;
                 GSAObject prop = props.Where(p => p.Reference == Property).FirstOrDefault();
-                Axis = ParseGSA2DMemberAxis(Coor.ToArray(),
+                Axis = HelperFunctions.Parse2DAxis(Coor.ToArray(),
                     Convert.ToDouble(pieces[counter++]),
                     prop == null ? false : (prop as GSA2DProperty).IsAxisLocal);
             }
             else
             {
-                Axis = ParseGSA2DMemberAxis(Coor.ToArray(),
+                Axis = HelperFunctions.Parse2DAxis(Coor.ToArray(),
                     Convert.ToDouble(pieces[counter++]),
                     false);
             }
@@ -195,7 +198,7 @@ namespace SpeckleGSA
                 topo += c.ToString() + " ";
             ls.Add(topo);
             ls.Add("0"); // Orientation node
-            ls.Add(GetGSA2DMemberAngle(Coor.ToArray(), Axis).ToNumString());
+            ls.Add(HelperFunctions.Get2DAngle(Coor.ToArray(), Axis).ToNumString());
             ls.Add("0"); // Target mesh size
             ls.Add("0"); // Fire
             ls.Add("0"); // Time 1
@@ -235,125 +238,6 @@ namespace SpeckleGSA
             }
 
             return children;
-        }
-        #endregion  
-
-        #region Axis
-        public Dictionary<string, object> ParseGSA2DMemberAxis(double[] coor, double rotationAngle = 0, bool isLocalAxis = false)
-        {
-            Dictionary<string, object> axisVectors = new Dictionary<string, object>();
-
-            Vector3D x;
-            Vector3D y;
-            Vector3D z;
-
-            List<Vector3D> nodes = new List<Vector3D>();
-
-            for (int i = 0; i < coor.Length; i += 3)
-                nodes.Add(new Vector3D(coor[i], coor[i + 1], coor[i + 2]));
-
-            if (isLocalAxis)
-            {
-                if (nodes.Count == 3)
-                {
-                    x = Vector3D.Subtract(nodes[1], nodes[0]);
-                    x.Normalize();
-                    z = Vector3D.CrossProduct(x, Vector3D.Subtract(nodes[2], nodes[0]));
-                    z.Normalize();
-                    y = Vector3D.CrossProduct(z, x);
-                    y.Normalize();
-                }
-                else if (nodes.Count == 4)
-                {
-                    x = Vector3D.Subtract(nodes[2], nodes[0]);
-                    x.Normalize();
-                    z = Vector3D.CrossProduct(x, Vector3D.Subtract(nodes[3], nodes[1]));
-                    z.Normalize();
-                    y = Vector3D.CrossProduct(z, x);
-                    y.Normalize();
-                }
-                else
-                {
-                    // Default to QUAD method
-                    x = Vector3D.Subtract(nodes[2], nodes[0]);
-                    x.Normalize();
-                    z = Vector3D.CrossProduct(x, Vector3D.Subtract(nodes[3], nodes[1]));
-                    z.Normalize();
-                    y = Vector3D.CrossProduct(z, x);
-                    y.Normalize();
-                }
-            }
-            else
-            {
-                x = Vector3D.Subtract(nodes[1], nodes[0]);
-                x.Normalize();
-                z = Vector3D.CrossProduct(x, Vector3D.Subtract(nodes[2], nodes[0]));
-                z.Normalize();
-
-                x = new Vector3D(1, 0, 0);
-                x = Vector3D.Subtract(x, Vector3D.Multiply(Vector3D.DotProduct(x, z), z));
-
-                if (x.Length == 0)
-                    x = new Vector3D(0, z.X > 0 ? -1 : 1, 0);
-
-                y = Vector3D.CrossProduct(z, x);
-
-                x.Normalize();
-                y.Normalize();
-            }
-
-            //Rotation
-            Matrix3D rotMat = HelperFunctions.RotationMatrix(z, rotationAngle * (Math.PI / 180));
-            x = Vector3D.Multiply(x, rotMat);
-            y = Vector3D.Multiply(y, rotMat);
-
-            axisVectors["X"] = new Dictionary<string, object> { { "x", x.X }, { "y", x.Y }, { "z", x.Z } };
-            axisVectors["Y"] = new Dictionary<string, object> { { "x", y.X }, { "y", y.Y }, { "z", y.Z } };
-            axisVectors["Z"] = new Dictionary<string, object> { { "x", z.X }, { "y", z.Y }, { "z", z.Z } };
-
-            return axisVectors;
-        }
-
-        private double GetGSA2DMemberAngle(double[] coor, Dictionary<string, object> axis)
-        {
-            Dictionary<string, object> X = axis["X"] as Dictionary<string, object>;
-            Dictionary<string, object> Y = axis["Y"] as Dictionary<string, object>;
-            Dictionary<string, object> Z = axis["Z"] as Dictionary<string, object>;
-
-            Vector3D x = new Vector3D(X["x"].ToDouble(), X["y"].ToDouble(), X["z"].ToDouble());
-            Vector3D y = new Vector3D(Y["x"].ToDouble(), Y["y"].ToDouble(), Y["z"].ToDouble());
-            Vector3D z = new Vector3D(Z["x"].ToDouble(), Z["y"].ToDouble(), Z["z"].ToDouble());
-
-            Vector3D x0;
-            Vector3D z0;
-
-            List<Vector3D> nodes = new List<Vector3D>();
-
-            for (int i = 0; i < coor.Length; i += 3)
-                nodes.Add(new Vector3D(coor[i], coor[i + 1], coor[i + 2]));
-
-            // Get 0 angle axis in GLOBAL coordinates
-            x0 = Vector3D.Subtract(nodes[1], nodes[0]);
-            x0.Normalize();
-            z0 = Vector3D.CrossProduct(x0, Vector3D.Subtract(nodes[2], nodes[0]));
-            z0.Normalize();
-
-            x0 = new Vector3D(1, 0, 0);
-            x0 = Vector3D.Subtract(x0, Vector3D.Multiply(Vector3D.DotProduct(x0, z0), z0));
-
-            if (x0.Length == 0)
-                x0 = new Vector3D(0, z0.X > 0 ? -1 : 1, 0);
-
-            x0.Normalize();
-
-            // Find angle
-            double angle = Math.Acos(Vector3D.DotProduct(x0, x) / (x0.Length * x.Length)).ToDegrees();
-            if (double.IsNaN(angle)) return 0;
-
-            Vector3D signVector = Vector3D.CrossProduct(x0, x);
-            double sign = Vector3D.DotProduct(signVector, z);
-
-            return sign >= 0 ? angle : -angle;
         }
         #endregion
     }

@@ -15,7 +15,6 @@ namespace SpeckleGSA
 
         public List<double> Coor;
         public object Color;
-        public ComAuto gsa;
 
         public GSAObject()
         {
@@ -24,8 +23,6 @@ namespace SpeckleGSA
             Color = null;
             Coor = new List<double>();
             Connectivity = new List<int>();
-
-            gsa = null;
         }
 
         public abstract void ParseGWACommand(string command, Dictionary<Type, object> dict = null);
@@ -33,13 +30,5 @@ namespace SpeckleGSA
         public abstract string GetGWACommand(Dictionary<Type, object> dict = null);
 
         public abstract List<GSAObject> GetChildren();
-        
-        public object RunGWACommand(string command)
-        {
-            if (gsa == null) return null;
-
-            return gsa.GwaCommand(command);
-        }
-
     }
 }

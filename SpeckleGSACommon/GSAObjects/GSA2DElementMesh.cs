@@ -33,7 +33,7 @@ namespace SpeckleGSA
         }
 
         #region GSAObject Functions
-        public static void GetObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        public static void GetObjects(Dictionary<Type, object> dict)
         {
             if (!dict.ContainsKey(typeof(GSA2DElement))) return;
             
@@ -61,21 +61,22 @@ namespace SpeckleGSA
                     meshes.Remove(m);
                 
                 if (matches.Count() > 0) i--;
+
+                Status.ChangeStatus("Merging 2D elements", (double)(i+1) / meshes.Count() * 100);
             }
 
             dict[typeof(GSA2DElementMesh)] = meshes;
         }
 
-        public static void WriteObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        public static void WriteObjects(Dictionary<Type, object> dict)
         {
             if (!dict.ContainsKey(typeof(GSA2DElementMesh))) return;
 
             List<GSAObject> meshes = dict[typeof(GSA2DElementMesh)] as List<GSAObject>;
 
+            double counter = 1;
             foreach (GSAObject m in meshes)
             {
-                m.AttachGSA(gsa);
-
                 List<GSAObject> e2Ds = m.GetChildren();
 
                 for (int i = 0; i < e2Ds.Count(); i++)
@@ -85,6 +86,8 @@ namespace SpeckleGSA
                     dict[typeof(GSA2DElement)] = e2Ds;
                 else
                     (dict[typeof(GSA2DElement)] as List<GSAObject>).AddRange(e2Ds);
+
+                Status.ChangeStatus("Unrolling 2D meshes", counter++ / meshes.Count() * 100);
             }
 
             dict.Remove(typeof(GSA2DElementMesh));

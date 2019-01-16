@@ -52,14 +52,20 @@ namespace SpeckleGSA
             WEDGE15 = 15,
             WEDGE6 = 6
         };
-        
-        #endregion
 
-        #region Attach GSA
-        public static dynamic AttachGSA(this GSAObject obj, ComAuto gsa)
+        public static int ParseElementType(this string type)
         {
-            obj.gsa = gsa;
-            return obj;
+            return (int)((ElementType)Enum.Parse(typeof(ElementType), type));
+        }
+
+        public static int ParseLineNumNodes(this string type)
+        {
+            return (int)((LineNumNodes)Enum.Parse(typeof(LineNumNodes), type));
+        }
+
+        public static int ParseElementNumNodes(this string type)
+        {
+            return (int)((ElementNumNodes)Enum.Parse(typeof(ElementNumNodes), type));
         }
         #endregion
 
@@ -344,7 +350,7 @@ namespace SpeckleGSA
             return Regex.Split(list, delimiter + "(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
         }
 
-        public static int[] ParseGSAList(this string list, GsaEntity type, ComAuto gsaObj)
+        public static int[] ParseGSAList(this string list, GsaEntity type)
         {
             if (list == null) return new int[0];
 
@@ -357,7 +363,7 @@ namespace SpeckleGSA
                 if (pieces[i].IsDigits())
                     items.Add(Convert.ToInt32(pieces[i]));
                 else if (pieces[i].Contains('"'))
-                    items.AddRange(pieces[i].ConvertNamedGSAList(type, gsaObj));
+                    items.AddRange(pieces[i].ConvertNamedGSAList(type));
                 else if (pieces[i] == "to")
                 {
                     int lowerRange = Convert.ToInt32(pieces[i - 1]);
@@ -372,7 +378,6 @@ namespace SpeckleGSA
                 {
                     int[] entities = new int[0];
                     GsaEntity entType = type;
-                    Console.WriteLine(gsaObj.EntitiesInList(pieces[i], ref entType, out entities));
 
                     items.AddRange(entities);
                 }
@@ -381,15 +386,15 @@ namespace SpeckleGSA
             return items.ToArray();
         }
 
-        public static int[] ConvertNamedGSAList(this string list, GsaEntity type, ComAuto gsaObj)
+        public static int[] ConvertNamedGSAList(this string list, GsaEntity type)
         {
             list = list.Trim(new char[] { '"' });
 
-            string res = gsaObj.GwaCommand("GET,LIST," + list);
+            string res = (string)GSA.RunGWACommand("GET,LIST," + list);
 
             string[] pieces = res.Split(new char[] { ',' });
 
-            return pieces[pieces.Length - 1].ParseGSAList(type, gsaObj);
+            return pieces[pieces.Length - 1].ParseGSAList(type);
         }
         #endregion
 
@@ -438,6 +443,330 @@ namespace SpeckleGSA
         }
         #endregion
 
+        #region Axis
+        public static Dictionary<string, object> Parse0DAxis(int axis, double[] evalAtCoor = null)
+        {
+            // Returns unit vector of each X, Y, Z axis
+            Dictionary<string, object> axisVectors = new Dictionary<string, object>();
+
+            Vector3D x;
+            Vector3D y;
+            Vector3D z;
+
+            switch (axis)
+            {
+                case 0:
+                    // Global
+                    axisVectors["X"] = new Dictionary<string, object> { { "x", 1 }, { "y", 0 }, { "z", 0 } };
+                    axisVectors["Y"] = new Dictionary<string, object> { { "x", 0 }, { "y", 1 }, { "z", 0 } };
+                    axisVectors["Z"] = new Dictionary<string, object> { { "x", 0 }, { "y", 0 }, { "z", 1 } };
+                    return axisVectors;
+                case -11:
+                    // X elevation
+                    axisVectors["X"] = new Dictionary<string, object> { { "x", 0 }, { "y", -1 }, { "z", 0 } };
+                    axisVectors["Y"] = new Dictionary<string, object> { { "x", 0 }, { "y", 0 }, { "z", 1 } };
+                    axisVectors["Z"] = new Dictionary<string, object> { { "x", -1 }, { "y", 0 }, { "z", 0 } };
+                    return axisVectors;
+                case -12:
+                    // Y elevation
+                    axisVectors["X"] = new Dictionary<string, object> { { "x", 1 }, { "y", 0 }, { "z", 0 } };
+                    axisVectors["Y"] = new Dictionary<string, object> { { "x", 0 }, { "y", 0 }, { "z", 1 } };
+                    axisVectors["Z"] = new Dictionary<string, object> { { "x", 0 }, { "y", -1 }, { "z", 0 } };
+                    return axisVectors;
+                case -14:
+                    // Vertical
+                    axisVectors["X"] = new Dictionary<string, object> { { "x", 0 }, { "y", 0 }, { "z", 1 } };
+                    axisVectors["Y"] = new Dictionary<string, object> { { "x", 1 }, { "y", 0 }, { "z", 0 } };
+                    axisVectors["Z"] = new Dictionary<string, object> { { "x", 0 }, { "y", 1 }, { "z", 0 } };
+                    return axisVectors;
+                case -13:
+                    // Global cylindrical
+                    x = new Vector3D(evalAtCoor[0], evalAtCoor[1], 0);
+                    x.Normalize();
+                    z = new Vector3D(0, 0, 1);
+                    y = Vector3D.CrossProduct(z, x);
+
+                    axisVectors["X"] = new Dictionary<string, object> { { "x", x.X }, { "y", x.Y }, { "z", x.Z } };
+                    axisVectors["Y"] = new Dictionary<string, object> { { "x", y.X }, { "y", y.Y }, { "z", y.Z } };
+                    axisVectors["Z"] = new Dictionary<string, object> { { "x", z.X }, { "y", z.Y }, { "z", z.Z } };
+                    return axisVectors;
+                default:
+                    string res = (string)GSA.RunGWACommand("GET,AXIS," + axis.ToString());
+                    string[] pieces = res.Split(new char[] { ',' });
+                    if (pieces.Length < 13)
+                    {
+                        axisVectors["X"] = new Dictionary<string, object> { { "x", 1 }, { "y", 0 }, { "z", 0 } };
+                        axisVectors["Y"] = new Dictionary<string, object> { { "x", 0 }, { "y", 1 }, { "z", 0 } };
+                        axisVectors["Z"] = new Dictionary<string, object> { { "x", 0 }, { "y", 0 }, { "z", 1 } };
+                        return axisVectors;
+                    }
+                    Vector3D origin = new Vector3D(Convert.ToDouble(pieces[4]), Convert.ToDouble(pieces[5]), Convert.ToDouble(pieces[6]));
+
+                    Vector3D X = new Vector3D(Convert.ToDouble(pieces[7]), Convert.ToDouble(pieces[8]), Convert.ToDouble(pieces[9]));
+                    X.Normalize();
+
+
+                    Vector3D Yp = new Vector3D(Convert.ToDouble(pieces[10]), Convert.ToDouble(pieces[11]), Convert.ToDouble(pieces[12]));
+                    Vector3D Z = Vector3D.CrossProduct(X, Yp);
+                    Z.Normalize();
+
+                    Vector3D Y = Vector3D.CrossProduct(Z, X);
+
+                    Vector3D pos = new Vector3D(0, 0, 0);
+
+                    if (evalAtCoor == null)
+                        pieces[3] = "CART";
+                    else
+                    {
+                        pos = new Vector3D(evalAtCoor[0] - origin.X, evalAtCoor[1] - origin.Y, evalAtCoor[2] - origin.Z);
+                        if (pos.Length == 0)
+                            pieces[3] = "CART";
+                    }
+
+                    switch (pieces[3])
+                    {
+                        case "CART":
+                            axisVectors["X"] = new Dictionary<string, object> { { "x", X.X }, { "y", X.Y }, { "z", X.Z } };
+                            axisVectors["Y"] = new Dictionary<string, object> { { "x", Y.X }, { "y", Y.Y }, { "z", Y.Z } };
+                            axisVectors["Z"] = new Dictionary<string, object> { { "x", Z.X }, { "y", Z.Y }, { "z", Z.Z } };
+                            return axisVectors;
+                        case "CYL":
+                            x = new Vector3D(pos.X, pos.Y, 0);
+                            x.Normalize();
+                            z = Z;
+                            y = Vector3D.CrossProduct(Z, x);
+                            y.Normalize();
+
+                            axisVectors["X"] = new Dictionary<string, object> { { "x", x.X }, { "y", x.Y }, { "z", x.Z } };
+                            axisVectors["Y"] = new Dictionary<string, object> { { "x", y.X }, { "y", y.Y }, { "z", y.Z } };
+                            axisVectors["Z"] = new Dictionary<string, object> { { "x", z.X }, { "y", z.Y }, { "z", z.Z } };
+                            return axisVectors;
+                        case "SPH":
+                            x = pos;
+                            x.Normalize();
+                            z = Vector3D.CrossProduct(Z, x);
+                            z.Normalize();
+                            y = Vector3D.CrossProduct(z, x);
+                            z.Normalize();
+
+                            axisVectors["X"] = new Dictionary<string, object> { { "x", x.X }, { "y", x.Y }, { "z", x.Z } };
+                            axisVectors["Y"] = new Dictionary<string, object> { { "x", y.X }, { "y", y.Y }, { "z", y.Z } };
+                            axisVectors["Z"] = new Dictionary<string, object> { { "x", z.X }, { "y", z.Y }, { "z", z.Z } };
+                            return axisVectors;
+                        default:
+                            axisVectors["X"] = new Dictionary<string, object> { { "x", 1 }, { "y", 0 }, { "z", 0 } };
+                            axisVectors["Y"] = new Dictionary<string, object> { { "x", 0 }, { "y", 1 }, { "z", 0 } };
+                            axisVectors["Z"] = new Dictionary<string, object> { { "x", 0 }, { "y", 0 }, { "z", 1 } };
+                            return axisVectors;
+                    }
+            }
+        }
+
+        public static Dictionary<string, object> Parse1DAxis(double[] coor, double rotationAngle = 0, double[] orientationNode = null)
+        {
+            Dictionary<string, object> axisVectors = new Dictionary<string, object>();
+
+            Vector3D x;
+            Vector3D y;
+            Vector3D z;
+
+            x = new Vector3D(coor[3] - coor[0], coor[4] - coor[1], coor[5] - coor[2]);
+            x.Normalize();
+
+            if (orientationNode == null)
+            {
+                if (x.X == 0 && x.Y == 0)
+                {
+                    //Column
+                    y = new Vector3D(0, 1, 0);
+                    z = Vector3D.CrossProduct(x, y);
+                }
+                else
+                {
+                    //Non-Vertical
+                    Vector3D Z = new Vector3D(0, 0, 1);
+                    y = Vector3D.CrossProduct(Z, x);
+                    y.Normalize();
+                    z = Vector3D.CrossProduct(x, y);
+                    z.Normalize();
+                }
+            }
+            else
+            {
+                Vector3D Yp = new Vector3D(orientationNode[0], orientationNode[1], orientationNode[2]);
+                z = Vector3D.CrossProduct(x, Yp);
+                z.Normalize();
+                y = Vector3D.CrossProduct(z, x);
+                y.Normalize();
+            }
+
+            //Rotation
+            Matrix3D rotMat = HelperFunctions.RotationMatrix(x, rotationAngle * (Math.PI / 180));
+            y = Vector3D.Multiply(y, rotMat);
+            z = Vector3D.Multiply(z, rotMat);
+
+            axisVectors["X"] = new Dictionary<string, object> { { "x", x.X }, { "y", x.Y }, { "z", x.Z } };
+            axisVectors["Y"] = new Dictionary<string, object> { { "x", y.X }, { "y", y.Y }, { "z", y.Z } };
+            axisVectors["Z"] = new Dictionary<string, object> { { "x", z.X }, { "y", z.Y }, { "z", z.Z } };
+
+            return axisVectors;
+        }
+
+        public static double Get1DAngle(Dictionary<string, object> axis)
+        {
+            Dictionary<string, object> X = axis["X"] as Dictionary<string, object>;
+            Dictionary<string, object> Y = axis["Y"] as Dictionary<string, object>;
+            Dictionary<string, object> Z = axis["Z"] as Dictionary<string, object>;
+
+            Vector3D x = new Vector3D(X["x"].ToDouble(), X["y"].ToDouble(), X["z"].ToDouble());
+            Vector3D y = new Vector3D(Y["x"].ToDouble(), Y["y"].ToDouble(), Y["z"].ToDouble());
+            Vector3D z = new Vector3D(Z["x"].ToDouble(), Z["y"].ToDouble(), Z["z"].ToDouble());
+
+            if (x.X == 0 & x.Y == 0)
+            {
+                // Column
+                Vector3D Yglobal = new Vector3D(0, 1, 0);
+
+                double angle = Math.Acos(Vector3D.DotProduct(Yglobal, y) / (Yglobal.Length * y.Length)).ToDegrees();
+                if (double.IsNaN(angle)) return 0;
+
+                Vector3D signVector = Vector3D.CrossProduct(Yglobal, y);
+                double sign = Vector3D.DotProduct(signVector, x);
+
+                return sign >= 0 ? angle : -angle;
+            }
+            else
+            {
+                Vector3D Zglobal = new Vector3D(0, 0, 1);
+                Vector3D Y0 = Vector3D.CrossProduct(Zglobal, x);
+                double angle = Math.Acos(Vector3D.DotProduct(Y0, y) / (Y0.Length * y.Length)).ToDegrees();
+                if (double.IsNaN(angle)) angle = 0;
+
+                Vector3D signVector = Vector3D.CrossProduct(Y0, y);
+                double sign = Vector3D.DotProduct(signVector, x);
+
+                return sign >= 0 ? angle : 360 - angle;
+            }
+        }
+
+        public static Dictionary<string, object> Parse2DAxis(double[] coor, double rotationAngle = 0, bool isLocalAxis = false)
+        {
+            Dictionary<string, object> axisVectors = new Dictionary<string, object>();
+
+            Vector3D x;
+            Vector3D y;
+            Vector3D z;
+
+            List<Vector3D> nodes = new List<Vector3D>();
+
+            for (int i = 0; i < coor.Length; i += 3)
+                nodes.Add(new Vector3D(coor[i], coor[i + 1], coor[i + 2]));
+
+            if (isLocalAxis)
+            {
+                if (nodes.Count == 3)
+                {
+                    x = Vector3D.Subtract(nodes[1], nodes[0]);
+                    x.Normalize();
+                    z = Vector3D.CrossProduct(x, Vector3D.Subtract(nodes[2], nodes[0]));
+                    z.Normalize();
+                    y = Vector3D.CrossProduct(z, x);
+                    y.Normalize();
+                }
+                else if (nodes.Count == 4)
+                {
+                    x = Vector3D.Subtract(nodes[2], nodes[0]);
+                    x.Normalize();
+                    z = Vector3D.CrossProduct(x, Vector3D.Subtract(nodes[3], nodes[1]));
+                    z.Normalize();
+                    y = Vector3D.CrossProduct(z, x);
+                    y.Normalize();
+                }
+                else
+                {
+                    // Default to QUAD method
+                    x = Vector3D.Subtract(nodes[2], nodes[0]);
+                    x.Normalize();
+                    z = Vector3D.CrossProduct(x, Vector3D.Subtract(nodes[3], nodes[1]));
+                    z.Normalize();
+                    y = Vector3D.CrossProduct(z, x);
+                    y.Normalize();
+                }
+            }
+            else
+            {
+                x = Vector3D.Subtract(nodes[1], nodes[0]);
+                x.Normalize();
+                z = Vector3D.CrossProduct(x, Vector3D.Subtract(nodes[2], nodes[0]));
+                z.Normalize();
+
+                x = new Vector3D(1, 0, 0);
+                x = Vector3D.Subtract(x, Vector3D.Multiply(Vector3D.DotProduct(x, z), z));
+
+                if (x.Length == 0)
+                    x = new Vector3D(0, z.X > 0 ? -1 : 1, 0);
+
+                y = Vector3D.CrossProduct(z, x);
+
+                x.Normalize();
+                y.Normalize();
+            }
+
+            //Rotation
+            Matrix3D rotMat = HelperFunctions.RotationMatrix(z, rotationAngle * (Math.PI / 180));
+            x = Vector3D.Multiply(x, rotMat);
+            y = Vector3D.Multiply(y, rotMat);
+
+            axisVectors["X"] = new Dictionary<string, object> { { "x", x.X }, { "y", x.Y }, { "z", x.Z } };
+            axisVectors["Y"] = new Dictionary<string, object> { { "x", y.X }, { "y", y.Y }, { "z", y.Z } };
+            axisVectors["Z"] = new Dictionary<string, object> { { "x", z.X }, { "y", z.Y }, { "z", z.Z } };
+
+            return axisVectors;
+        }
+
+        public static double Get2DAngle(double[] coor, Dictionary<string, object> axis)
+        {
+            Dictionary<string, object> X = axis["X"] as Dictionary<string, object>;
+            Dictionary<string, object> Y = axis["Y"] as Dictionary<string, object>;
+            Dictionary<string, object> Z = axis["Z"] as Dictionary<string, object>;
+
+            Vector3D x = new Vector3D(X["x"].ToDouble(), X["y"].ToDouble(), X["z"].ToDouble());
+            Vector3D y = new Vector3D(Y["x"].ToDouble(), Y["y"].ToDouble(), Y["z"].ToDouble());
+            Vector3D z = new Vector3D(Z["x"].ToDouble(), Z["y"].ToDouble(), Z["z"].ToDouble());
+
+            Vector3D x0;
+            Vector3D z0;
+
+            List<Vector3D> nodes = new List<Vector3D>();
+
+            for (int i = 0; i < coor.Length; i += 3)
+                nodes.Add(new Vector3D(coor[i], coor[i + 1], coor[i + 2]));
+
+            // Get 0 angle axis in GLOBAL coordinates
+            x0 = Vector3D.Subtract(nodes[1], nodes[0]);
+            x0.Normalize();
+            z0 = Vector3D.CrossProduct(x0, Vector3D.Subtract(nodes[2], nodes[0]));
+            z0.Normalize();
+
+            x0 = new Vector3D(1, 0, 0);
+            x0 = Vector3D.Subtract(x0, Vector3D.Multiply(Vector3D.DotProduct(x0, z0), z0));
+
+            if (x0.Length == 0)
+                x0 = new Vector3D(0, z0.X > 0 ? -1 : 1, 0);
+
+            x0.Normalize();
+
+            // Find angle
+            double angle = Math.Acos(Vector3D.DotProduct(x0, x) / (x0.Length * x.Length)).ToDegrees();
+            if (double.IsNaN(angle)) return 0;
+
+            Vector3D signVector = Vector3D.CrossProduct(x0, x);
+            double sign = Vector3D.DotProduct(signVector, z);
+
+            return sign >= 0 ? angle : -angle;
+        }
+        #endregion
+
         #region Conversion
         public static double ToDouble(this object obj)
         {
@@ -457,37 +786,6 @@ namespace SpeckleGSA
                 return ((double)obj).ToString();
             else
                 return "0";
-        }
-
-        public static int ParseElementType(this string type)
-        {
-            return (int)((ElementType)Enum.Parse(typeof(ElementType), type));
-        }
-
-        public static int ParseLineNumNodes(this string type)
-        {
-            return (int)((LineNumNodes)Enum.Parse(typeof(LineNumNodes), type));
-        }
-
-        public static int ParseElementNumNodes(this string type)
-        {
-            return (int)((ElementNumNodes)Enum.Parse(typeof(ElementNumNodes), type));
-        }
-
-        public static bool MemberIs1D(this string type)
-        {
-            if (type == "1D_GENERIC" | type == "COLUMN" | type == "BEAM")
-                return true;
-            else
-                return false;
-        }
-
-        public static bool MemberIs2D(this string type)
-        {
-            if (type == "2D_GENERIC" | type == "SLAB" | type == "WALL")
-                return true;
-            else
-                return false;
         }
 
         public static double ConvertUnit(this double value, string originalDimension, string targetDimension)
@@ -532,34 +830,6 @@ namespace SpeckleGSA
 
         }
 
-        public static bool IsList(this object o)
-        {
-            if (o == null) return false;
-            return o.GetType().IsGenericType &&
-                   o.GetType().GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
-        }
-
-        public static bool IsList(this PropertyInfo prop)
-        {
-            if (prop == null) return false;
-            return prop.PropertyType.IsGenericType &&
-                   prop.PropertyType.GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
-        }
-
-        public static bool IsDictionary(this object o)
-        {
-            if (o == null) return false;
-            return o.GetType().IsGenericType &&
-                   o.GetType().GetGenericTypeDefinition().IsAssignableFrom(typeof(Dictionary<,>));
-        }
-
-        public static bool IsDictionary(this PropertyInfo prop)
-        {
-            if (prop == null) return false;
-            return prop.PropertyType.IsGenericType &&
-                   prop.PropertyType.GetGenericTypeDefinition().IsAssignableFrom(typeof(Dictionary<,>));
-        }
-
         public static Dictionary<string,object> GetPropertyDict(this object obj)
         {
             Dictionary<string, object> properties = new Dictionary<string, object>();
@@ -588,6 +858,7 @@ namespace SpeckleGSA
 
                 if (properties[prop.Name] == null) continue;
                 
+                // TODO: This try catch is lazy. Fix it.
                 try
                 { 
                     if (prop.PropertyType.IsArray) 
@@ -638,6 +909,49 @@ namespace SpeckleGSA
         #endregion
 
         #region Comparison
+        public static bool MemberIs1D(this string type)
+        {
+            if (type == "1D_GENERIC" | type == "COLUMN" | type == "BEAM")
+                return true;
+            else
+                return false;
+        }
+
+        public static bool MemberIs2D(this string type)
+        {
+            if (type == "2D_GENERIC" | type == "SLAB" | type == "WALL")
+                return true;
+            else
+                return false;
+        }
+
+        public static bool IsList(this object o)
+        {
+            if (o == null) return false;
+            return o.GetType().IsGenericType &&
+                   o.GetType().GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
+        }
+
+        public static bool IsList(this PropertyInfo prop)
+        {
+            if (prop == null) return false;
+            return prop.PropertyType.IsGenericType &&
+                   prop.PropertyType.GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
+        }
+
+        public static bool IsDictionary(this object o)
+        {
+            if (o == null) return false;
+            return o.GetType().IsGenericType &&
+                   o.GetType().GetGenericTypeDefinition().IsAssignableFrom(typeof(Dictionary<,>));
+        }
+
+        public static bool IsDictionary(this PropertyInfo prop)
+        {
+            if (prop == null) return false;
+            return prop.PropertyType.IsGenericType &&
+                   prop.PropertyType.GetGenericTypeDefinition().IsAssignableFrom(typeof(Dictionary<,>));
+        }
 
         public static bool IsDigits(this string str)
         {
@@ -649,7 +963,6 @@ namespace SpeckleGSA
 
             return true;
         }
-
 
         public static bool Equal(this object obj, double val)
         {

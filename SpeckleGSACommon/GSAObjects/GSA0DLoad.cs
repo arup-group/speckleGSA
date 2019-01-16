@@ -40,7 +40,7 @@ namespace SpeckleGSA
         }
 
         #region GSAObject Functions
-        public static void GetObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        public static void GetObjects(Dictionary<Type, object> dict)
         {
             if (!dict.ContainsKey(typeof(GSANode))) return;
 
@@ -49,20 +49,21 @@ namespace SpeckleGSA
 
             List<GSAObject> loads = new List<GSAObject>();
 
-            string res = gsa.GwaCommand("GET_ALL,LOAD_NODE");
+            string res = (string)GSA.RunGWACommand("GET_ALL,LOAD_NODE");
 
             if (res == "")
                 return;
 
             string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
 
+            double counter = 1;
             foreach (string p in pieces)
             {
                 List<GSA0DLoad> loadSubList = new List<GSA0DLoad>();
 
                 // Placeholder load object to get list of nodes and load values
                 // Need to transform to axis
-                GSA0DLoad initLoad = new GSA0DLoad().AttachGSA(gsa);
+                GSA0DLoad initLoad = new GSA0DLoad();
                 initLoad.ParseGWACommand(p);
 
                 // Only send those where the nodes actually exists
@@ -77,7 +78,7 @@ namespace SpeckleGSA
                     
                     // Transform load to defined axis
                     GSANode node = nodes.Where(n => n.Reference == nRef).First() as GSANode;
-                    Dictionary<string, object> loadAxis = node.ParseGSANodeAxis(initLoad.Axis, node.Coor.ToArray());
+                    Dictionary<string, object> loadAxis = HelperFunctions.Parse0DAxis(initLoad.Axis, node.Coor.ToArray());
                     load.Loading = load.TransformLoading(initLoad.Loading, loadAxis);
 
                     // If the loading already exists, add node ref to list
@@ -92,26 +93,29 @@ namespace SpeckleGSA
                 }
 
                 loads.AddRange(loadSubList);
+
+                Status.ChangeStatus("Reading 0D loads", counter++ / pieces.Length * 100);
             }
 
             dict[typeof(GSA0DLoad)] = loads;
         }
 
-        public static void WriteObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        public static void WriteObjects(Dictionary<Type, object> dict)
         {
             if (!dict.ContainsKey(typeof(GSA0DLoad))) return;
 
             List<GSAObject> loads = dict[typeof(GSA0DLoad)] as List<GSAObject>;
 
+            double counter = 1;
             foreach (GSAObject l in loads)
             {
-                l.AttachGSA(gsa);
-
                 GSARefCounters.RefObject(l);
                 
                 string[] commands = l.GetGWACommand().Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
                 foreach (string c in commands)
-                    l.RunGWACommand(c);
+                    GSA.RunGWACommand(c);
+
+                Status.ChangeStatus("Writing 0D loads", counter++ / loads.Count() * 100);
             }
         }
 
@@ -121,7 +125,7 @@ namespace SpeckleGSA
 
             int counter = 1; // Skip identifier
             Name = pieces[counter++].Trim(new char[] { '"' });
-            Nodes = pieces[counter++].ParseGSAList(GsaEntity.NODE, gsa).ToList();
+            Nodes = pieces[counter++].ParseGSAList(GsaEntity.NODE).ToList();
             Case = Convert.ToInt32(pieces[counter++]);
 
             string axis = pieces[counter++];

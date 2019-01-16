@@ -43,7 +43,6 @@ namespace SpeckleGSA
         private UserManager userManager;
         private Dictionary<string, SpeckleGSASender> senders;
         private Dictionary<string, SpeckleGSAReceiver> receivers;
-        private ComAuto gsaObj;
         
         public GSAController()
         {
@@ -116,49 +115,11 @@ namespace SpeckleGSA
         #endregion
 
         #region GSA
-        public void Link()
-        {
-            if (userManager == null)
-            {
-                Status.AddError("Not logged in");
-                return;
-            }
-
-            gsaObj = new ComAuto();
-            Status.AddMessage("GSA link established");
-        }
-
-        public void NewFile()
-        {
-            if (gsaObj == null)
-            {
-                Status.AddError("No GSA link found");
-                return;
-            }
-
-            gsaObj.NewFile();
-            gsaObj.DisplayGsaWindow(true);
-            Status.AddMessage("New file created");
-        }
-
-        public void OpenFile(string path)
-        {
-            if (gsaObj == null)
-            {
-                Status.AddError("No GSA link found");
-                return;
-            }
-
-            gsaObj.Open(path);
-            gsaObj.DisplayGsaWindow(true);
-            Status.AddMessage("Opened " + path);
-        }
-
         public async Task ExportObjects(string modelName)
         {
             List<Task> taskList = new List<Task>();
 
-            if (gsaObj == null)
+            if (!GSA.IsInit)
             {
                 Status.AddError("GSA link not found.");
                 return;
@@ -176,7 +137,7 @@ namespace SpeckleGSA
             foreach (Type t in objTypes)
             {
                 if (t.GetMethod("GetObjects",
-                    new Type[] { typeof(ComAuto), typeof(Dictionary<Type, object>) }) == null)
+                    new Type[] { typeof(Dictionary<Type, object>) }) == null)
                     continue;
 
                 if (t.GetField("Stream") == null) continue;
@@ -207,8 +168,8 @@ namespace SpeckleGSA
                     Status.ChangeStatus("Reading " + t.Name);
                     
                     t.GetMethod("GetObjects",
-                        new Type[] { typeof(ComAuto), typeof(Dictionary<Type, object>) })
-                        .Invoke(null, new object[] { gsaObj, bucketObjects });
+                        new Type[] { typeof(Dictionary<Type, object>) })
+                        .Invoke(null, new object[] { bucketObjects });
                 }
             }
 
@@ -274,7 +235,7 @@ namespace SpeckleGSA
 
             Dictionary<Type, object> objects = new Dictionary<Type, object>();
 
-            if (gsaObj == null)
+            if (!GSA.IsInit)
             {
                 Status.AddError("GSA link not found.");
                 return;
@@ -373,7 +334,7 @@ namespace SpeckleGSA
             foreach (Type t in objTypes)
             {
                 if (t.GetMethod("WriteObjects",
-                    new Type[] { typeof(ComAuto), typeof(Dictionary<Type, object>) }) == null)
+                    new Type[] { typeof(Dictionary<Type, object>) }) == null)
                     continue;
 
                 int priority = 0;
@@ -396,9 +357,9 @@ namespace SpeckleGSA
                     try
                     {
                         string keyword = (string)t.GetField("GSAKeyword").GetValue(null);
-                        int highestRecord = (int)gsaObj.GwaCommand("HIGHEST," + keyword);
+                        int highestRecord = (int)GSA.RunGWACommand("HIGHEST," + keyword);
 
-                        gsaObj.GwaCommand("BLANK," + t.GetField("GSAKeyword").GetValue(null) + ",1," + highestRecord.ToString());
+                        GSA.RunGWACommand("BLANK," + t.GetField("GSAKeyword").GetValue(null) + ",1," + highestRecord.ToString());
                     }
                     catch { }
                 }
@@ -412,12 +373,12 @@ namespace SpeckleGSA
                     Status.ChangeStatus("Writing " + t.Name);
                     
                     t.GetMethod("WriteObjects",
-                        new Type[] { typeof(ComAuto), typeof(Dictionary<Type, object>) })
-                        .Invoke(null, new object[] { gsaObj, objects });
+                        new Type[] { typeof(Dictionary<Type, object>) })
+                        .Invoke(null, new object[] { objects });
                 }
             }
             
-            gsaObj.UpdateViews();
+            GSA.UpdateViews();
 
             Status.ChangeStatus("Receiving complete", 0);
             Status.AddMessage("Receiving completed!");

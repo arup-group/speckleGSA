@@ -42,7 +42,7 @@ namespace SpeckleGSA
         }
 
         #region GSAObject Functions
-        public static void GetObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        public static void GetObjects(Dictionary<Type, object> dict)
         {
             if (!dict.ContainsKey(typeof(GSA2DElement))) return;
 
@@ -51,20 +51,21 @@ namespace SpeckleGSA
 
             List<GSAObject> loads = new List<GSAObject>();
 
-            string res = gsa.GwaCommand("GET_ALL,LOAD_2D_FACE");
+            string res = (string)GSA.RunGWACommand("GET_ALL,LOAD_2D_FACE");
 
             if (res == "")
                 return;
 
             string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
 
+            double counter = 1;
             foreach (string p in pieces)
             {
                 List<GSA2DFaceLoad> loadSubList = new List<GSA2DFaceLoad>();
 
                 // Placeholder load object to get list of nodes and load values
                 // Need to transform to axis
-                GSA2DFaceLoad initLoad = new GSA2DFaceLoad().AttachGSA(gsa);
+                GSA2DFaceLoad initLoad = new GSA2DFaceLoad();
                 initLoad.ParseGWACommand(p);
 
                 // Only send those where the nodes actually exists
@@ -79,7 +80,7 @@ namespace SpeckleGSA
 
                     // Transform load to defined axis
                     GSA2DElement elem = elements.Where(e => e.Reference == eRef).First() as GSA2DElement;
-                    Dictionary<string, object> loadAxis = elem.ParseGSA2DElementAxis(
+                    Dictionary<string, object> loadAxis = HelperFunctions.Parse2DAxis(
                         elem.Coor.ToArray(),
                         0,
                         load.Axis != 0); // Assumes if not global, local
@@ -98,12 +99,13 @@ namespace SpeckleGSA
                 }
 
                 loads.AddRange(loadSubList);
+                Status.ChangeStatus("Reading 2D face loads", counter++ / pieces.Length * 100);
             }
 
             dict[typeof(GSA2DFaceLoad)] = loads;
         }
 
-        public static void WriteObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        public static void WriteObjects(Dictionary<Type, object> dict)
         {
             if (!dict.ContainsKey(typeof(GSA2DFaceLoad))) return;
 
@@ -111,10 +113,9 @@ namespace SpeckleGSA
 
             List<GSAObject> loads = dict[typeof(GSA2DFaceLoad)] as List<GSAObject>;
 
+            double counter = 1;
             foreach (GSAObject l in loads)
             {
-                l.AttachGSA(gsa);
-
                 GSARefCounters.RefObject(l);
 
                 // Target meshes
@@ -125,7 +126,9 @@ namespace SpeckleGSA
 
                 string[] commands = l.GetGWACommand().Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
                 foreach (string c in commands)
-                    l.RunGWACommand(c);
+                    GSA.RunGWACommand(c);
+
+                Status.ChangeStatus("Writing 2D face loads", counter++ / loads.Count() * 100);
             }
         }
 
@@ -135,7 +138,7 @@ namespace SpeckleGSA
 
             int counter = 1; // Skip identifier
             Name = pieces[counter++].Trim(new char[] { '"' });
-            Elements = pieces[counter++].ParseGSAList(GsaEntity.ELEMENT, gsa).ToList();
+            Elements = pieces[counter++].ParseGSAList(GsaEntity.ELEMENT).ToList();
             Case = Convert.ToInt32(pieces[counter++]);
 
             string axis = pieces[counter++];

@@ -45,7 +45,6 @@ namespace SpeckleGSAUI
             StreamData = new ObservableCollection<Tuple<string, string>>();
 
             ModelName = "";
-
             gsa = new GSAController();
 
             //For testing purposes
@@ -55,6 +54,7 @@ namespace SpeckleGSAUI
 
             MessagePane.ItemsSource = Messages;
 
+            SpeckleGSA.GSA.Init();
             SpeckleGSA.Status.Init(this.AddMessage, this.AddError, this.ChangeStatus);
         }
 
@@ -97,21 +97,16 @@ namespace SpeckleGSAUI
         #endregion
 
         #region GSA
-        private void LinkGSA(object sender, RoutedEventArgs e)
-        {
-            Task.Run(() => gsa.Link());
-        }
-
         private void NewGSAFile(object sender, RoutedEventArgs e)
         {
-            Task.Run(() => gsa.NewFile());
+            Task.Run(() => GSA.NewFile());
         }
 
         private void OpenGSAFile(object sender, RoutedEventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
             if (openFileDialog.ShowDialog() == true)
-                Task.Run(() => gsa.OpenFile(openFileDialog.FileName));
+                Task.Run(() => GSA.OpenFile(openFileDialog.FileName));
         }
         #endregion
 

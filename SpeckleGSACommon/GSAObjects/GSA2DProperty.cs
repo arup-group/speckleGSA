@@ -29,14 +29,14 @@ namespace SpeckleGSA
         }
 
         #region GSAObject Functions
-        public static void GetObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        public static void GetObjects(Dictionary<Type, object> dict)
         {
             if (!dict.ContainsKey(typeof(GSAMaterial))) return;
 
             List<GSAObject> materials = dict[typeof(GSAMaterial)] as List<GSAObject>;
             List<GSAObject> props = new List<GSAObject>();
 
-            string res = gsa.GwaCommand("GET_ALL,PROP_2D");
+            string res = (string)GSA.RunGWACommand("GET_ALL,PROP_2D");
 
             if (res == "")
                 return;
@@ -45,23 +45,25 @@ namespace SpeckleGSA
 
             // TODO: NEED TO GET UNITS OF THICKNESS SOMEHOW
             // Hold temporary dimension
-            res = gsa.GwaCommand("GET,UNIT_DATA,LENGTH");
+            res = (string)GSA.RunGWACommand("GET,UNIT_DATA,LENGTH");
             string dimension = res.ListSplit(",")[2];
             dict[typeof(string)] = dimension;
 
+            double counter = 1;
             foreach (string p in pieces)
             {
-                GSA2DProperty prop = new GSA2DProperty().AttachGSA(gsa);
+                GSA2DProperty prop = new GSA2DProperty();
                 prop.ParseGWACommand(p, dict);
 
                 props.Add(prop);
+                Status.ChangeStatus("Reading 2D properties", counter++ / pieces.Length * 100);
             }
 
             dict.Remove(typeof(string));
             dict[typeof(GSA2DProperty)] = props;
         }
 
-        public static void WriteObjects(ComAuto gsa, Dictionary<Type, object> dict)
+        public static void WriteObjects(Dictionary<Type, object> dict)
         {
             if (!dict.ContainsKey(typeof(GSA2DProperty))) return;
 
@@ -69,17 +71,17 @@ namespace SpeckleGSA
 
             // TODO: NEED TO GET UNITS OF THICKNESS SOMEHOW
             // Hold temporary dimension
-            string res = gsa.GwaCommand("GET,UNIT_DATA,LENGTH");
+            string res = (string)GSA.RunGWACommand("GET,UNIT_DATA,LENGTH");
             string dimension = res.ListSplit(",")[2];
             dict[typeof(string)] = dimension;
 
+            double counter = 1;
             foreach (GSAObject p in props)
             {
-                p.AttachGSA(gsa);
-
                 GSARefCounters.RefObject(p);
                 
-                p.RunGWACommand(p.GetGWACommand(dict));
+                GSA.RunGWACommand(p.GetGWACommand(dict));
+                Status.ChangeStatus("Writing 2D properties", counter++ / props.Count() * 100);
             }
 
             dict.Remove(typeof(string));
