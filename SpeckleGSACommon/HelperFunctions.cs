@@ -56,73 +56,7 @@ namespace SpeckleGSA
         #endregion
 
         #region Attach GSA
-        public static GSAObject AttachGSA(this GSAObject obj, ComAuto gsa)
-        {
-            obj.gsa = gsa;
-            return obj;
-        }
-
-        public static GSA0DLoad AttachGSA(this GSA0DLoad obj, ComAuto gsa)
-        {
-            obj.gsa = gsa;
-            return obj;
-        }
-
-        public static GSA2DFaceLoad AttachGSA(this GSA2DFaceLoad obj, ComAuto gsa)
-        {
-            obj.gsa = gsa;
-            return obj;
-        }
-        
-        public static GSAMaterial AttachGSA(this GSAMaterial obj, ComAuto gsa)
-        {
-            obj.gsa = gsa;
-            return obj;
-        }
-
-        public static GSA2DProperty AttachGSA(this GSA2DProperty obj, ComAuto gsa)
-        {
-            obj.gsa = gsa;
-            return obj;
-        }
-
-        public static GSANode AttachGSA(this GSANode obj, ComAuto gsa)
-        {
-            obj.gsa = gsa;
-            return obj;
-        }
-
-        public static GSA0DElement AttachGSA(this GSA0DElement obj, ComAuto gsa)
-        {
-            obj.gsa = gsa;
-            return obj;
-        }
-
-        public static GSA1DElement AttachGSA(this GSA1DElement obj, ComAuto gsa)
-        {
-            obj.gsa = gsa;
-            return obj;
-        }
-
-        public static GSA2DElement AttachGSA(this GSA2DElement obj, ComAuto gsa)
-        {
-            obj.gsa = gsa;
-            return obj;
-        }
-
-        public static GSA1DMember AttachGSA(this GSA1DMember obj, ComAuto gsa)
-        {
-            obj.gsa = gsa;
-            return obj;
-        }
-
-        public static GSA2DMember AttachGSA(this GSA2DMember obj, ComAuto gsa)
-        {
-            obj.gsa = gsa;
-            return obj;
-        }
-
-        public static GSAMember AttachGSA(this GSAMember obj, ComAuto gsa)
+        public static dynamic AttachGSA(this GSAObject obj, ComAuto gsa)
         {
             obj.gsa = gsa;
             return obj;
