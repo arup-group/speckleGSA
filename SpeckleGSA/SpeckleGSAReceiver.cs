@@ -45,7 +45,7 @@ namespace SpeckleGSA
 
             if (streamGetResult.Success == false)
             {
-                MessageLog.AddError("Failed to receive " + myReceiver.Stream.Name + "stream.");
+                Status.AddError("Failed to receive " + myReceiver.Stream.Name + "stream.");
             }
             else
             {
@@ -90,7 +90,7 @@ namespace SpeckleGSA
                     }
                 });
 
-                MessageLog.AddMessage("Received " + myReceiver.Stream.Name + " stream with " + myReceiver.Stream.Objects.Count() + " objects.");
+                Status.AddMessage("Received " + myReceiver.Stream.Name + " stream with " + myReceiver.Stream.Objects.Count() + " objects.");
             }
         }
     }

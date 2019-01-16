@@ -16,7 +16,7 @@ namespace SpeckleGSA
         public static readonly int WritePriority = 0;
         
         public int Property { get; set; }
-        public double InsertionPoint { get; set; }
+        public double Offset { get; set; }
         public List<object> Elements { get; set; }
 
         public List<int[]> Edges;
@@ -25,7 +25,7 @@ namespace SpeckleGSA
         public GSA2DElementMesh()
         {
             Property = 1;
-            InsertionPoint = 0;
+            Offset = 0;
             Elements = new List<object>();
 
             Edges = new List<int[]>();
@@ -43,7 +43,7 @@ namespace SpeckleGSA
             {
                 GSA2DElementMesh mesh = new GSA2DElementMesh();
                 mesh.Property = (e2D as GSA2DElement).Property;
-                mesh.InsertionPoint = (e2D as GSA2DElement).InsertionPoint;
+                mesh.Offset = (e2D as GSA2DElement).Offset;
                 mesh.AddElement(e2D as GSA2DElement);
                 meshes.Add(mesh);
             }
@@ -118,7 +118,7 @@ namespace SpeckleGSA
 
                 elem.MeshReference = Reference;
                 elem.Property = Property;
-                elem.InsertionPoint = InsertionPoint;
+                elem.Offset = Offset;
                 elem.Name = (string)elemDict["Name"];
                 elem.Reference = (int)(elemDict["Reference"].ToDouble());
                 elem.Axis = (Dictionary<string, object>)elemDict["Axis"];
@@ -149,7 +149,7 @@ namespace SpeckleGSA
         #region Mesh Operations
         public bool MeshMergeable(GSA2DElementMesh mesh)
         {
-            if (mesh.Property != Property | mesh.InsertionPoint != InsertionPoint)
+            if (mesh.Property != Property | mesh.Offset != Offset)
                 return false;
 
             foreach (int[] edge in mesh.Edges)
@@ -176,7 +176,7 @@ namespace SpeckleGSA
         #region Element Operations
         public bool ElementAddable(GSA2DElement element)
         {
-            if (element.Property != Property | element.InsertionPoint != InsertionPoint)
+            if (element.Property != Property | element.Offset != Offset)
                 return false;
 
             List<int> connectivity = element.Connectivity;

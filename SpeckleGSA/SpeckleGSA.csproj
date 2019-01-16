@@ -41,7 +41,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="GSAController.cs" />
-    <Compile Include="MessageLog.cs" />
+    <Compile Include="Status.cs" />
     <Compile Include="SpeckleGSAReceiver.cs" />
     <Compile Include="SpeckleGSASender.cs" />
     <Compile Include="StreamManager.cs" />
