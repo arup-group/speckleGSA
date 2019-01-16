@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using SpeckleCore;
@@ -39,7 +40,7 @@ namespace SpeckleGSA
 
         public void SendGSAObjects(Dictionary<string, List<object>> payloadObjects, Dictionary<string, object> baseProps)
         {
-            ConverterHack n = new ConverterHack();
+            ConverterHack hack = new ConverterHack();
 
             // Convert and set up layers
             List<SpeckleObject> bucketObjects = new List<SpeckleObject>();

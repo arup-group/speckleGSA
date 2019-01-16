@@ -16,34 +16,6 @@ namespace SpeckleGSA
     public static class SpeckleGSAConverter
     {
         #region Property Conversion
-        public static bool IsList(this object o)
-        {
-            if (o == null) return false;
-            return o.GetType().IsGenericType &&
-                   o.GetType().GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
-        }
-
-        public static bool IsList(this PropertyInfo prop)
-        {
-            if (prop == null) return false;
-            return prop.PropertyType.IsGenericType &&
-                   prop.PropertyType.GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
-        }
-
-        public static bool IsDictionary(this object o)
-        {
-            if (o == null) return false;
-            return o.GetType().IsGenericType &&
-                   o.GetType().GetGenericTypeDefinition().IsAssignableFrom(typeof(Dictionary<,>));
-        }
-
-        public static bool IsDictionary(this PropertyInfo prop)
-        {
-            if (prop == null) return false;
-            return prop.PropertyType.IsGenericType &&
-                   prop.PropertyType.GetGenericTypeDefinition().IsAssignableFrom(typeof(Dictionary<,>));
-        }
-
         public static object UnrollAbstractRef(object obj, string path)
         {
             string[] pieces = path.Split(new char[] { '/' });

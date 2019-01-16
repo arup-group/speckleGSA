@@ -48,21 +48,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="GSA0DElement.cs" />
-    <Compile Include="GSA0DLoad.cs" />
-    <Compile Include="GSA1DElement.cs" />
-    <Compile Include="GSA1DMember.cs" />
-    <Compile Include="GSA1DProperty.cs" />
-    <Compile Include="GSA2DElement.cs" />
-    <Compile Include="GSA2DElementMesh.cs" />
-    <Compile Include="GSA2DFaceLoad.cs" />
-    <Compile Include="GSA2DMember.cs" />
-    <Compile Include="GSA2DProperty.cs" />
-    <Compile Include="GSAMaterial.cs" />
-    <Compile Include="GSAMember.cs" />
-    <Compile Include="GSANode.cs" />
-    <Compile Include="GSAObject.cs" />
-    <Compile Include="HelperFunctions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
