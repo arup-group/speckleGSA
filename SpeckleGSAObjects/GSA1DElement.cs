@@ -18,8 +18,8 @@ namespace SpeckleGSA
         public string Type { get; set; }
         public int Property { get; set; }
         public Dictionary<string, object> Axis { get; set; }
-        public Dictionary<string, object> Stiffness { get; set; }
-        public Dictionary<string, object> InsertionPoint { get; set; }
+        public Dictionary<string, object> EndCondition { get; set; }
+        public Dictionary<string, object> Offset { get; set; }
 
         public GSA1DElement()
         {
@@ -31,7 +31,7 @@ namespace SpeckleGSA
                 { "Y", new Dictionary<string, object> { { "x", 0 }, { "y", 1 },{ "z", 0 }  } },
                 { "Z", new Dictionary<string, object> { { "x", 0 }, { "y", 0 },{ "z", 1 }  } },
             };
-            Stiffness = new Dictionary<string, object>()
+            EndCondition = new Dictionary<string, object>()
             {
                 { "start", new Dictionary<string,object>()
                 {
@@ -54,7 +54,7 @@ namespace SpeckleGSA
                 }
                 },
             };
-            InsertionPoint = new Dictionary<string, object>()
+            Offset = new Dictionary<string, object>()
             {
                 { "Vertical", 0 },
                 { "Horizontal", 0 },
@@ -179,25 +179,25 @@ namespace SpeckleGSA
             {
                 string start = pieces[counter++];
                 string end = pieces[counter++];
-                (Stiffness["start"] as Dictionary<string, object>)["x"] = ParseEndStiffness(start[0], pieces, ref counter);
-                (Stiffness["start"] as Dictionary<string, object>)["y"] = ParseEndStiffness(start[1], pieces, ref counter);
-                (Stiffness["start"] as Dictionary<string, object>)["z"] = ParseEndStiffness(start[2], pieces, ref counter);
-                (Stiffness["start"] as Dictionary<string, object>)["xx"] = ParseEndStiffness(start[3], pieces, ref counter);
-                (Stiffness["start"] as Dictionary<string, object>)["yy"] = ParseEndStiffness(start[4], pieces, ref counter);
-                (Stiffness["start"] as Dictionary<string, object>)["zz"] = ParseEndStiffness(start[5], pieces, ref counter);
-                (Stiffness["end"] as Dictionary<string, object>)["x"] = ParseEndStiffness(end[0], pieces, ref counter);
-                (Stiffness["end"] as Dictionary<string, object>)["y"] = ParseEndStiffness(end[1], pieces, ref counter);
-                (Stiffness["end"] as Dictionary<string, object>)["z"] = ParseEndStiffness(end[2], pieces, ref counter);
-                (Stiffness["end"] as Dictionary<string, object>)["xx"] = ParseEndStiffness(end[3], pieces, ref counter);
-                (Stiffness["end"] as Dictionary<string, object>)["yy"] = ParseEndStiffness(end[4], pieces, ref counter);
-                (Stiffness["end"] as Dictionary<string, object>)["zz"] = ParseEndStiffness(end[5], pieces, ref counter);
+                (EndCondition["start"] as Dictionary<string, object>)["x"] = ParseEndStiffness(start[0], pieces, ref counter);
+                (EndCondition["start"] as Dictionary<string, object>)["y"] = ParseEndStiffness(start[1], pieces, ref counter);
+                (EndCondition["start"] as Dictionary<string, object>)["z"] = ParseEndStiffness(start[2], pieces, ref counter);
+                (EndCondition["start"] as Dictionary<string, object>)["xx"] = ParseEndStiffness(start[3], pieces, ref counter);
+                (EndCondition["start"] as Dictionary<string, object>)["yy"] = ParseEndStiffness(start[4], pieces, ref counter);
+                (EndCondition["start"] as Dictionary<string, object>)["zz"] = ParseEndStiffness(start[5], pieces, ref counter);
+                (EndCondition["end"] as Dictionary<string, object>)["x"] = ParseEndStiffness(end[0], pieces, ref counter);
+                (EndCondition["end"] as Dictionary<string, object>)["y"] = ParseEndStiffness(end[1], pieces, ref counter);
+                (EndCondition["end"] as Dictionary<string, object>)["z"] = ParseEndStiffness(end[2], pieces, ref counter);
+                (EndCondition["end"] as Dictionary<string, object>)["xx"] = ParseEndStiffness(end[3], pieces, ref counter);
+                (EndCondition["end"] as Dictionary<string, object>)["yy"] = ParseEndStiffness(end[4], pieces, ref counter);
+                (EndCondition["end"] as Dictionary<string, object>)["zz"] = ParseEndStiffness(end[5], pieces, ref counter);
             }
 
             counter++; // offset x-start
             counter++; // offset x-end
 
-            InsertionPoint["Horizontal"] = Convert.ToDouble(pieces[counter++]);
-            InsertionPoint["Vertical"] = Convert.ToDouble(pieces[counter++]);
+            Offset["Horizontal"] = Convert.ToDouble(pieces[counter++]);
+            Offset["Vertical"] = Convert.ToDouble(pieces[counter++]);
 
             //counter++; // Action // TODO: EL.4 SUPPORT
             counter++; // Dummy
@@ -232,19 +232,19 @@ namespace SpeckleGSA
                 string end = "";
                 List<double> stiffness = new List<double>();
 
-                start += GetEndStiffness((Stiffness["start"] as Dictionary<string, object>)["x"], ref stiffness);
-                start += GetEndStiffness((Stiffness["start"] as Dictionary<string, object>)["y"], ref stiffness);
-                start += GetEndStiffness((Stiffness["start"] as Dictionary<string, object>)["z"], ref stiffness);
-                start += GetEndStiffness((Stiffness["start"] as Dictionary<string, object>)["xx"], ref stiffness);
-                start += GetEndStiffness((Stiffness["start"] as Dictionary<string, object>)["yy"], ref stiffness);
-                start += GetEndStiffness((Stiffness["start"] as Dictionary<string, object>)["zz"], ref stiffness);
+                start += GetEndStiffness((EndCondition["start"] as Dictionary<string, object>)["x"], ref stiffness);
+                start += GetEndStiffness((EndCondition["start"] as Dictionary<string, object>)["y"], ref stiffness);
+                start += GetEndStiffness((EndCondition["start"] as Dictionary<string, object>)["z"], ref stiffness);
+                start += GetEndStiffness((EndCondition["start"] as Dictionary<string, object>)["xx"], ref stiffness);
+                start += GetEndStiffness((EndCondition["start"] as Dictionary<string, object>)["yy"], ref stiffness);
+                start += GetEndStiffness((EndCondition["start"] as Dictionary<string, object>)["zz"], ref stiffness);
 
-                end += GetEndStiffness((Stiffness["end"] as Dictionary<string, object>)["x"], ref stiffness);
-                end += GetEndStiffness((Stiffness["end"] as Dictionary<string, object>)["y"], ref stiffness);
-                end += GetEndStiffness((Stiffness["end"] as Dictionary<string, object>)["z"], ref stiffness);
-                end += GetEndStiffness((Stiffness["end"] as Dictionary<string, object>)["xx"], ref stiffness);
-                end += GetEndStiffness((Stiffness["end"] as Dictionary<string, object>)["yy"], ref stiffness);
-                end += GetEndStiffness((Stiffness["end"] as Dictionary<string, object>)["zz"], ref stiffness);
+                end += GetEndStiffness((EndCondition["end"] as Dictionary<string, object>)["x"], ref stiffness);
+                end += GetEndStiffness((EndCondition["end"] as Dictionary<string, object>)["y"], ref stiffness);
+                end += GetEndStiffness((EndCondition["end"] as Dictionary<string, object>)["z"], ref stiffness);
+                end += GetEndStiffness((EndCondition["end"] as Dictionary<string, object>)["xx"], ref stiffness);
+                end += GetEndStiffness((EndCondition["end"] as Dictionary<string, object>)["yy"], ref stiffness);
+                end += GetEndStiffness((EndCondition["end"] as Dictionary<string, object>)["zz"], ref stiffness);
 
                 ls.Add(start);
                 ls.Add(end);
@@ -258,8 +258,8 @@ namespace SpeckleGSA
             ls.Add("0"); // Offset x-start
             ls.Add("0"); // Offset x-end
 
-            ls.Add(InsertionPoint["Horizontal"].ToNumString());
-            ls.Add(InsertionPoint["Vertical"].ToNumString());
+            ls.Add(Offset["Horizontal"].ToNumString());
+            ls.Add(Offset["Vertical"].ToNumString());
 
             //ls.Add("NORMAL"); // Action // TODO: EL.4 SUPPORT
             ls.Add(""); // Dummy

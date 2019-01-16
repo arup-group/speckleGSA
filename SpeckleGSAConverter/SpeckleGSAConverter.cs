@@ -197,7 +197,7 @@ namespace SpeckleGSA
         public static SpecklePolyline ToSpeckle(this GSA1DProperty prop)
         {
             SpecklePolyline p = new SpecklePolyline(
-                prop.Coor.Concat(prop.Coor.Take(3)),
+                prop.Coor,
                 prop.Reference.ToString(),
                 prop.GetSpeckleProperties());
 
@@ -299,7 +299,7 @@ namespace SpeckleGSA
         public static SpecklePolyline ToSpeckle(this GSA2DMember member)
         {
             SpecklePolyline p = new SpecklePolyline(
-                member.Coor.Concat(member.Coor.Take(3)),
+                member.Coor,
                 member.Reference.ToString(),
                 member.GetSpeckleProperties());
 
@@ -393,10 +393,7 @@ namespace SpeckleGSA
 
                     m2D.SetSpeckleProperties(poly.Properties);
 
-                    if (poly.Closed)
-                        m2D.Coor = poly.Value.Take(poly.Value.Count() - 3).ToList();
-                    else
-                        m2D.Coor = poly.Value.Take(poly.Value.Count()).ToList();
+                    m2D.Coor = poly.Value.Take(poly.Value.Count()).ToList();
 
                     return m2D;
                 }
@@ -406,26 +403,29 @@ namespace SpeckleGSA
 
                     prop.SetSpeckleProperties(poly.Properties);
 
-                    if (poly.Closed)
-                        prop.Coor = poly.Value.Take(poly.Value.Count() - 3).ToList();
-                    else
-                        prop.Coor = poly.Value.Take(poly.Value.Count()).ToList();
+                    prop.Coor = poly.Value.Take(poly.Value.Count()).ToList();
                 
                     return prop;
                 }
             }
             else
             {
-                List<GSAObject> e1Ds = new List<GSAObject>();
+                if (poly.Value.Count() >= 9)
+                { 
+                    GSA2DMember m2D = new GSA2DMember();
+                
+                    m2D.Coor = poly.Value.Take(poly.Value.Count()).ToList();
 
-                for(int i = 0; i < poly.Value.Count(); i+=3)
-                {
-                    GSA1DElement e = new GSA1DElement();
-                    e.Coor = poly.Value.Skip(i).Take(3).ToList();
-                    e1Ds.Add(e);
+                    return m2D;
                 }
+                else
+                {
+                    GSA1DMember m1D = new GSA1DMember();
+                    
+                    m1D.Coor = poly.Value.Take(poly.Value.Count()).ToList();
 
-                return e1Ds;
+                    return m1D;
+                }
             }
 
         }

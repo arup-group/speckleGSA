@@ -340,21 +340,21 @@ namespace SpeckleGSA
 
                 try
                 { 
-                if (!objects.ContainsKey(obj.GetType()))
-                { 
-                    if (obj.IsList())
-                        objects[obj.GetType()] = (obj as IList).Cast<GSAObject>().ToList();
-                    else if (obj is GSAObject)
-                            objects[obj.GetType()] = new List<GSAObject>() { obj as GSAObject };
-                }
-                else
-                { 
-                    if (obj.IsList())
-                        (objects[obj.GetType()] as List<GSAObject>)
-                            .AddRange((obj as IList).Cast<GSAObject>().ToList());
-                    else if (obj is GSAObject)
-                            (objects[obj.GetType()] as List<GSAObject>).Add(obj as GSAObject);
-                }
+                    if (!objects.ContainsKey(obj.GetType()))
+                    { 
+                        if (obj.IsList())
+                            objects[obj.GetType()] = (obj as IList).Cast<GSAObject>().ToList();
+                        else if (obj is GSAObject)
+                                objects[obj.GetType()] = new List<GSAObject>() { obj as GSAObject };
+                    }
+                    else
+                    { 
+                        if (obj.IsList())
+                            (objects[obj.GetType()] as List<GSAObject>)
+                                .AddRange((obj as IList).Cast<GSAObject>().ToList());
+                        else if (obj is GSAObject)
+                                (objects[obj.GetType()] as List<GSAObject>).Add(obj as GSAObject);
+                    }
                 }
                 catch (Exception ex)
                 {

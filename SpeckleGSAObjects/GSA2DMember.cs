@@ -189,7 +189,7 @@ namespace SpeckleGSA
                 ls.Add(Color.ToNumString());
             ls.Add(Type == "GENERIC" ? "2D_GENERIC" : Type);
             ls.Add(Property.ToString());
-            ls.Add("0"); // Group
+            ls.Add("1"); // Group
             string topo = "";
             foreach (int c in Connectivity)
                 topo += c.ToString() + " ";

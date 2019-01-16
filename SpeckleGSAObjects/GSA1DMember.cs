@@ -211,7 +211,7 @@ namespace SpeckleGSA
                 ls.Add(Color.ToNumString());
             ls.Add(Type == "GENERIC" ? "1D_GENERIC" : Type);
             ls.Add(Property.ToString());
-            ls.Add("0"); // Group
+            ls.Add("1"); // Group
             string topo = "";
             foreach (int c in Connectivity)
                 topo += c.ToString() + " ";
@@ -225,8 +225,8 @@ namespace SpeckleGSA
             ls.Add("0"); // Time 3
             ls.Add("0"); // TODO: What is this?
             ls.Add("ACTIVE"); // Dummy
-            ls.Add("0"); // End 1 condition
-            ls.Add("0"); // End 2 condition
+            ls.Add("1"); // End 1 condition
+            ls.Add("1"); // End 2 condition
             ls.Add("AUTOMATIC"); // Effective length option
             ls.Add("0"); // Pool
             ls.Add("0"); // Height

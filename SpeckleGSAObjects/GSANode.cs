@@ -231,7 +231,7 @@ namespace SpeckleGSA
                 ls.Add(Convert.ToDouble(Stiffness["yy"]).ToNumString());
                 ls.Add(Convert.ToDouble(Stiffness["zz"]).ToNumString());
             }
-            
+
             ls.Add("NO_MESH");
 
             return string.Join(",", ls);

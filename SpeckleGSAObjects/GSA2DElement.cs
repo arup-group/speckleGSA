@@ -18,7 +18,7 @@ namespace SpeckleGSA
         public string Type { get; set; }
         public int Property { get; set; }
         public Dictionary<string, object> Axis { get; set; }
-        public double InsertionPoint { get; set; }
+        public double Offset { get; set; }
 
         public int MeshReference;
 
@@ -32,7 +32,7 @@ namespace SpeckleGSA
                 { "Y", new Dictionary<string, object> { { "x", 0 }, { "y", 1 },{ "z", 0 }  } },
                 { "Z", new Dictionary<string, object> { { "x", 0 }, { "y", 0 },{ "z", 1 }  } },
             };
-            InsertionPoint = 0;
+            Offset = 0;
 
             MeshReference = 1;
         }
@@ -168,8 +168,8 @@ namespace SpeckleGSA
             counter++; //Ofsset x-start
             counter++; //Ofsset x-end
             counter++; //Ofsset y
-            
-            InsertionPoint = GetGSATotalElementOffset(Property,Convert.ToDouble(pieces[counter++]));
+
+            Offset = GetGSATotalElementOffset(Property,Convert.ToDouble(pieces[counter++]));
 
             //counter++; // Action // TODO: EL.4 SUPPORT
             counter++; // Dummy
@@ -199,7 +199,7 @@ namespace SpeckleGSA
             ls.Add("0"); // Offset x-start
             ls.Add("0"); // Offset x-end
             ls.Add("0"); // Offset y
-            ls.Add(InsertionPoint.ToNumString());
+            ls.Add(Offset.ToNumString());
 
             //ls.Add("NORMAL"); // Action // TODO: EL.4 SUPPORT
             ls.Add(""); // Dummy
