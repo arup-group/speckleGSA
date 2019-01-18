@@ -268,17 +268,30 @@ namespace SpeckleGSA
             return l;
         }
 
-        public static SpecklePolyline ToSpeckle(this GSA2DMember member)
+        public static SpeckleMesh ToSpeckle(this GSA2DMember member)
         {
-            SpecklePolyline p = new SpecklePolyline(
-                member.Coor,
-                member.Reference.ToString(),
+            // Perform mesh making
+            List<List<int>> faces = (Enumerable.Range(0, member.Coor.Count() / 3).ToList()).SplitMesh(member.Coor);
+            
+            List<int> faceMap = new List<int>();
+            foreach (List<int> f in faces)
+            {
+                if (f.Count() < 3) continue;
+                faceMap.Add(f.Count() - 3);
+                faceMap.AddRange(f);
+            }
+
+            SpeckleMesh m = new SpeckleMesh(
+                member.Coor.ToArray(),
+                faceMap.ToArray(),
+                Enumerable.Repeat(
+                    member.Color.ToSpeckleColor(),
+                    member.Coor.Count() / 3).ToArray(),
+                null,
+                "",
                 member.GetSpeckleProperties());
 
-            p.Closed = true;
-            p.GenerateHash();
-
-            return p;
+            return m;
         }
         #endregion
 
@@ -323,174 +336,171 @@ namespace SpeckleGSA
         {
             GSANode obj = new GSANode();
 
-            if (point.Properties!=null && point.Properties.ContainsKey("Structural"))
-                obj.SetSpeckleProperties(point.Properties);
+            obj.SetSpeckleProperties(point.Properties);
 
             obj.Coor = point.Value;
 
             return obj;
         }
 
-        public static GSA1DMember ToNative(this SpeckleLine line)
+        public static GSAObject ToNative(this SpeckleLine line)
         {
-            // TODO: Option to import 1D Element?
-            GSA1DMember m = new GSA1DMember();
+            GSAObject obj;
 
-            if (line.Properties != null && line.Properties.ContainsKey("Structural"))
-                m.SetSpeckleProperties(line.Properties);
+            if (GSA.TargetDesignLayer)
+                obj = new GSA1DMember();
+            else
+                obj = new GSA1DElement();
+            
+            obj.SetSpeckleProperties(line.Properties);
+            obj.Coor = line.Value;
 
-            m.Coor = line.Value;
-
-            return m;
-
-            //GSA1DElement e = new GSA1DElement();
-
-            //if (line.Properties != null && line.Properties.ContainsKey("Structural"))
-            //    e.SetSpeckleProperties(line.Properties);
-
-            //e.Coor = line.Value;
-
-            //return e;
+            return obj;
         }
 
-        public static object ToNative(this SpecklePolyline poly)
+        public static GSAObject ToNative(this SpecklePolyline poly)
         {
-            if (poly.Properties != null && poly.Properties.ContainsKey("Structural"))
-            {
-                Dictionary<string, object> temp = poly.Properties["Structural"] as Dictionary<string, object>;
-                
-                if (temp.ContainsKey("Type"))
-                {
-                    GSA2DMember m2D = new GSA2DMember();
-
-                    m2D.SetSpeckleProperties(poly.Properties);
-
-                    m2D.Coor = poly.Value.Take(poly.Value.Count()).ToList();
-
-                    return m2D;
-                }
-                else
-                {
-                    GSA1DProperty prop = new GSA1DProperty();
-
-                    prop.SetSpeckleProperties(poly.Properties);
-
-                    prop.Coor = poly.Value.Take(poly.Value.Count()).ToList();
-                
-                    return prop;
-                }
-            }
+            GSAObject obj;
+            
+            string type = poly.GetGSAObjectEntityType();
+            
+            if (type == "1D Property")
+                // Assumes that 1D properties will automatically have its entity type set
+                obj = new GSA1DProperty();
             else
-            {
-                if (poly.Value.Count() >= 9)
-                { 
-                    GSA2DMember m2D = new GSA2DMember();
-                
-                    m2D.Coor = poly.Value.Take(poly.Value.Count()).ToList();
-
-                    return m2D;
-                }
+            { 
+                if (GSA.TargetDesignLayer)
+                    obj = new GSA1DMember();
                 else
-                {
-                    GSA1DMember m1D = new GSA1DMember();
-                    
-                    m1D.Coor = poly.Value.Take(poly.Value.Count()).ToList();
-
-                    return m1D;
-                }
+                    obj = new GSA1DElement();
             }
 
+            obj.Coor = poly.Value.Take(poly.Value.Count()).ToList();
+
+            return obj;
         }
         
-        public static GSA2DElementMesh ToNative(this SpeckleMesh mesh)
+        public static GSAObject ToNative(this SpeckleMesh mesh)
         {
-            GSA2DElementMesh m = new GSA2DElementMesh();
+            GSAObject obj;
+            
+            if (GSA.TargetDesignLayer)
+            { 
+                obj = new GSA2DMember();
 
-            if (mesh.Properties == null || !mesh.Properties.ContainsKey("Structural"))
-            {
-                m.Coor = mesh.Vertices;
-                m.Color = mesh.Colors.Count > 0 ? Math.Max(mesh.Colors[0], 0) : 0;
+                obj.SetSpeckleProperties(mesh.Properties);
 
-                for (int i = 0; i < mesh.Faces.Count(); i++)
+                // Need to collapse mesh
+                List<Tuple<int,int>> edges = new List<Tuple<int,int>>();
+
+                for (int i = 0; i < mesh.Faces.Count();)
                 {
                     int numNodes = mesh.Faces[i++] + 3;
 
-                    List<double> coor = new List<double>();
-                    for (int j = 0; j < numNodes; j++)
-                        coor.AddRange(mesh.Vertices.Skip(mesh.Faces[i++] * 3).Take(3));
+                    List<int> vertices = mesh.Faces.Skip(i).Take(numNodes).ToList();
 
-                    m.Elements.Add(new Dictionary<string, object>()
+                    i += numNodes;
+
+                    // Add edges
+                    vertices.Add(vertices[0]);
+                    for (int j = 0; j < vertices.Count() - 1; j++)
                     {
-                        { "Name", "" },
-                        { "Reference", 0 },
-                        { "Axis", new Dictionary<string, object>()
-                            {
-                                { "X", new Dictionary<string, object> { { "x", 1 }, { "y", 0 },{ "z", 0 }  } },
-                                { "Y", new Dictionary<string, object> { { "x", 0 }, { "y", 1 },{ "z", 0 }  } },
-                                { "Z", new Dictionary<string, object> { { "x", 0 }, { "y", 0 },{ "z", 1 }  } },
-                            }
-                        },
-                        { "Coor", coor.ToArray() }
-                    });
-
-                    i--;
+                        if (vertices[j] < vertices[j + 1])
+                            edges.Add(new Tuple<int, int>(vertices[j], vertices[j + 1]));
+                        else
+                            edges.Add(new Tuple<int, int>(vertices[j+1], vertices[j]));
+                    }
                 }
+
+                edges.Distinct().ToList();
+
+                // Reorder the edges
+                List<int> reorderedEdges = new List<int>();
+                reorderedEdges.Add(edges[0].Item1);
+                reorderedEdges.Add(edges[0].Item2);
+                edges.RemoveAt(0);
+
+                while(edges.Count > 0)
+                {
+                    int commonVertex = reorderedEdges[reorderedEdges.Count() - 1];
+
+                    List<Tuple<int, int>> nextEdge = edges.Where(e => e.Item1 == commonVertex | e.Item2 == commonVertex).ToList();
+
+                    if (nextEdge.Count > 0)
+                    {
+                        reorderedEdges.Add(nextEdge[0].Item1 == commonVertex ? nextEdge[0].Item2 : nextEdge[0].Item1);
+                        edges.Remove(nextEdge[0]);
+                    }
+                    else
+                        // Next edge not found
+                        return null;
+                }
+
+                // Get coordinates
+                List<double> coordinates = new List<double>();
+                foreach(int e in reorderedEdges)
+                    coordinates.AddRange(mesh.Vertices.Skip(e * 3).Take(3));
+
+                obj.Coor = coordinates;
             }
             else
-            {
-                m.SetSpeckleProperties(mesh.Properties);
-                m.Coor = mesh.Vertices;
-                m.Color = mesh.Colors.Count > 0 ? Math.Max(mesh.Colors[0], 0) : 0;
+            { 
+                obj = new GSA2DElementMesh();
+
+                obj.SetSpeckleProperties(mesh.Properties);
+
+                obj.Coor = mesh.Vertices;
+                obj.Color = mesh.Colors.Count > 0 ? Math.Max(mesh.Colors[0], 0) : 0;
 
                 int elemCounter = 0;
-                for (int i = 0; i < mesh.Faces.Count(); i++)
+                for (int i = 0; i < mesh.Faces.Count();)
                 {
+                    int numNodes = mesh.Faces[i++] + 3;
+
+                    List<int> vertices = mesh.Faces.Skip(i).Take(numNodes).ToList();
+
+                    // If there are element connectivities
                     try
                     {
-                        int innerCounter = i;
-                        innerCounter++;
-
-                        List<int> conn = m.GetElemConnectivity(m.Elements[elemCounter] as Dictionary<string, object>);
+                        List<int> conn = (obj as GSA2DElementMesh).GetElemConnectivity((obj as GSA2DElementMesh).Elements[elemCounter] as Dictionary<string, object>);
 
                         for (int j = 0; j < conn.Count(); j++)
-                            m.NodeMapping[conn[j]] = mesh.Faces[innerCounter++];
-
-                        elemCounter++;
-                        innerCounter--;
-                        i = innerCounter;
+                            (obj as GSA2DElementMesh).NodeMapping[conn[j]] = vertices[j];
                     }
+                    // Error in element connectivities! Use coordinates instead
                     catch
                     {
-                        int innerCounter = i;
-                        int numNodes = mesh.Faces[innerCounter++] + 3;
+                        List<double> coordinates = new List<double>();
+                        foreach (int e in vertices)
+                            coordinates.AddRange(mesh.Vertices.Skip(e * 3).Take(3));
 
-                        List<double> coor = new List<double>();
-                        for (int j = 0; j < numNodes; j++)
-                            coor.AddRange(mesh.Vertices.Skip(mesh.Faces[innerCounter++] * 3).Take(3));
-
-                        m.Elements.Add(new Dictionary<string, object>()
+                        try
                         {
-                            { "Name", "" },
-                            { "Reference", 0 },
-                            { "Axis", new Dictionary<string, object>()
-                                {
-                                    { "X", new Dictionary<string, object> { { "x", 1 }, { "y", 0 },{ "z", 0 }  } },
-                                    { "Y", new Dictionary<string, object> { { "x", 0 }, { "y", 1 },{ "z", 0 }  } },
-                                    { "Z", new Dictionary<string, object> { { "x", 0 }, { "y", 0 },{ "z", 1 }  } },
-                                }
-                            },
-                            { "Coor", coor.ToArray() }
-                        });
-
-                        elemCounter++;
-                        innerCounter--;
-                        i = innerCounter;
+                            ((obj as GSA2DElementMesh).Elements[elemCounter] as Dictionary<string, object>)["Coor"] = coordinates.ToArray();
+                        }
+                        catch
+                        {
+                            (obj as GSA2DElementMesh).Elements.Add(new Dictionary<string, object>()
+                            {
+                                { "Name", "" },
+                                { "Reference", 0 },
+                                { "Axis", new Dictionary<string, object>()
+                                    {
+                                        { "X", new Dictionary<string, object> { { "x", 1 }, { "y", 0 },{ "z", 0 }  } },
+                                        { "Y", new Dictionary<string, object> { { "x", 0 }, { "y", 1 },{ "z", 0 }  } },
+                                        { "Z", new Dictionary<string, object> { { "x", 0 }, { "y", 0 },{ "z", 1 }  } },
+                                    }
+                                },
+                                { "Coor", coordinates.ToArray() }
+                            });
+                        }
                     }
+                    elemCounter++;
+                    i += numNodes;
                 }
-                m.Connectivity = m.GetNodeReferences();
             }
 
-            return m;
+            return obj;
         }
         #endregion
     }

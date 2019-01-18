@@ -10,6 +10,8 @@ namespace SpeckleGSA
 {
     public class GSA2DElementMesh : GSAObject
     {
+        public override string Entity { get => "2D Element"; set { } }
+
         public static readonly string GSAKeyword = "";
         public static readonly string Stream = "elements";
         public static readonly int ReadPriority = 5;

@@ -15,7 +15,7 @@ namespace SpeckleGSA
 {
     public static class HelperFunctions
     {
-        public const double EPS = 1e-3;
+        public const double EPS = 1e-16;
 
         #region Enum
         public enum LineNumNodes
@@ -146,6 +146,93 @@ namespace SpeckleGSA
 
             return centroid;
         }
+
+        private static double IntegrateHasher(this List<double> coor, List<int> vertices)
+        {
+            // Get coordinates
+            List<double> x = new List<double>();
+            List<double> y = new List<double>();
+            List<double> z = new List<double>();
+
+            foreach (int e in vertices)
+            {
+                x.Add(coor.Skip(e * 3).First());
+                y.Add(coor.Skip(e * 3 + 1).First());
+                z.Add(coor.Skip(e * 3 + 2).First());
+            }
+
+            // Close the loop
+            x.Add(x[0]);
+            y.Add(y[0]);
+            z.Add(z[0]);
+
+            //Integrate
+            double area1 = 0;
+            for (int i = 0; i < x.Count() - 1; i++)
+            {
+                area1 += x[i] * y[i + 1] - y[i] * x[i + 1];
+            }
+
+            if (Math.Abs(area1) > HelperFunctions.EPS) return area1;
+
+            //Integrate
+            double area2 = 0;
+            for (int i = 0; i < x.Count() - 1; i++)
+            {
+                area2 += x[i] * z[i + 1] - z[i] * y[i + 1];
+            }
+
+            if (Math.Abs(area2) > HelperFunctions.EPS) return area2;
+
+            //Integrate
+            double area3 = 0;
+            for (int i = 0; i < y.Count() - 1; i++)
+            {
+                area3 += y[i] * z[i + 1] - z[i] * y[i + 1];
+            }
+
+            if (Math.Abs(area3) > HelperFunctions.EPS) return area3;
+
+            return 0;
+        }
+
+        public static bool InTri(this List<double> coor, List<int> tri, int point)
+        {
+            // Get coordinates
+            List<double> x = new List<double>();
+            List<double> y = new List<double>();
+            List<double> z = new List<double>();
+
+            foreach (int t in tri)
+            {
+                x.Add(coor.Skip(t * 3).First());
+                y.Add(coor.Skip(t * 3 + 1).First());
+                z.Add(coor.Skip(t * 3 + 2).First());
+            }
+
+            Point3D p0 = new Point3D(x[0], y[0], z[0]);
+            Point3D p1 = new Point3D(x[1], y[1], z[1]);
+            Point3D p2 = new Point3D(x[2], y[2], z[2]);
+
+            Point3D p = new Point3D(coor.Skip(point * 3).First(),
+                coor.Skip(point * 3 + 1).First(),
+                coor.Skip(point * 3 + 2).First());
+
+            Vector3D u = Point3D.Subtract(p1, p0);
+            Vector3D v = Point3D.Subtract(p2, p0);
+            Vector3D n = Vector3D.CrossProduct(u, v);
+            Vector3D w = Point3D.Subtract(p, p0);
+
+            double gamma = Vector3D.DotProduct(Vector3D.CrossProduct(u, w), n) / (n.Length * n.Length);
+            double beta = Vector3D.DotProduct(Vector3D.CrossProduct(w, v), n) / (n.Length * n.Length);
+            double alpha = 1 - gamma - beta;
+
+            if (alpha >= 0 & beta >= 0 & gamma >= 0 & alpha <= 1 & beta <= 1 & gamma <= 1)
+                return true;
+            else
+                return false;
+        }
+
         #endregion
 
         #region Arc Helper Methods
@@ -905,6 +992,21 @@ namespace SpeckleGSA
                     Console.WriteLine(ex.Message);
                 }
             }
+        }
+
+        public static string GetGSAObjectEntityType(this SpeckleObject obj)
+        {
+            if (obj.Properties != null && obj.Properties.ContainsKey("Structural"))
+            {
+                Dictionary<string, object> temp = obj.Properties["Structural"] as Dictionary<string, object>;
+
+                if (temp.ContainsKey("Entity"))
+                    return (string)temp["Entity"];
+                else
+                    return null;
+            }
+            else
+                return null;
         }
         #endregion
 

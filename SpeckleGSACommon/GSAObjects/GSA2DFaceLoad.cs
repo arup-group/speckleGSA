@@ -10,6 +10,8 @@ namespace SpeckleGSA
 {
     public class GSA2DFaceLoad : GSAObject
     {
+        public override string Entity { get => "2D Load"; set { } }
+
         public static readonly string GSAKeyword = "LOAD_2D_FACE";
         public static readonly string Stream = "loads";
         public static readonly int ReadPriority = 4;
@@ -108,6 +110,7 @@ namespace SpeckleGSA
         public static void WriteObjects(Dictionary<Type, object> dict)
         {
             if (!dict.ContainsKey(typeof(GSA2DFaceLoad))) return;
+            if (!dict.ContainsKey(typeof(GSA2DElement))) return;
 
             List<GSAObject> elements = dict[typeof(GSA2DElement)] as List<GSAObject>;
 

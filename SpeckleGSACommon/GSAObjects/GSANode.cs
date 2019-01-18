@@ -10,6 +10,8 @@ namespace SpeckleGSA
 {
     public class GSANode : GSAObject
     {
+        public override string Entity { get => "Node"; set { } }
+
         public static readonly string GSAKeyword = "NODE";
         public static readonly string Stream = "nodes";
         public static readonly int ReadPriority = 2;

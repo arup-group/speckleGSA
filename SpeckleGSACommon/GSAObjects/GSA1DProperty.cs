@@ -10,6 +10,8 @@ namespace SpeckleGSA
 {
     public class GSA1DProperty : GSAObject
     {
+        public override string Entity { get => "1D Property"; set { } }
+
         public static readonly string GSAKeyword = "PROP_SEC";
         public static readonly string Stream = "properties";
         public static readonly int ReadPriority = 1;

@@ -9,6 +9,8 @@ namespace SpeckleGSA
 {
     public abstract class GSAObject
     {
+        public abstract string Entity { get; set; }
+
         public int Reference { get; set; }
         public string Name { get; set; }
         public List<int> Connectivity { get; set; }

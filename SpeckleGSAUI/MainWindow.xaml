@@ -170,7 +170,7 @@
         <Grid 
             Grid.Row="2"
             Margin="20,20,20,20"
-            Background="Beige">
+            Background="White">
             <Grid.RowDefinitions>
                 <RowDefinition Height="auto"/>
                 <RowDefinition Height="*"/>

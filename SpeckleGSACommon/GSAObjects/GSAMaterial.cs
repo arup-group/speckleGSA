@@ -9,6 +9,8 @@ namespace SpeckleGSA
 {
     public class GSAMaterial : GSAObject
     {
+        public override string Entity { get => "Material"; set { } }
+
         public static readonly string GSAKeyword  = "MAT";
         public static readonly string Stream = "properties";
         public static readonly int ReadPriority = 0;

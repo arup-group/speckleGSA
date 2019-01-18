@@ -13,12 +13,19 @@ namespace SpeckleGSA
 
         public static bool IsInit;
 
+        public static bool TargetAnalysisLayer;
+
+        public static bool TargetDesignLayer;
+
         public static void Init()
         {
             if (IsInit)
                 return;
 
             GSAObject = new ComAuto();
+
+            TargetAnalysisLayer = false;
+            TargetDesignLayer = true; // TODO
 
             IsInit = true;
         }
