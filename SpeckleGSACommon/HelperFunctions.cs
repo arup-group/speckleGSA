@@ -1149,7 +1149,7 @@ namespace SpeckleGSA
 
         public static bool IsCoincident(this GSANode n1, GSANode n2)
         {
-            if (Math.Pow(n1.Coor[0] - n2.Coor[0],2) +
+            if (Math.Pow(n1.Coor[0] - n2.Coor[0], 2) +
                 Math.Pow(n1.Coor[1] - n2.Coor[1], 2) +
                 Math.Pow(n1.Coor[2] - n2.Coor[2], 2) < Math.Pow(EPS,2))
                 return true;

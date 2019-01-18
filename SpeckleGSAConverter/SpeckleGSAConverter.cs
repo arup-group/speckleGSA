@@ -405,14 +405,21 @@ namespace SpeckleGSA
                     vertices.Add(vertices[0]);
                     for (int j = 0; j < vertices.Count() - 1; j++)
                     {
-                        if (vertices[j] < vertices[j + 1])
-                            edges.Add(new Tuple<int, int>(vertices[j], vertices[j + 1]));
+                        if (edges.Where(e => (e.Item1 == vertices[j] & e.Item2 == vertices[j + 1]) |
+                            (e.Item1 == vertices[j + 1] & e.Item2 == vertices[j])).Count() == 0)
+                        {
+                            if (vertices[j] < vertices[j + 1])
+                                edges.Add(new Tuple<int, int>(vertices[j], vertices[j + 1]));
+                            else
+                                edges.Add(new Tuple<int, int>(vertices[j + 1], vertices[j]));
+                        }
                         else
-                            edges.Add(new Tuple<int, int>(vertices[j+1], vertices[j]));
+                        { 
+                            edges.Remove(new Tuple<int, int>(vertices[j], vertices[j + 1]));
+                            edges.Remove(new Tuple<int, int>(vertices[j+1], vertices[j]));
+                        }
                     }
                 }
-
-                edges.Distinct().ToList();
 
                 // Reorder the edges
                 List<int> reorderedEdges = new List<int>();
@@ -435,6 +442,7 @@ namespace SpeckleGSA
                         // Next edge not found
                         return null;
                 }
+                reorderedEdges.RemoveAt(0);
 
                 // Get coordinates
                 List<double> coordinates = new List<double>();
