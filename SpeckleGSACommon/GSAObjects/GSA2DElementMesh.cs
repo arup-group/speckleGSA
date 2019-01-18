@@ -37,6 +37,8 @@ namespace SpeckleGSA
         #region GSAObject Functions
         public static void GetObjects(Dictionary<Type, object> dict)
         {
+            if (!GSA.TargetAnalysisLayer) return;
+
             if (!dict.ContainsKey(typeof(GSA2DElement))) return;
             
             List<GSAObject> meshes = new List<GSAObject>();
@@ -167,7 +169,22 @@ namespace SpeckleGSA
         {
             Edges.AddRange(mesh.Edges);
 
-            foreach(KeyValuePair<int, int> nMap in mesh.NodeMapping)
+            foreach(int[] e in mesh.Edges)
+            {
+                if (Edges.Where(ed => (ed[0] == e[0] & ed[1] == e[1]) |
+                           (ed[0] == e[1] & ed[1] == e[0])).Count() == 0)
+                {
+                    Edges.Add(e);
+                }
+                else
+                {
+                    Edges.Remove(new int[] { e[0], e[1] });
+                    Edges.Remove(new int[] { e[1], e[0] });
+
+                }
+            }
+
+            foreach (KeyValuePair<int, int> nMap in mesh.NodeMapping)
                 if (!NodeMapping.ContainsKey(nMap.Key))
                 {
                     NodeMapping[nMap.Key] = Coor.Count() / 3;

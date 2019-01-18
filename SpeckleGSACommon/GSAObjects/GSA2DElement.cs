@@ -42,6 +42,8 @@ namespace SpeckleGSA
         #region GSAObject Functions
         public static void GetObjects(Dictionary<Type, object> dict)
         {
+            if (!GSA.TargetAnalysisLayer) return;
+
             if (!dict.ContainsKey(typeof(GSANode))) return;
 
             List<GSAObject> nodes = dict[typeof(GSANode)] as List<GSAObject>;

@@ -146,7 +146,11 @@
                                 </Style>
                             </DataGrid.CellStyle>
                         </DataGrid>
-                        <Button Grid.Row="2" Grid.ColumnSpan="2" Content="Send/Update Streams" Click="SendStream" Margin="5" Padding="5" HorizontalAlignment="Right" MinWidth="100"/>
+                        <StackPanel Grid.Row="2" Grid.ColumnSpan="2" HorizontalAlignment="Right" Orientation="Horizontal">
+                            <Button Content="Send/Update Analysis Streams" Click="SendAnalysisLayer" Margin="5" Padding="5" HorizontalAlignment="Right" MinWidth="100"/>
+                            <Button Content="Send/Update Design Streams" Click="SendDesignLayer" Margin="5" Padding="5" HorizontalAlignment="Right" MinWidth="100"/>
+                        </StackPanel>
+                        
                     </Grid>
                 </TabItem>
                 <TabItem Header="Receiver">
@@ -162,7 +166,10 @@
                                 </Style>
                             </RichTextBox.Resources>
                         </RichTextBox>
-                        <Button Grid.Row="1" Content="Receive Streams" Click="ReceiveStream" Margin="5" Padding="5" HorizontalAlignment="Right" MinWidth="100"/>
+                        <StackPanel Grid.Row="1" HorizontalAlignment="Right" Orientation="Horizontal">
+                            <Button Content="Receive Analysis Streams" Click="ReceiveAnalysisLayer" Margin="5" Padding="5" HorizontalAlignment="Right" MinWidth="100"/>
+                            <Button Content="Receive Design Streams" Click="ReceiveDesignLayer" Margin="5" Padding="5" HorizontalAlignment="Right" MinWidth="100"/>
+                        </StackPanel>
                     </Grid>
                 </TabItem>
             </TabControl>

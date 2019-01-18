@@ -111,6 +111,22 @@ namespace SpeckleGSAUI
         #endregion
 
         #region Sender
+        private void SendAnalysisLayer(object sender, RoutedEventArgs e)
+        {
+            GSA.TargetAnalysisLayer = true;
+            GSA.TargetDesignLayer = false;
+
+            SendStream(sender, e);
+        }
+
+        private void SendDesignLayer(object sender, RoutedEventArgs e)
+        {
+            GSA.TargetAnalysisLayer = false;
+            GSA.TargetDesignLayer = true;
+
+            SendStream(sender, e);
+        }
+
         private void SendStream(object sender, RoutedEventArgs e)
         {
             Task.Run(() => gsa.ExportObjects(ModelName)).ContinueWith(
@@ -136,6 +152,22 @@ namespace SpeckleGSAUI
         #endregion
 
         #region Receiver
+        private void ReceiveAnalysisLayer(object sender, RoutedEventArgs e)
+        {
+            GSA.TargetAnalysisLayer = true;
+            GSA.TargetDesignLayer = false;
+
+            ReceiveStream(sender, e);
+        }
+
+        private void ReceiveDesignLayer(object sender, RoutedEventArgs e)
+        {
+            GSA.TargetAnalysisLayer = false;
+            GSA.TargetDesignLayer = true;
+
+            ReceiveStream(sender, e);
+        }
+
         private void ReceiveStream(object sender, RoutedEventArgs e)
         {
             string streamInput = new TextRange(ReceiverStreams.Document.ContentStart, ReceiverStreams.Document.ContentEnd).Text;
