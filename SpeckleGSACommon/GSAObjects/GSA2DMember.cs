@@ -232,10 +232,11 @@ namespace SpeckleGSA
             {
                 GSANode n = new GSANode();
                 n.Coor = Coor.Skip(i * 3).Take(3).ToList();
-                if (Connectivity.Count() > i)
-                    n.Reference = Connectivity[i];
-                else
-                    n.Reference = 0;
+                //if (Connectivity.Count() > i)
+                //    n.Reference = Connectivity[i];
+                //else
+                // TODO: Using connectivity is problematic as the coordinates are rebuilt each time
+                n.Reference = 0;
                 children.Add(n);
             }
 
