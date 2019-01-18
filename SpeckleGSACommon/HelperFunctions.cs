@@ -233,6 +233,77 @@ namespace SpeckleGSA
                 return false;
         }
 
+        public static List<List<int>> SplitMesh(this List<int> mesh, List<double> coordinates)
+        {
+            if (mesh.Count() <= 4) return new List<List<int>>() { mesh };
+
+            List<int> meshCopy = new List<int>(mesh);
+
+            // Need to ensure same area!
+            double currArea = coordinates.IntegrateHasher(meshCopy);
+
+            // Assume area doesn't twist on itself
+            if (currArea < 0)
+            {
+                meshCopy.Reverse();
+                currArea *= -1;
+            }
+
+            int indexToCut = 0;
+            int numCut = 3;
+            double bestCost = currArea * 10; // TODO: figure out a better way
+            List<int> newFace1 = new List<int>();
+            List<int> newFace2 = new List<int>();
+
+            do
+            {
+                List<int> face1 = meshCopy.Take(numCut).ToList();
+                List<int> face2 = meshCopy.Skip(numCut - 1).ToList();
+                face2.Add(meshCopy[0]);
+
+                double cost1 = coordinates.IntegrateHasher(face1);
+                double cost2 = coordinates.IntegrateHasher(face2);
+
+                if (cost1 > 0 & cost2 > 0)
+                {
+                    // Check to make sure that the new region does not encompass the other's points
+                    bool flag = false;
+                    for (int i = 1; i < face2.Count() - 1; i++)
+                    {
+                        if (coordinates.InTri(face1, face2[i]))
+                        {
+                            flag = true;
+                            break;
+                        }
+                    }
+
+                    if (!flag)
+                    {
+                        double cost = Math.Abs(cost1 + cost2 - currArea);
+                        if (bestCost > cost)
+                        {
+                            // Track best solution
+                            bestCost = cost;
+                            newFace1 = face1;
+                            newFace2 = face2;
+                        }
+                    }
+                }
+
+                meshCopy.Add(meshCopy[0]);
+                meshCopy.RemoveAt(0);
+                indexToCut++;
+
+                if (indexToCut >= meshCopy.Count())
+                    break;
+
+            } while (bestCost > 1e-10);
+
+            List<List<int>> returnVals = new List<List<int>>();
+            returnVals.AddRange(newFace1.SplitMesh(coordinates));
+            returnVals.AddRange(newFace2.SplitMesh(coordinates));
+            return returnVals;
+        }
         #endregion
 
         #region Arc Helper Methods
