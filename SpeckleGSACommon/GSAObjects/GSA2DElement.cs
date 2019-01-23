@@ -23,6 +23,7 @@ namespace SpeckleGSA
         public double Offset { get; set; }
 
         public int MeshReference;
+        public List<int> Connectivity;
 
         public GSA2DElement()
         {
@@ -37,6 +38,7 @@ namespace SpeckleGSA
             Offset = 0;
 
             MeshReference = 1;
+            Connectivity = new List<int>();
         }
 
         #region GSAObject Functions
@@ -117,7 +119,7 @@ namespace SpeckleGSA
                     dict[typeof(GSANode)] = nodes;
                 }
 
-                e.Connectivity = nodes.Select(n => n.Reference).ToList();
+                (e as GSA2DElement).Connectivity = nodes.Select(n => n.Reference).ToList();
 
                 GSA.RunGWACommand(e.GetGWACommand());
                 Status.ChangeStatus("Writing 2D elements", counter++ / e2Ds.Count() * 100);
@@ -135,15 +137,14 @@ namespace SpeckleGSA
             Type = pieces[counter++];
             Property = Convert.ToInt32(pieces[counter++]);
             counter++; // Group
-
-            Connectivity.Clear();
+            
             Coor.Clear();
 
             List<GSAObject> nodes = dict[typeof(GSANode)] as List<GSAObject>;
             for (int i = 0; i < Type.ParseElementNumNodes(); i++)
-            { 
-                Connectivity.Add(Convert.ToInt32(pieces[counter++]));
-                Coor.AddRange(nodes.Where(n => n.Reference == Connectivity[i]).FirstOrDefault().Coor);
+            {
+                int key = Convert.ToInt32(pieces[counter++]);
+                Coor.AddRange(nodes.Where(n => n.Reference == key).FirstOrDefault().Coor);
             }
 
             counter++; // Orientation node
@@ -221,10 +222,7 @@ namespace SpeckleGSA
             {
                 GSANode n = new GSANode();
                 n.Coor = Coor.Skip(i * 3).Take(3).ToList();
-                if (Connectivity.Count() > i)
-                    n.Reference = Connectivity[i];
-                else
-                    n.Reference = 0;
+                n.Reference = 0;
                 children.Add(n);
             }
 

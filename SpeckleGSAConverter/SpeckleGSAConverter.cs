@@ -38,6 +38,8 @@ namespace SpeckleGSA
 
             string nextRootPath = "";
 
+            // TODO: GetHashCode() should not be used as unique identifier.
+            // Collisions observed for larger property dictionaries.
             if (traversed == null)
             {
                 traversed = new Dictionary<int, string>();
@@ -48,13 +50,16 @@ namespace SpeckleGSA
             {
                 if (traversed.ContainsKey(obj.GetHashCode()))
                 {
-                    return new SpeckleAbstract()
-                    {
-                        _type = "ref",
-                        _ref = traversed[obj.GetHashCode()]
-                    };
+                    //return new SpeckleAbstract()
+                    //{
+                    //    _type = "ref",
+                    //    _ref = traversed[obj.GetHashCode()]
+                    //};
                 }
-                traversed.Add(obj.GetHashCode(), path + "/" + key);
+                else
+                { 
+                    traversed.Add(obj.GetHashCode(), path + "/" + key);
+                }
                 nextRootPath = path + "/" + key;
             }
 
@@ -235,14 +240,11 @@ namespace SpeckleGSA
         {
             List<int> faceConnectivity = new List<int>();
 
-            for (int i = 0; i < mesh.Elements.Count; i++)
+            foreach(List<string> coordinates in mesh.ElementConnectivity)
             {
-                Dictionary<string, object> e = mesh.Elements[i] as Dictionary<string, object>;
-                List<int> eConnectivity = e["Connectivity"] as List<int>;
-
-                faceConnectivity.Add(eConnectivity.Count() - 3);
-                foreach (int c in eConnectivity)
-                    faceConnectivity.Add(mesh.NodeMapping[c]);
+                faceConnectivity.Add(coordinates.Count() - 3);
+                foreach(string coor in coordinates)
+                    faceConnectivity.Add(mesh.NodeMapping[coor]);
             }
 
             SpeckleMesh m = new SpeckleMesh(
@@ -466,43 +468,13 @@ namespace SpeckleGSA
                     int numNodes = mesh.Faces[i++] + 3;
 
                     List<int> vertices = mesh.Faces.Skip(i).Take(numNodes).ToList();
+                    
+                    List<string> coordinates = new List<string>();
+                    foreach (int e in vertices)
+                        coordinates.Add(string.Join(",",mesh.Vertices.Skip(e * 3).Take(3)));
 
-                    // If there are element connectivities
-                    try
-                    {
-                        List<int> conn = (obj as GSA2DElementMesh).GetElemConnectivity((obj as GSA2DElementMesh).Elements[elemCounter] as Dictionary<string, object>);
-
-                        for (int j = 0; j < conn.Count(); j++)
-                            (obj as GSA2DElementMesh).NodeMapping[conn[j]] = vertices[j];
-                    }
-                    // Error in element connectivities! Use coordinates instead
-                    catch
-                    {
-                        List<double> coordinates = new List<double>();
-                        foreach (int e in vertices)
-                            coordinates.AddRange(mesh.Vertices.Skip(e * 3).Take(3));
-
-                        try
-                        {
-                            ((obj as GSA2DElementMesh).Elements[elemCounter] as Dictionary<string, object>)["Coor"] = coordinates.ToArray();
-                        }
-                        catch
-                        {
-                            (obj as GSA2DElementMesh).Elements.Add(new Dictionary<string, object>()
-                            {
-                                { "Name", "" },
-                                { "Reference", 0 },
-                                { "Axis", new Dictionary<string, object>()
-                                    {
-                                        { "X", new Dictionary<string, object> { { "x", 1 }, { "y", 0 },{ "z", 0 }  } },
-                                        { "Y", new Dictionary<string, object> { { "x", 0 }, { "y", 1 },{ "z", 0 }  } },
-                                        { "Z", new Dictionary<string, object> { { "x", 0 }, { "y", 0 },{ "z", 1 }  } },
-                                    }
-                                },
-                                { "Coor", coordinates.ToArray() }
-                            });
-                        }
-                    }
+                    (obj as GSA2DElementMesh).ElementConnectivity.Add(coordinates);
+                    
                     elemCounter++;
                     i += numNodes;
                 }

@@ -22,7 +22,9 @@ namespace SpeckleGSA
         public Dictionary<string, object> Axis { get; set; }
         public Dictionary<string, object> EndCondition { get; set; }
         public Dictionary<string, object> Offset { get; set; }
-        
+
+        public List<int> Connectivity;
+
         public GSA1DMember()
         {
             Type = "GENERIC";
@@ -61,6 +63,8 @@ namespace SpeckleGSA
                 { "Vertical", 0 },
                 { "Horizontal", 0 },
             };
+
+            Connectivity = new List<int>();
         }
 
         #region GSAObject Functions
@@ -156,7 +160,7 @@ namespace SpeckleGSA
                     dict[typeof(GSANode)] = nodes;
                 }
 
-                m.Connectivity = nodes.Select(n => n.Reference).ToList();
+                (m as GSA1DMember).Connectivity = nodes.Select(n => n.Reference).ToList();
 
                 GSA.RunGWACommand(m.GetGWACommand());
                 Status.ChangeStatus("Writing 1D members", counter++ / m1Ds.Count() * 100);
@@ -175,18 +179,14 @@ namespace SpeckleGSA
             Type = Type == "1D_GENERIC" ? "GENERIC" : Type;
             Property = Convert.ToInt32(pieces[counter++]);
             counter++; // Group
-
-            Connectivity.Clear();
+            
             Coor.Clear();
 
             string[] nodeRefs = pieces[counter++].ListSplit(" ");
             List<GSAObject> nodes = dict[typeof(GSANode)] as List<GSAObject>;
 
             for (int i = 0; i < nodeRefs.Length; i++)
-            {
-                Connectivity.Add(Convert.ToInt32(nodeRefs[i]));
-                Coor.AddRange(nodes.Where(n => n.Reference == Connectivity[i]).FirstOrDefault().Coor);
-            }
+                Coor.AddRange(nodes.Where(n => n.Reference == Convert.ToInt32(nodeRefs[i])).FirstOrDefault().Coor);
 
             int orientationNodeRef = Convert.ToInt32(pieces[counter++]);
             double rotationAngle = Convert.ToDouble(pieces[counter++]);
@@ -256,10 +256,7 @@ namespace SpeckleGSA
             {
                 GSANode n = new GSANode();
                 n.Coor = Coor.Skip(i * 3).Take(3).ToList();
-                if (Connectivity.Count() > i)
-                    n.Reference = Connectivity[i];
-                else
-                    n.Reference = 0;
+                n.Reference = 0;
                 children.Add(n);
             }
 

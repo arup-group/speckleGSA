@@ -21,8 +21,9 @@ namespace SpeckleGSA
         public double Offset { get; set; }
         public List<object> Elements { get; set; }
 
-        public List<int[]> Edges;
-        public Dictionary<int, int> NodeMapping;
+        public Dictionary<string,List<string>> Edges;
+        public Dictionary<string, int> NodeMapping;
+        public List<List<string>> ElementConnectivity;
 
         public GSA2DElementMesh()
         {
@@ -30,8 +31,9 @@ namespace SpeckleGSA
             Offset = 0;
             Elements = new List<object>();
 
-            Edges = new List<int[]>();
-            NodeMapping = new Dictionary<int, int>();
+            Edges = new Dictionary<string, List<string>>();
+            NodeMapping = new Dictionary<string, int>();
+            ElementConnectivity = new List<List<string>>();
         }
 
         #region GSAObject Functions
@@ -111,26 +113,20 @@ namespace SpeckleGSA
         {
             List<GSAObject> elements = new List<GSAObject>();
 
-            foreach (object e in Elements)
+            for(int i = 0; i < ElementConnectivity.Count(); i++)
             {
-                Dictionary<string, object> elemDict = e as Dictionary<string, object>;
                 GSA2DElement elem = new GSA2DElement();
-
-                if (elemDict.ContainsKey("Connectivity"))
-                    elem.Connectivity = GetElemConnectivity(elemDict);
-                else if (elemDict.ContainsKey("Coor"))
-                    elem.Coor = GetElemCoor(elemDict);
-                else
-                    continue;
 
                 elem.MeshReference = Reference;
                 elem.Property = Property;
                 elem.Offset = Offset;
-                elem.Name = (string)elemDict["Name"];
-                elem.Reference = (int)(elemDict["Reference"].ToDouble());
-                elem.Axis = (Dictionary<string, object>)elemDict["Axis"];
 
-                switch (elem.Connectivity.Count() + elem.Coor.Count() / 3)
+                elem.Coor = ElementConnectivity[i]
+                    .SelectMany(c => 
+                        c.ToCoor())
+                        .ToList();
+
+                switch (elem.Coor.Count() / 3)
                 {
                     case 3:
                         elem.Type = "TRI3";
@@ -142,9 +138,18 @@ namespace SpeckleGSA
                         continue;
                 }
 
-                if (elem.Coor.Count == 0)
-                    foreach (int c in elem.Connectivity)
-                        elem.Coor.AddRange(Coor.Skip(NodeMapping[c] * 3).Take(3));
+                if (Elements.Count > i)
+                {
+                    try
+                    {
+                        Dictionary<string, object> elemDict = Elements[i] as Dictionary<string, object>;
+
+                        elem.Name = (string)elemDict["Name"];
+                        elem.Reference = (int)(elemDict["Reference"].ToDouble());
+                        elem.Axis = (Dictionary<string, object>)elemDict["Axis"];
+                    }
+                    catch { }
+                }
 
                 elements.Add(elem);
             }
@@ -159,32 +164,27 @@ namespace SpeckleGSA
             if (mesh.Property != Property | mesh.Offset != Offset)
                 return false;
 
-            foreach (int[] edge in mesh.Edges)
-                if (EdgeinMesh(edge)) return true;
+            if (EdgeinMesh(mesh.Edges)) return true;
 
             return false;
         }
 
         public void MergeMesh(GSA2DElementMesh mesh)
         {
-            Edges.AddRange(mesh.Edges);
-
-            foreach(int[] e in mesh.Edges)
+            foreach (KeyValuePair<string, List<string>> kvp in mesh.Edges)
             {
-                if (Edges.Where(ed => (ed[0] == e[0] & ed[1] == e[1]) |
-                           (ed[0] == e[1] & ed[1] == e[0])).Count() == 0)
+                if (Edges.ContainsKey(kvp.Key))
                 {
-                    Edges.Add(e);
+                    Edges[kvp.Key].AddRange(kvp.Value);
+                    Edges[kvp.Key] = Edges[kvp.Key].Distinct().ToList();
                 }
                 else
                 {
-                    Edges.Remove(new int[] { e[0], e[1] });
-                    Edges.Remove(new int[] { e[1], e[0] });
-
+                    Edges[kvp.Key] = kvp.Value;
                 }
             }
 
-            foreach (KeyValuePair<int, int> nMap in mesh.NodeMapping)
+            foreach (KeyValuePair<string, int> nMap in mesh.NodeMapping)
                 if (!NodeMapping.ContainsKey(nMap.Key))
                 {
                     NodeMapping[nMap.Key] = Coor.Count() / 3;
@@ -192,30 +192,24 @@ namespace SpeckleGSA
                 }
 
             Elements.AddRange(mesh.Elements);
+            ElementConnectivity.AddRange(mesh.ElementConnectivity);
         }
         #endregion
 
         #region Element Operations
-        public bool ElementAddable(GSA2DElement element)
+        public bool EdgeinMesh(Dictionary<string, List<string>> edges)
         {
-            if (element.Property != Property | element.Offset != Offset)
-                return false;
+            foreach (KeyValuePair<string, List<string>> kvp in edges)
+            {
+                if (Edges.ContainsKey(kvp.Key))
+                {
+                    if (Edges[kvp.Key].Any(a => kvp.Value.Any(b => b == a)))
+                    {
+                        return true;
+                    }
+                }
+            }
 
-            List<int> connectivity = element.Connectivity;
-            connectivity.Add(element.Connectivity[0]);
-
-            for (int i = 0; i < connectivity.Count(); i ++)
-                if (EdgeinMesh(new int[] { connectivity[i], connectivity[i + 1] }))
-                    return true;
-
-            return false;
-        }
-
-        public bool EdgeinMesh(int[] edge)
-        {
-            foreach (int[] e in Edges)
-                if ((e[0] == edge[0] && e[1] == edge[1]) || (e[0] == edge[1] && e[1] == edge[0])) return true;
-            
             return false;
         }
 
@@ -225,64 +219,53 @@ namespace SpeckleGSA
             {
                 { "Name", element.Name },
                 { "Reference", element.Reference },
-                { "Connectivity", element.Connectivity },
                 { "Axis", element.Axis }
             };
-            AddEdges(element.Connectivity);
-            AddCoors(element.Coor, element.Connectivity);
+            AddEdges(element.Coor);
+            AddCoors(element.Coor);
+
+            List<string> elementConnectivity = new List<string>();
+            for (int i = 0; i < element.Coor.Count() / 3; i++)
+                elementConnectivity.Add(string.Join(",",element.Coor.Skip(i * 3).Take(3).Select(x => x.ToString())));
+            ElementConnectivity.Add(elementConnectivity);
+
             Elements.Add(e);
         }
 
-        public void AddEdges(List<int> connectivity)
+        public void AddEdges(List<double> coordinates)
         {
-            for (int i = 0; i < connectivity.Count() - 1; i++)
-                Edges.Add(connectivity.Skip(i).Take(2).ToArray());
+            List<double> loopedCoordinates = new List<double>(coordinates);
+            loopedCoordinates.AddRange(coordinates.Take(3));
 
-            Edges.Add(new int[] {
-                    connectivity[connectivity.Count() - 1],
-                    connectivity[0]});
+            for (int i = 0; i < loopedCoordinates.Count() / 3; i++)
+            {
+                string key = string.Join(",",loopedCoordinates.Skip(i * 3).Take(3).Select(x => x.ToString()));
+                string value = string.Join(",", loopedCoordinates.Skip((i+1) * 3).Take(3).Select(x => x.ToString()));
+                if (Edges.ContainsKey(key))
+                    Edges[key].Add(value);
+                else
+                    Edges[key] = new List<string>() { value };
+
+                if (Edges.ContainsKey(value))
+                    Edges[value].Add(key);
+                else
+                    Edges[value] = new List<string>() { key };
+            }
         }
 
-        public void AddCoors(List<double> coor, List<int> connectivity)
+        public void AddCoors(List<double> coordinates)
         {
-            for (int i = 0; i < connectivity.Count(); i++)
-                if (!NodeMapping.ContainsKey(connectivity[i]))
+            for (int i = 0; i < coordinates.Count() / 3; i++)
+            {
+                string key = string.Join(",", coordinates.Skip(i * 3).Take(3).Select(x => x.ToString()));
+
+                if (!NodeMapping.ContainsKey(key))
                 {
-                    NodeMapping[connectivity[i]] = Coor.Count() / 3;
-                    Coor.AddRange(coor.Skip(i * 3).Take(3));
+                    NodeMapping[key] = Coor.Count() / 3;
+                    Coor.AddRange(coordinates.Skip(i * 3).Take(3).ToArray());
                 }
+            }
         }
         #endregion
-
-        #region Helper Functions
-        public List<int> GetNodeReferences()
-        {
-            List<int> nodeRefs = new List<int>();
-
-            foreach (object e in Elements)
-                nodeRefs.AddRange(GetElemConnectivity(e as Dictionary<string, object>));
-
-            return nodeRefs;
-        }
-
-        public List<int> GetElemConnectivity (Dictionary<string,object> elem)
-        {
-            try { 
-            return ((IEnumerable)elem["Connectivity"]).Cast<object>()
-                .Select(e => Convert.ToInt32(e)).ToList();
-            }
-            catch { return new List<int>(); }
-        }
-
-        public List<double> GetElemCoor(Dictionary<string, object> elem)
-        {
-            try
-            {
-                return ((IEnumerable)elem["Coor"]).Cast<object>()
-                .Select(e => e.ToDouble()).ToList();
-            }
-            catch { return new List<double>(); }
-        }
-    #endregion
-}
+    }
 }

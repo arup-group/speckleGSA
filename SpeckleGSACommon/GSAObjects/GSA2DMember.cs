@@ -22,6 +22,8 @@ namespace SpeckleGSA
         public Dictionary<string, object> Axis { get; set; }
         public double Offset { get; set; }
 
+        public List<int> Connectivity;
+
         public GSA2DMember()
         {
             Type = "GENERIC";
@@ -33,6 +35,8 @@ namespace SpeckleGSA
                 { "Z", new Dictionary<string, object> { { "x", 0 }, { "y", 0 },{ "z", 1 }  } },
             };
             Offset = 0;
+
+            Connectivity = new List<int>();
         }
 
         #region GSAObject Functions
@@ -128,7 +132,7 @@ namespace SpeckleGSA
                     dict[typeof(GSANode)] = nodes;
                 }
 
-                m.Connectivity = nodes.Select(n => n.Reference).ToList();
+                (m as GSA2DMember).Connectivity = nodes.Select(n => n.Reference).ToList();
 
                 GSA.RunGWACommand(m.GetGWACommand());
                 Status.ChangeStatus("Writing 2D members", counter++ / m2Ds.Count() * 100);
@@ -147,18 +151,14 @@ namespace SpeckleGSA
             Type = Type == "2D_GENERIC" ? "GENERIC" : Type;
             Property = Convert.ToInt32(pieces[counter++]);
             counter++; // Group
-
-            Connectivity.Clear();
+            
             Coor.Clear();
 
             string[] nodeRefs = pieces[counter++].ListSplit(" ");
             List<GSAObject> nodes = dict[typeof(GSANode)] as List<GSAObject>;
 
             for (int i = 0; i < nodeRefs.Length; i++)
-            {
-                Connectivity.Add(Convert.ToInt32(nodeRefs[i]));
-                Coor.AddRange(nodes.Where(n => n.Reference == Connectivity[i]).FirstOrDefault().Coor);
-            }
+                Coor.AddRange(nodes.Where(n => n.Reference == Convert.ToInt32(nodeRefs[i])).FirstOrDefault().Coor);
 
             counter++; // Orientation node
 

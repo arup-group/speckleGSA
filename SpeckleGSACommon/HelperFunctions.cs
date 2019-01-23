@@ -926,6 +926,18 @@ namespace SpeckleGSA
         #endregion
 
         #region Conversion
+        public static double[] ToCoor(this string str)
+        {
+            try
+            {
+                return str.Split(new char[] { ',' }).Select(x => Convert.ToDouble(x)).ToArray();
+            }
+            catch
+            {
+                return new double[3];
+            }
+        }
+
         public static double ToDouble(this object obj)
         {
             if (obj.GetType() == typeof(int))

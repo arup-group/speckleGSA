@@ -80,7 +80,7 @@ namespace SpeckleGSA
                 foreach(GSAObject e in dict[typeof(GSA0DElement)] as List<GSAObject>)
                 { 
                     try { 
-                        (nodes.Where(n => e.Connectivity.Contains(n.Reference)).First() as GSANode).Merge0DElement(e as GSA0DElement);
+                        (nodes.Where(n => (e as GSA0DElement).Connectivity.Contains(n.Reference)).First() as GSANode).Merge0DElement(e as GSA0DElement);
                     }
                     catch { }
                     Status.ChangeStatus("Merging 0D elements", counter++ / pieces.Length * 100);

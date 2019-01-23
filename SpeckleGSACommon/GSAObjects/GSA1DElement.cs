@@ -23,6 +23,8 @@ namespace SpeckleGSA
         public Dictionary<string, object> EndCondition { get; set; }
         public Dictionary<string, object> Offset { get; set; }
 
+        public List<int> Connectivity;
+
         public GSA1DElement()
         {
             Type = "BEAM";
@@ -61,6 +63,8 @@ namespace SpeckleGSA
                 { "Vertical", 0 },
                 { "Horizontal", 0 },
             };
+
+            Connectivity = new List<int>();
         }
 
         #region GSAObject Functions
@@ -139,7 +143,7 @@ namespace SpeckleGSA
                     dict[typeof(GSANode)] = nodes;
                 }
 
-                e.Connectivity = nodes.Select(n => n.Reference).ToList();
+                (e as GSA1DElement).Connectivity = nodes.Select(n => n.Reference).ToList();
 
                 GSA.RunGWACommand(e.GetGWACommand());
 
@@ -160,15 +164,14 @@ namespace SpeckleGSA
             Type = pieces[counter++];
             Property = Convert.ToInt32(pieces[counter++]);
             counter++; // Group
-
-            Connectivity.Clear();
+            
             Coor.Clear();
 
             List<GSAObject> nodes = dict[typeof(GSANode)] as List<GSAObject>;
             for (int i = 0; i < 2; i++)
             {
-                Connectivity.Add(Convert.ToInt32(pieces[counter++]));
-                Coor.AddRange(nodes.Where(n => n.Reference == Connectivity[i]).FirstOrDefault().Coor);
+                int key = Convert.ToInt32(pieces[counter++]);
+                Coor.AddRange(nodes.Where(n => n.Reference == key).FirstOrDefault().Coor);
             }
 
             int orientationNodeRef = Convert.ToInt32(pieces[counter++]);
@@ -282,10 +285,7 @@ namespace SpeckleGSA
             {
                 GSANode n = new GSANode();
                 n.Coor = Coor.Skip(i * 3).Take(3).ToList();
-                if (Connectivity.Count() > i)
-                    n.Reference = Connectivity[i];
-                else
-                    n.Reference = 0;
+                n.Reference = 0;
                 children.Add(n);
             }
 

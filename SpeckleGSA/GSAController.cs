@@ -316,10 +316,6 @@ namespace SpeckleGSA
                 // Reserve reference
                 GSARefCounters.AddObjRefs((string)kvp.Key.GetField("GSAKeyword").GetValue(null),
                     (kvp.Value as IList).Cast<GSAObject>().Select(o => o.Reference).ToList());
-
-                // Reserve connectivities
-                GSARefCounters.AddObjRefs("NODE",
-                    (kvp.Value as IList).Cast<GSAObject>().SelectMany(e => e.Connectivity).ToList());
             }
 
             // Initialize object write priority list

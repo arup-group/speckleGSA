@@ -13,7 +13,6 @@ namespace SpeckleGSA
 
         public int Reference { get; set; }
         public string Name { get; set; }
-        public List<int> Connectivity { get; set; }
 
         public List<double> Coor;
         public object Color;
@@ -24,7 +23,6 @@ namespace SpeckleGSA
             Name = "";
             Color = null;
             Coor = new List<double>();
-            Connectivity = new List<int>();
         }
 
         public abstract void ParseGWACommand(string command, Dictionary<Type, object> dict = null);

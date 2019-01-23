@@ -21,6 +21,7 @@ namespace SpeckleGSA
         public int Group { get; set; }
 
         public double Mass;
+        public List<int> Connectivity;
 
         public GSA0DElement()
         {
@@ -94,9 +95,6 @@ namespace SpeckleGSA
             Type = pieces[counter++];
             Property = Convert.ToInt32(pieces[counter++]);
             Group = Convert.ToInt32(pieces[counter++]);
-            Connectivity.Clear();
-            for (int i = 0; i < Type.ParseElementNumNodes(); i++)
-                Connectivity.Add(Convert.ToInt32(pieces[counter++]));
             
             // Rest is unimportant for 0D element
         }
