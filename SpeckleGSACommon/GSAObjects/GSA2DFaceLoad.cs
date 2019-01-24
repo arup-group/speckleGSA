@@ -110,9 +110,9 @@ namespace SpeckleGSA
         public static void WriteObjects(Dictionary<Type, object> dict)
         {
             if (!dict.ContainsKey(typeof(GSA2DFaceLoad))) return;
-            if (!dict.ContainsKey(typeof(GSA2DElement))) return;
+            if (!dict.ContainsKey(typeof(GSA2DElement)) & GSA.TargetAnalysisLayer) return;
+            if (!dict.ContainsKey(typeof(GSA2DMember)) & GSA.TargetDesignLayer) return;
 
-            List<GSAObject> elements = dict[typeof(GSA2DElement)] as List<GSAObject>;
 
             List<GSAObject> loads = dict[typeof(GSA2DFaceLoad)] as List<GSAObject>;
 
@@ -121,11 +121,16 @@ namespace SpeckleGSA
             {
                 GSARefCounters.RefObject(l);
 
-                // Target meshes
-                List<int> matches = elements.Where(e => (l as GSA2DFaceLoad).Meshes.Contains((e as GSA2DElement).MeshReference))
-                    .Select(e => e.Reference).ToList();
-                (l as GSA2DFaceLoad).Elements.AddRange(matches);
-                (l as GSA2DFaceLoad).Elements = (l as GSA2DFaceLoad).Elements.Distinct().ToList();
+                if (GSA.TargetAnalysisLayer)
+                {
+                    // Add mesh elements to target
+                    List<GSAObject> elements = dict[typeof(GSA2DElement)] as List<GSAObject>;
+
+                    List<int> matches = elements.Where(e => (l as GSA2DFaceLoad).Meshes.Contains((e as GSA2DElement).MeshReference))
+                        .Select(e => e.Reference).ToList();
+                    (l as GSA2DFaceLoad).Elements.AddRange(matches);
+                    (l as GSA2DFaceLoad).Elements = (l as GSA2DFaceLoad).Elements.Distinct().ToList();
+                }
 
                 string[] commands = l.GetGWACommand().Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
                 foreach (string c in commands)
@@ -175,7 +180,14 @@ namespace SpeckleGSA
                 subLs.Add("SET");
                 subLs.Add(GSAKeyword);
                 subLs.Add(Name == "" ? " " : "");
-                subLs.Add(string.Join(" ", Elements));
+                if (GSA.TargetDesignLayer)
+                {
+                    subLs.Add(string.Join(" ", Meshes.Select(x => "G" + x.ToString())));
+                }
+                else if (GSA.TargetAnalysisLayer)
+                { 
+                    subLs.Add(string.Join(" ", Elements));
+                }
                 subLs.Add(Case.ToString());
                 subLs.Add("GLOBAL"); // Axis
                 subLs.Add("CONS"); // Type

@@ -37,7 +37,7 @@ namespace SpeckleGSA
             };
             Offset = 0;
 
-            MeshReference = 1;
+            MeshReference = -1;
             Connectivity = new List<int>();
         }
 
