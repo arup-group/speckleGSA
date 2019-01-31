@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using SpeckleCore;
 
@@ -32,7 +34,6 @@ namespace SpeckleGSA
         
         public List<object> GetGSAObjects()
         {
-            ConverterHack n = new ConverterHack();
             UpdateDataAsync();
 
             return SpeckleCore.Converter.Deserialise(myReceiver.Stream.Objects);
@@ -40,12 +41,14 @@ namespace SpeckleGSA
 
         public void UpdateDataAsync()
         {
+            ConverterHack hack = new ConverterHack();
+
             // Try to get stream
             ResponseStream streamGetResult = myReceiver.StreamGetAsync(myReceiver.StreamId, null).Result;
 
             if (streamGetResult.Success == false)
             {
-                MessageLog.AddError("Failed to receive " + myReceiver.Stream.Name + "stream.");
+                Status.AddError("Failed to receive " + myReceiver.Stream.Name + "stream.");
             }
             else
             {
@@ -90,7 +93,7 @@ namespace SpeckleGSA
                     }
                 });
 
-                MessageLog.AddMessage("Received " + myReceiver.Stream.Name + " stream with " + myReceiver.Stream.Objects.Count() + " objects.");
+                Status.AddMessage("Received " + myReceiver.Stream.Name + " stream with " + myReceiver.Stream.Objects.Count() + " objects.");
             }
         }
     }

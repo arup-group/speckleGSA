@@ -11,7 +11,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleGSAUI", "SpeckleGSAU
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleGSAConverter", "SpeckleGSAConverter\SpeckleGSAConverter.csproj", "{DF558C64-1575-4DB6-A20F-93C38BD9F60C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleGSAObjects", "SpeckleGSAObjects\SpeckleGSAObjects.csproj", "{821DE1A5-1544-40F1-8754-1536069C4994}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleGSACommon", "SpeckleGSACommon\SpeckleGSACommon.csproj", "{E43A36D3-C488-49EF-9177-01A3038E6B29}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -35,10 +35,10 @@ Global
 		{DF558C64-1575-4DB6-A20F-93C38BD9F60C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DF558C64-1575-4DB6-A20F-93C38BD9F60C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DF558C64-1575-4DB6-A20F-93C38BD9F60C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{821DE1A5-1544-40F1-8754-1536069C4994}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{821DE1A5-1544-40F1-8754-1536069C4994}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{821DE1A5-1544-40F1-8754-1536069C4994}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{821DE1A5-1544-40F1-8754-1536069C4994}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E43A36D3-C488-49EF-9177-01A3038E6B29}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E43A36D3-C488-49EF-9177-01A3038E6B29}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E43A36D3-C488-49EF-9177-01A3038E6B29}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E43A36D3-C488-49EF-9177-01A3038E6B29}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

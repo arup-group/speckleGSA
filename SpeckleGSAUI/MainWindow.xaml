@@ -5,37 +5,22 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         
         xmlns:local="clr-namespace:SpeckleGSAUI"
-        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
-        xmlns:dragablz="clr-namespace:Dragablz;assembly=Dragablz"
         
-        TextElement.Foreground="{DynamicResource MaterialDesignBody}"
-        TextElement.FontWeight="Medium"
-        TextElement.FontSize="14"
-        TextOptions.TextFormattingMode="Ideal"
-        TextOptions.TextRenderingMode="Auto"
-        Background="#EEEEEE"
-        FontFamily="{DynamicResource MaterialDesignFont}"
+        Background="#FF0057FF"
         
         mc:Ignorable="d"
-        Width="1000"
-        Title="SpeckleGSA" Height="800">
+        
+        Title="SpeckleGSA" Height="600" Width="500">
     <Grid
         Margin="0,0,0,0">
         <Grid.RowDefinitions>
             <RowDefinition Height="auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="auto"/>
-            <RowDefinition Height="150"/>
+            <RowDefinition Height="200"/>
         </Grid.RowDefinitions>
         <Grid
-            Grid.Row="0"
-            Background="{DynamicResource PrimaryHueMidBrush}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="auto"/>
-            </Grid.ColumnDefinitions>
+            Grid.Row="0">
             <TextBlock
-                Grid.Column="0"
                 Width="97"
                 Height="29"
                 HorizontalAlignment="Left"
@@ -47,61 +32,190 @@
                 Text="Speckle!"
                 TextWrapping="Wrap" />
         </Grid>
-        <dragablz:TabablzControl
-            Grid.Row="1"
-            x:Name="ControlPanelContainer"
-            ShowDefaultCloseButton="True"
-            BorderThickness="0">
-            <dragablz:TabablzControl.HeaderSuffixContent>
-                <Button 
-                        Background="Transparent"
-                        HorizontalAlignment="Right"
-                        BorderBrush="White"
-                        BorderThickness="0"
-                        Height="40"
-                        Foreground="White"
-                        FontWeight="Black"
-                        FontSize="25"
-                        Padding="0"
-                        Margin="25,0,25,0"
-                        Content="+"
-                        Click="AddControlPanel">
-                </Button>
-            </dragablz:TabablzControl.HeaderSuffixContent>
-        </dragablz:TabablzControl>
-        <GridSplitter
-            Height="5"
-            Background="#FF0057FF"
-            Grid.Row="2"
-            HorizontalAlignment="Stretch"
-            VerticalAlignment="Stretch">
-        </GridSplitter>
         <Grid
-            Background="{DynamicResource PrimaryHueMidBrush}"
-            Grid.Row="3"
-            x:Name="MessageLogContainer">
-            <Grid Margin="25,5,25,25">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                <Label
+            Grid.Row="1"
+            Margin="20,0,20,0">
+            <TabControl>
+                <TabItem Header="Server">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
+                        </Grid.RowDefinitions>
+                        <Label Grid.Row="0" Grid.Column="0" Content="Server Adress" Margin="5"/>
+                        <TextBox Grid.Row="0" Grid.Column="1" x:Name="ServerAddress" Margin="5"/>
+                        <Label Grid.Row="1" Grid.Column="0" Content="Email Adress" Margin="5"/>
+                        <TextBox Grid.Row="1" Grid.Column="1" x:Name="EmailAddress" Margin="5"/>
+                        <Label Grid.Row="2" Grid.Column="0" Content="Password" Margin="5"/>
+                        <PasswordBox Grid.Row="2" Grid.Column="1" x:Name="Password" Margin="5"/>
+                        <Button Grid.Row="3" Grid.ColumnSpan="2" Click="Login" Content="Login" Margin="5" Padding="5" HorizontalAlignment="Right" MinWidth="100"/>
+                    </Grid>
+                </TabItem>
+                <TabItem Header="Stream List">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="auto"/>
+                        </Grid.RowDefinitions>
+                        <DataGrid
+                            Grid.Row="0"
+                            Margin="5"
+                            CanUserSortColumns="False"
+                            AutoGenerateColumns="False"
+                            IsReadOnly="True"
+                            ItemsSource="{Binding StreamData}"
+                            SelectionMode="Single"
+                            CopyingRowClipboardContent="CopyStreamList"
+                            GridLinesVisibility="None">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Name" Width="*" Binding="{Binding Item1}"/>
+                                <DataGridTextColumn Header="StreamID" Width="*" Binding="{Binding Item2}"/>
+                            </DataGrid.Columns>
+                            <DataGrid.CellStyle>
+                                <Style
+                                        TargetType="DataGridCell"
+                                        BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                </Style>
+                            </DataGrid.CellStyle>
+                        </DataGrid>
+                        <Button Grid.Row="1" Click="UpdateStreamList"  Content="Update Stream List" Margin="5" Padding="5" HorizontalAlignment="Right" MinWidth="100"/>
+                    </Grid>
+                </TabItem>
+                <TabItem Header="Stream Operations">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
+                        </Grid.RowDefinitions>
+                        <Button Grid.Row="0" Content="Clone Model Streams" Click="CloneModelStreams" Margin="5" Padding="5"/>
+                        <Button Grid.Row="1" Content="Diff Model Streams" Click="CloneModelStreams" Margin="5" Padding="5"/>
+                    </Grid>
+                </TabItem>
+                <TabItem Header="GSA">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
+                        </Grid.RowDefinitions>
+                        <Button Grid.Row="0" Content="New File" Click="NewGSAFile" Margin="5" Padding="5"/>
+                        <Button Grid.Row="1" Content="Open File" Click="OpenGSAFile" Margin="5" Padding="5"/>
+                    </Grid>
+                </TabItem>
+                <TabItem Header="Sender">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="auto"/>
+                        </Grid.RowDefinitions>
+                        <Label Grid.Row="0" Grid.Column="0" Content="Model Name" Margin="5"/>
+                        <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Path=ModelName}" Margin="5"/>
+                        <DataGrid
+                            x:Name="SenderStreams"
+                            Grid.Row="1"
+                            Grid.ColumnSpan="2"
+                            Margin="5"
+                            CanUserSortColumns="False"
+                            AutoGenerateColumns="False"
+                            IsReadOnly="True"
+                            SelectionMode="Single"
+                            CopyingRowClipboardContent="CopyStreamList"
+                            GridLinesVisibility="None">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Name" Width="*" Binding="{Binding Item1}"/>
+                                <DataGridTextColumn Header="StreamID" Width="*" Binding="{Binding Item2}"/>
+                            </DataGrid.Columns>
+                            <DataGrid.CellStyle>
+                                <Style
+                                    TargetType="DataGridCell"
+                                    BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                </Style>
+                            </DataGrid.CellStyle>
+                        </DataGrid>
+                        <StackPanel Grid.Row="2" Grid.ColumnSpan="2" HorizontalAlignment="Right" Orientation="Horizontal">
+                            <Button Content="Send/Update Analysis Streams" Click="SendAnalysisLayer" Margin="5" Padding="5" HorizontalAlignment="Right" MinWidth="100"/>
+                            <Button Content="Send/Update Design Streams" Click="SendDesignLayer" Margin="5" Padding="5" HorizontalAlignment="Right" MinWidth="100"/>
+                        </StackPanel>
+                        
+                    </Grid>
+                </TabItem>
+                <TabItem Header="Receiver">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="auto"/>
+                        </Grid.RowDefinitions>
+                        <RichTextBox x:Name="ReceiverStreams" Grid.Row="0" HorizontalContentAlignment="Center" Margin="5" AcceptsReturn="True" BorderThickness="1">
+                            <RichTextBox.Resources>
+                                <Style TargetType="{x:Type Paragraph}">
+                                    <Setter Property="Margin" Value="0"/>
+                                </Style>
+                            </RichTextBox.Resources>
+                        </RichTextBox>
+                        <StackPanel Grid.Row="1" HorizontalAlignment="Right" Orientation="Horizontal">
+                            <Button Content="Receive Analysis Streams" Click="ReceiveAnalysisLayer" Margin="5" Padding="5" HorizontalAlignment="Right" MinWidth="100"/>
+                            <Button Content="Receive Design Streams" Click="ReceiveDesignLayer" Margin="5" Padding="5" HorizontalAlignment="Right" MinWidth="100"/>
+                        </StackPanel>
+                    </Grid>
+                </TabItem>
+            </TabControl>
+        </Grid>
+        <Grid 
+            Grid.Row="2"
+            Margin="20,20,20,20"
+            Background="White">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="auto"/>
+            </Grid.RowDefinitions>
+            <Label
                 Grid.Row="0"
-                Foreground="White"
                 FontWeight="Medium"
                 Content="Message Log"/>
-                <materialDesign:Card
-                    Grid.Row="1"
-                    VerticalAlignment="Stretch">
-                    <ListBox
+            <Grid
+                Grid.Row="1"
+                Margin="5">
+                <ListBox
                     x:Name="MessagePane">
-                        <ListBox.Resources>
-                            <DataTemplate x:Key="MessageItem">
-                                <Label x:Name="MessageLine" Margin="0" Padding="0"  Content="{Binding}"/>
-                            </DataTemplate>
-                        </ListBox.Resources>
-                    </ListBox>
-                </materialDesign:Card>
+                    <ListBox.Resources>
+                        <DataTemplate x:Key="MessageItem">
+                            <Label x:Name="MessageLine" Margin="0" Padding="0"  Content="{Binding}"/>
+                        </DataTemplate>
+                    </ListBox.Resources>
+                </ListBox>
+            </Grid>
+            <Grid
+                Grid.Row="2"
+                Margin="5"
+                VerticalAlignment="Bottom">
+                <StackPanel>
+                    <Label
+                        x:Name="StatusText"
+                        HorizontalAlignment="Center"
+                        Content="READY">
+                    </Label>
+                    <ProgressBar
+                        x:Name="ProgressBar"
+                        Height="25"
+                        Minimum="0"
+                        Maximum="100">
+                    </ProgressBar>
+                </StackPanel>
             </Grid>
         </Grid>
     </Grid>

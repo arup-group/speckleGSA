@@ -47,9 +47,9 @@
       <Project>{cfe27d3d-8a1a-43f9-9387-8fd9e119e174}</Project>
       <Name>SpeckleCore</Name>
     </ProjectReference>
-    <ProjectReference Include="..\SpeckleGSAObjects\SpeckleGSAObjects.csproj">
-      <Project>{821de1a5-1544-40f1-8754-1536069c4994}</Project>
-      <Name>SpeckleGSAObjects</Name>
+    <ProjectReference Include="..\SpeckleGSACommon\SpeckleGSACommon.csproj">
+      <Project>{e43a36d3-c488-49ef-9177-01a3038e6b29}</Project>
+      <Name>SpeckleGSACommon</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

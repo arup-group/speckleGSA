@@ -16,34 +16,6 @@ namespace SpeckleGSA
     public static class SpeckleGSAConverter
     {
         #region Property Conversion
-        public static bool IsList(this object o)
-        {
-            if (o == null) return false;
-            return o.GetType().IsGenericType &&
-                   o.GetType().GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
-        }
-
-        public static bool IsList(this PropertyInfo prop)
-        {
-            if (prop == null) return false;
-            return prop.PropertyType.IsGenericType &&
-                   prop.PropertyType.GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
-        }
-
-        public static bool IsDictionary(this object o)
-        {
-            if (o == null) return false;
-            return o.GetType().IsGenericType &&
-                   o.GetType().GetGenericTypeDefinition().IsAssignableFrom(typeof(Dictionary<,>));
-        }
-
-        public static bool IsDictionary(this PropertyInfo prop)
-        {
-            if (prop == null) return false;
-            return prop.PropertyType.IsGenericType &&
-                   prop.PropertyType.GetGenericTypeDefinition().IsAssignableFrom(typeof(Dictionary<,>));
-        }
-
         public static object UnrollAbstractRef(object obj, string path)
         {
             string[] pieces = path.Split(new char[] { '/' });
@@ -66,6 +38,8 @@ namespace SpeckleGSA
 
             string nextRootPath = "";
 
+            // TODO: GetHashCode() should not be used as unique identifier.
+            // Collisions observed for larger property dictionaries.
             if (traversed == null)
             {
                 traversed = new Dictionary<int, string>();
@@ -76,13 +50,16 @@ namespace SpeckleGSA
             {
                 if (traversed.ContainsKey(obj.GetHashCode()))
                 {
-                    return new SpeckleAbstract()
-                    {
-                        _type = "ref",
-                        _ref = traversed[obj.GetHashCode()]
-                    };
+                    //return new SpeckleAbstract()
+                    //{
+                    //    _type = "ref",
+                    //    _ref = traversed[obj.GetHashCode()]
+                    //};
                 }
-                traversed.Add(obj.GetHashCode(), path + "/" + key);
+                else
+                { 
+                    traversed.Add(obj.GetHashCode(), path + "/" + key);
+                }
                 nextRootPath = path + "/" + key;
             }
 
@@ -197,7 +174,7 @@ namespace SpeckleGSA
         public static SpecklePolyline ToSpeckle(this GSA1DProperty prop)
         {
             SpecklePolyline p = new SpecklePolyline(
-                prop.Coor.Concat(prop.Coor.Take(3)),
+                prop.Coor,
                 prop.Reference.ToString(),
                 prop.GetSpeckleProperties());
 
@@ -263,14 +240,11 @@ namespace SpeckleGSA
         {
             List<int> faceConnectivity = new List<int>();
 
-            for (int i = 0; i < mesh.Elements.Count; i++)
+            foreach(List<string> coordinates in mesh.ElementConnectivity)
             {
-                Dictionary<string, object> e = mesh.Elements[i] as Dictionary<string, object>;
-                List<int> eConnectivity = e["Connectivity"] as List<int>;
-
-                faceConnectivity.Add(eConnectivity.Count() - 3);
-                foreach (int c in eConnectivity)
-                    faceConnectivity.Add(mesh.NodeMapping[c]);
+                faceConnectivity.Add(coordinates.Count() - 3);
+                foreach(string coor in coordinates)
+                    faceConnectivity.Add(mesh.NodeMapping[coor]);
             }
 
             SpeckleMesh m = new SpeckleMesh(
@@ -282,6 +256,42 @@ namespace SpeckleGSA
                         null,
                         "",
                         mesh.GetSpeckleProperties());
+
+            return m;
+        }
+
+        public static SpeckleLine ToSpeckle(this GSA1DMember member)
+        {
+            SpeckleLine l = new SpeckleLine(
+                member.Coor,
+                member.Reference.ToString(),
+                member.GetSpeckleProperties());
+
+            return l;
+        }
+
+        public static SpeckleMesh ToSpeckle(this GSA2DMember member)
+        {
+            // Perform mesh making
+            List<List<int>> faces = (Enumerable.Range(0, member.Coor.Count() / 3).ToList()).SplitMesh(member.Coor);
+            
+            List<int> faceMap = new List<int>();
+            foreach (List<int> f in faces)
+            {
+                if (f.Count() < 3) continue;
+                faceMap.Add(f.Count() - 3);
+                faceMap.AddRange(f);
+            }
+
+            SpeckleMesh m = new SpeckleMesh(
+                member.Coor.ToArray(),
+                faceMap.ToArray(),
+                Enumerable.Repeat(
+                    member.Color.ToSpeckleColor(),
+                    member.Coor.Count() / 3).ToArray(),
+                null,
+                "",
+                member.GetSpeckleProperties());
 
             return m;
         }
@@ -328,146 +338,149 @@ namespace SpeckleGSA
         {
             GSANode obj = new GSANode();
 
-            if (point.Properties!=null && point.Properties.ContainsKey("Structural"))
-                obj.SetSpeckleProperties(point.Properties);
+            obj.SetSpeckleProperties(point.Properties);
 
             obj.Coor = point.Value;
 
             return obj;
         }
 
-        public static GSA1DElement ToNative(this SpeckleLine line)
+        public static GSAObject ToNative(this SpeckleLine line)
         {
-            GSA1DElement e = new GSA1DElement();
+            GSAObject obj;
 
-            if (line.Properties != null && line.Properties.ContainsKey("Structural"))
-                e.SetSpeckleProperties(line.Properties);
+            if (GSA.TargetDesignLayer)
+                obj = new GSA1DMember();
+            else
+                obj = new GSA1DElement();
+            
+            obj.SetSpeckleProperties(line.Properties);
+            obj.Coor = line.Value;
 
-            e.Coor = line.Value;
-
-            return e;
+            return obj;
         }
 
-        public static object ToNative(this SpecklePolyline poly)
+        public static GSAObject ToNative(this SpecklePolyline poly)
         {
-            if (poly.Properties != null && poly.Properties.ContainsKey("Structural"))
-            {
-                GSA1DProperty prop = new GSA1DProperty();
-
-                prop.SetSpeckleProperties(poly.Properties);
-
-                if (poly.Closed)
-                    prop.Coor = poly.Value.Take(poly.Value.Count() - 3).ToList();
-                else
-                    prop.Coor = poly.Value.Take(poly.Value.Count()).ToList();
-                
-                return prop;
-            }
+            GSAObject obj;
+            
+            string type = poly.GetGSAObjectEntityType();
+            
+            if (type == "1D Property")
+                // Assumes that 1D properties will automatically have its entity type set
+                obj = new GSA1DProperty();
             else
-            {
-                List<GSAObject> e1Ds = new List<GSAObject>();
-
-                for(int i = 0; i < poly.Value.Count(); i+=3)
-                {
-                    GSA1DElement e = new GSA1DElement();
-                    e.Coor = poly.Value.Skip(i).Take(3).ToList();
-                    e1Ds.Add(e);
-                }
-
-                return e1Ds;
+            { 
+                if (GSA.TargetDesignLayer)
+                    obj = new GSA1DMember();
+                else
+                    obj = new GSA1DElement();
             }
 
+            obj.Coor = poly.Value.Take(poly.Value.Count()).ToList();
+
+            return obj;
         }
         
-        public static GSA2DElementMesh ToNative(this SpeckleMesh mesh)
+        public static GSAObject ToNative(this SpeckleMesh mesh)
         {
-            GSA2DElementMesh m = new GSA2DElementMesh();
+            GSAObject obj;
+            
+            if (GSA.TargetDesignLayer)
+            { 
+                obj = new GSA2DMember();
 
-            if (mesh.Properties == null || !mesh.Properties.ContainsKey("Structural"))
-            {
-                m.Coor = mesh.Vertices;
-                m.Color = mesh.Colors.Count > 0 ? Math.Max(mesh.Colors[0], 0) : 0;
+                obj.SetSpeckleProperties(mesh.Properties);
 
-                for (int i = 0; i < mesh.Faces.Count(); i++)
+                // Need to collapse mesh
+                List<Tuple<int,int>> edges = new List<Tuple<int,int>>();
+
+                for (int i = 0; i < mesh.Faces.Count();)
                 {
                     int numNodes = mesh.Faces[i++] + 3;
 
-                    List<double> coor = new List<double>();
-                    for (int j = 0; j < numNodes; j++)
-                        coor.AddRange(mesh.Vertices.Skip(mesh.Faces[i++] * 3).Take(3));
+                    List<int> vertices = mesh.Faces.Skip(i).Take(numNodes).ToList();
 
-                    m.Elements.Add(new Dictionary<string, object>()
+                    i += numNodes;
+
+                    // Add edges
+                    vertices.Add(vertices[0]);
+                    for (int j = 0; j < vertices.Count() - 1; j++)
                     {
-                        { "Name", "" },
-                        { "Reference", 0 },
-                        { "Axis", new Dictionary<string, object>()
-                            {
-                                { "X", new Dictionary<string, object> { { "x", 1 }, { "y", 0 },{ "z", 0 }  } },
-                                { "Y", new Dictionary<string, object> { { "x", 0 }, { "y", 1 },{ "z", 0 }  } },
-                                { "Z", new Dictionary<string, object> { { "x", 0 }, { "y", 0 },{ "z", 1 }  } },
-                            }
-                        },
-                        { "Coor", coor.ToArray() }
-                    });
-
-                    i--;
+                        if (edges.Where(e => (e.Item1 == vertices[j] & e.Item2 == vertices[j + 1]) |
+                            (e.Item1 == vertices[j + 1] & e.Item2 == vertices[j])).Count() == 0)
+                        {
+                            if (vertices[j] < vertices[j + 1])
+                                edges.Add(new Tuple<int, int>(vertices[j], vertices[j + 1]));
+                            else
+                                edges.Add(new Tuple<int, int>(vertices[j + 1], vertices[j]));
+                        }
+                        else
+                        { 
+                            edges.Remove(new Tuple<int, int>(vertices[j], vertices[j + 1]));
+                            edges.Remove(new Tuple<int, int>(vertices[j+1], vertices[j]));
+                        }
+                    }
                 }
+
+                // Reorder the edges
+                List<int> reorderedEdges = new List<int>();
+                reorderedEdges.Add(edges[0].Item1);
+                reorderedEdges.Add(edges[0].Item2);
+                edges.RemoveAt(0);
+
+                while(edges.Count > 0)
+                {
+                    int commonVertex = reorderedEdges[reorderedEdges.Count() - 1];
+
+                    List<Tuple<int, int>> nextEdge = edges.Where(e => e.Item1 == commonVertex | e.Item2 == commonVertex).ToList();
+
+                    if (nextEdge.Count > 0)
+                    {
+                        reorderedEdges.Add(nextEdge[0].Item1 == commonVertex ? nextEdge[0].Item2 : nextEdge[0].Item1);
+                        edges.Remove(nextEdge[0]);
+                    }
+                    else
+                        // Next edge not found
+                        return null;
+                }
+                reorderedEdges.RemoveAt(0);
+
+                // Get coordinates
+                List<double> coordinates = new List<double>();
+                foreach(int e in reorderedEdges)
+                    coordinates.AddRange(mesh.Vertices.Skip(e * 3).Take(3));
+
+                obj.Coor = coordinates;
             }
             else
-            {
-                m.SetSpeckleProperties(mesh.Properties);
-                m.Coor = mesh.Vertices;
-                m.Color = mesh.Colors.Count > 0 ? Math.Max(mesh.Colors[0], 0) : 0;
+            { 
+                obj = new GSA2DElementMesh();
+
+                obj.SetSpeckleProperties(mesh.Properties);
+
+                obj.Coor = mesh.Vertices;
+                obj.Color = mesh.Colors.Count > 0 ? Math.Max(mesh.Colors[0], 0) : 0;
 
                 int elemCounter = 0;
-                for (int i = 0; i < mesh.Faces.Count(); i++)
+                for (int i = 0; i < mesh.Faces.Count();)
                 {
-                    try
-                    {
-                        int innerCounter = i;
-                        innerCounter++;
+                    int numNodes = mesh.Faces[i++] + 3;
 
-                        List<int> conn = m.GetElemConnectivity(m.Elements[elemCounter] as Dictionary<string, object>);
+                    List<int> vertices = mesh.Faces.Skip(i).Take(numNodes).ToList();
+                    
+                    List<string> coordinates = new List<string>();
+                    foreach (int e in vertices)
+                        coordinates.Add(string.Join(",",mesh.Vertices.Skip(e * 3).Take(3)));
 
-                        for (int j = 0; j < conn.Count(); j++)
-                            m.NodeMapping[conn[j]] = mesh.Faces[innerCounter++];
-
-                        elemCounter++;
-                        innerCounter--;
-                        i = innerCounter;
-                    }
-                    catch
-                    {
-                        int innerCounter = i;
-                        int numNodes = mesh.Faces[innerCounter++] + 3;
-
-                        List<double> coor = new List<double>();
-                        for (int j = 0; j < numNodes; j++)
-                            coor.AddRange(mesh.Vertices.Skip(mesh.Faces[innerCounter++] * 3).Take(3));
-
-                        m.Elements.Add(new Dictionary<string, object>()
-                        {
-                            { "Name", "" },
-                            { "Reference", 0 },
-                            { "Axis", new Dictionary<string, object>()
-                                {
-                                    { "X", new Dictionary<string, object> { { "x", 1 }, { "y", 0 },{ "z", 0 }  } },
-                                    { "Y", new Dictionary<string, object> { { "x", 0 }, { "y", 1 },{ "z", 0 }  } },
-                                    { "Z", new Dictionary<string, object> { { "x", 0 }, { "y", 0 },{ "z", 1 }  } },
-                                }
-                            },
-                            { "Coor", coor.ToArray() }
-                        });
-
-                        elemCounter++;
-                        innerCounter--;
-                        i = innerCounter;
-                    }
+                    (obj as GSA2DElementMesh).ElementConnectivity.Add(coordinates);
+                    
+                    elemCounter++;
+                    i += numNodes;
                 }
-                m.Connectivity = m.GetNodeReferences();
             }
 
-            return m;
+            return obj;
         }
         #endregion
     }

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using SpeckleCore;
@@ -39,7 +40,7 @@ namespace SpeckleGSA
 
         public void SendGSAObjects(Dictionary<string, List<object>> payloadObjects, Dictionary<string, object> baseProps)
         {
-            ConverterHack n = new ConverterHack();
+            ConverterHack hack = new ConverterHack();
 
             // Convert and set up layers
             List<SpeckleObject> bucketObjects = new List<SpeckleObject>();
@@ -68,7 +69,7 @@ namespace SpeckleGSA
                 objectCounter += convertedObjects.Count;
             }
 
-            MessageLog.AddMessage("Succesfully converted: " + bucketObjects.Count() + " objects.");
+            Status.AddMessage("Succesfully converted: " + bucketObjects.Count() + " objects.");
 
             // Prune objects with placeholders using local DB
             LocalContext.PruneExistingObjects(bucketObjects, mySender.BaseUrl);
@@ -102,7 +103,7 @@ namespace SpeckleGSA
                     }
                     catch
                     {
-                        MessageLog.AddError("Failed to send payload.");
+                        Status.AddError("Failed to send payload.");
                     }
                 }
             }
@@ -127,11 +128,11 @@ namespace SpeckleGSA
                 mySender.Stream.Layers = updateStream.Layers.ToList();
                 mySender.Stream.Objects = placeholders;
                 
-                MessageLog.AddMessage("Succesfully sent " + mySender.Stream.Name + " stream with " + updateStream.Objects.Count() + " objects.");
+                Status.AddMessage("Succesfully sent " + mySender.Stream.Name + " stream with " + updateStream.Objects.Count() + " objects.");
             }
             catch
             {
-                MessageLog.AddError("Failed to send " + mySender.Stream.Name + " stream.");
+                Status.AddError("Failed to send " + mySender.Stream.Name + " stream.");
             }
         }
 
@@ -153,7 +154,7 @@ namespace SpeckleGSA
 
                 if (currentBucketSize > MAX_BUCKET_SIZE)
                 {
-                    MessageLog.AddMessage("Reached payload limit. Making a new one, current  #: " + objectUpdatePayloads.Count);
+                    Status.AddMessage("Reached payload limit. Making a new one, current  #: " + objectUpdatePayloads.Count);
                     objectUpdatePayloads.Add(currentBucketObjects);
                     currentBucketObjects = new List<SpeckleObject>();
                     currentBucketSize = 0;

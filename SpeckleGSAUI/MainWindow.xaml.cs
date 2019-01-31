@@ -20,7 +20,6 @@ using System.Windows.Interop;
 using Microsoft.Win32;
 using System.Windows.Threading;
 using System.Collections.ObjectModel;
-using Dragablz;
 
 namespace SpeckleGSAUI
 {
@@ -30,7 +29,11 @@ namespace SpeckleGSAUI
     public partial class MainWindow : Window
     {
         public ObservableCollection<string> Messages { get; set; }
-        public ObservableCollection<TabItem> Tabs;
+        public ObservableCollection<Tuple<string, string>> StreamData { get; set; }
+
+        public string ModelName { get; set; }
+
+        public GSAController gsa;
 
         public MainWindow()
         {
@@ -39,24 +42,148 @@ namespace SpeckleGSAUI
             DataContext = this;
 
             Messages = new ObservableCollection<string>();
-            Tabs = new ObservableCollection<TabItem>();
+            StreamData = new ObservableCollection<Tuple<string, string>>();
 
-            ControlPanelContainer.ItemsSource = Tabs;
+            ModelName = "";
+            gsa = new GSAController();
+
+            //For testing purposes
+            ServerAddress.Text = "https://hestia.speckle.works/api/v1";
+            EmailAddress.Text = "mishael.nuh@arup.com";
+            Password.Password = "temporaryPassword";
+
             MessagePane.ItemsSource = Messages;
-            
-            MessageLog.Init(AddMessage, AddError);
+
+            SpeckleGSA.GSA.Init();
+            SpeckleGSA.Status.Init(this.AddMessage, this.AddError, this.ChangeStatus);
         }
 
-        private void AddControlPanel(object sender, RoutedEventArgs e)
+        #region Speckle Operations
+        private void Login(object sender, RoutedEventArgs e)
         {
-            TabItem tab = new TabItem();
-            tab.Content = new ControlPanel();
-            tab.Header = Tabs.Count + 1;
+            string email = EmailAddress.Text;
+            string password = Password.Password;
+            string server = ServerAddress.Text;
 
-            Tabs.Add(tab);
-
-            ControlPanelContainer.SelectedIndex  = Tabs.Count() - 1;
+            Task.Run(() => gsa.Login(email, password, server));
         }
+
+        private void UpdateStreamList(object sender, RoutedEventArgs e)
+        {
+            Task.Run(() => gsa.GetStreamList()).ContinueWith(res =>
+            {
+                Application.Current.Dispatcher.BeginInvoke(
+                    DispatcherPriority.Background,
+                    new Action(() =>
+                    {
+                        List<Tuple<string, string>> streams = res.Result;
+                        if (streams != null)
+                        {
+                            streams.Reverse();
+                            StreamData.Clear();
+                            foreach (Tuple<string, string> t in streams)
+                                StreamData.Add(t);
+                        }
+                    }
+                    ));
+            }
+            );
+        }
+
+        private void CloneModelStreams(object sender, RoutedEventArgs e)
+        {
+            Task.Run(() => gsa.CloneModelStreams());
+        }
+        #endregion
+
+        #region GSA
+        private void NewGSAFile(object sender, RoutedEventArgs e)
+        {
+            Task.Run(() => GSA.NewFile());
+        }
+
+        private void OpenGSAFile(object sender, RoutedEventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            if (openFileDialog.ShowDialog() == true)
+                Task.Run(() => GSA.OpenFile(openFileDialog.FileName));
+        }
+        #endregion
+
+        #region Sender
+        private void SendAnalysisLayer(object sender, RoutedEventArgs e)
+        {
+            GSA.TargetAnalysisLayer = true;
+            GSA.TargetDesignLayer = false;
+
+            SendStream(sender, e);
+        }
+
+        private void SendDesignLayer(object sender, RoutedEventArgs e)
+        {
+            GSA.TargetAnalysisLayer = false;
+            GSA.TargetDesignLayer = true;
+
+            SendStream(sender, e);
+        }
+
+        private void SendStream(object sender, RoutedEventArgs e)
+        {
+            Task.Run(() => gsa.ExportObjects(ModelName)).ContinueWith(
+            delegate {
+                try
+                {
+                    Application.Current.Dispatcher.BeginInvoke(
+                        DispatcherPriority.Background,
+                        new Action(() =>
+                        {
+                            SenderStreams.Items.Clear();
+
+                            List<Tuple<string, string>> streams = gsa.GetSenderStreams();
+                            foreach (Tuple<string, string> stream in streams)
+                                SenderStreams.Items.Add(stream);
+                        }
+                        ));
+                }
+                catch
+                { }
+            });
+        }
+        #endregion
+
+        #region Receiver
+        private void ReceiveAnalysisLayer(object sender, RoutedEventArgs e)
+        {
+            GSA.TargetAnalysisLayer = true;
+            GSA.TargetDesignLayer = false;
+
+            ReceiveStream(sender, e);
+        }
+
+        private void ReceiveDesignLayer(object sender, RoutedEventArgs e)
+        {
+            GSA.TargetAnalysisLayer = false;
+            GSA.TargetDesignLayer = true;
+
+            ReceiveStream(sender, e);
+        }
+
+        private void ReceiveStream(object sender, RoutedEventArgs e)
+        {
+            string streamInput = new TextRange(ReceiverStreams.Document.ContentStart, ReceiverStreams.Document.ContentEnd).Text;
+            if (streamInput == null)
+                return;
+
+            string[] streams = streamInput.Split(new string[] { "\r", "\n", "," }, StringSplitOptions.RemoveEmptyEntries);
+
+            Dictionary<string, string> streamDict = new Dictionary<string, string>();
+
+            for (int i = 0; i < streams.Length; i++)
+                streamDict.Add(i.ToString(), streams[i]);
+
+            Task.Run(() => gsa.ImportObjects(streamDict));
+        }
+        #endregion
 
         #region Log
         private void AddMessage(object sender, MessageEventArgs e)
@@ -83,6 +210,35 @@ namespace SpeckleGSAUI
                 }
                 )
             );
+        }
+
+        private void ChangeStatus(object sender, StatusEventArgs e)
+        {
+            Application.Current.Dispatcher.BeginInvoke(
+                DispatcherPriority.Background,
+                new Action(() =>
+                {
+                    StatusText.Content = e.Name;
+                    if (e.Percent >= 0 & e.Percent <= 100)
+                    {
+                        ProgressBar.IsIndeterminate = false;
+                        ProgressBar.Value = e.Percent;
+                    }
+                    else
+                    {
+                        ProgressBar.IsIndeterminate = true;
+                        ProgressBar.Value = 0;
+                    }
+                }
+                )
+            );
+        }
+        #endregion
+
+        #region UI
+        private void CopyStreamList(object sender, DataGridRowClipboardEventArgs e)
+        {
+            e.ClipboardRowContent.RemoveAt(0);
         }
         #endregion
     }
