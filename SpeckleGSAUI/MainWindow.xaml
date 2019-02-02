@@ -172,6 +172,24 @@
                         </StackPanel>
                     </Grid>
                 </TabItem>
+                <TabItem Header="Settings">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <GroupBox Grid.Column="0" Header="Sender" Margin="5">
+                            <StackPanel>
+                                <CheckBox Margin="5" Content="Send only meaningful nodes" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="SendOnlyMeaningfulNodes"/>
+                                <CheckBox Margin="5" Content="Merge 2D elements into mesh" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="Merge2DElementsIntoMesh"/>
+                            </StackPanel>
+                        </GroupBox>
+                        <GroupBox Grid.Column="1" Header="Receiver" Margin="5">
+                            <StackPanel>
+                            </StackPanel>
+                        </GroupBox>
+                    </Grid>
+                </TabItem>
             </TabControl>
         </Grid>
         <Grid 

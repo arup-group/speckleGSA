@@ -7,7 +7,7 @@
     <ProjectGuid>{E43A36D3-C488-49EF-9177-01A3038E6B29}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>SpeckleGSACommon</RootNamespace>
+    <RootNamespace>SpeckleGSA</RootNamespace>
     <AssemblyName>SpeckleGSACommon</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
@@ -68,6 +68,7 @@
     <Compile Include="GSAObjects\GSAObject.cs" />
     <Compile Include="HelperFunctions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Settings.cs" />
     <Compile Include="Status.cs" />
   </ItemGroup>
   <ItemGroup>

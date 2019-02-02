@@ -42,7 +42,7 @@ namespace SpeckleGSA
         public static void GetObjects(Dictionary<Type, object> dict)
         {
             if (!GSA.TargetAnalysisLayer) return;
-
+            
             if (!dict.ContainsKey(typeof(GSA2DElement))) return;
             
             List<GSAObject> meshes = new List<GSAObject>();
@@ -59,19 +59,22 @@ namespace SpeckleGSA
 
             dict.Remove(typeof(GSA2DElement));
 
-            for (int i = 0; i < meshes.Count(); i++)
-            {
-                List<GSAObject> matches = meshes.Where((m, j) => (meshes[i] as GSA2DElementMesh).MeshMergeable(m as GSA2DElementMesh) & j != i).ToList();
+            if (Settings.Merge2DElementsIntoMesh)
+            { 
+                for (int i = 0; i < meshes.Count(); i++)
+                {
+                    List<GSAObject> matches = meshes.Where((m, j) => (meshes[i] as GSA2DElementMesh).MeshMergeable(m as GSA2DElementMesh) & j != i).ToList();
 
-                foreach (GSAObject m in matches)
-                    (meshes[i] as GSA2DElementMesh).MergeMesh(m as GSA2DElementMesh);
+                    foreach (GSAObject m in matches)
+                        (meshes[i] as GSA2DElementMesh).MergeMesh(m as GSA2DElementMesh);
 
-                foreach (GSAObject m in matches)
-                    meshes.Remove(m);
+                    foreach (GSAObject m in matches)
+                        meshes.Remove(m);
                 
-                if (matches.Count() > 0) i--;
+                    if (matches.Count() > 0) i--;
 
-                Status.ChangeStatus("Merging 2D elements", (double)(i+1) / meshes.Count() * 100);
+                    Status.ChangeStatus("Merging 2D elements", (double)(i+1) / meshes.Count() * 100);
+                }
             }
 
             dict[typeof(GSA2DElementMesh)] = meshes;

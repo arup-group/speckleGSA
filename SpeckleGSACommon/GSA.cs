@@ -14,7 +14,6 @@ namespace SpeckleGSA
         public static bool IsInit;
 
         public static bool TargetAnalysisLayer;
-
         public static bool TargetDesignLayer;
 
         public static void Init()

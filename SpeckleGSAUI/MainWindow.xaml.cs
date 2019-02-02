@@ -40,7 +40,7 @@ namespace SpeckleGSAUI
             InitializeComponent();
 
             DataContext = this;
-
+            
             Messages = new ObservableCollection<string>();
             StreamData = new ObservableCollection<Tuple<string, string>>();
 
@@ -52,10 +52,13 @@ namespace SpeckleGSAUI
             EmailAddress.Text = "mishael.nuh@arup.com";
             Password.Password = "temporaryPassword";
 
-            MessagePane.ItemsSource = Messages;
+            //Default settings
+            SendOnlyMeaningfulNodes.IsChecked = Settings.SendOnlyMeaningfulNodes;
+            Merge2DElementsIntoMesh.IsChecked = Settings.Merge2DElementsIntoMesh;
 
-            SpeckleGSA.GSA.Init();
-            SpeckleGSA.Status.Init(this.AddMessage, this.AddError, this.ChangeStatus);
+            GSA.Init();
+            Status.Init(this.AddMessage, this.AddError, this.ChangeStatus);
+            MessagePane.ItemsSource = Messages;
         }
 
         #region Speckle Operations
@@ -240,6 +243,24 @@ namespace SpeckleGSAUI
         {
             e.ClipboardRowContent.RemoveAt(0);
         }
+
+        private void UpdateSettings(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string propertyName = "";
+                object propertyValue = null;
+
+                if (sender is CheckBox)
+                {
+                    propertyName = (sender as CheckBox).Name;
+                    propertyValue = (sender as CheckBox).IsChecked;
+                    typeof(Settings).GetField(propertyName).SetValue(null, propertyValue);
+                }
+            }
+            catch { }
+        }
         #endregion
+
     }
 }
