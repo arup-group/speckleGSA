@@ -193,8 +193,11 @@ namespace SpeckleGSA
 
         public static SpecklePoint ToSpeckle(this GSANode node)
         {
-            SpecklePoint p = new SpecklePoint(node.Coor[0], node.Coor[1], node.Coor[2], null, node.GetSpeckleProperties());
-            return p;
+            // Do not send node if its a boring node.
+            if (node.Restraint.Where(r => ((bool)r.Value) == true).Count() > 0 || node.Stiffness.Where(r => ((double)r.Value) > 0).Count() > 0 || node.Mass > 0)
+                return new SpecklePoint(node.Coor[0], node.Coor[1], node.Coor[2], null, node.GetSpeckleProperties());
+            else
+                return null;
         }
 
         public static SpeckleString ToSpeckle(this GSA0DLoad load)

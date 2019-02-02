@@ -38,7 +38,7 @@ namespace SpeckleGSA
             mySender.Stream.Name = streamName;
         }
 
-        public void SendGSAObjects(Dictionary<string, List<object>> payloadObjects, Dictionary<string, object> baseProps)
+        public void SendGSAObjects(Dictionary<string, List<object>> payloadObjects)
         {
             ConverterHack hack = new ConverterHack();
 
@@ -50,10 +50,10 @@ namespace SpeckleGSA
             int orderIndex = 0;
             foreach (KeyValuePair<string, List<object>> kvp in payloadObjects)
             {
-                List <SpeckleObject> convertedObjects = SpeckleCore.Converter.Serialise(kvp.Value);
-
-                if (kvp.Value.Count == 0)
+                if (kvp.Value.Count() == 0)
                     continue;
+
+                List<SpeckleObject> convertedObjects = SpeckleCore.Converter.Serialise(kvp.Value).Where(o => o != null).ToList();
 
                 layers.Add(new Layer()
                 {
@@ -120,7 +120,6 @@ namespace SpeckleGSA
             updateStream.Layers = layers;
             updateStream.Objects = placeholders;
             updateStream.Name = mySender.Stream.Name;
-            updateStream.BaseProperties = baseProps;
 
             try
             { 

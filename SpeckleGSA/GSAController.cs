@@ -216,7 +216,7 @@ namespace SpeckleGSA
                         senders[kvp.Key].SendGSAObjects(
                             new Dictionary<string, List<object>>() {
                                 { "All", kvp.Value }
-                            }, baseProps);
+                            });
                     }
                     catch (Exception ex)
                     {
