@@ -14,9 +14,10 @@ namespace SpeckleGSA
 
         public static readonly string GSAKeyword = "LOAD_NODE";
         public static readonly string Stream = "loads";
-        public static readonly int ReadPriority = 3;
         public static readonly int WritePriority = 9999;
-        
+
+        public static readonly Type[] ReadPrerequisite = new Type[1] { typeof(GSANode) };
+
         public List<int> Nodes { get; set; }
         public int Case { get; set; }
         public Dictionary<string, object> Loading { get; set; }

@@ -14,8 +14,9 @@ namespace SpeckleGSA
 
         public static readonly string GSAKeyword = "LOAD_2D_FACE";
         public static readonly string Stream = "loads";
-        public static readonly int ReadPriority = 4;
         public static readonly int WritePriority = 9999;
+
+        public static readonly Type[] ReadPrerequisite = new Type[1] { typeof(GSA2DElement) };
 
         public List<int> Elements { get; set; }
         public List<int> Meshes { get; set; }

@@ -14,8 +14,9 @@ namespace SpeckleGSA
 
         public static readonly string GSAKeyword = "MEMB";
         public static readonly string Stream = "elements";
-        public static readonly int ReadPriority = 3;
         public static readonly int WritePriority = 1;
+
+        public static readonly Type[] ReadPrerequisite = new Type[1] { typeof(GSANode) };
 
         public string Type { get; set; }
         public int Property { get; set; }

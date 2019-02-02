@@ -14,8 +14,9 @@ namespace SpeckleGSA
 
         public static readonly string GSAKeyword = "NODE";
         public static readonly string Stream = "nodes";
-        public static readonly int ReadPriority = 2;
         public static readonly int WritePriority = 2;
+
+        public static readonly Type[] ReadPrerequisite = new Type[0];
 
         public Dictionary<string, object> Axis { get; set; }
         public Dictionary<string, object> Restraint { get; set; }

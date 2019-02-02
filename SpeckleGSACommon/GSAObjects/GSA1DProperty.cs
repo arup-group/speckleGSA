@@ -14,8 +14,9 @@ namespace SpeckleGSA
 
         public static readonly string GSAKeyword = "PROP_SEC";
         public static readonly string Stream = "properties";
-        public static readonly int ReadPriority = 1;
         public static readonly int WritePriority = 3;
+
+        public static readonly Type[] ReadPrerequisite = new Type[1] { typeof(GSAMaterial) };
 
         public int Material { get; set; }
 

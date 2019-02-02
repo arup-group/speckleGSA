@@ -13,9 +13,10 @@ namespace SpeckleGSA
 
         public static readonly string GSAKeyword = "EL";
         public static readonly string Stream = "elements";
-        public static readonly int ReadPriority = 1;
         public static readonly int WritePriority = 9999;
-        
+
+        public static readonly Type[] ReadPrerequisite = new Type[0];
+
         public string Type { get; set; }
         public int Property { get; set; }
         public int Group { get; set; }

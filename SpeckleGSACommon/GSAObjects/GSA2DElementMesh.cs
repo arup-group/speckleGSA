@@ -14,9 +14,10 @@ namespace SpeckleGSA
 
         public static readonly string GSAKeyword = "";
         public static readonly string Stream = "elements";
-        public static readonly int ReadPriority = 5;
         public static readonly int WritePriority = 0;
-        
+
+        public static readonly Type[] ReadPrerequisite = new Type[1] { typeof(GSA2DElement) };
+
         public int Property { get; set; }
         public double Offset { get; set; }
         public List<object> Elements { get; set; }

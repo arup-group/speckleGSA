@@ -126,8 +126,8 @@ namespace SpeckleGSA
             }
 
             // Initialize object read priority list
-            SortedDictionary<int, List<Type>> typePriority = new SortedDictionary<int, List<Type>>();
-
+            Dictionary<Type, List<Type>> typePrerequisites = new Dictionary<Type, List<Type>>();
+            
             IEnumerable<Type> objTypes = typeof(GSAObject)
                 .Assembly.GetTypes()
                 .Where(t => t.IsSubclassOf(typeof(GSAObject)) && !t.IsAbstract);
@@ -142,14 +142,11 @@ namespace SpeckleGSA
 
                 if (t.GetField("Stream") == null) continue;
 
-                int priority = 0;
-                if (t.GetField("ReadPriority") != null)
-                    priority = (int)t.GetField("ReadPriority").GetValue(null);
-
-                if (!typePriority.ContainsKey(priority))
-                    typePriority[priority] = new List<Type>();
-
-                typePriority[priority].Add(t);
+                List<Type> prereq = new List<Type>();
+                if (t.GetField("ReadPrerequisite") != null)
+                    prereq = ((Type[])t.GetField("ReadPrerequisite").GetValue(null)).ToList();
+                        
+                typePrerequisites[t] = prereq;
             }
 
             // Getting document settings
@@ -161,18 +158,27 @@ namespace SpeckleGSA
             // Read objects
             Dictionary<Type, object> bucketObjects = new Dictionary<Type, object>();
 
-            foreach (KeyValuePair<int, List<Type>> kvp in typePriority)
+            List<Type> currentBatch = new List<Type>();
+            do
             {
-                foreach (Type t in kvp.Value)
+                currentBatch = typePrerequisites.Where(i => i.Value.Count == 0).Select(i => i.Key).ToList();
+                
+                foreach (Type t in currentBatch)
                 {
                     Status.ChangeStatus("Reading " + t.Name);
-                    
+
                     t.GetMethod("GetObjects",
                         new Type[] { typeof(Dictionary<Type, object>) })
                         .Invoke(null, new object[] { bucketObjects });
-                }
-            }
+                    
+                    typePrerequisites.Remove(t);
 
+                    foreach (KeyValuePair<Type,List<Type>> kvp in typePrerequisites)
+                        if (kvp.Value.Contains(t))
+                            kvp.Value.Remove(t);
+                }
+            } while (currentBatch.Count > 0);
+            
             // Seperate objects into streams
             Dictionary<string, List<object>> streamBuckets = new Dictionary<string, List<object>>();
 
