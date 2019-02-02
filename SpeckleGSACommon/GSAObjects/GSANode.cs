@@ -264,37 +264,7 @@ namespace SpeckleGSA
 
             return Convert.ToDouble(pieces[5]);
         }
-        
-        private int WriteMassProptoGSA(double mass)
-        {
-            List<string> ls = new List<string>();
-
-            int res = (int)GSA.RunGWACommand("HIGHEST,PROP_MASS");
-
-            ls.Add("SET");
-            ls.Add("PROP_MASS.2");
-            ls.Add((res + 1).ToString());
-            ls.Add("");
-            ls.Add("NO_RGB");
-            ls.Add("GLOBAL");
-            ls.Add(mass.ToString());
-            ls.Add("0");
-            ls.Add("0");
-            ls.Add("0");
-            ls.Add("0");
-            ls.Add("0");
-            ls.Add("0");
-
-            ls.Add("MOD");
-            ls.Add("100%");
-            ls.Add("100%");
-            ls.Add("100%");
-
-            GSA.RunGWACommand(string.Join(",", ls));
-
-            return res + 1;
-        }
-
+       
         public void Merge(GSANode mergeNode)
         {
             Dictionary<string, object> temp = new Dictionary<string, object>();
