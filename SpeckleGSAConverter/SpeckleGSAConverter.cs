@@ -129,6 +129,7 @@ namespace SpeckleGSA
         public static void SetSpeckleProperties(this object obj, Dictionary<string, object> dict)
         {
             if (obj == null) return;
+            if (dict == null) return;
 
             if (!dict.ContainsKey("Structural")) return;
 
@@ -229,9 +230,10 @@ namespace SpeckleGSA
                         new int[] { element.Coor.Count() / 3 - 3 }.Concat(
                             Enumerable.Range(0, element.Coor.Count() / 3).ToArray())
                             .ToArray(),
-                        Enumerable.Repeat(
-                            element.Color.ToSpeckleColor(),
-                            element.Coor.Count() / 3).ToArray(),
+                        element.Color == null ? new int[0] :
+                            Enumerable.Repeat(
+                                element.Color.ToSpeckleColor(),
+                                element.Coor.Count() / 3).ToArray(),
                         null,
                         element.Reference.ToString(),
                         element.GetSpeckleProperties());
@@ -253,9 +255,10 @@ namespace SpeckleGSA
             SpeckleMesh m = new SpeckleMesh(
                         mesh.Coor.ToArray(),
                         faceConnectivity.ToArray(),
-                        Enumerable.Repeat(
-                            mesh.Color.ToSpeckleColor(),
-                            mesh.Coor.Count() / 3).ToArray(),
+                        mesh.Color == null ? new int[0] :
+                            Enumerable.Repeat(
+                                mesh.Color.ToSpeckleColor(),
+                                mesh.Coor.Count() / 3).ToArray(),
                         null,
                         "",
                         mesh.GetSpeckleProperties());
@@ -289,9 +292,10 @@ namespace SpeckleGSA
             SpeckleMesh m = new SpeckleMesh(
                 member.Coor.ToArray(),
                 faceMap.ToArray(),
-                Enumerable.Repeat(
-                    member.Color.ToSpeckleColor(),
-                    member.Coor.Count() / 3).ToArray(),
+                member.Color == null ? new int[0] :
+                    Enumerable.Repeat(
+                        member.Color.ToSpeckleColor(),
+                        member.Coor.Count() / 3).ToArray(),
                 null,
                 "",
                 member.GetSpeckleProperties());
@@ -363,26 +367,52 @@ namespace SpeckleGSA
             return obj;
         }
 
-        public static GSAObject ToNative(this SpecklePolyline poly)
+        public static List<GSAObject> ToNative(this SpecklePolyline poly)
         {
-            GSAObject obj;
+            List<GSAObject> objList = new List<GSAObject>();
             
             string type = poly.GetGSAObjectEntityType();
             
             if (type == "1D Property")
+            {
                 // Assumes that 1D properties will automatically have its entity type set
-                obj = new GSA1DProperty();
+                GSAObject obj = new GSA1DProperty();
+                obj.SetSpeckleProperties(poly.Properties);
+                obj.Coor = poly.Value.Take(poly.Value.Count()).ToList();
+                objList.Add(obj);
+            }
             else
-            { 
-                if (GSA.TargetDesignLayer)
-                    obj = new GSA1DMember();
-                else
-                    obj = new GSA1DElement();
+            {
+                GSAObject obj;
+                
+                for (int i = 0; i < poly.Value.Count() / 3 - 1; i ++)
+                { 
+                    if (GSA.TargetDesignLayer)
+                        obj = new GSA1DMember();
+                    else
+                        obj = new GSA1DElement();
+
+                    obj.SetSpeckleProperties(poly.Properties);
+                    obj.Coor = poly.Value.Skip(i * 3).Take(6).ToList();
+                    objList.Add(obj);
+                }
+                
+                if (poly.Closed)
+                {
+                    if (GSA.TargetDesignLayer)
+                        obj = new GSA1DMember();
+                    else
+                        obj = new GSA1DElement();
+
+                    obj.SetSpeckleProperties(poly.Properties);
+                    obj.Coor = poly.Value.Take(3)
+                        .Concat(poly.Value.Skip(poly.Value.Count() - 3).Take(3))
+                        .ToList();
+                    objList.Add(obj);
+                }
             }
 
-            obj.Coor = poly.Value.Take(poly.Value.Count()).ToList();
-
-            return obj;
+            return objList;
         }
         
         public static GSAObject ToNative(this SpeckleMesh mesh)
