@@ -391,6 +391,8 @@ namespace SpeckleGSA
                 obj = new GSA2DMember();
 
                 obj.SetSpeckleProperties(mesh.Properties);
+                
+                obj.Color = mesh.Colors.Count > 0 ? mesh.Colors[0].ToGSAColor() : null;
 
                 // Need to collapse mesh
                 List<Tuple<int,int>> edges = new List<Tuple<int,int>>();
@@ -460,7 +462,7 @@ namespace SpeckleGSA
                 obj.SetSpeckleProperties(mesh.Properties);
 
                 obj.Coor = mesh.Vertices;
-                obj.Color = mesh.Colors.Count > 0 ? Math.Max(mesh.Colors[0], 0) : 0;
+                obj.Color = mesh.Colors.Count > 0 ? mesh.Colors[0].ToGSAColor() : null;
 
                 int elemCounter = 0;
                 for (int i = 0; i < mesh.Faces.Count();)

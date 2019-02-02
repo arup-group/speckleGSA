@@ -15,7 +15,7 @@ namespace SpeckleGSA
         public static readonly string Stream = "elements";
         public static readonly int WritePriority = 9999;
 
-        public static readonly Type[] ReadPrerequisite = new Type[0];
+        public static readonly Type[] ReadPrerequisite = new Type[1] { typeof(GSANode) };
 
         public string Type { get; set; }
         public int Property { get; set; }
@@ -31,12 +31,14 @@ namespace SpeckleGSA
             Group = 0;
 
             Mass = 0;
+            Connectivity = new List<int>();
         }
 
         #region GSAObject Functions
         public static void GetObjects(Dictionary<Type, object> dict)
         {
             List<GSAObject> e0Ds = new List<GSAObject>();
+            List<GSAObject> nodes = dict[typeof(GSANode)] as List<GSAObject>;
 
             string res = (string)GSA.RunGWACommand("GET_ALL,EL");
 
@@ -52,15 +54,27 @@ namespace SpeckleGSA
                 if (pPieces[4].ParseElementNumNodes() == 1)
                 {
                     GSA0DElement e0D = new GSA0DElement();
-                    e0D.ParseGWACommand(p);
+                    e0D.ParseGWACommand(p, dict);
 
                     e0Ds.Add(e0D);
                 }
 
                 Status.ChangeStatus("Reading 0D elements", counter++ / pieces.Length * 100);
             }
-            
-            dict[typeof(GSA0DElement)] = e0Ds;
+
+            counter = 0;
+            foreach (GSAObject e in e0Ds)
+            {
+                try
+                {
+                    (nodes.Where(n => (e as GSA0DElement).IsCoincident(n)).First() as GSANode).Merge0DElement(e as GSA0DElement);
+                }
+                catch { }
+                Status.ChangeStatus("Merging 0D elements", counter++ / pieces.Length * 100);
+            }
+
+            // Folded into nodes. Do not add to bucket dictionary to send.
+            //dict[typeof(GSA0DElement)] = e0Ds;
         }
 
         public static void WriteObjects(Dictionary<Type, object> dict)
@@ -90,13 +104,17 @@ namespace SpeckleGSA
             string[] pieces = command.ListSplit(",");
 
             int counter = 1; // Skip identifier
-            counter++; // Reference
+            Reference = Convert.ToInt32(pieces[counter++]);
             Name = pieces[counter++].Trim(new char[] { '"' });
             Color = pieces[counter++].ParseGSAColor();
             Type = pieces[counter++];
             Property = Convert.ToInt32(pieces[counter++]);
             Group = Convert.ToInt32(pieces[counter++]);
-            
+
+            List<GSAObject> nodes = dict[typeof(GSANode)] as List<GSAObject>;
+            int key = Convert.ToInt32(pieces[counter++]);
+            Coor.AddRange(nodes.Where(n => n.Reference == key).FirstOrDefault().Coor);
+
             // Rest is unimportant for 0D element
         }
 

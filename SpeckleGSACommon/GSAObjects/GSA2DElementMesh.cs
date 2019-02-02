@@ -30,6 +30,7 @@ namespace SpeckleGSA
         {
             Property = 1;
             Offset = 0;
+
             Elements = new List<object>();
 
             Edges = new Dictionary<string, List<string>>();
@@ -51,6 +52,7 @@ namespace SpeckleGSA
                 GSA2DElementMesh mesh = new GSA2DElementMesh();
                 mesh.Property = (e2D as GSA2DElement).Property;
                 mesh.Offset = (e2D as GSA2DElement).Offset;
+                mesh.Color = (e2D as GSA2DElement).Color;
                 mesh.AddElement(e2D as GSA2DElement);
                 meshes.Add(mesh);
             }
@@ -121,6 +123,7 @@ namespace SpeckleGSA
                 elem.MeshReference = Reference;
                 elem.Property = Property;
                 elem.Offset = Offset;
+                elem.Color = Color;
 
                 elem.Coor = ElementConnectivity[i]
                     .SelectMany(c => 
@@ -162,7 +165,11 @@ namespace SpeckleGSA
         #region Mesh Operations
         public bool MeshMergeable(GSA2DElementMesh mesh)
         {
-            if (mesh.Property != Property | mesh.Offset != Offset)
+            if (mesh.Property != Property || mesh.Offset != Offset)
+                return false;
+
+            if ((mesh.Color == null && Color != null) || (mesh.Color != null && Color == null) ||
+                (mesh.Color != null && Color != null && (int)mesh.Color != (int)Color))
                 return false;
 
             if (EdgeinMesh(mesh.Edges)) return true;

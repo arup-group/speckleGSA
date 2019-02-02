@@ -576,7 +576,7 @@ namespace SpeckleGSA
                 else
                 {
                     return Int32.Parse(
-                    rgbString.Substring(2, 6),
+                    rgbString.Remove(0,2).PadLeft(6,'0'),
                     System.Globalization.NumberStyles.HexNumber);
                 }
             }
@@ -598,6 +598,12 @@ namespace SpeckleGSA
                            (int)color % 256,
                            ((int)color / 256) % 256,
                            ((int)color / 256 / 256) % 256).ToArgb();
+        }
+        
+        public static object ToGSAColor(this int color)
+        {
+            Color col = Color.FromArgb(color);
+            return col.R + col.G * 256 + col.B * 256 * 256;
         }
         #endregion
 
@@ -1159,11 +1165,15 @@ namespace SpeckleGSA
                 return false;
         }
 
-        public static bool IsCoincident(this GSANode n1, GSANode n2)
+        public static bool IsCoincident(this GSAObject n1, GSAObject n2)
         {
-            if (Math.Pow(n1.Coor[0] - n2.Coor[0], 2) +
-                Math.Pow(n1.Coor[1] - n2.Coor[1], 2) +
-                Math.Pow(n1.Coor[2] - n2.Coor[2], 2) < Math.Pow(EPS,2))
+            if (n1.Coor.Count() != n2.Coor.Count()) return false;
+
+            double dist = 0;
+            for(int i = 0; i < n1.Coor.Count(); i++)
+                dist += Math.Pow(n1.Coor[i] - n2.Coor[i], 2);
+
+            if (dist < Math.Pow(EPS,2))
                 return true;
             else
                 return false;

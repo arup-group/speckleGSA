@@ -74,22 +74,7 @@ namespace SpeckleGSA
 
                 Status.ChangeStatus("Reading nodes", counter++ / pieces.Length * 100);
             }
-
-            counter = 1;
-            if (dict.ContainsKey(typeof(GSA0DElement)))
-            {
-                foreach(GSAObject e in dict[typeof(GSA0DElement)] as List<GSAObject>)
-                { 
-                    try { 
-                        (nodes.Where(n => (e as GSA0DElement).Connectivity.Contains(n.Reference)).First() as GSANode).Merge0DElement(e as GSA0DElement);
-                    }
-                    catch { }
-                    Status.ChangeStatus("Merging 0D elements", counter++ / pieces.Length * 100);
-                }
-
-                dict.Remove(typeof(GSA0DElement));
-            }
-
+            
             dict[typeof(GSANode)] = nodes;
         }
 
