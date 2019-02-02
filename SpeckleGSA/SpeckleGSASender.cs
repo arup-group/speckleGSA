@@ -120,6 +120,7 @@ namespace SpeckleGSA
             updateStream.Layers = layers;
             updateStream.Objects = placeholders;
             updateStream.Name = mySender.Stream.Name;
+            updateStream.BaseProperties = GSA.GetBaseProperties();
 
             try
             { 

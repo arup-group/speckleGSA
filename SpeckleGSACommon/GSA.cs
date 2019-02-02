@@ -15,6 +15,8 @@ namespace SpeckleGSA
 
         public static bool TargetAnalysisLayer;
         public static bool TargetDesignLayer;
+        
+        public static string Units;
 
         public static void Init()
         {
@@ -36,6 +38,7 @@ namespace SpeckleGSA
 
             GSAObject.NewFile();
             GSAObject.DisplayGsaWindow(true);
+            UpdateUnits();
         }
 
         public static void OpenFile(string path)
@@ -45,6 +48,7 @@ namespace SpeckleGSA
 
             GSAObject.Open(path);
             GSAObject.DisplayGsaWindow(true);
+            UpdateUnits();
         }
 
         public static object RunGWACommand(string command)
@@ -58,6 +62,37 @@ namespace SpeckleGSA
         public static void UpdateViews()
         {
             GSAObject.UpdateViews();
+        }
+
+        public static void UpdateUnits()
+        {
+            Units = ((string)RunGWACommand("GET,UNIT_DATA.1,LENGTH")).ListSplit(",")[2];
+        }
+
+        
+        public static Dictionary<string, object> GetBaseProperties()
+        {
+            Dictionary<string, object> baseProps = new Dictionary<string, object>();
+            
+            baseProps["units"] = Units.LongUnitName();
+
+            string[] tolerances = ((string)RunGWACommand("GET,TOL")).ListSplit(",");
+
+            List<double> lengthTolerances = new List<double>() {
+                Convert.ToDouble(tolerances[3]), // edge
+                Convert.ToDouble(tolerances[5]), // leg_length
+                Convert.ToDouble(tolerances[7])  // memb_cl_dist
+            };
+
+            List<double> angleTolerances = new List<double>(){
+                Convert.ToDouble(tolerances[4]), // angle
+                Convert.ToDouble(tolerances[6]), // meemb_orient
+            };
+
+            baseProps["tolerance"] = lengthTolerances.Max().ConvertUnit("m", Units);
+            baseProps["angleTolerance"] = angleTolerances.Max().ToRadians();
+
+            return baseProps;
         }
     }
 }

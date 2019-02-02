@@ -226,17 +226,17 @@ namespace SpeckleGSA
         public static SpeckleMesh ToSpeckle(this GSA2DElement element)
         {
             SpeckleMesh m = new SpeckleMesh(
-                        element.Coor.ToArray(),
-                        new int[] { element.Coor.Count() / 3 - 3 }.Concat(
-                            Enumerable.Range(0, element.Coor.Count() / 3).ToArray())
-                            .ToArray(),
-                        element.Color == null ? new int[0] :
-                            Enumerable.Repeat(
-                                element.Color.ToSpeckleColor(),
-                                element.Coor.Count() / 3).ToArray(),
-                        null,
-                        element.Reference.ToString(),
-                        element.GetSpeckleProperties());
+                element.Coor.ToArray(),
+                new int[] { element.Coor.Count() / 3 - 3 }.Concat(
+                    Enumerable.Range(0, element.Coor.Count() / 3).ToArray())
+                    .ToArray(),
+                element.Color == null ? new int[0] :
+                    Enumerable.Repeat(
+                        element.Color.ToSpeckleColor(),
+                        element.Coor.Count() / 3).ToArray(),
+                null,
+                element.Reference.ToString(),
+                element.GetSpeckleProperties());
             
             return m;
         }

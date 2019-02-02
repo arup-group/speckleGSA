@@ -125,6 +125,8 @@ namespace SpeckleGSA
                 return;
             }
 
+            GSA.UpdateUnits();
+
             // Initialize object read priority list
             Dictionary<Type, List<Type>> typePrerequisites = new Dictionary<Type, List<Type>>();
             
@@ -257,7 +259,7 @@ namespace SpeckleGSA
                     Status.AddMessage("No " + kvp.Key + " stream specified.");
                 else
                 {
-                    Status.AddMessage("Creating " + kvp.Key + " receiver.");
+                    Status.AddMessage("Creating receiver " + kvp.Key);
                     receivers[kvp.Key] = new SpeckleGSAReceiver(userManager.ServerAddress, userManager.ApiToken);
                     await receivers[kvp.Key].InitializeReceiver(kvp.Value);
 

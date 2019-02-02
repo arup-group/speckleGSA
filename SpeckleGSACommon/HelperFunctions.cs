@@ -1003,7 +1003,44 @@ namespace SpeckleGSA
             }
             else
                 return value.ConvertUnit(originalDimension, "m").ConvertUnit("m", targetDimension);
+        }
 
+        public static string LongUnitName(this string unit)
+        {
+            switch (unit)
+            {
+                case "m":
+                    return "Meters";
+                case "mm":
+                    return "Millimeters";
+                case "cm":
+                    return "Centimeters";
+                case "ft":
+                    return "Feet";
+                case "in":
+                    return "Inches";
+                default:
+                    return unit;
+            }
+        }
+
+        public static string ShortUnitName(this string unit)
+        {
+            switch (unit)
+            {
+                case "Meters":
+                    return "m";
+                case "Millimeters":
+                    return "mm";
+                case "Centimeters":
+                    return "cm";
+                case "Feet":
+                    return "ft";
+                case "Inches":
+                    return "in";
+                default:
+                    return unit;
+            }
         }
 
         public static Dictionary<string,object> GetPropertyDict(this object obj)
