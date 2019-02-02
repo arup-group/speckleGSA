@@ -195,7 +195,9 @@ namespace SpeckleGSA
         public static SpecklePoint ToSpeckle(this GSANode node)
         {
             // Do not send node if its a boring node.
-            if (!Settings.SendOnlyMeaningfulNodes || node.Restraint.Where(r => ((bool)r.Value) == true).Count() > 0 || node.Stiffness.Where(r => ((double)r.Value) > 0).Count() > 0 || node.Mass > 0)
+            if (!Settings.SendOnlyMeaningfulNodes || node.ForceSend || 
+                node.Restraint.Where(r => ((bool)r.Value) == true).Count() > 0 || node.Stiffness.Where(r => ((double)r.Value) > 0).Count() > 0 ||
+                node.Mass > 0)
                 return new SpecklePoint(node.Coor[0], node.Coor[1], node.Coor[2], null, node.GetSpeckleProperties());
             else
                 return null;
@@ -489,30 +491,52 @@ namespace SpeckleGSA
                 obj.Coor = coordinates;
             }
             else
-            { 
-                obj = new GSA2DElementMesh();
-
-                obj.SetSpeckleProperties(mesh.Properties);
-
-                obj.Coor = mesh.Vertices;
-                obj.Color = mesh.Colors.Count > 0 ? mesh.Colors[0].ToGSAColor() : null;
-
-                int elemCounter = 0;
-                for (int i = 0; i < mesh.Faces.Count();)
+            {
+                if (mesh.Faces[0] + 3 + 1 == mesh.Faces.Count() && !mesh.ElementDictExists())
                 {
-                    int numNodes = mesh.Faces[i++] + 3;
+                    obj = new GSA2DElement();
+                    switch (mesh.Faces[0] + 3)
+                    {
+                        case 3:
+                            (obj as GSA2DElement).Type = "TRI3";
+                            break;
+                        case 4:
+                            (obj as GSA2DElement).Type = "QUAD4";
+                            break;
+                        default:
+                            return null;
+                    }
 
-                    List<int> vertices = mesh.Faces.Skip(i).Take(numNodes).ToList();
-                    
-                    List<string> coordinates = new List<string>();
+                    List<int> vertices = mesh.Faces.Skip(1).ToList();
                     foreach (int e in vertices)
-                        coordinates.Add(string.Join(",",mesh.Vertices.Skip(e * 3).Take(3)));
-
-                    (obj as GSA2DElementMesh).ElementConnectivity.Add(coordinates);
-                    
-                    elemCounter++;
-                    i += numNodes;
+                        obj.Coor.AddRange(mesh.Vertices.Skip(e * 3).Take(3));
                 }
+                else
+                { 
+                    obj = new GSA2DElementMesh();
+
+                    obj.Coor = mesh.Vertices;
+
+                    int elemCounter = 0;
+                    for (int i = 0; i < mesh.Faces.Count();)
+                    {
+                        int numNodes = mesh.Faces[i++] + 3;
+
+                        List<int> vertices = mesh.Faces.Skip(i).Take(numNodes).ToList();
+                    
+                        List<string> coordinates = new List<string>();
+                        foreach (int e in vertices)
+                            coordinates.Add(string.Join(",",mesh.Vertices.Skip(e * 3).Take(3)));
+
+                        (obj as GSA2DElementMesh).ElementConnectivity.Add(coordinates);
+                    
+                        elemCounter++;
+                        i += numNodes;
+                    }
+                }
+
+                obj.Color = mesh.Colors.Count > 0 ? mesh.Colors[0].ToGSAColor() : null;
+                obj.SetSpeckleProperties(mesh.Properties);
             }
 
             return obj;

@@ -534,10 +534,14 @@ namespace SpeckleGSA
                 }
                 else
                 {
-                    int[] entities = new int[0];
-                    GsaEntity entType = type;
-
-                    items.AddRange(entities);
+                    try
+                    {
+                        int[] itemTemp = new int[0];
+                        GSA.GSAObject.EntitiesInList(pieces[i], type, out itemTemp);
+                        items.AddRange(itemTemp);
+                    }
+                    catch
+                    { }
                 }
             }
 
@@ -1134,6 +1138,22 @@ namespace SpeckleGSA
             else
                 return null;
         }
+
+        public static bool ElementDictExists(this SpeckleObject obj)
+        {
+            if (obj.Properties != null && obj.Properties.ContainsKey("Structural"))
+            {
+                Dictionary<string, object> temp = obj.Properties["Structural"] as Dictionary<string, object>;
+
+                if (temp.ContainsKey("Elements"))
+                    return true;
+                else
+                    return false;
+            }
+            else
+                return false;
+        }
+
         #endregion
 
         #region Comparison
@@ -1216,11 +1236,19 @@ namespace SpeckleGSA
                 return false;
         }
 
-        public static bool IsAxisEqual(this Dictionary<string, object> axis1, Dictionary<string, object> axis2)
+        //TODO: NEED TO IMPLEMENT GENERIC LIST AND DICTIONARY RECURSIVE COMPARATOR
+
+        public static bool IsLoadingEqual(this Dictionary<string, object> load1, Dictionary<string, object> load2)
         {
-            //TODO: NEED TO IMPLEMENT EPS
-            if (axis1.GetHashCode() == axis2.GetHashCode()) return true;
-            return false;
+            try
+            {
+                if (Math.Abs((double)load1["x"] - (double)load2["x"]) > EPS) return false;
+                if (Math.Abs((double)load1["y"] - (double)load2["y"]) > EPS) return false;
+                if (Math.Abs((double)load1["z"] - (double)load2["z"]) > EPS) return false;
+
+                return true;
+            }
+            catch { return false; }
         }
         #endregion
     }

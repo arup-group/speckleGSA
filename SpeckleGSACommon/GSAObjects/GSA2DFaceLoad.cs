@@ -90,7 +90,7 @@ namespace SpeckleGSA
                     load.Loading = load.TransformLoading(initLoad.Loading, loadAxis, load.Projected);
 
                     // If the loading already exists, add node ref to list
-                    List<GSA2DFaceLoad> matches = loadSubList.Where(l => l.Loading.IsAxisEqual(load.Loading)).ToList();
+                    List<GSA2DFaceLoad> matches = loadSubList.Where(l => l.Loading.IsLoadingEqual(load.Loading)).ToList();
 
                     if (matches.Count() > 0)
                         matches[0].Elements.Add(eRef);
@@ -113,7 +113,6 @@ namespace SpeckleGSA
             if (!dict.ContainsKey(typeof(GSA2DFaceLoad))) return;
             if (!dict.ContainsKey(typeof(GSA2DElement)) & GSA.TargetAnalysisLayer) return;
             if (!dict.ContainsKey(typeof(GSA2DMember)) & GSA.TargetDesignLayer) return;
-
 
             List<GSAObject> loads = dict[typeof(GSA2DFaceLoad)] as List<GSAObject>;
 

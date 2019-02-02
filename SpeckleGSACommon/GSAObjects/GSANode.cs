@@ -23,6 +23,8 @@ namespace SpeckleGSA
         public Dictionary<string, object> Stiffness { get; set; }
         public double Mass { get; set; }
 
+        public bool ForceSend;
+
         public GSANode()
         {
             Axis = new Dictionary<string, object>()
@@ -50,6 +52,8 @@ namespace SpeckleGSA
                 { "zz", 0.0 },
             };
             Mass = 0;
+
+            ForceSend = false;
         }
 
         #region GSAObject Functions

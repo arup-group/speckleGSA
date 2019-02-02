@@ -16,7 +16,7 @@ namespace SpeckleGSA
         public static readonly string Stream = "elements";
         public static readonly int WritePriority = 0;
 
-        public static readonly Type[] ReadPrerequisite = new Type[1] { typeof(GSA2DElement) };
+        public static readonly Type[] ReadPrerequisite = new Type[2] { typeof(GSA2DElement), typeof(GSA2DFaceLoad) };
 
         public int Property { get; set; }
         public double Offset { get; set; }
@@ -57,8 +57,6 @@ namespace SpeckleGSA
                 meshes.Add(mesh);
             }
 
-            dict.Remove(typeof(GSA2DElement));
-
             if (Settings.Merge2DElementsIntoMesh)
             { 
                 for (int i = 0; i < meshes.Count(); i++)
@@ -76,6 +74,12 @@ namespace SpeckleGSA
                     Status.ChangeStatus("Merging 2D elements", (double)(i+1) / meshes.Count() * 100);
                 }
             }
+
+            List<GSAObject> singleFaceMesh = meshes.Where(m => (m as GSA2DElementMesh).Elements.Count() <= 1).ToList();
+
+            dict[typeof(GSA2DElement)] = singleFaceMesh.SelectMany(m => (m as GSA2DElementMesh).GetChildren()).ToList();
+            foreach(GSAObject o in singleFaceMesh)
+                meshes.Remove(o);
 
             dict[typeof(GSA2DElementMesh)] = meshes;
         }

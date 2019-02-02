@@ -73,6 +73,10 @@ namespace SpeckleGSA
                 List<int> nodesApplied = initLoad.Nodes
                     .Where(nRef => nodeRefs.Contains(nRef)).ToList();
 
+                // Raise node flag to make sure it gets sent
+                foreach(GSANode n in nodes.Where(n => nodesApplied.Contains(n.Reference)).Cast<GSANode>())
+                    n.ForceSend = true;
+
                 foreach (int nRef in nodesApplied)
                 {
                     GSA0DLoad load = new GSA0DLoad();
@@ -85,7 +89,7 @@ namespace SpeckleGSA
                     load.Loading = load.TransformLoading(initLoad.Loading, loadAxis);
 
                     // If the loading already exists, add node ref to list
-                    List<GSA0DLoad> matches = loadSubList.Where(l => l.Loading.IsAxisEqual(load.Loading)).ToList();
+                    List<GSA0DLoad> matches = loadSubList.Where(l => l.Loading.IsLoadingEqual(load.Loading)).ToList();
                     if (matches.Count() > 0)
                         matches[0].Nodes.Add(nRef);
                     else
