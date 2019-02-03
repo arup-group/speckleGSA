@@ -1,6 +1,6 @@
 # SpeckleGSA
 
-![specklegsa-logo](https://gitlab.arup.com/tor_digital/SpeckleGSA/blob/3bbd7b153b3754226fcb0277c5b77788903b0be4/readme/ICON.png)
+![specklegsa-logo](https://gitlab.arup.com/tor_digital/SpeckleGSA/raw/3bbd7b153b3754226fcb0277c5b77788903b0be4/readme/ICON.png)
 
 SpeckleGSA is currently under development.
 
@@ -20,7 +20,7 @@ SpeckleGSA is not currently packaged for distribution. To build SpeckleGSA yours
 
 ## Usage
 
-![specklegsa-demo](https://gitlab.arup.com/tor_digital/SpeckleGSA/blob/3bbd7b153b3754226fcb0277c5b77788903b0be4/readme/demo.gif)
+![specklegsa-demo](https://gitlab.arup.com/tor_digital/SpeckleGSA/raw/3bbd7b153b3754226fcb0277c5b77788903b0be4/readme/demo.gif)
 
 SpeckleGSA implements key components of a Speckle client in it's tab interface:
 - Server:
