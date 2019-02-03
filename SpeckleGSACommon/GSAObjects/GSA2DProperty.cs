@@ -163,6 +163,13 @@ namespace SpeckleGSA
         {
             throw new NotImplementedException();
         }
+
+        public override void ScaleToGSAUnits(string originalUnit)
+        {
+            base.ScaleToGSAUnits(originalUnit);
+
+            Thickness = Thickness.ConvertUnit(originalUnit, GSA.Units);
+        }
         #endregion
     }
 }

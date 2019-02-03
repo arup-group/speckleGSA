@@ -229,6 +229,13 @@ namespace SpeckleGSA
 
             return children;
         }
+
+        public override void ScaleToGSAUnits(string originalUnit)
+        {
+            base.ScaleToGSAUnits(originalUnit);
+
+            Offset = Offset.ConvertUnit(originalUnit, GSA.Units);
+        }
         #endregion
 
         #region Offset

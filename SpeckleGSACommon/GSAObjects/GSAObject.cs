@@ -16,7 +16,7 @@ namespace SpeckleGSA
 
         public List<double> Coor;
         public object Color;
-
+        
         public GSAObject()
         {
             Reference = 0;
@@ -30,5 +30,11 @@ namespace SpeckleGSA
         public abstract string GetGWACommand(Dictionary<Type, object> dict = null);
 
         public abstract List<GSAObject> GetChildren();
+
+        public virtual void ScaleToGSAUnits(string originalUnit)
+        {
+            for(int i = 0; i < Coor.Count();i++)
+                Coor[i] = Coor[i].ConvertUnit(originalUnit, GSA.Units);
+        }
     }
 }

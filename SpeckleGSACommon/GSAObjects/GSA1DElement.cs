@@ -292,33 +292,41 @@ namespace SpeckleGSA
 
             return children;
         }
+
+        public override void ScaleToGSAUnits(string originalUnit)
+        {
+            base.ScaleToGSAUnits(originalUnit);
+            
+            Offset["Horizontal"] = (Convert.ToDouble(Offset["Horizontal"])).ConvertUnit(originalUnit, GSA.Units);
+            Offset["Vertical"] = (Convert.ToDouble(Offset["Vertical"])).ConvertUnit(originalUnit, GSA.Units);
+        }
         #endregion
 
         #region Helper Functions
         private object ParseEndStiffness(char code, string[] pieces, ref int counter)
+    {
+        switch (code)
         {
-            switch (code)
-            {
-                case 'F':
-                    return "FIXED";
-                case 'R':
-                    return 0;
-                default:
-                    return Convert.ToDouble(pieces[counter++]);
-            }
+            case 'F':
+                return "FIXED";
+            case 'R':
+                return 0;
+            default:
+                return Convert.ToDouble(pieces[counter++]);
         }
+    }
 
-        private string GetEndStiffness(object code, ref List<double> stiffness)
+    private string GetEndStiffness(object code, ref List<double> stiffness)
+    {
+        if (code.GetType() == typeof(string)) return "F";
+        else if ((double)code == 0) return "R";
+        else
         {
-            if (code.GetType() == typeof(string)) return "F";
-            else if ((double)code == 0) return "R";
-            else
-            {
-                stiffness.Add((double)code);
-                return "K";
-            }
+            stiffness.Add((double)code);
+            return "K";
         }
-        #endregion
+    }
+    #endregion
 
     }
 }

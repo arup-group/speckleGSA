@@ -167,6 +167,43 @@ namespace SpeckleGSA
 
             return elements;
         }
+
+        public override void ScaleToGSAUnits(string originalUnit)
+        {
+            base.ScaleToGSAUnits(originalUnit);
+
+            Dictionary<string, List<string>> scaledEdges = new Dictionary<string, List<string>>();
+            foreach(string k in Edges.Keys)
+            {
+                string newKey = ScaleStringCordinateToGSAUnits(k, originalUnit);
+                scaledEdges[newKey] = new List<string>();
+                foreach (string s in Edges[k])
+                    scaledEdges[newKey].Add(ScaleStringCordinateToGSAUnits(s, originalUnit));
+            }
+            Edges = scaledEdges;
+
+            Dictionary<string, int> scaledNodeMapping = new Dictionary<string, int>();
+            foreach (string k in NodeMapping.Keys)
+                scaledNodeMapping[ScaleStringCordinateToGSAUnits(k, originalUnit)] = NodeMapping[k];
+            NodeMapping = scaledNodeMapping;
+
+            for (int i=0; i < ElementConnectivity.Count(); i++)
+            {
+                for (int j = 0; j < ElementConnectivity[i].Count(); j++)
+                {
+                    string[] coors = ElementConnectivity[i][j].ListSplit(",");
+                    ElementConnectivity[i][j] = string.Join(",",coors.Select(c => Convert.ToDouble(c).ConvertUnit(originalUnit, GSA.Units).ToString()));
+                }
+            }
+
+            Offset = Offset.ConvertUnit(originalUnit, GSA.Units);
+        }
+
+        private string ScaleStringCordinateToGSAUnits(string originalString, string unit)
+        {
+            string[] coors = originalString.ListSplit(",");
+            return string.Join(",", coors.Select(c => Convert.ToDouble(c).ConvertUnit(unit, GSA.Units).ToString()));
+        }
         #endregion
 
         #region Mesh Operations

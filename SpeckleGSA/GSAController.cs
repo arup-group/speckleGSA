@@ -249,8 +249,10 @@ namespace SpeckleGSA
                 return;
             }
 
+            GSA.UpdateUnits();
+
             // Pull objects from server asynchronously
-            List<object> convertedObjects = new List<object>();
+            Dictionary<string,List<object>> convertedObjects = new Dictionary<string, List<object>>();
 
             Status.ChangeStatus("Receiving from server");
             foreach (KeyValuePair<string, string> kvp in streamIDs)
@@ -267,11 +269,12 @@ namespace SpeckleGSA
                         Status.AddError("Could not connect to " + kvp.Key + " stream.");
                     else
                     {
+                        
                         Task task = new Task(() =>
                         {
                             try
                             {
-                                convertedObjects.AddRange(receivers[kvp.Key].GetGSAObjects());
+                                convertedObjects[kvp.Key] = receivers[kvp.Key].GetGSAObjects();
                             }
                             catch (Exception ex)
                             {
@@ -288,34 +291,40 @@ namespace SpeckleGSA
 
             // Populate dictionary
             Status.ChangeStatus("Bucketing objects");
-            foreach (object obj in convertedObjects)
+            foreach (KeyValuePair<string,List<object>> kvp in convertedObjects)
             {
-                if (obj == null) continue;
-
-                try
-                {
-                    if (obj.IsList())
+                foreach (object obj in kvp.Value)
+                { 
+                    if (obj == null) continue;
+                    
+                    try
                     {
-                        foreach(GSAObject o in obj as IList)
+                        if (obj.IsList())
                         {
-                            if (!objects.ContainsKey(o.GetType()))
-                                objects[o.GetType()] = new List<GSAObject>() { o as GSAObject };
+                            foreach(GSAObject o in obj as IList)
+                            {
+                                o.ScaleToGSAUnits(receivers[kvp.Key].Units.ShortUnitName());
+
+                                if (!objects.ContainsKey(o.GetType()))
+                                    objects[o.GetType()] = new List<GSAObject>() { o };
+                                else
+                                    (objects[o.GetType()] as List<GSAObject>).Add(o);
+                            }
+                        }
+                        else
+                        {
+                            (obj as GSAObject).ScaleToGSAUnits(receivers[kvp.Key].Units.ShortUnitName());
+                            
+                            if (!objects.ContainsKey(obj.GetType()))
+                                objects[obj.GetType()] = new List<GSAObject>() { obj as GSAObject };
                             else
-                                (objects[o.GetType()] as List<GSAObject>).Add(o as GSAObject);
+                                (objects[obj.GetType()] as List<GSAObject>).Add(obj as GSAObject);
                         }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        if (!objects.ContainsKey(obj.GetType()))
-                            objects[obj.GetType()] = new List<GSAObject>() { obj as GSAObject };
-                        else
-                            (objects[obj.GetType()] as List<GSAObject>).Add(obj as GSAObject);
-
+                        Status.AddError(ex.Message);
                     }
-                }
-                catch (Exception ex)
-                {
-                    Status.AddError(ex.Message);
                 }
             }
 

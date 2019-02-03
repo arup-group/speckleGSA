@@ -19,6 +19,7 @@ namespace SpeckleGSA
 
         public string StreamID { get => myReceiver == null? null : myReceiver.StreamId; }
         public string StreamName { get => myReceiver == null ? null : myReceiver.Stream.Name; }
+        public string Units { get => myReceiver == null ? null : myReceiver.Stream.BaseProperties["units"]; }
 
         public SpeckleGSAReceiver(string serverAddress, string apiToken)
         {
@@ -35,8 +36,8 @@ namespace SpeckleGSA
         public List<object> GetGSAObjects()
         {
             UpdateDataAsync();
-
-            return SpeckleCore.Converter.Deserialise(myReceiver.Stream.Objects);
+            
+            return Converter.Deserialise(myReceiver.Stream.Objects);
         }
 
         public void UpdateDataAsync()

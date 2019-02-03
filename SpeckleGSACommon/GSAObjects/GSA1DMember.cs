@@ -180,7 +180,7 @@ namespace SpeckleGSA
             Type = Type == "1D_GENERIC" ? "GENERIC" : Type;
             Property = Convert.ToInt32(pieces[counter++]);
             counter++; // Group
-            
+
             Coor.Clear();
 
             string[] nodeRefs = pieces[counter++].ListSplit(" ");
@@ -198,7 +198,7 @@ namespace SpeckleGSA
                     nodes.Where(n => n.Reference == orientationNodeRef).FirstOrDefault().Coor.ToArray());
             else
                 Axis = HelperFunctions.Parse1DAxis(Coor.ToArray(), rotationAngle);
-            
+
             // Skip to offsets at third to last
             counter = pieces.Length - 3;
             Offset["Horizontal"] = Convert.ToDouble(pieces[counter++]);
@@ -263,6 +263,14 @@ namespace SpeckleGSA
 
             return children;
         }
-        #endregion
+
+        public override void ScaleToGSAUnits(string originalUnit)
+        {
+            base.ScaleToGSAUnits(originalUnit);
+
+            Offset["Horizontal"] = (Convert.ToDouble(Offset["Horizontal"])).ConvertUnit(originalUnit, GSA.Units);
+            Offset["Vertical"] = (Convert.ToDouble(Offset["Vertical"])).ConvertUnit(originalUnit, GSA.Units);
+            #endregion
+        }
     }
 }
