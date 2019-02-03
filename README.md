@@ -1,6 +1,6 @@
 # SpeckleGSA
 
-<img src="https://gitlab.arup.com/tor_digital/SpeckleGSA/raw/3bbd7b153b3754226fcb0277c5b77788903b0be4/readme/ICON.png" alt="specklegsa-logo" height="200">
+<img src="https://gitlab.arup.com/tor_digital/SpeckleGSA/raw/3bbd7b153b3754226fcb0277c5b77788903b0be4/readme/ICON.png" alt="specklegsa-logo" height="100">
 
 SpeckleGSA is currently under development.
 
@@ -13,6 +13,7 @@ Requires GSA 10 beta.
 - [Bugs and feature requests](#bugs-and-feature-requests)
 - [Building SpeckleGSA](#building-specklegsa)
 - [About Speckle](#about-speckle)
+- [Notes](#notes)
 
 ## Installation
 
@@ -68,3 +69,7 @@ The SpeckleGSA repo is currently made up of the following projects:
 ## About Speckle
 
 Speckle reimagines the design process from the Internet up: an open source (MIT) initiative for developing an extensible Design & AEC data communication protocol and platform. Contributions are welcome - we can't build this alone!
+
+## Notes
+
+SpeckleGSA is written and maintained by [Mishael Nuh](https://gitlab.arup.com/Mishael.Nuh).
