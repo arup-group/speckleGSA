@@ -104,9 +104,11 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="auto"/>
                             <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
                         </Grid.RowDefinitions>
-                        <Button Grid.Row="0" Content="New File" Click="NewGSAFile" Margin="5" Padding="5"/>
-                        <Button Grid.Row="1" Content="Open File" Click="OpenGSAFile" Margin="5" Padding="5"/>
+                        <Button Grid.Row="0" Content="Link GSA" Click="LinkGSA" Margin="5" Padding="5"/>
+                        <Button Grid.Row="1" Content="New File" Click="NewGSAFile" Margin="5" Padding="5"/>
+                        <Button Grid.Row="2" Content="Open File" Click="OpenGSAFile" Margin="5" Padding="5"/>
                     </Grid>
                 </TabItem>
                 <TabItem Header="Sender">

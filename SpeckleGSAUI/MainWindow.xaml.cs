@@ -55,8 +55,7 @@ namespace SpeckleGSAUI
             //Default settings
             SendOnlyMeaningfulNodes.IsChecked = Settings.SendOnlyMeaningfulNodes;
             Merge2DElementsIntoMesh.IsChecked = Settings.Merge2DElementsIntoMesh;
-
-            GSA.Init();
+            
             Status.Init(this.AddMessage, this.AddError, this.ChangeStatus);
             MessagePane.ItemsSource = Messages;
         }
@@ -100,6 +99,11 @@ namespace SpeckleGSAUI
         #endregion
 
         #region GSA
+        private void LinkGSA(object sender, RoutedEventArgs e)
+        {
+            GSA.Init();
+        }
+
         private void NewGSAFile(object sender, RoutedEventArgs e)
         {
             Task.Run(() => GSA.NewFile());

@@ -29,6 +29,8 @@ namespace SpeckleGSA
             TargetDesignLayer = true; // TODO
 
             IsInit = true;
+
+            Status.AddMessage("Linked to GSA.");
         }
 
         public static void NewFile()
@@ -39,16 +41,21 @@ namespace SpeckleGSA
             GSAObject.NewFile();
             GSAObject.DisplayGsaWindow(true);
             UpdateUnits();
+
+            Status.AddMessage("Created new file.");
         }
 
         public static void OpenFile(string path)
         {
             if (!IsInit)
                 return;
-
+        
+            GSAObject.Close();
             GSAObject.Open(path);
             GSAObject.DisplayGsaWindow(true);
             UpdateUnits();
+
+            Status.AddMessage("Opened new file.");
         }
 
         public static object RunGWACommand(string command)
