@@ -1,6 +1,6 @@
 # SpeckleGSA
 
-![specklegsa-logo](https://gitlab.arup.com/tor_digital/SpeckleGSA/raw/3bbd7b153b3754226fcb0277c5b77788903b0be4/readme/ICON.png = 100x100)
+<img src="https://gitlab.arup.com/tor_digital/SpeckleGSA/raw/3bbd7b153b3754226fcb0277c5b77788903b0be4/readme/ICON.png" alt="specklegsa-logo" height="200">
 
 SpeckleGSA is currently under development.
 
