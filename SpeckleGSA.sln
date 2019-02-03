@@ -5,13 +5,13 @@ VisualStudioVersion = 15.0.27703.2035
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleGSA", "SpeckleGSA\SpeckleGSA.csproj", "{6D8CA3AD-E530-4CDA-AF79-9715A7583F4F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleCore", "..\SpeckleCore\SpeckleCore\SpeckleCore.csproj", "{CFE27D3D-8A1A-43F9-9387-8FD9E119E174}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleGSAUI", "SpeckleGSAUI\SpeckleGSAUI.csproj", "{74BD53B7-5588-4CBC-86A3-EFBBC99DB7ED}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleGSAConverter", "SpeckleGSAConverter\SpeckleGSAConverter.csproj", "{DF558C64-1575-4DB6-A20F-93C38BD9F60C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleGSACommon", "SpeckleGSACommon\SpeckleGSACommon.csproj", "{E43A36D3-C488-49EF-9177-01A3038E6B29}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleCore", "SpeckleCore\SpeckleCore\SpeckleCore.csproj", "{CFE27D3D-8A1A-43F9-9387-8FD9E119E174}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,10 +23,6 @@ Global
 		{6D8CA3AD-E530-4CDA-AF79-9715A7583F4F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6D8CA3AD-E530-4CDA-AF79-9715A7583F4F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6D8CA3AD-E530-4CDA-AF79-9715A7583F4F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CFE27D3D-8A1A-43F9-9387-8FD9E119E174}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CFE27D3D-8A1A-43F9-9387-8FD9E119E174}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CFE27D3D-8A1A-43F9-9387-8FD9E119E174}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CFE27D3D-8A1A-43F9-9387-8FD9E119E174}.Release|Any CPU.Build.0 = Release|Any CPU
 		{74BD53B7-5588-4CBC-86A3-EFBBC99DB7ED}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{74BD53B7-5588-4CBC-86A3-EFBBC99DB7ED}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{74BD53B7-5588-4CBC-86A3-EFBBC99DB7ED}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -39,6 +35,10 @@ Global
 		{E43A36D3-C488-49EF-9177-01A3038E6B29}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E43A36D3-C488-49EF-9177-01A3038E6B29}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E43A36D3-C488-49EF-9177-01A3038E6B29}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CFE27D3D-8A1A-43F9-9387-8FD9E119E174}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CFE27D3D-8A1A-43F9-9387-8FD9E119E174}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CFE27D3D-8A1A-43F9-9387-8FD9E119E174}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CFE27D3D-8A1A-43F9-9387-8FD9E119E174}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

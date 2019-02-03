@@ -72,7 +72,7 @@
     <Compile Include="Status.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\SpeckleCore\SpeckleCore\SpeckleCore.csproj">
+    <ProjectReference Include="..\SpeckleCore\SpeckleCore\SpeckleCore.csproj">
       <Project>{cfe27d3d-8a1a-43f9-9387-8fd9e119e174}</Project>
       <Name>SpeckleCore</Name>
     </ProjectReference>
