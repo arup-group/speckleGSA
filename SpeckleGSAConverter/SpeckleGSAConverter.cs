@@ -417,8 +417,10 @@ namespace SpeckleGSA
             return objList;
         }
         
-        public static GSAObject ToNative(this SpeckleMesh mesh)
+        public static List<GSAObject> ToNative(this SpeckleMesh mesh)
         {
+            List<GSAObject> objList = new List<GSAObject>();
+
             GSAObject obj;
             
             if (GSA.TargetDesignLayer)
@@ -478,17 +480,37 @@ namespace SpeckleGSA
                         edges.Remove(nextEdge[0]);
                     }
                     else
-                        // Next edge not found
-                        return null;
+                    { 
+                        // Next edge not found. Return whatever is done.
+                        return objList;
+                    }
+
+                    if (reorderedEdges[0] == reorderedEdges[reorderedEdges.Count() - 1])
+                    {
+                        reorderedEdges.RemoveAt(0);
+
+                        obj = new GSA2DMember();
+
+                        obj.SetSpeckleProperties(mesh.Properties);
+                        obj.Color = mesh.Colors.Count > 0 ? mesh.Colors[0].ToGSAColor() : null;
+                        
+                        // Get coordinates
+                        List<double> coordinates = new List<double>();
+                        foreach (int e in reorderedEdges)
+                            coordinates.AddRange(mesh.Vertices.Skip(e * 3).Take(3));
+                        obj.Coor = coordinates;
+
+                        objList.Add(obj);
+
+                        reorderedEdges.Clear();
+                        if (edges.Count > 0)
+                        { 
+                            reorderedEdges.Add(edges[0].Item1);
+                            reorderedEdges.Add(edges[0].Item2);
+                            edges.RemoveAt(0);
+                        }
+                    }
                 }
-                reorderedEdges.RemoveAt(0);
-
-                // Get coordinates
-                List<double> coordinates = new List<double>();
-                foreach(int e in reorderedEdges)
-                    coordinates.AddRange(mesh.Vertices.Skip(e * 3).Take(3));
-
-                obj.Coor = coordinates;
             }
             else
             {
@@ -537,9 +559,11 @@ namespace SpeckleGSA
 
                 obj.Color = mesh.Colors.Count > 0 ? mesh.Colors[0].ToGSAColor() : null;
                 obj.SetSpeckleProperties(mesh.Properties);
+
+                objList.Add(obj);
             }
 
-            return obj;
+            return objList;
         }
         #endregion
     }
