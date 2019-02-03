@@ -1,10 +1,11 @@
 # SpeckleGSA
 
+![specklegsa-logo](https://gitlab.arup.com/tor_digital/SpeckleGSA/blob/3bbd7b153b3754226fcb0277c5b77788903b0be4/readme/ICON.png)
+
 SpeckleGSA is currently under development.
 
 Requires GSA 10 beta.
 
----
 ## Contents
 
 - [Installation](#installation)
@@ -15,9 +16,11 @@ Requires GSA 10 beta.
 
 ## Installation
 
-SpeckleGSA is not currently packaged for distribution. To build SpeckleGSA yourself, see [Building SpeckleGSA](#building-specklegsa)
+SpeckleGSA is not currently packaged for distribution. To build SpeckleGSA yourself, see [Building SpeckleGSA](#building-specklegsa).
 
 ## Usage
+
+![specklegsa-demo](https://gitlab.arup.com/tor_digital/SpeckleGSA/blob/3bbd7b153b3754226fcb0277c5b77788903b0be4/readme/demo.gif)
 
 SpeckleGSA implements key components of a Speckle client in it's tab interface:
 - Server:
@@ -30,21 +33,6 @@ SpeckleGSA implements key components of a Speckle client in it's tab interface:
 - Sender:
     - Sends model to SpeckleServer
     - Allows for sending of either the analysis or design layer of GSA
-    - Objects are grouped into the following streams:
-        1. Nodes
-        2. Elements:
-            - 1D Elements
-            - 1D Members
-            - 2D Elements
-            - 2D Members
-        3. Properties:
-            - Materials *not fully implemented*
-            - 1D Properties
-            - 2D Properties
-        4. Loads:
-            - 0D Loads
-            - 1D Loads *yet to be implemented*
-            - 2D Loads
 - Receiver:
     - Receive stream(s) from a SpeckleServer
     - Allows for writing to either the analysis or design layer of GSA
@@ -77,6 +65,6 @@ The SpeckleGSA repo is currently made up of the following projects:
 - If SpeckleCore hasn't been cloned, run `git submodule update --remote`
 - Set SpeckleGSAUI as start project and rebuild all
 
-### About Speckle
+## About Speckle
 
 Speckle reimagines the design process from the Internet up: an open source (MIT) initiative for developing an extensible Design & AEC data communication protocol and platform. Contributions are welcome - we can't build this alone!
