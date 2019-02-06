@@ -41,8 +41,7 @@ namespace SpeckleGSA
 
         public void SendGSAObjects(Dictionary<string, List<object>> payloadObjects)
         {
-            GSAConverterHack hack1 = new GSAConverterHack();
-            StructuresConverterHack hack2 = new StructuresConverterHack();
+            StructuresConverterHack hack = new StructuresConverterHack();
 
             // Convert and set up layers
             List<SpeckleObject> bucketObjects = new List<SpeckleObject>();

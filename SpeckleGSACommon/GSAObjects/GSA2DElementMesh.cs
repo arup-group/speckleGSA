@@ -23,7 +23,7 @@ namespace SpeckleGSA
 
         }
 
-        public GSA2DElementMesh(double[] edgeCoordinates, string name = "", Structural2DElementType type = null, int property = 0, Axis axis = null, double offset = 0)
+        public GSA2DElementMesh(double[] edgeCoordinates, string name = "", string type = null, int property = 0, Axis axis = null, double offset = 0)
             : base (edgeCoordinates, name, type, property, axis, offset)
         {
 
@@ -42,6 +42,19 @@ namespace SpeckleGSA
 
             foreach (PropertyInfo p in baseClass.GetType().GetProperties())
                 p.SetValue(this, p.GetValue(baseClass));
+        }
+
+        public StructuralObject GetBase()
+        {
+            StructuralObject baseClass = (StructuralObject)Activator.CreateInstance(this.GetType().BaseType);
+
+            foreach (FieldInfo f in baseClass.GetType().GetFields())
+                f.SetValue(baseClass, f.GetValue(this));
+
+            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
+                p.SetValue(baseClass, p.GetValue(this));
+
+            return baseClass;
         }
 
         #region GSAObject Functions

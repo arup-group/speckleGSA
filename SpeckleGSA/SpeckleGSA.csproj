@@ -51,10 +51,6 @@
       <Project>{e43a36d3-c488-49ef-9177-01a3038e6b29}</Project>
       <Name>SpeckleGSACommon</Name>
     </ProjectReference>
-    <ProjectReference Include="..\SpeckleGSAConverter\SpeckleGSAConverter.csproj">
-      <Project>{df558c64-1575-4db6-a20f-93c38bd9f60c}</Project>
-      <Name>SpeckleGSAConverter</Name>
-    </ProjectReference>
     <ProjectReference Include="..\SpeckleStructures\SpeckleCore\SpeckleCore\SpeckleCore.csproj">
       <Project>{cfe27d3d-8a1a-43f9-9387-8fd9e119e174}</Project>
       <Name>SpeckleCore</Name>

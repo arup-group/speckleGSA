@@ -43,8 +43,7 @@ namespace SpeckleGSA
 
         public void UpdateDataAsync()
         {
-            GSAConverterHack hack1 = new GSAConverterHack();
-            StructuresConverterHack hack2 = new StructuresConverterHack();
+            StructuresConverterHack hack = new StructuresConverterHack();
 
             // Try to get stream
             ResponseStream streamGetResult = myReceiver.StreamGetAsync(myReceiver.StreamId, null).Result;

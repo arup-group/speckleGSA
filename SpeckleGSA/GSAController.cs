@@ -175,7 +175,16 @@ namespace SpeckleGSA
                             kvp.Value.Remove(t);
                 }
             } while (currentBatch.Count > 0);
-            
+
+            // Convert objects to base clas
+            Dictionary<Type, List<StructuralObject>> tempBucket = new Dictionary<Type, List<StructuralObject>>();
+            foreach (KeyValuePair<Type, List<StructuralObject>> kvp in bucketObjects)
+            {
+                tempBucket[kvp.Key] = kvp.Value.Select(
+                    x => x.GetType().GetMethod("GetBase").Invoke(x, new object[] { })).Cast<StructuralObject>().ToList();
+            }
+            bucketObjects = tempBucket;
+
             // Seperate objects into streams
             Dictionary<string, List<object>> streamBuckets = new Dictionary<string, List<object>>();
 

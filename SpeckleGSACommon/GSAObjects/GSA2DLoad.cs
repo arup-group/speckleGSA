@@ -39,6 +39,19 @@ namespace SpeckleGSA
                 p.SetValue(this, p.GetValue(baseClass));
         }
 
+        public StructuralObject GetBase()
+        {
+            StructuralObject baseClass = (StructuralObject)Activator.CreateInstance(this.GetType().BaseType);
+
+            foreach (FieldInfo f in baseClass.GetType().GetFields())
+                f.SetValue(baseClass, f.GetValue(this));
+
+            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
+                p.SetValue(baseClass, p.GetValue(this));
+
+            return baseClass;
+        }
+
         #region GSAObject Functions
         public static void GetObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
@@ -198,7 +211,7 @@ namespace SpeckleGSA
                 {
                     subLs.Add(string.Join(" ", Meshes.Select(x => "G" + x.ToString())));
                 }
-                else if (GSA.TargetAnalysisLayer)
+                else
                 {
                     subLs.Add(string.Join(" ", Elements));
                 }
