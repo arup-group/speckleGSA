@@ -21,6 +21,7 @@ namespace SpeckleGSA
         private List<int> Connectivity;
         public int MeshReference;
 
+        #region Contructors and Converters
         public GSA2DElement()
         {
             Connectivity = new List<int>();
@@ -51,15 +52,19 @@ namespace SpeckleGSA
 
             return baseClass;
         }
+        #endregion
 
-        #region GSAObject Functions
+        #region GSA Functions
         public static void GetObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
+            if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
+                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
+
+            foreach (Type t in ReadPrerequisite)
+                if (!dict.ContainsKey(t)) return;
+
             if (!GSA.TargetAnalysisLayer) return;
 
-            if (!dict.ContainsKey(typeof(GSANode))) return;
-
-            List<StructuralObject> nodes = dict[typeof(GSANode)];
             List<StructuralObject> e2Ds = new List<StructuralObject>();
 
             string res = (string)GSA.RunGWACommand("GET_ALL,EL");
@@ -69,14 +74,16 @@ namespace SpeckleGSA
 
             string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
 
+            List<StructuralObject> nodes = dict[typeof(GSANode)];
+
             double counter = 1;
             foreach (string p in pieces)
             {
                 string[] pPieces = p.ListSplit(",");
                 int numConnectivity = pPieces[4].ParseElementNumNodes();
+                // TODO: Only supports QUAD4 and TRI3. Throw out everything else since they're useless.
                 if (pPieces[4] == "QUAD4" || pPieces[4] == "TRI3")
                 {
-                    // ONLY SUPPORTS QUAD4 AND TRI3
                     GSA2DElement e2D = new GSA2DElement();
                     e2D.ParseGWACommand(p, dict);
 
@@ -85,12 +92,12 @@ namespace SpeckleGSA
                 Status.ChangeStatus("Reading 2D elements", counter++ / pieces.Length * 100);
             }
 
-            dict[typeof(GSA2DElement)] = e2Ds;
+            dict[typeof(GSA2DElement)].AddRange(e2Ds);
         }
 
         public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
-            if (!dict.ContainsKey(typeof(GSA2DElement))) return;
+            if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType)) return;
 
             List<StructuralObject> e2Ds = dict[typeof(GSA2DElement)];
 
@@ -100,38 +107,12 @@ namespace SpeckleGSA
                 GSARefCounters.RefObject(e);
 
                 List<StructuralObject> eNodes = (e as GSA2DElement).GetChildren();
-                
-                if (dict.ContainsKey(typeof(GSANode)))
-                {
-                    List<StructuralObject> nodes = dict[typeof(GSANode)];
 
-                    for (int i = 0; i < eNodes.Count(); i++)
-                    {
-                        List<StructuralObject> matches = nodes
-                            .Where(n => (n as GSANode).Coordinates.Equals((eNodes[i] as GSANode).Coordinates)).ToList();
+                // Ensure no coincident nodes
+                if (!dict.ContainsKey(typeof(GSANode)))
+                    dict[typeof(GSANode)] = new List<StructuralObject>();
 
-                        if (matches.Count() > 0)
-                        {
-                            if (matches[0].Reference == 0)
-                                matches[0] = GSARefCounters.RefObject(matches[0]);
-
-                            eNodes[i].Reference = matches[0].Reference;
-                            (matches[0] as GSANode).Merge(eNodes[i] as GSANode);
-                        }
-                        else
-                        {
-                            GSARefCounters.RefObject(eNodes[i]);
-                            dict[typeof(GSANode)].Add(eNodes[i]);
-                        }
-                    }
-                }
-                else
-                {
-                    for (int i = 0; i < eNodes.Count(); i++)
-                        GSARefCounters.RefObject(eNodes[i]);
-
-                    dict[typeof(GSANode)] = eNodes;
-                }
+                dict[typeof(GSANode)] = HelperFunctions.CollapseNodes(dict[typeof(GSANode)].Cast<GSANode>().ToList(), eNodes.Cast<GSANode>().ToList()).Cast<StructuralObject>().ToList();
 
                 (e as GSA2DElement).Connectivity = eNodes.Select(n => n.Reference).ToList();
 
@@ -206,7 +187,7 @@ namespace SpeckleGSA
             ls.Add(GSAKeyword);
             ls.Add(Reference.ToString());
             ls.Add(Name);
-            ls.Add("NO_RGB");
+            ls.Add(Color == null ? "NO_RGB" : Color.ToString());
             ls.Add(Coordinates.Count() == 3 ? "TRI3" : "QUAD4");
             ls.Add(Property.ToString());
             ls.Add("0"); // Group
@@ -219,14 +200,16 @@ namespace SpeckleGSA
             ls.Add("0"); // Offset x-start
             ls.Add("0"); // Offset x-end
             ls.Add("0"); // Offset y
-            ls.Add(Offset.ToNumString());
+            ls.Add(Offset.ToString());
 
             //ls.Add("NORMAL"); // Action // TODO: EL.4 SUPPORT
             ls.Add(""); // Dummy
 
             return string.Join(",", ls);
         }
+        #endregion
 
+        #region Helper Functions
         public List<StructuralObject> GetChildren()
         {
             List<StructuralObject> children = new List<StructuralObject>();
@@ -240,9 +223,7 @@ namespace SpeckleGSA
 
             return children;
         }
-        #endregion
-
-        #region Offset
+        
         private double GetGSATotalElementOffset(int prop, double insertionPointOffset)
         {
             double materialInsertionPointOffset = 0;

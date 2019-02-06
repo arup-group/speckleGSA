@@ -5,7 +5,6 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Media.Media3D;
-using Interop.Gsa_10_0;
 using SpeckleStructures;
 
 namespace SpeckleGSA
@@ -20,11 +19,12 @@ namespace SpeckleGSA
 
         private List<int> Connectivity;
 
+        #region Contructors and Converters
         public GSA1DElement()
         {
             Connectivity = new List<int>();
         }
-
+        
         public GSA1DElement(Structural1DElement baseClass)
         {
             Connectivity = new List<int>();
@@ -48,23 +48,29 @@ namespace SpeckleGSA
 
             return baseClass;
         }
+        #endregion
 
-        #region GSAObject Functions
+        #region GSA Functions
         public static void GetObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
+            dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
+
+            foreach (Type t in ReadPrerequisite)
+                if (!dict.ContainsKey(t)) return;
+
             if (!GSA.TargetAnalysisLayer) return;
 
-            if (!dict.ContainsKey(typeof(GSANode))) return;
-
-            List<StructuralObject> nodes = dict[typeof(GSANode)];
             List<StructuralObject> e1Ds = new List<StructuralObject>();
-
+            
+            // Grab all elements and check if they are 1D elements
             string res = (string)GSA.RunGWACommand("GET_ALL,EL");
 
             if (res == "")
                 return;
 
             string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+            List<StructuralObject> nodes = dict[typeof(GSANode)];
 
             double counter = 1;
             foreach (string p in pieces)
@@ -79,12 +85,13 @@ namespace SpeckleGSA
                 Status.ChangeStatus("Reading 1D elements", counter++ / pieces.Length * 100);
             }
 
-            dict[typeof(GSA1DElement)] = e1Ds;
+            dict[typeof(GSA1DElement)].AddRange(e1Ds);
         }
 
         public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
-            if (!dict.ContainsKey(typeof(GSA1DElement))) return;
+            if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
+                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
 
             List<StructuralObject> e1Ds = dict[typeof(GSA1DElement)];
 
@@ -95,37 +102,11 @@ namespace SpeckleGSA
 
                 List<StructuralObject> eNodes = (e as GSA1DElement).GetChildren();
 
-                if (dict.ContainsKey(typeof(GSANode)))
-                {
-                    List<StructuralObject> nodes = dict[typeof(GSANode)];
-
-                    for (int i = 0; i < eNodes.Count(); i++)
-                    {
-                        List<StructuralObject> matches = nodes
-                            .Where(n => (n as GSANode).Coordinates.Equals((eNodes[i] as GSANode).Coordinates)).ToList();
-                        
-                        if (matches.Count() > 0)
-                        {
-                            if (matches[0].Reference == 0)
-                                matches[0] = GSARefCounters.RefObject(matches[0]);
-
-                            eNodes[i].Reference = matches[0].Reference;
-                            (matches[0] as GSANode).Merge(eNodes[i] as GSANode);
-                        }
-                        else
-                        {
-                            GSARefCounters.RefObject(eNodes[i]);
-                            dict[typeof(GSANode)].Add(eNodes[i]);
-                        }
-                    }
-                }
-                else
-                {
-                    for (int i = 0; i < eNodes.Count(); i++)
-                        GSARefCounters.RefObject(eNodes[i]);
-
-                    dict[typeof(GSANode)] = eNodes;
-                }
+                // Ensure no coincident nodes
+                if (!dict.ContainsKey(typeof(GSANode)))
+                    dict[typeof(GSANode)] = new List<StructuralObject>();
+                
+                dict[typeof(GSANode)] = HelperFunctions.CollapseNodes(dict[typeof(GSANode)].Cast<GSANode>().ToList(), eNodes.Cast<GSANode>().ToList()).Cast<StructuralObject>().ToList();
 
                 (e as GSA1DElement).Connectivity = eNodes.Select(n => n.Reference).ToList();
 
@@ -133,8 +114,6 @@ namespace SpeckleGSA
 
                 Status.ChangeStatus("Writing 1D elements", counter++ / e1Ds.Count() * 100);
             }
-
-            dict.Remove(typeof(GSA1DElement));
         }
 
         public void ParseGWACommand(string command, Dictionary<Type, List<StructuralObject>> dict = null)
@@ -258,7 +237,9 @@ namespace SpeckleGSA
 
             return string.Join(",", ls);
         }
+        #endregion
 
+        #region Helper Functions
         public List<StructuralObject> GetChildren()
         {
             List<StructuralObject> children = new List<StructuralObject>();
@@ -272,9 +253,7 @@ namespace SpeckleGSA
 
             return children;
         }
-        #endregion
 
-        #region Helper Functions
         private bool ParseEndRelease(char code, string[] pieces, ref int counter)
         {
             switch (code)
@@ -284,6 +263,7 @@ namespace SpeckleGSA
                 case 'R':
                     return false;
                 default:
+                    // TODO
                     Status.AddError("Element end stiffness not supported. Only releases.");
                     counter++;
                     return false;

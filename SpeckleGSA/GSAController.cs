@@ -175,8 +175,12 @@ namespace SpeckleGSA
                             kvp.Value.Remove(t);
                 }
             } while (currentBatch.Count > 0);
+            
+            // Remove unimportant nodes
+            if (Settings.SendOnlyMeaningfulNodes && bucketObjects.ContainsKey(typeof(GSANode)))
+                bucketObjects[typeof(GSANode)] = bucketObjects[typeof(GSANode)].Where(n => (n as GSANode).ForceSend).ToList();
 
-            // Convert objects to base clas
+            // Convert objects to base class
             Dictionary<Type, List<StructuralObject>> tempBucket = new Dictionary<Type, List<StructuralObject>>();
             foreach (KeyValuePair<Type, List<StructuralObject>> kvp in bucketObjects)
             {
@@ -332,7 +336,7 @@ namespace SpeckleGSA
                     
                     try
                     {
-                        if (obj.IsList())
+                        if (obj is IEnumerable)
                         {
                             foreach(StructuralObject o in obj as IList)
                             {
@@ -382,7 +386,6 @@ namespace SpeckleGSA
             // Initialize object write priority list
             Status.ChangeStatus("Preparing to write GSA Object");
 
-
             // Clear GSA file
             foreach (KeyValuePair<Type, List<Type>> kvp in typePrerequisites)
             {
@@ -419,7 +422,6 @@ namespace SpeckleGSA
                             kvp.Value.Remove(t);
                 }
             } while (currentBatch.Count > 0);
-
 
             GSA.UpdateViews();
 

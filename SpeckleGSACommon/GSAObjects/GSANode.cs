@@ -20,6 +20,7 @@ namespace SpeckleGSA
 
         public bool ForceSend;
 
+        #region Contructors and Converters
         public GSANode()
         {
             ForceSend = false;
@@ -48,10 +49,17 @@ namespace SpeckleGSA
 
             return baseClass;
         }
+        #endregion
 
-        #region GSAObject Functions
+        #region GSA Functions
         public static void GetObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
+            if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
+                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
+
+            foreach (Type t in ReadPrerequisite)
+                if (!dict.ContainsKey(t)) return;
+
             List<StructuralObject> nodes = new List<StructuralObject>();
 
             string res = (string)GSA.RunGWACommand("GET_ALL,NODE");
@@ -95,7 +103,6 @@ namespace SpeckleGSA
 
                     Status.ChangeStatus("Reading 0D elements", counter++ / pieces.Length * 100);
                 }
-                
             }
 
             dict[typeof(GSANode)] = nodes;
@@ -103,10 +110,11 @@ namespace SpeckleGSA
 
         public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
-            if (!dict.ContainsKey(typeof(GSANode))) return;
-
+            if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType)) return;
+            
             List<StructuralObject> nodes = dict[typeof(GSANode)];
-
+            
+            // Need iterator to make sure that we don't match with the same node in LINQ
             for (int i = 0; i < nodes.Count(); i++)
             {
                 GSARefCounters.RefObject(nodes[i]);
@@ -135,8 +143,6 @@ namespace SpeckleGSA
 
                 Status.ChangeStatus("Writing nodes and 0D elements", (double)(i+1) / nodes.Count() * 100);
             }
-            
-            dict.Remove(typeof(GSANode));
         }
 
         public void ParseGWACommand(string command, Dictionary<Type, List<StructuralObject>> dict = null)
@@ -305,110 +311,5 @@ namespace SpeckleGSA
             return res + 1;
         }
         #endregion
-    }
-    
-    public class GSA0DElement : StructuralObject
-    {
-        public static readonly string GSAKeyword = "EL";
-        public static readonly string Stream = "elements";
-
-        public string Type;
-        public int Property;
-        public double Mass;
-        public int Connectivity;
-
-        public GSA0DElement()
-        {
-            Type = "MASS";
-            Property = 0;
-            Mass = 0;
-            Connectivity = 0;
-        }
-
-        #region GSAObject Functions
-        public void ParseGWACommand(string command, Dictionary<Type, List<StructuralObject>> dict = null)
-        {
-            string[] pieces = command.ListSplit(",");
-
-            int counter = 1; // Skip identifier
-            Reference = Convert.ToInt32(pieces[counter++]);
-            counter++; // Name
-            counter++; // Color
-            Type = pieces[counter++];
-            Property = Convert.ToInt32(pieces[counter++]);
-            counter++; // group
-
-            Connectivity = Convert.ToInt32(pieces[counter++]);
-
-            Mass = GetGSAMass();
-
-            // Rest is unimportant for 0D element
-        }
-
-        public string GetGWACommand(Dictionary<Type, List<StructuralObject>> dict = null)
-        {
-            List<string> ls = new List<string>();
-
-            ls.Add("SET");
-            ls.Add(GSAKeyword);
-            ls.Add(Reference.ToString());
-            ls.Add(""); // Name
-            ls.Add("NO_RGB");
-            ls.Add(Type);
-            ls.Add(WriteMassProptoGSA().ToString()); // Property
-            ls.Add("0"); // Group
-            ls.Add(Connectivity.ToString());
-            ls.Add("0"); // Orient Node
-            ls.Add("0"); // Beta
-            ls.Add("NO_RLS"); // Release
-            ls.Add("0"); // Offset x-start
-            ls.Add("0"); // Offset y-start
-            ls.Add("0"); // Offset y
-            ls.Add("0"); // Offset z
-
-            //ls.Add("NORMAL"); // Action // TODO: EL.4 SUPPORT
-            ls.Add(""); //Dummy
-
-            return string.Join(",", ls);
-        }
-        #endregion
-
-        private double GetGSAMass()
-        {
-            string res = (string)GSA.RunGWACommand("GET,PROP_MASS," + Property.ToString());
-            string[] pieces = res.ListSplit(",");
-
-            return Convert.ToDouble(pieces[5]);
-        }
-
-        private int WriteMassProptoGSA()
-        {
-            List<string> ls = new List<string>();
-
-            int res = (int)GSA.RunGWACommand("HIGHEST,PROP_MASS");
-
-            ls.Add("SET");
-            ls.Add("PROP_MASS.2");
-            ls.Add((res + 1).ToString());
-            ls.Add("");
-            ls.Add("NO_RGB");
-            ls.Add("GLOBAL");
-            ls.Add(Mass.ToString());
-            ls.Add("0");
-            ls.Add("0");
-            ls.Add("0");
-            ls.Add("0");
-            ls.Add("0");
-            ls.Add("0");
-
-            ls.Add("MOD");
-            ls.Add("100%");
-            ls.Add("100%");
-            ls.Add("100%");
-
-            GSA.RunGWACommand(string.Join(",", ls));
-
-            return res + 1;
-        }
     }
 }

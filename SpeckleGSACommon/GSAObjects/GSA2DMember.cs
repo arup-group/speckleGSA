@@ -20,6 +20,7 @@ namespace SpeckleGSA
         
         public List<int> Connectivity;
 
+        #region Contructors and Converters
         public GSA2DMember()
         {
             Connectivity = new List<int>();
@@ -48,15 +49,19 @@ namespace SpeckleGSA
 
             return baseClass;
         }
+        #endregion
 
-        #region GSAObject Functions
+        #region GSA Functions
         public static void GetObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
+            if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
+                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
+
+            foreach (Type t in ReadPrerequisite)
+                if (!dict.ContainsKey(t)) return;
+
             if (!GSA.TargetDesignLayer) return;
 
-            if (!dict.ContainsKey(typeof(GSANode))) return;
-
-            List<StructuralObject> nodes = dict[typeof(GSANode)];
             List<StructuralObject> m2Ds = new List<StructuralObject>();
 
             // TODO: Workaround for GET_ALL,MEMB bug
@@ -72,7 +77,7 @@ namespace SpeckleGSA
                 tempPieces.Add((string)GSA.RunGWACommand("GET,MEMB," + r.ToString()));
 
             string[] pieces = tempPieces.ToArray();
-            
+
             double counter = 1;
             foreach (string p in pieces)
             {
@@ -87,12 +92,12 @@ namespace SpeckleGSA
                 Status.ChangeStatus("Reading 2D members", counter++ / pieces.Length * 100);
             }
 
-            dict[typeof(GSA2DMember)] = m2Ds;
+            dict[typeof(GSA2DMember)].AddRange(m2Ds);
         }
 
         public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
-            if (!dict.ContainsKey(typeof(GSA2DMember))) return;
+            if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType)) return;
 
             List<StructuralObject> m2Ds = dict[typeof(GSA2DMember)];
 
@@ -103,37 +108,11 @@ namespace SpeckleGSA
 
                 List<StructuralObject> eNodes = (m as GSA2DMember).GetChildren();
 
-                if (dict.ContainsKey(typeof(GSANode)))
-                {
-                    List<StructuralObject> nodes = dict[typeof(GSANode)];
+                // Ensure no coincident nodes
+                if (!dict.ContainsKey(typeof(GSANode)))
+                    dict[typeof(GSANode)] = new List<StructuralObject>();
 
-                    for (int i = 0; i < eNodes.Count(); i++)
-                    {
-                        List<StructuralObject> matches = nodes
-                            .Where(n => (n as GSANode).Coordinates.Equals((eNodes[i] as GSANode).Coordinates)).ToList();
-
-                        if (matches.Count() > 0)
-                        {
-                            if (matches[0].Reference == 0)
-                                matches[0] = GSARefCounters.RefObject(matches[0]);
-
-                            eNodes[i].Reference = matches[0].Reference;
-                            (matches[0] as GSANode).Merge(eNodes[i] as GSANode);
-                        }
-                        else
-                        {
-                            GSARefCounters.RefObject(eNodes[i]);
-                            dict[typeof(GSANode)].Add(eNodes[i]);
-                        }
-                    }
-                }
-                else
-                {
-                    for (int i = 0; i < eNodes.Count(); i++)
-                        GSARefCounters.RefObject(eNodes[i]);
-
-                    dict[typeof(GSANode)] = eNodes;
-                }
+                dict[typeof(GSANode)] = HelperFunctions.CollapseNodes(dict[typeof(GSANode)].Cast<GSANode>().ToList(), eNodes.Cast<GSANode>().ToList()).Cast<StructuralObject>().ToList();
 
                 (m as GSA2DMember).Connectivity = eNodes.Select(n => n.Reference).ToList();
 
@@ -200,10 +179,7 @@ namespace SpeckleGSA
             ls.Add(GSAKeyword);
             ls.Add(Reference.ToString());
             ls.Add(Name);
-            if (Color == null)
-                ls.Add("NO_RGB");
-            else
-                ls.Add(Color.ToNumString());
+            ls.Add(Color == null ? "NO_RGB" : Color.ToString());
             if (Type == Structural2DElementType.SLAB)
                 ls.Add("SLAB");
             else if (Type == Structural2DElementType.WALL)
@@ -235,12 +211,14 @@ namespace SpeckleGSA
             ls.Add("0"); // Offset x 1
             ls.Add("0"); // Offset x 2
             ls.Add("0"); // Offset y
-            ls.Add(Offset.ToNumString()); // Offset z
+            ls.Add(Offset.ToString()); // Offset z
             ls.Add("ALL"); // Exposure
 
             return string.Join(",", ls);
         }
+        #endregion
 
+        #region Helper Functions
         public List<StructuralObject> GetChildren()
         {
             List<StructuralObject> children = new List<StructuralObject>();

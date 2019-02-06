@@ -18,6 +18,7 @@ namespace SpeckleGSA
         public static readonly Type[] ReadPrerequisite = new Type[1] { typeof(GSAMaterial) };
         public static readonly Type[] WritePrerequisite = new Type[1] { typeof(GSAMaterial) };
 
+        #region Contructors and Converters
         public GSA1DProperty()
         {
 
@@ -44,13 +45,17 @@ namespace SpeckleGSA
 
             return baseClass;
         }
+        #endregion
 
-        #region GSAObject Functions
+        #region GSA Functions
         public static void GetObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
-            if (!dict.ContainsKey(typeof(GSAMaterial))) return;
+            if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
+                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
 
-            List<StructuralObject> materials = dict[typeof(GSAMaterial)];
+            foreach (Type t in ReadPrerequisite)
+                if (!dict.ContainsKey(t)) return;
+
             List<StructuralObject> props = new List<StructuralObject>();
 
             string res = (string)GSA.RunGWACommand("GET_ALL,PROP_SEC");
@@ -59,24 +64,23 @@ namespace SpeckleGSA
                 return;
 
             string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
-            
+
             double counter = 1;
             foreach (string p in pieces)
             {
                 GSA1DProperty prop = new GSA1DProperty();
                 prop.ParseGWACommand(p, dict);
-
                 props.Add(prop);
 
                 Status.ChangeStatus("Reading 1D properties", counter++ / pieces.Length * 100);
             }
             
-            dict[typeof(GSA1DProperty)] = props;
+            dict[typeof(GSA1DProperty)].AddRange(props);
         }
 
         public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
-            if (!dict.ContainsKey(typeof(GSA1DProperty))) return;
+            if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType)) return;
 
             List<StructuralObject> props = dict[typeof(GSA1DProperty)];
             
@@ -88,8 +92,6 @@ namespace SpeckleGSA
                 GSA.RunGWACommand((p as GSA1DProperty).GetGWACommand(dict));
                 Status.ChangeStatus("Writing 1D properties", counter++ / props.Count() * 100);
             }
-            
-            dict.Remove(typeof(GSA1DProperty));
         }
 
         public void ParseGWACommand(string command, Dictionary<Type, List<StructuralObject>> dict = null)
@@ -130,7 +132,7 @@ namespace SpeckleGSA
 
             ls.Add("SET");
             ls.Add(GSAKeyword);
-            ls.Add(Reference.ToNumString());
+            ls.Add(Reference.ToString());
             ls.Add(Name);
             ls.Add("NO_RGB");
 
@@ -152,7 +154,7 @@ namespace SpeckleGSA
             else
                 ls.Add("");
 
-            ls.Add(Material.ToNumString());
+            ls.Add(Material.ToString());
             ls.Add("0"); // Analysis material
             ls.Add(GetGeometryDesc());
             ls.Add("0"); // Cost
@@ -161,7 +163,7 @@ namespace SpeckleGSA
         }
         #endregion
 
-        #region Property Parser
+        #region Helper Functions
         public void SetDesc(string desc)
         {
             string[] pieces = desc.ListSplit("%");
@@ -417,7 +419,6 @@ namespace SpeckleGSA
 
             return string.Join("%", ls);
         }
-
         #endregion
     }
 }

@@ -74,7 +74,6 @@ namespace SpeckleGSA
         {
             Units = ((string)RunGWACommand("GET,UNIT_DATA.1,LENGTH")).ListSplit(",")[2];
         }
-
         
         public static Dictionary<string, object> GetBaseProperties()
         {

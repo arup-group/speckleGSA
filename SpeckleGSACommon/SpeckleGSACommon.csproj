@@ -53,6 +53,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="GSA.cs" />
+    <Compile Include="GSAObjects\GSA0DElement.cs" />
     <Compile Include="GSAObjects\GSA0DLoad.cs" />
     <Compile Include="GSAObjects\GSA1DElement.cs" />
     <Compile Include="GSAObjects\GSA1DMember.cs" />

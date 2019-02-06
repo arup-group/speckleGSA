@@ -21,6 +21,7 @@ namespace SpeckleGSA
         public int Axis;
         public bool Projected;
 
+        #region Contructors and Converters
         public GSA2DLoad()
         {
             Axis = 0;
@@ -51,15 +52,17 @@ namespace SpeckleGSA
 
             return baseClass;
         }
+        #endregion
 
-        #region GSAObject Functions
+        #region GSA Functions
         public static void GetObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
-            if (!dict.ContainsKey(typeof(GSA2DElement))) return;
+            if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
+                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
 
-            List<StructuralObject> elements = dict[typeof(GSA2DElement)];
-            List<int> elemRefs = elements.Select(e => e.Reference).ToList();
-
+            foreach (Type t in ReadPrerequisite)
+                if (!dict.ContainsKey(t)) return;
+            
             List<StructuralObject> loads = new List<StructuralObject>();
 
             string res = (string)GSA.RunGWACommand("GET_ALL,LOAD_2D_FACE");
@@ -69,20 +72,24 @@ namespace SpeckleGSA
 
             string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
 
+            List<StructuralObject> elements = dict[typeof(GSA2DElement)];
+            List<int> elemRefs = elements.Select(e => e.Reference).ToList();
+
             double counter = 1;
             foreach (string p in pieces)
             {
                 List<GSA2DLoad> loadSubList = new List<GSA2DLoad>();
 
-                // Placeholder load object to get list of nodes and load values
+                // Placeholder load object to get list of elements and load values
                 // Need to transform to axis
                 GSA2DLoad initLoad = new GSA2DLoad();
                 initLoad.ParseGWACommand(p);
 
-                // Only send those where the nodes actually exists
+                // Only send those where the element actually exists
                 List<int> elemsApplied = initLoad.Elements
                     .Where(eRef => elemRefs.Contains(eRef)).ToList();
 
+                // Create load for each element applied
                 foreach (int eRef in elemsApplied)
                 {
                     GSA2DLoad load = new GSA2DLoad();
@@ -91,10 +98,7 @@ namespace SpeckleGSA
 
                     // Transform load to defined axis
                     GSA2DElement elem = elements.Where(e => e.Reference == eRef).First() as GSA2DElement;
-                    Axis loadAxis = HelperFunctions.Parse2DAxis(
-                        elem.Coordinates.ToArray(),
-                        0,
-                        load.Axis != 0); // Assumes if not global, local
+                    Axis loadAxis = HelperFunctions.Parse2DAxis(elem.Coordinates.ToArray(), 0, load.Axis != 0); // Assumes if not global, local
                     load.Loading = initLoad.Loading;
                     if (load.Projected)
                     {
@@ -103,11 +107,10 @@ namespace SpeckleGSA
                     }
                     load.Loading.TransformOntoAxis(loadAxis);
 
-                    // If the loading already exists, add node ref to list
-                    List<GSA2DLoad> matches = loadSubList.Where(l => l.Loading == load.Loading).ToList();
-
-                    if (matches.Count() > 0)
-                        matches[0].Elements.Add(eRef);
+                    // If the loading already exists, add element ref to list
+                    GSA2DLoad match = loadSubList.Count() > 0 ? loadSubList.Where(l => l.Loading.Equals(load.Loading)).First() : null;
+                    if (match != null)
+                        match.Elements.Add(eRef);
                     else
                     {
                         load.Elements.Add(eRef);
@@ -119,14 +122,15 @@ namespace SpeckleGSA
                 Status.ChangeStatus("Reading 2D face loads", counter++ / pieces.Length * 100);
             }
 
-            dict[typeof(GSA2DLoad)] = loads;
+            dict[typeof(GSA2DLoad)].AddRange(loads);
         }
 
         public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
-            if (!dict.ContainsKey(typeof(GSA2DLoad))) return;
-            if (!dict.ContainsKey(typeof(GSA2DElement)) & GSA.TargetAnalysisLayer) return;
-            if (!dict.ContainsKey(typeof(GSA2DMember)) & GSA.TargetDesignLayer) return;
+            if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType)) return;
+            
+            if (GSA.TargetAnalysisLayer && !dict.ContainsKey(typeof(GSA2DElement))) return;
+            if (GSA.TargetDesignLayer && !dict.ContainsKey(typeof(GSA2DMember))) return;
 
             List<StructuralObject> loads = dict[typeof(GSA2DLoad)];
 
@@ -227,7 +231,6 @@ namespace SpeckleGSA
 
             return ls;
         }
-
         #endregion
     }
 }

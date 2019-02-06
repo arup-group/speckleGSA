@@ -20,6 +20,7 @@ namespace SpeckleGSA
         // Need local reference since materials can have same reference if different types
         public int LocalReference;
 
+        #region Contructors and Converters
         public GSAMaterial()
         {
             LocalReference = 0;
@@ -48,10 +49,17 @@ namespace SpeckleGSA
 
             return baseClass;
         }
+        #endregion
 
-        #region GSAObject Functions
+        #region GSA Functions
         public static void GetObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
+            if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
+                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
+
+            foreach (Type t in ReadPrerequisite)
+                if (!dict.ContainsKey(t)) return;
+
             // TODO: Only supports steel and concrete
             string[] materialIdentifier = new string[]
                 { "MAT_STEEL", "MAT_CONCRETE" };
@@ -80,12 +88,12 @@ namespace SpeckleGSA
                 Status.ChangeStatus("Reading materials", (double)(i+1) / pieces.Count() * 100);
             }
 
-            dict[typeof(GSAMaterial)] = materials;
+            dict[typeof(GSAMaterial)].AddRange(materials);
         }
 
         public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
-            if (!dict.ContainsKey(typeof(GSAMaterial))) return;
+            if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType)) return;
 
             List<StructuralObject> materials = dict[typeof(GSAMaterial)];
 
@@ -97,8 +105,6 @@ namespace SpeckleGSA
                 GSA.RunGWACommand((m as GSAMaterial).GetGWACommand());
                 Status.ChangeStatus("Writing materials", counter++ / materials.Count() * 100);
             }
-
-            dict.Remove(typeof(GSAMaterial));
         }
 
         public void ParseGWACommand(string command, Dictionary<Type, List<StructuralObject>> dict = null)
@@ -179,6 +185,5 @@ namespace SpeckleGSA
             return string.Join(",", ls);
         }
         #endregion
-
     }
 }

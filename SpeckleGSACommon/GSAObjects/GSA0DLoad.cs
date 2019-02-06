@@ -14,13 +14,13 @@ namespace SpeckleGSA
     {
         public static readonly string GSAKeyword = "LOAD_NODE";
         public static readonly string Stream = "loads";
-        public static readonly int WritePriority = 9999;
 
         public static readonly Type[] ReadPrerequisite = new Type[1] { typeof(GSANode) };
         public static readonly Type[] WritePrerequisite = new Type[1] { typeof(GSANode) };
         
         public int Axis;
 
+        #region Contructors and Converters
         public GSA0DLoad()
         {
             Axis = 0;
@@ -49,14 +49,16 @@ namespace SpeckleGSA
 
             return baseClass;
         }
+        #endregion
 
-        #region GSAObject Functions
+        #region GSA Functions
         public static void GetObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
-            if (!dict.ContainsKey(typeof(GSANode))) return;
+            if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
+                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
 
-            List<StructuralObject> nodes = dict[typeof(GSANode)];
-            List<int> nodeRefs = nodes.Select(n => n.Reference).ToList(); 
+            foreach (Type t in ReadPrerequisite)
+                if (!dict.ContainsKey(t)) return;
 
             List<StructuralObject> loads = new List<StructuralObject>();
 
@@ -66,25 +68,29 @@ namespace SpeckleGSA
                 return;
 
             string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
-
+            
+            List<StructuralObject> nodes = dict[typeof(GSANode)];
+            
             double counter = 1;
             foreach (string p in pieces)
             {
                 List<GSA0DLoad> loadSubList = new List<GSA0DLoad>();
 
                 // Placeholder load object to get list of nodes and load values
-                // Need to transform to axis
+                // Need to transform to axis so one load definition may be transformed to many
                 GSA0DLoad initLoad = new GSA0DLoad();
                 initLoad.ParseGWACommand(p);
 
                 // Only send those where the nodes actually exists
                 List<int> nodesApplied = initLoad.Nodes
-                    .Where(nRef => nodeRefs.Contains(nRef)).ToList();
+                    .Where(nRef => nodes.Select(n => n.Reference)
+                    .Contains(nRef)).ToList();
 
                 // Raise node flag to make sure it gets sent
                 foreach(GSANode n in nodes.Where(n => nodesApplied.Contains(n.Reference)).Cast<GSANode>())
                     n.ForceSend = true;
 
+                // Create load for each node applied
                 foreach (int nRef in nodesApplied)
                 {
                     GSA0DLoad load = new GSA0DLoad();
@@ -98,9 +104,9 @@ namespace SpeckleGSA
                     load.Loading.TransformOntoAxis(loadAxis);
 
                     // If the loading already exists, add node ref to list
-                    List<GSA0DLoad> matches = loadSubList.Where(l => l.Loading == load.Loading).ToList();
-                    if (matches.Count() > 0)
-                        matches[0].Nodes.Add(nRef);
+                    GSA0DLoad match = loadSubList.Count() > 0 ? loadSubList.Where(l => l.Loading.Equals(load.Loading)).First() : null;
+                    if (match != null)
+                        match.Nodes.Add(nRef);
                     else
                     {
                         load.Nodes.Add(nRef);
@@ -113,14 +119,14 @@ namespace SpeckleGSA
                 Status.ChangeStatus("Reading 0D loads", counter++ / pieces.Length * 100);
             }
 
-            dict[typeof(GSA0DLoad)] = loads;
+            dict[typeof(GSA0DLoad)].AddRange(loads);
         }
 
         public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
-            if (!dict.ContainsKey(typeof(GSA0DLoad))) return;
+            if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType)) return;
 
-            List<StructuralObject> loads = dict[typeof(GSA0DLoad)] as List<StructuralObject>;
+            List<StructuralObject> loads = dict[typeof(GSA0DLoad)];
 
             double counter = 1;
             foreach (StructuralObject l in loads)
@@ -197,7 +203,6 @@ namespace SpeckleGSA
                 subLs.Add(values[i].ToString());
 
                 ls.Add(string.Join(",", subLs));
-
             }
 
             return ls;
