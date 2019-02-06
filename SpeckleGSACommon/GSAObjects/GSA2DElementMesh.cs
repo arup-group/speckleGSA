@@ -2,321 +2,126 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Interop.Gsa_10_0;
+using SpeckleStructures;
 
 namespace SpeckleGSA
 {
-    public class GSA2DElementMesh : GSAObject
+    public class GSA2DElementMesh : Structural2DElementMesh
     {
-        public override string Entity { get => "2D Element"; set { } }
-
         public static readonly string GSAKeyword = "";
         public static readonly string Stream = "elements";
-        public static readonly int WritePriority = 0;
 
-        public static readonly Type[] ReadPrerequisite = new Type[2] { typeof(GSA2DElement), typeof(GSA2DFaceLoad) };
-
-        public int Property { get; set; }
-        public double Offset { get; set; }
-        public List<object> Elements { get; set; }
-
-        public Dictionary<string,List<string>> Edges;
-        public Dictionary<string, int> NodeMapping;
-        public List<List<string>> ElementConnectivity;
+        public static readonly Type[] ReadPrerequisite = new Type[2] { typeof(GSA2DElement), typeof(GSA2DLoad) };
+        public static readonly Type[] WritePrerequisite = new Type[0] { };
 
         public GSA2DElementMesh()
         {
-            Property = 1;
-            Offset = 0;
 
-            Elements = new List<object>();
+        }
 
-            Edges = new Dictionary<string, List<string>>();
-            NodeMapping = new Dictionary<string, int>();
-            ElementConnectivity = new List<List<string>>();
+        public GSA2DElementMesh(double[] edgeCoordinates, string name = "", Structural2DElementType type = null, int property = 0, Axis axis = null, double offset = 0)
+            : base (edgeCoordinates, name, type, property, axis, offset)
+        {
+
+        }
+
+        public GSA2DElementMesh(GSA2DElement element)
+            : base (element)
+        {
+
+        }
+
+        public GSA2DElementMesh(Structural2DElementMesh baseClass)
+        {
+            foreach (FieldInfo f in baseClass.GetType().GetFields())
+                f.SetValue(this, f.GetValue(baseClass));
+
+            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
+                p.SetValue(this, p.GetValue(baseClass));
         }
 
         #region GSAObject Functions
-        public static void GetObjects(Dictionary<Type, object> dict)
+        public static void GetObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
+            // Merges the 2D elements into mesh
             if (!GSA.TargetAnalysisLayer) return;
-            
+
             if (!dict.ContainsKey(typeof(GSA2DElement))) return;
-            
-            List<GSAObject> meshes = new List<GSAObject>();
-            
-            foreach (GSAObject e2D in dict[typeof(GSA2DElement)] as List<GSAObject>)
+
+            List<StructuralObject> meshes = new List<StructuralObject>();
+
+            foreach (StructuralObject e2D in dict[typeof(GSA2DElement)])
             {
-                GSA2DElementMesh mesh = new GSA2DElementMesh();
-                mesh.Property = (e2D as GSA2DElement).Property;
-                mesh.Offset = (e2D as GSA2DElement).Offset;
-                mesh.Color = (e2D as GSA2DElement).Color;
-                mesh.AddElement(e2D as GSA2DElement);
+                GSA2DElementMesh mesh = new GSA2DElementMesh(e2D as GSA2DElement);
                 meshes.Add(mesh);
             }
 
             if (Settings.Merge2DElementsIntoMesh)
-            { 
+            {
                 for (int i = 0; i < meshes.Count(); i++)
                 {
-                    List<GSAObject> matches = meshes.Where((m, j) => (meshes[i] as GSA2DElementMesh).MeshMergeable(m as GSA2DElementMesh) & j != i).ToList();
+                    List<StructuralObject> matches = meshes.Where((m, j) => (meshes[i] as GSA2DElementMesh).MeshMergeable(m as GSA2DElementMesh) & j != i).ToList();
 
-                    foreach (GSAObject m in matches)
+                    foreach (StructuralObject m in matches)
                         (meshes[i] as GSA2DElementMesh).MergeMesh(m as GSA2DElementMesh);
 
-                    foreach (GSAObject m in matches)
+                    foreach (StructuralObject m in matches)
                         meshes.Remove(m);
-                
+
                     if (matches.Count() > 0) i--;
 
-                    Status.ChangeStatus("Merging 2D elements", (double)(i+1) / meshes.Count() * 100);
+                    Status.ChangeStatus("Merging 2D elements", (double)(i + 1) / meshes.Count() * 100);
                 }
             }
 
-            List<GSAObject> singleFaceMesh = meshes.Where(m => (m as GSA2DElementMesh).Elements.Count() <= 1).ToList();
-
-            dict[typeof(GSA2DElement)] = singleFaceMesh.SelectMany(m => (m as GSA2DElementMesh).GetChildren()).ToList();
-            foreach(GSAObject o in singleFaceMesh)
-                meshes.Remove(o);
-
+            dict.Remove(typeof(GSA2DElement));
             dict[typeof(GSA2DElementMesh)] = meshes;
         }
 
-        public static void WriteObjects(Dictionary<Type, object> dict)
+        public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
+            // Convert GSA2DElementMesh into other classes depending on the target
+
             if (!dict.ContainsKey(typeof(GSA2DElementMesh))) return;
 
-            List<GSAObject> meshes = dict[typeof(GSA2DElementMesh)] as List<GSAObject>;
-
-            double counter = 1;
-            foreach (GSAObject m in meshes)
+            if (!GSA.TargetAnalysisLayer)
             {
-                List<GSAObject> e2Ds = m.GetChildren();
-
-                for (int i = 0; i < e2Ds.Count(); i++)
-                    GSARefCounters.RefObject(e2Ds[i]);
-
-                if (!dict.ContainsKey(typeof(GSA2DElement)))
-                    dict[typeof(GSA2DElement)] = e2Ds;
+                if (dict.ContainsKey(typeof(GSA2DMember)))
+                    dict[typeof(GSA2DMember)].AddRange(dict[typeof(GSA2DElementMesh)].Cast<Structural2DElementMesh>()
+                        .Select(o => new GSA2DMember(o)));
                 else
-                    (dict[typeof(GSA2DElement)] as List<GSAObject>).AddRange(e2Ds);
+                    dict[typeof(GSA2DMember)] = dict[typeof(GSA2DElementMesh)].Cast<Structural2DElementMesh>()
+                        .Select(o => new GSA2DMember(o)).Cast<StructuralObject>().ToList();
+            }
+            else
+            {
+                List<StructuralObject> e2Ds = new List<StructuralObject>();
 
-                Status.ChangeStatus("Unrolling 2D meshes", counter++ / meshes.Count() * 100);
+                foreach (StructuralObject m in dict[typeof(GSA2DElementMesh)])
+                {
+                    List<StructuralObject> meshElements = (m as Structural2DElementMesh).Elements.Select(o => new GSA2DElement(o))
+                        .Cast<StructuralObject>().ToList();
+
+                    foreach (StructuralObject e in meshElements)
+                    {
+                        (e as GSA2DElement).Reference = 0;
+                        (e as GSA2DElement).MeshReference = m.Reference;
+                    }
+
+                    e2Ds.AddRange(meshElements);
+                }
+
+                if (dict.ContainsKey(typeof(GSA2DElement)))
+                    dict[typeof(GSA2DElement)].AddRange(e2Ds);
+                else
+                    dict[typeof(GSA2DElement)] = e2Ds;
             }
 
             dict.Remove(typeof(GSA2DElementMesh));
-        }
-
-        public override void ParseGWACommand(string command, Dictionary<Type, object> dict = null)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override string GetGWACommand(Dictionary<Type, object> dict = null)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override List<GSAObject> GetChildren()
-        {
-            List<GSAObject> elements = new List<GSAObject>();
-
-            for(int i = 0; i < ElementConnectivity.Count(); i++)
-            {
-                GSA2DElement elem = new GSA2DElement();
-
-                elem.MeshReference = Reference;
-                elem.Property = Property;
-                elem.Offset = Offset;
-                elem.Color = Color;
-
-                elem.Coor = ElementConnectivity[i]
-                    .SelectMany(c => 
-                        c.ToCoor())
-                        .ToList();
-
-                switch (elem.Coor.Count() / 3)
-                {
-                    case 3:
-                        elem.Type = "TRI3";
-                        break;
-                    case 4:
-                        elem.Type = "QUAD4";
-                        break;
-                    default:
-                        continue;
-                }
-
-                if (Elements.Count > i)
-                {
-                    try
-                    {
-                        Dictionary<string, object> elemDict = Elements[i] as Dictionary<string, object>;
-
-                        elem.Name = (string)elemDict["Name"];
-                        elem.Reference = (int)(elemDict["Reference"].ToDouble());
-                        elem.Axis = (Dictionary<string, object>)elemDict["Axis"];
-                    }
-                    catch { }
-                }
-
-                elements.Add(elem);
-            }
-
-            return elements;
-        }
-
-        public override void ScaleToGSAUnits(string originalUnit)
-        {
-            base.ScaleToGSAUnits(originalUnit);
-
-            Dictionary<string, List<string>> scaledEdges = new Dictionary<string, List<string>>();
-            foreach(string k in Edges.Keys)
-            {
-                string newKey = ScaleStringCordinateToGSAUnits(k, originalUnit);
-                scaledEdges[newKey] = new List<string>();
-                foreach (string s in Edges[k])
-                    scaledEdges[newKey].Add(ScaleStringCordinateToGSAUnits(s, originalUnit));
-            }
-            Edges = scaledEdges;
-
-            Dictionary<string, int> scaledNodeMapping = new Dictionary<string, int>();
-            foreach (string k in NodeMapping.Keys)
-                scaledNodeMapping[ScaleStringCordinateToGSAUnits(k, originalUnit)] = NodeMapping[k];
-            NodeMapping = scaledNodeMapping;
-
-            for (int i=0; i < ElementConnectivity.Count(); i++)
-            {
-                for (int j = 0; j < ElementConnectivity[i].Count(); j++)
-                {
-                    string[] coors = ElementConnectivity[i][j].ListSplit(",");
-                    ElementConnectivity[i][j] = string.Join(",",coors.Select(c => Convert.ToDouble(c).ConvertUnit(originalUnit, GSA.Units).ToString()));
-                }
-            }
-
-            Offset = Offset.ConvertUnit(originalUnit, GSA.Units);
-        }
-
-        private string ScaleStringCordinateToGSAUnits(string originalString, string unit)
-        {
-            string[] coors = originalString.ListSplit(",");
-            return string.Join(",", coors.Select(c => Convert.ToDouble(c).ConvertUnit(unit, GSA.Units).ToString()));
-        }
-        #endregion
-
-        #region Mesh Operations
-        public bool MeshMergeable(GSA2DElementMesh mesh)
-        {
-            if (mesh.Property != Property || mesh.Offset != Offset)
-                return false;
-
-            if ((mesh.Color == null && Color != null) || (mesh.Color != null && Color == null) ||
-                (mesh.Color != null && Color != null && (int)mesh.Color != (int)Color))
-                return false;
-
-            if (EdgeinMesh(mesh.Edges)) return true;
-
-            return false;
-        }
-
-        public void MergeMesh(GSA2DElementMesh mesh)
-        {
-            foreach (KeyValuePair<string, List<string>> kvp in mesh.Edges)
-            {
-                if (Edges.ContainsKey(kvp.Key))
-                {
-                    Edges[kvp.Key].AddRange(kvp.Value);
-                    Edges[kvp.Key] = Edges[kvp.Key].Distinct().ToList();
-                }
-                else
-                {
-                    Edges[kvp.Key] = kvp.Value;
-                }
-            }
-
-            foreach (KeyValuePair<string, int> nMap in mesh.NodeMapping)
-                if (!NodeMapping.ContainsKey(nMap.Key))
-                {
-                    NodeMapping[nMap.Key] = Coor.Count() / 3;
-                    Coor.AddRange(mesh.Coor.Skip(nMap.Value * 3).Take(3));
-                }
-
-            Elements.AddRange(mesh.Elements);
-            ElementConnectivity.AddRange(mesh.ElementConnectivity);
-        }
-        #endregion
-
-        #region Element Operations
-        public bool EdgeinMesh(Dictionary<string, List<string>> edges)
-        {
-            foreach (KeyValuePair<string, List<string>> kvp in edges)
-            {
-                if (Edges.ContainsKey(kvp.Key))
-                {
-                    if (Edges[kvp.Key].Any(a => kvp.Value.Any(b => b == a)))
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        public void AddElement(GSA2DElement element)
-        {
-            Dictionary<string, object> e = new Dictionary<string, object>()
-            {
-                { "Name", element.Name },
-                { "Reference", element.Reference },
-                { "Axis", element.Axis }
-            };
-            AddEdges(element.Coor);
-            AddCoors(element.Coor);
-
-            List<string> elementConnectivity = new List<string>();
-            for (int i = 0; i < element.Coor.Count() / 3; i++)
-                elementConnectivity.Add(string.Join(",",element.Coor.Skip(i * 3).Take(3).Select(x => x.ToString())));
-            ElementConnectivity.Add(elementConnectivity);
-
-            Elements.Add(e);
-        }
-
-        public void AddEdges(List<double> coordinates)
-        {
-            List<double> loopedCoordinates = new List<double>(coordinates);
-            loopedCoordinates.AddRange(coordinates.Take(3));
-
-            for (int i = 0; i < loopedCoordinates.Count() / 3; i++)
-            {
-                string key = string.Join(",",loopedCoordinates.Skip(i * 3).Take(3).Select(x => x.ToString()));
-                string value = string.Join(",", loopedCoordinates.Skip((i+1) * 3).Take(3).Select(x => x.ToString()));
-                if (Edges.ContainsKey(key))
-                    Edges[key].Add(value);
-                else
-                    Edges[key] = new List<string>() { value };
-
-                if (Edges.ContainsKey(value))
-                    Edges[value].Add(key);
-                else
-                    Edges[value] = new List<string>() { key };
-            }
-        }
-
-        public void AddCoors(List<double> coordinates)
-        {
-            for (int i = 0; i < coordinates.Count() / 3; i++)
-            {
-                string key = string.Join(",", coordinates.Skip(i * 3).Take(3).Select(x => x.ToString()));
-
-                if (!NodeMapping.ContainsKey(key))
-                {
-                    NodeMapping[key] = Coor.Count() / 3;
-                    Coor.AddRange(coordinates.Skip(i * 3).Take(3).ToArray());
-                }
-            }
         }
         #endregion
     }

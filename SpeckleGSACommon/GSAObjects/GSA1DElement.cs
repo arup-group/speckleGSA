@@ -1,82 +1,50 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Media.Media3D;
 using Interop.Gsa_10_0;
+using SpeckleStructures;
 
 namespace SpeckleGSA
 {
-    public class GSA1DElement : GSAObject
+    public class GSA1DElement : Structural1DElement
     {
-        public override string Entity { get => "1D Element"; set { } }
-
-        public static readonly string GSAKeyword  = "EL";
+        public static readonly string GSAKeyword = "EL";
         public static readonly string Stream = "elements";
-        public static readonly int WritePriority = 1;
 
         public static readonly Type[] ReadPrerequisite = new Type[1] { typeof(GSANode) };
+        public static readonly Type[] WritePrerequisite = new Type[1] { typeof(GSA1DProperty) };
 
-        public string Type { get; set; }
-        public int Property { get; set; }
-        public Dictionary<string, object> Axis { get; set; }
-        public Dictionary<string, object> EndCondition { get; set; }
-        public Dictionary<string, object> Offset { get; set; }
-
-        public List<int> Connectivity;
+        private List<int> Connectivity;
 
         public GSA1DElement()
         {
-            Type = "BEAM";
-            Property = 1;
-            Axis = new Dictionary<string, object>()
-            {
-                { "X", new Dictionary<string, object> { { "x", 1 }, { "y", 0 },{ "z", 0 }  } },
-                { "Y", new Dictionary<string, object> { { "x", 0 }, { "y", 1 },{ "z", 0 }  } },
-                { "Z", new Dictionary<string, object> { { "x", 0 }, { "y", 0 },{ "z", 1 }  } },
-            };
-            EndCondition = new Dictionary<string, object>()
-            {
-                { "start", new Dictionary<string,object>()
-                {
-                    { "x", "FIXED" },
-                    { "y", "FIXED" },
-                    { "z", "FIXED" },
-                    { "xx", "FIXED" },
-                    { "yy", "FIXED" },
-                    { "zz", "FIXED" },
-                }
-                },
-                { "end", new Dictionary<string,object>()
-                {
-                    { "x", "FIXED" },
-                    { "y", "FIXED" },
-                    { "z", "FIXED" },
-                    { "xx", "FIXED" },
-                    { "yy", "FIXED" },
-                    { "zz", "FIXED" },
-                }
-                },
-            };
-            Offset = new Dictionary<string, object>()
-            {
-                { "Vertical", 0 },
-                { "Horizontal", 0 },
-            };
-
             Connectivity = new List<int>();
         }
 
+        public GSA1DElement(Structural1DElement baseClass)
+        {
+            Connectivity = new List<int>();
+
+            foreach (FieldInfo f in baseClass.GetType().GetFields())
+                f.SetValue(this, f.GetValue(baseClass));
+
+            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
+                p.SetValue(this, p.GetValue(baseClass));
+        }
+
         #region GSAObject Functions
-        public static void GetObjects(Dictionary<Type, object> dict)
+        public static void GetObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
             if (!GSA.TargetAnalysisLayer) return;
 
             if (!dict.ContainsKey(typeof(GSANode))) return;
 
-            List<GSAObject> nodes = dict[typeof(GSANode)] as List<GSAObject>;
-            List<GSAObject> e1Ds = new List<GSAObject>();
+            List<StructuralObject> nodes = dict[typeof(GSANode)];
+            List<StructuralObject> e1Ds = new List<StructuralObject>();
 
             string res = (string)GSA.RunGWACommand("GET_ALL,EL");
 
@@ -101,52 +69,54 @@ namespace SpeckleGSA
             dict[typeof(GSA1DElement)] = e1Ds;
         }
 
-        public static void WriteObjects(Dictionary<Type, object> dict)
+        public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
             if (!dict.ContainsKey(typeof(GSA1DElement))) return;
 
-            List<GSAObject> e1Ds = dict[typeof(GSA1DElement)] as List<GSAObject>;
+            List<StructuralObject> e1Ds = dict[typeof(GSA1DElement)];
 
             double counter = 1;
-            foreach (GSAObject e in e1Ds)
+            foreach (StructuralObject e in e1Ds)
             {
                 GSARefCounters.RefObject(e);
 
-                List<GSAObject> nodes = e.GetChildren();
+                List<StructuralObject> eNodes = (e as GSA1DElement).GetChildren();
 
                 if (dict.ContainsKey(typeof(GSANode)))
-                { 
-                    for (int i = 0; i < nodes.Count(); i++)
+                {
+                    List<StructuralObject> nodes = dict[typeof(GSANode)];
+
+                    for (int i = 0; i < eNodes.Count(); i++)
                     {
-                        List<GSAObject> matches = (dict[typeof(GSANode)] as List<GSAObject>).Where(
-                            n => (n as GSANode).IsCoincident(nodes[i] as GSANode)).ToList();
-
+                        List<StructuralObject> matches = nodes
+                            .Where(n => (n as GSANode).Coordinates.Equals((eNodes[i] as GSANode).Coordinates)).ToList();
+                        
                         if (matches.Count() > 0)
-                        { 
+                        {
                             if (matches[0].Reference == 0)
-                                GSARefCounters.RefObject(matches[0]);
+                                matches[0] = GSARefCounters.RefObject(matches[0]);
 
-                            nodes[i].Reference = matches[0].Reference;
-                            (matches[0] as GSANode).Merge(nodes[i] as GSANode);
+                            eNodes[i].Reference = matches[0].Reference;
+                            (matches[0] as GSANode).Merge(eNodes[i] as GSANode);
                         }
                         else
                         {
-                            GSARefCounters.RefObject(nodes[i]);
-                            (dict[typeof(GSANode)] as List<GSAObject>).Add(nodes[i]);
+                            GSARefCounters.RefObject(eNodes[i]);
+                            dict[typeof(GSANode)].Add(eNodes[i]);
                         }
                     }
                 }
                 else
                 {
-                    for (int i = 0; i < nodes.Count(); i++)
-                        GSARefCounters.RefObject(nodes[i]);
+                    for (int i = 0; i < eNodes.Count(); i++)
+                        GSARefCounters.RefObject(eNodes[i]);
 
-                    dict[typeof(GSANode)] = nodes;
+                    dict[typeof(GSANode)] = eNodes;
                 }
 
-                (e as GSA1DElement).Connectivity = nodes.Select(n => n.Reference).ToList();
+                (e as GSA1DElement).Connectivity = eNodes.Select(n => n.Reference).ToList();
 
-                GSA.RunGWACommand(e.GetGWACommand());
+                GSA.RunGWACommand((e as GSA1DElement).GetGWACommand());
 
                 Status.ChangeStatus("Writing 1D elements", counter++ / e1Ds.Count() * 100);
             }
@@ -154,67 +124,69 @@ namespace SpeckleGSA
             dict.Remove(typeof(GSA1DElement));
         }
 
-        public override void ParseGWACommand(string command, Dictionary<Type, object> dict = null)
+        public void ParseGWACommand(string command, Dictionary<Type, List<StructuralObject>> dict = null)
         {
             string[] pieces = command.ListSplit(",");
 
             int counter = 1; // Skip identifier
             Reference = Convert.ToInt32(pieces[counter++]);
             Name = pieces[counter++].Trim(new char[] { '"' });
-            Color = pieces[counter++].ParseGSAColor();
-            Type = pieces[counter++];
+            counter++; // Colour
+            counter++; // Type
             Property = Convert.ToInt32(pieces[counter++]);
             counter++; // Group
-            
-            Coor.Clear();
 
-            List<GSAObject> nodes = dict[typeof(GSANode)] as List<GSAObject>;
+            Coordinates = new Coordinates();
             for (int i = 0; i < 2; i++)
             {
                 int key = Convert.ToInt32(pieces[counter++]);
-                Coor.AddRange(nodes.Where(n => n.Reference == key).FirstOrDefault().Coor);
+                Coordinates.Add(dict[typeof(GSANode)].Cast<GSANode>().Where(n => n.Reference == key).FirstOrDefault().Coordinates);
             }
 
             int orientationNodeRef = Convert.ToInt32(pieces[counter++]);
             double rotationAngle = Convert.ToDouble(pieces[counter++]);
 
             if (orientationNodeRef != 0)
-                Axis = HelperFunctions.Parse1DAxis(Coor.ToArray(),
+                Axis = HelperFunctions.Parse1DAxis(Coordinates.ToArray(),
                     rotationAngle,
-                    nodes.Where(n => n.Reference == orientationNodeRef).FirstOrDefault().Coor.ToArray());
+                    dict[typeof(GSANode)].Cast<GSANode>().Where(n => n.Reference == orientationNodeRef).FirstOrDefault().Coordinates.ToArray());
             else
-                Axis = HelperFunctions.Parse1DAxis(Coor.ToArray(), rotationAngle);
+                Axis = HelperFunctions.Parse1DAxis(Coordinates.ToArray(), rotationAngle);
 
 
             if (pieces[counter++] != "NO_RLS")
             {
                 string start = pieces[counter++];
                 string end = pieces[counter++];
-                (EndCondition["start"] as Dictionary<string, object>)["x"] = ParseEndStiffness(start[0], pieces, ref counter);
-                (EndCondition["start"] as Dictionary<string, object>)["y"] = ParseEndStiffness(start[1], pieces, ref counter);
-                (EndCondition["start"] as Dictionary<string, object>)["z"] = ParseEndStiffness(start[2], pieces, ref counter);
-                (EndCondition["start"] as Dictionary<string, object>)["xx"] = ParseEndStiffness(start[3], pieces, ref counter);
-                (EndCondition["start"] as Dictionary<string, object>)["yy"] = ParseEndStiffness(start[4], pieces, ref counter);
-                (EndCondition["start"] as Dictionary<string, object>)["zz"] = ParseEndStiffness(start[5], pieces, ref counter);
-                (EndCondition["end"] as Dictionary<string, object>)["x"] = ParseEndStiffness(end[0], pieces, ref counter);
-                (EndCondition["end"] as Dictionary<string, object>)["y"] = ParseEndStiffness(end[1], pieces, ref counter);
-                (EndCondition["end"] as Dictionary<string, object>)["z"] = ParseEndStiffness(end[2], pieces, ref counter);
-                (EndCondition["end"] as Dictionary<string, object>)["xx"] = ParseEndStiffness(end[3], pieces, ref counter);
-                (EndCondition["end"] as Dictionary<string, object>)["yy"] = ParseEndStiffness(end[4], pieces, ref counter);
-                (EndCondition["end"] as Dictionary<string, object>)["zz"] = ParseEndStiffness(end[5], pieces, ref counter);
+
+                EndCondition1.X = ParseEndRelease(start[0], pieces, ref counter);
+                EndCondition1.Y = ParseEndRelease(start[1], pieces, ref counter);
+                EndCondition1.Z = ParseEndRelease(start[2], pieces, ref counter);
+                EndCondition1.XX = ParseEndRelease(start[3], pieces, ref counter);
+                EndCondition1.YY = ParseEndRelease(start[4], pieces, ref counter);
+                EndCondition1.ZZ = ParseEndRelease(start[5], pieces, ref counter);
+                EndCondition2.X = ParseEndRelease(end[0], pieces, ref counter);
+                EndCondition2.Y = ParseEndRelease(end[1], pieces, ref counter);
+                EndCondition2.Z = ParseEndRelease(end[2], pieces, ref counter);
+                EndCondition2.XX = ParseEndRelease(end[3], pieces, ref counter);
+                EndCondition2.YY = ParseEndRelease(end[4], pieces, ref counter);
+                EndCondition2.ZZ = ParseEndRelease(end[5], pieces, ref counter);
             }
 
-            counter++; // offset x-start
-            counter++; // offset x-end
+            Offset1.X = Convert.ToDouble(pieces[counter++]);
+            Offset2.X = Convert.ToDouble(pieces[counter++]);
 
-            Offset["Horizontal"] = Convert.ToDouble(pieces[counter++]);
-            Offset["Vertical"] = Convert.ToDouble(pieces[counter++]);
+            Offset1.Y = Convert.ToDouble(pieces[counter++]);
+            Offset2.Y = Offset1.Y;
+
+            Offset1.Z = Convert.ToDouble(pieces[counter++]);
+            Offset2.Z = Offset1.Z;
 
             //counter++; // Action // TODO: EL.4 SUPPORT
             counter++; // Dummy
         }
 
-        public override string GetGWACommand(Dictionary<Type, object> dict = null)
+        public string GetGWACommand(Dictionary<Type, List<StructuralObject>> dict = null)
         {
             List<string> ls = new List<string>();
 
@@ -222,11 +194,8 @@ namespace SpeckleGSA
             ls.Add(GSAKeyword);
             ls.Add(Reference.ToString());
             ls.Add(Name);
-            if (Color == null)
-                ls.Add("NO_RGB");
-            else
-                ls.Add(Color.ToNumString());
-            ls.Add(Type);
+            ls.Add("NO_RGB");
+            ls.Add("BEAM"); // Type
             ls.Add(Property.ToString());
             ls.Add("0"); // Group
             foreach (int c in Connectivity)
@@ -234,43 +203,42 @@ namespace SpeckleGSA
 
             ls.Add("0"); // Orientation Node
             ls.Add(HelperFunctions.Get1DAngle(Axis).ToString());
-
-            if (Coor.Count() / 3 == 2)
+            
+            if (EndCondition1 != new SixVectorBool() || EndCondition2 != new SixVectorBool())
             {
                 ls.Add("RLS");
 
-                string start = "";
-                string end = "";
-                List<double> stiffness = new List<double>();
+                string end1 = "";
 
-                start += GetEndStiffness((EndCondition["start"] as Dictionary<string, object>)["x"], ref stiffness);
-                start += GetEndStiffness((EndCondition["start"] as Dictionary<string, object>)["y"], ref stiffness);
-                start += GetEndStiffness((EndCondition["start"] as Dictionary<string, object>)["z"], ref stiffness);
-                start += GetEndStiffness((EndCondition["start"] as Dictionary<string, object>)["xx"], ref stiffness);
-                start += GetEndStiffness((EndCondition["start"] as Dictionary<string, object>)["yy"], ref stiffness);
-                start += GetEndStiffness((EndCondition["start"] as Dictionary<string, object>)["zz"], ref stiffness);
+                end1 += EndCondition1.X ? "F" : "R";
+                end1 += EndCondition1.Y ? "F" : "R";
+                end1 += EndCondition1.Z ? "F" : "R";
+                end1 += EndCondition1.XX ? "F" : "R";
+                end1 += EndCondition1.YY ? "F" : "R";
+                end1 += EndCondition1.ZZ ? "F" : "R";
 
-                end += GetEndStiffness((EndCondition["end"] as Dictionary<string, object>)["x"], ref stiffness);
-                end += GetEndStiffness((EndCondition["end"] as Dictionary<string, object>)["y"], ref stiffness);
-                end += GetEndStiffness((EndCondition["end"] as Dictionary<string, object>)["z"], ref stiffness);
-                end += GetEndStiffness((EndCondition["end"] as Dictionary<string, object>)["xx"], ref stiffness);
-                end += GetEndStiffness((EndCondition["end"] as Dictionary<string, object>)["yy"], ref stiffness);
-                end += GetEndStiffness((EndCondition["end"] as Dictionary<string, object>)["zz"], ref stiffness);
+                ls.Add(end1);
 
-                ls.Add(start);
-                ls.Add(end);
+                string end2 = "";
 
-                foreach (double d in stiffness)
-                    ls.Add(d.ToString());
+                end2 += EndCondition2.X ? "F" : "R";
+                end2 += EndCondition2.Y ? "F" : "R";
+                end2 += EndCondition2.Z ? "F" : "R";
+                end2 += EndCondition2.XX ? "F" : "R";
+                end2 += EndCondition2.YY ? "F" : "R";
+                end2 += EndCondition2.ZZ ? "F" : "R";
+
+                ls.Add(end2);
+
             }
             else
                 ls.Add("NO_RLS");
 
-            ls.Add("0"); // Offset x-start
-            ls.Add("0"); // Offset x-end
+            ls.Add(Offset1.X.ToString()); // Offset x-start
+            ls.Add(Offset2.X.ToString()); // Offset x-end
 
-            ls.Add(Offset["Horizontal"].ToNumString());
-            ls.Add(Offset["Vertical"].ToNumString());
+            ls.Add(Offset1.Y.ToString());
+            ls.Add(Offset1.Z.ToString());
 
             //ls.Add("NORMAL"); // Action // TODO: EL.4 SUPPORT
             ls.Add(""); // Dummy
@@ -278,55 +246,36 @@ namespace SpeckleGSA
             return string.Join(",", ls);
         }
 
-        public override List<GSAObject> GetChildren()
+        public List<StructuralObject> GetChildren()
         {
-            List<GSAObject> children = new List<GSAObject>();
+            List<StructuralObject> children = new List<StructuralObject>();
 
-            for (int i = 0; i < Coor.Count() / 3; i++)
+            for (int i = 0; i < Coordinates.Count(); i++)
             {
                 GSANode n = new GSANode();
-                n.Coor = Coor.Skip(i * 3).Take(3).ToList();
-                n.Reference = 0;
+                n.Coordinates = new Coordinates(Coordinates[i]);
                 children.Add(n);
             }
 
             return children;
         }
-
-        public override void ScaleToGSAUnits(string originalUnit)
-        {
-            base.ScaleToGSAUnits(originalUnit);
-            
-            Offset["Horizontal"] = (Convert.ToDouble(Offset["Horizontal"])).ConvertUnit(originalUnit, GSA.Units);
-            Offset["Vertical"] = (Convert.ToDouble(Offset["Vertical"])).ConvertUnit(originalUnit, GSA.Units);
-        }
         #endregion
 
         #region Helper Functions
-        private object ParseEndStiffness(char code, string[] pieces, ref int counter)
-    {
-        switch (code)
+        private bool ParseEndRelease(char code, string[] pieces, ref int counter)
         {
-            case 'F':
-                return "FIXED";
-            case 'R':
-                return 0;
-            default:
-                return Convert.ToDouble(pieces[counter++]);
+            switch (code)
+            {
+                case 'F':
+                    return true;
+                case 'R':
+                    return false;
+                default:
+                    Status.AddError("Element end stiffness not supported. Only releases.");
+                    counter++;
+                    return false;
+            }
         }
-    }
-
-    private string GetEndStiffness(object code, ref List<double> stiffness)
-    {
-        if (code.GetType() == typeof(string)) return "F";
-        else if ((double)code == 0) return "R";
-        else
-        {
-            stiffness.Add((double)code);
-            return "K";
-        }
-    }
-    #endregion
-
+        #endregion
     }
 }

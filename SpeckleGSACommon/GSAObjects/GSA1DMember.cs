@@ -5,78 +5,45 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Media.Media3D;
+using SpeckleStructures;
+using System.Reflection;
 
 namespace SpeckleGSA
 {
-    public class GSA1DMember : GSAObject
+    public class GSA1DMember : Structural1DElement
     {
-        public override string Entity { get => "1D Member"; set { } }
-
         public static readonly string GSAKeyword = "MEMB";
         public static readonly string Stream = "elements";
-        public static readonly int WritePriority = 1;
 
         public static readonly Type[] ReadPrerequisite = new Type[1] { typeof(GSANode) };
-
-        public string Type { get; set; }
-        public int Property { get; set; }
-        public Dictionary<string, object> Axis { get; set; }
-        public Dictionary<string, object> EndCondition { get; set; }
-        public Dictionary<string, object> Offset { get; set; }
+        public static readonly Type[] WritePrerequisite = new Type[1] { typeof(GSA1DProperty) };
 
         public List<int> Connectivity;
 
         public GSA1DMember()
         {
-            Type = "GENERIC";
-            Property = 1;
-            Axis = new Dictionary<string, object>()
-            {
-                { "X", new Dictionary<string, object> { { "x", 1 }, { "y", 0 },{ "z", 0 }  } },
-                { "Y", new Dictionary<string, object> { { "x", 0 }, { "y", 1 },{ "z", 0 }  } },
-                { "Z", new Dictionary<string, object> { { "x", 0 }, { "y", 0 },{ "z", 1 }  } },
-            };
-            EndCondition = new Dictionary<string, object>()
-            {
-                { "start", new Dictionary<string,object>()
-                {
-                    { "x", "FIXED" },
-                    { "y", "FIXED" },
-                    { "z", "FIXED" },
-                    { "xx", 0 },
-                    { "yy", 0 },
-                    { "zz", 0 },
-                }
-                },
-                { "end", new Dictionary<string,object>()
-                {
-                    { "x", "FIXED" },
-                    { "y", "FIXED" },
-                    { "z", "FIXED" },
-                    { "xx", 0 },
-                    { "yy", 0 },
-                    { "zz", 0 },
-                }
-                },
-            };
-            Offset = new Dictionary<string, object>()
-            {
-                { "Vertical", 0 },
-                { "Horizontal", 0 },
-            };
-
             Connectivity = new List<int>();
         }
 
-        #region GSAObject Functions
-        public static void GetObjects(Dictionary<Type, object> dict)
+        public GSA1DMember(Structural1DElement baseClass)
+        {
+            Connectivity = new List<int>();
+
+            foreach (FieldInfo f in baseClass.GetType().GetFields())
+                f.SetValue(this, f.GetValue(baseClass));
+
+            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
+                p.SetValue(this, p.GetValue(baseClass));
+        }
+
+        public static void GetObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
             if (!GSA.TargetDesignLayer) return;
 
             if (!dict.ContainsKey(typeof(GSANode))) return;
 
-            List<GSAObject> nodes = dict[typeof(GSANode)] as List<GSAObject>;
-            List<GSAObject> m1Ds = new List<GSAObject>();
+            List<StructuralObject> nodes = dict[typeof(GSANode)];
+            List<StructuralObject> m1Ds = new List<StructuralObject>();
 
             // TODO: Workaround for GET_ALL,MEMB bug
             int[] memberRefs = new int[0];
@@ -88,19 +55,10 @@ namespace SpeckleGSA
             List<string> tempPieces = new List<string>();
 
             foreach (int r in memberRefs)
-            {
                 tempPieces.Add((string)GSA.RunGWACommand("GET,MEMB," + r.ToString()));
-            }
 
             string[] pieces = tempPieces.ToArray();
-
-            //string res = gsa.GwaCommand("GET_ALL,MEMB");
-
-            //if (res == "")
-            //    return;
-
-            //string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
-
+            
             double counter = 1;
             foreach (string p in pieces)
             {
@@ -118,94 +76,110 @@ namespace SpeckleGSA
             dict[typeof(GSA1DMember)] = m1Ds;
         }
 
-        public static void WriteObjects(Dictionary<Type, object> dict)
+        public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
             if (!dict.ContainsKey(typeof(GSA1DMember))) return;
 
-            List<GSAObject> m1Ds = dict[typeof(GSA1DMember)] as List<GSAObject>;
+            List<StructuralObject> m1Ds = dict[typeof(GSA1DMember)];
 
             double counter = 1;
-            foreach (GSAObject m in m1Ds)
+            foreach (StructuralObject m in m1Ds)
             {
                 GSARefCounters.RefObject(m);
 
-                List<GSAObject> nodes = m.GetChildren();
+                List<StructuralObject> eNodes = (m as GSA1DMember).GetChildren();
 
                 if (dict.ContainsKey(typeof(GSANode)))
                 {
-                    for (int i = 0; i < nodes.Count(); i++)
+                    List<StructuralObject> nodes = dict[typeof(GSANode)];
+
+                    for (int i = 0; i < eNodes.Count(); i++)
                     {
-                        List<GSAObject> matches = (dict[typeof(GSANode)] as List<GSAObject>).Where(
-                            n => (n as GSANode).IsCoincident(nodes[i] as GSANode)).ToList();
+                        List<StructuralObject> matches = nodes
+                            .Where(n => (n as GSANode).Coordinates.Equals((eNodes[i] as GSANode).Coordinates)).ToList();
 
                         if (matches.Count() > 0)
                         {
                             if (matches[0].Reference == 0)
-                                GSARefCounters.RefObject(matches[0]);
+                                matches[0] = GSARefCounters.RefObject(matches[0]);
 
-                            nodes[i].Reference = matches[0].Reference;
-                            (matches[0] as GSANode).Merge(nodes[i] as GSANode);
+                            eNodes[i].Reference = matches[0].Reference;
+                            (matches[0] as GSANode).Merge(eNodes[i] as GSANode);
                         }
                         else
                         {
-                            GSARefCounters.RefObject(nodes[i]);
-                            (dict[typeof(GSANode)] as List<GSAObject>).Add(nodes[i]);
+                            GSARefCounters.RefObject(eNodes[i]);
+                            dict[typeof(GSANode)].Add(eNodes[i]);
                         }
                     }
                 }
                 else
                 {
-                    for (int i = 0; i < nodes.Count(); i++)
-                        GSARefCounters.RefObject(nodes[i]);
+                    for (int i = 0; i < eNodes.Count(); i++)
+                        GSARefCounters.RefObject(eNodes[i]);
 
-                    dict[typeof(GSANode)] = nodes;
+                    dict[typeof(GSANode)] = eNodes;
                 }
 
-                (m as GSA1DMember).Connectivity = nodes.Select(n => n.Reference).ToList();
+                (m as GSA1DMember).Connectivity = eNodes.Select(n => n.Reference).ToList();
 
-                GSA.RunGWACommand(m.GetGWACommand());
+                GSA.RunGWACommand((m as GSA1DMember).GetGWACommand());
                 Status.ChangeStatus("Writing 1D members", counter++ / m1Ds.Count() * 100);
             }
         }
 
-        public override void ParseGWACommand(string command, Dictionary<Type, object> dict = null)
+        public void ParseGWACommand(string command, Dictionary<Type, List<StructuralObject>> dict = null)
         {
             string[] pieces = command.ListSplit(",");
 
             int counter = 1; // Skip identifier
             Reference = Convert.ToInt32(pieces[counter++]);
             Name = pieces[counter++].Trim(new char[] { '"' });
-            Color = pieces[counter++].ParseGSAColor();
-            Type = pieces[counter++];
-            Type = Type == "1D_GENERIC" ? "GENERIC" : Type;
+            counter++; // Color
+
+            string type = pieces[counter++];
+            if (type == "BEAM")
+                Type = Structural1DElementType.BEAM;
+            else if (type == "COLUMN")
+                Type = Structural1DElementType.COLUMN;
+            else if (type == "CANTILEVER")
+                Type = Structural1DElementType.CANTILEVER;
+            else
+                Type = Structural1DElementType.GENERIC;
+            
             Property = Convert.ToInt32(pieces[counter++]);
             counter++; // Group
 
-            Coor.Clear();
-
+            List<double> coordinates = new List<double>();
             string[] nodeRefs = pieces[counter++].ListSplit(" ");
-            List<GSAObject> nodes = dict[typeof(GSANode)] as List<GSAObject>;
-
             for (int i = 0; i < nodeRefs.Length; i++)
-                Coor.AddRange(nodes.Where(n => n.Reference == Convert.ToInt32(nodeRefs[i])).FirstOrDefault().Coor);
+                coordinates.AddRange(dict[typeof(GSANode)].Cast<GSANode>().Where(n => n.Reference == Convert.ToInt32(nodeRefs[i])).FirstOrDefault().Coordinates.ToArray());
+
+            Coordinates = new Coordinates(coordinates.ToArray());
 
             int orientationNodeRef = Convert.ToInt32(pieces[counter++]);
             double rotationAngle = Convert.ToDouble(pieces[counter++]);
 
             if (orientationNodeRef != 0)
-                Axis = HelperFunctions.Parse1DAxis(Coor.ToArray(),
+                Axis = HelperFunctions.Parse1DAxis(Coordinates.ToArray(),
                     rotationAngle,
-                    nodes.Where(n => n.Reference == orientationNodeRef).FirstOrDefault().Coor.ToArray());
+                    dict[typeof(GSANode)].Cast<GSANode>().Where(n => n.Reference == orientationNodeRef).FirstOrDefault().Coordinates.ToArray());
             else
-                Axis = HelperFunctions.Parse1DAxis(Coor.ToArray(), rotationAngle);
+                Axis = HelperFunctions.Parse1DAxis(Coordinates.ToArray(), rotationAngle);
 
-            // Skip to offsets at third to last
-            counter = pieces.Length - 3;
-            Offset["Horizontal"] = Convert.ToDouble(pieces[counter++]);
-            Offset["Vertical"] = Convert.ToDouble(pieces[counter++]);
+            // Skip to offsets at fifth to last
+            counter = pieces.Length - 5;
+            Offset1.X = Convert.ToDouble(pieces[counter++]);
+            Offset2.X = Convert.ToDouble(pieces[counter++]);
+
+            Offset1.Y = Convert.ToDouble(pieces[counter++]);
+            Offset2.Y = Offset1.Y;
+
+            Offset1.Z = Convert.ToDouble(pieces[counter++]);
+            Offset2.Z = Offset1.Z;
         }
 
-        public override string GetGWACommand(Dictionary<Type, object> dict = null)
+        public string GetGWACommand(Dictionary<Type, List<StructuralObject>> dict = null)
         {
             List<string> ls = new List<string>();
 
@@ -213,11 +187,15 @@ namespace SpeckleGSA
             ls.Add(GSAKeyword);
             ls.Add(Reference.ToString());
             ls.Add(Name);
-            if (Color == null)
-                ls.Add("NO_RGB");
+            ls.Add("NO_RGB");
+            if (Type == Structural1DElementType.BEAM)
+                ls.Add("BEAM");
+            else if (Type == Structural1DElementType.COLUMN)
+                ls.Add("COLUMN");
+            else if (Type == Structural1DElementType.CANTILEVER)
+                ls.Add("CANTILEVER");
             else
-                ls.Add(Color.ToNumString());
-            ls.Add(Type == "GENERIC" ? "1D_GENERIC" : Type);
+                ls.Add("1D_GENERIC");
             ls.Add(Property.ToString());
             ls.Add("1"); // Group
             string topo = "";
@@ -240,37 +218,27 @@ namespace SpeckleGSA
             ls.Add("0"); // Height
             ls.Add("MAN"); // Auto offset 1
             ls.Add("MAN"); // Auto offset 2
-            ls.Add("0"); // Offset x 1
-            ls.Add("0"); // Offset x 2
-            ls.Add("0"); // Offset y
-            ls.Add(Offset.ToNumString()); // Offset z
+            ls.Add(Offset1.X.ToString()); // Offset x 1
+            ls.Add(Offset2.X.ToString()); // Offset x 2
+            ls.Add(Offset1.Y.ToString()); // Offset y
+            ls.Add(Offset1.Z.ToString()); // Offset z
             ls.Add("ALL"); // Exposure
 
             return string.Join(",", ls);
         }
 
-        public override List<GSAObject> GetChildren()
+        public List<StructuralObject> GetChildren()
         {
-            List<GSAObject> children = new List<GSAObject>();
+            List<StructuralObject> children = new List<StructuralObject>();
 
-            for (int i = 0; i < Coor.Count() / 3; i++)
+            for (int i = 0; i < Coordinates.Count(); i++)
             {
                 GSANode n = new GSANode();
-                n.Coor = Coor.Skip(i * 3).Take(3).ToList();
-                n.Reference = 0;
+                n.Coordinates = new Coordinates(Coordinates[i]);
                 children.Add(n);
             }
 
             return children;
-        }
-
-        public override void ScaleToGSAUnits(string originalUnit)
-        {
-            base.ScaleToGSAUnits(originalUnit);
-
-            Offset["Horizontal"] = (Convert.ToDouble(Offset["Horizontal"])).ConvertUnit(originalUnit, GSA.Units);
-            Offset["Vertical"] = (Convert.ToDouble(Offset["Vertical"])).ConvertUnit(originalUnit, GSA.Units);
-            #endregion
         }
     }
 }

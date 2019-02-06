@@ -1,42 +1,49 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Interop.Gsa_10_0;
+using SpeckleStructures;
 
 namespace SpeckleGSA
 {
-    public class GSAMaterial : GSAObject
+    public class GSAMaterial : StructuralMaterial
     {
-        public override string Entity { get => "Material"; set { } }
-
         public static readonly string GSAKeyword  = "MAT";
         public static readonly string Stream = "properties";
-        public static readonly int WritePriority = 4;
 
         public static readonly Type[] ReadPrerequisite = new Type[0];
+        public static readonly Type[] WritePrerequisite = new Type[0];
 
-        public string Type { get; set; }
-        public string Grade { get; set; }
-
+        // Need local reference since materials can have same reference if different types
         public int LocalReference;
 
         public GSAMaterial()
         {
-            Type = "CONCRETE";
-            Grade = "35MPa";
-
             LocalReference = 0;
         }
 
-        #region GSAObject Functions
-        public static void GetObjects(Dictionary<Type, object> dict)
+        public GSAMaterial(StructuralMaterial baseClass)
         {
+            LocalReference = 0;
+
+            foreach (FieldInfo f in baseClass.GetType().GetFields())
+                f.SetValue(this, f.GetValue(baseClass));
+
+            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
+                p.SetValue(this, p.GetValue(baseClass));
+        }
+  
+        #region GSAObject Functions
+        public static void GetObjects(Dictionary<Type, List<StructuralObject>> dict)
+        {
+            // TODO: Only supports steel and concrete
             string[] materialIdentifier = new string[]
                 { "MAT_STEEL", "MAT_CONCRETE" };
 
-            List<GSAObject> materials = new List<GSAObject>();
+            List<StructuralObject> materials = new List<StructuralObject>();
 
             List<string> pieces = new List<string>();
             foreach (string id in materialIdentifier)
@@ -63,25 +70,25 @@ namespace SpeckleGSA
             dict[typeof(GSAMaterial)] = materials;
         }
 
-        public static void WriteObjects(Dictionary<Type, object> dict)
+        public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
             if (!dict.ContainsKey(typeof(GSAMaterial))) return;
 
-            List<GSAObject> materials = dict[typeof(GSAMaterial)] as List<GSAObject>;
+            List<StructuralObject> materials = dict[typeof(GSAMaterial)];
 
             double counter = 1;
-            foreach (GSAObject m in materials)
+            foreach (StructuralObject m in materials)
             {
                 GSARefCounters.RefObject(m);
 
-                GSA.RunGWACommand(m.GetGWACommand());
+                GSA.RunGWACommand((m as GSAMaterial).GetGWACommand());
                 Status.ChangeStatus("Writing materials", counter++ / materials.Count() * 100);
             }
 
             dict.Remove(typeof(GSAMaterial));
         }
 
-        public override void ParseGWACommand(string command, Dictionary<Type, object> dict = null)
+        public void ParseGWACommand(string command, Dictionary<Type, List<StructuralObject>> dict = null)
         {
             string[] pieces = command.ListSplit(",");
 
@@ -91,46 +98,47 @@ namespace SpeckleGSA
 
             if (identifier.Contains("STEEL"))
             {
-                Type = "STEEL";
+                Type = StructuralMaterialType.STEEL;
                 counter++; // Move to name field of basic MAT definition
             }
             else if (identifier.Contains("CONCRETE"))
             {
-                Type = "CONCRETE";
+                Type = StructuralMaterialType.CONCRETE;
                 counter++; // Move to name field of basic MAT definition
             }
             else
-                Type = "GENERAL";
+                Type = StructuralMaterialType.GENERIC;
 
-            Grade = pieces[counter++].Trim(new char[] { '"' }); // Use name as grade
+            Grade = pieces[counter++].Trim(new char[] { '"' }); // TODO: Using name as grade
 
             // TODO: Skip all other properties for now
         }
 
-        public override string GetGWACommand(Dictionary<Type, object> dict = null)
+        public string GetGWACommand(Dictionary<Type, List<StructuralObject>> dict = null)
         {
+            // TODO: This function barely works.
             List<string> ls = new List<string>();
 
             ls.Add("SET");
-            switch (Type)
+            if (Type == StructuralMaterialType.STEEL)
             {
-                case "STEEL":
-                    ls.Add("MAT_STEEL.3");
-                    ls.Add(Reference.ToString());
-                    ls.Add("MAT.6");
-                    ls.Add(Grade);
-                    break;
-                case "CONCRETE":
-                    ls.Add("MAT_CONCRETE.16");
-                    ls.Add(Reference.ToString());
-                    ls.Add("MAT.6");
-                    ls.Add(Grade);
-                    break;
-                default:
-                    ls.Add("MAT.6");
-                    ls.Add(Reference.ToString());
-                    ls.Add(Grade);
-                    break;
+                ls.Add("MAT_STEEL.3");
+                ls.Add(Reference.ToString());
+                ls.Add("MAT.6");
+                ls.Add(Grade);
+            }
+            else if (Type == StructuralMaterialType.CONCRETE)
+            {
+                ls.Add("MAT_CONCRETE.16");
+                ls.Add(Reference.ToString());
+                ls.Add("MAT.6");
+                ls.Add(Grade);
+            }
+            else
+            {
+                ls.Add("MAT.6");
+                ls.Add(Reference.ToString());
+                ls.Add(Grade);
             }
 
             ls.Add("YES");
@@ -156,11 +164,6 @@ namespace SpeckleGSA
             ls.Add("0"); // cost
             
             return string.Join(",", ls);
-        }
-
-        public override List<GSAObject> GetChildren()
-        {
-            throw new NotImplementedException();
         }
         #endregion
 

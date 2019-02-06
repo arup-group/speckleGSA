@@ -53,7 +53,6 @@ namespace SpeckleGSA
             GSAObject.Close();
             GSAObject.Open(path);
             GSAObject.DisplayGsaWindow(true);
-            UpdateUnits();
 
             Status.AddMessage("Opened new file.");
         }

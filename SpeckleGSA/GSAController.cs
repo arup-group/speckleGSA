@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Interop.Gsa_10_0;
+using SpeckleStructures;
 
 namespace SpeckleGSA
 {
@@ -130,16 +131,16 @@ namespace SpeckleGSA
             // Initialize object read priority list
             Dictionary<Type, List<Type>> typePrerequisites = new Dictionary<Type, List<Type>>();
             
-            IEnumerable<Type> objTypes = typeof(GSAObject)
+            IEnumerable<Type> objTypes = typeof(GSA)
                 .Assembly.GetTypes()
-                .Where(t => t.IsSubclassOf(typeof(GSAObject)) && !t.IsAbstract);
+                .Where(t => t.IsSubclassOf(typeof(StructuralObject)) && !t.IsAbstract);
 
             Status.ChangeStatus("Preparing to read GSA Objects");
 
             foreach (Type t in objTypes)
             {
                 if (t.GetMethod("GetObjects",
-                    new Type[] { typeof(Dictionary<Type, object>) }) == null)
+                    new Type[] { typeof(Dictionary<Type, List<StructuralObject>>) }) == null)
                     continue;
 
                 if (t.GetField("Stream") == null) continue;
@@ -150,15 +151,9 @@ namespace SpeckleGSA
                         
                 typePrerequisites[t] = prereq;
             }
-
-            // Getting document settings
-            Dictionary<string, object> baseProps = new Dictionary<string, object>();
-            baseProps["units"] = "Millimeters";// gsaObj.GwaCommand("GET,UNIT_DATA,LENGTH");
-            baseProps["tolerance"] = HelperFunctions.EPS;
-            baseProps["angleTolerance"] = HelperFunctions.EPS;
-
+            
             // Read objects
-            Dictionary<Type, object> bucketObjects = new Dictionary<Type, object>();
+            Dictionary<Type, List<StructuralObject>> bucketObjects = new Dictionary<Type, List<StructuralObject>>();
 
             List<Type> currentBatch = new List<Type>();
             do
@@ -170,7 +165,7 @@ namespace SpeckleGSA
                     Status.ChangeStatus("Reading " + t.Name);
 
                     t.GetMethod("GetObjects",
-                        new Type[] { typeof(Dictionary<Type, object>) })
+                        new Type[] { typeof(Dictionary<Type, List<StructuralObject>>) })
                         .Invoke(null, new object[] { bucketObjects });
                     
                     typePrerequisites.Remove(t);
@@ -186,9 +181,10 @@ namespace SpeckleGSA
 
             Status.ChangeStatus("Preparing stream buckets");
 
-            foreach (KeyValuePair<Type, object> kvp in bucketObjects)
+            foreach (KeyValuePair<Type, List<StructuralObject>> kvp in bucketObjects)
             {
                 string stream = (string)kvp.Key.GetField("Stream").GetValue(null);
+
                 if (!streamBuckets.ContainsKey(stream))
                     streamBuckets[stream] = (kvp.Value as IList).Cast<object>().ToList();
                 else
@@ -241,7 +237,7 @@ namespace SpeckleGSA
         {
             List<Task> taskList = new List<Task>();
 
-            Dictionary<Type, object> objects = new Dictionary<Type, object>();
+            Dictionary<Type, List<StructuralObject>> objects = new Dictionary<Type, List<StructuralObject>>();
 
             if (!GSA.IsInit)
             {
@@ -289,10 +285,38 @@ namespace SpeckleGSA
 
             await Task.WhenAll(taskList);
 
+            // Initialize object write priority list
+            Dictionary<Type, List<Type>> typePrerequisites = new Dictionary<Type, List<Type>>();
+
+            IEnumerable<Type> objTypes = typeof(GSA)
+                .Assembly.GetTypes()
+                .Where(t => t.IsSubclassOf(typeof(StructuralObject)) && !t.IsAbstract);
+
+            Status.ChangeStatus("Preparing to write GSA Objects");
+
+            foreach (Type t in objTypes)
+            {
+                if (t.GetMethod("WriteObjects",
+                    new Type[] { typeof(Dictionary<Type, List<StructuralObject>>) }) == null)
+                    continue;
+                
+                List<Type> prereq = new List<Type>();
+                if (t.GetField("WritePrerequisite") != null)
+                    prereq = ((Type[])t.GetField("WritePrerequisite").GetValue(null)).ToList();
+
+                typePrerequisites[t] = prereq;
+            }
+
+            List<KeyValuePair<Type,List<Type>>> typeCastPriorty = typePrerequisites.ToList();
+
+            typeCastPriorty.Sort((x, y) => x.Value.Count().CompareTo(y.Value.Count()));
+
             // Populate dictionary
             Status.ChangeStatus("Bucketing objects");
             foreach (KeyValuePair<string,List<object>> kvp in convertedObjects)
             {
+                double scaleFactor = (1.0).ConvertUnit(receivers[kvp.Key].Units.ShortUnitName(), GSA.Units);
+
                 foreach (object obj in kvp.Value)
                 { 
                     if (obj == null) continue;
@@ -301,24 +325,32 @@ namespace SpeckleGSA
                     {
                         if (obj.IsList())
                         {
-                            foreach(GSAObject o in obj as IList)
+                            foreach(StructuralObject o in obj as IList)
                             {
-                                o.ScaleToGSAUnits(receivers[kvp.Key].Units.ShortUnitName());
+                                o.Scale(scaleFactor);
 
-                                if (!objects.ContainsKey(o.GetType()))
-                                    objects[o.GetType()] = new List<GSAObject>() { o };
+                                Type castType = typeCastPriorty.Where(t => t.Key.IsSubclassOf(o.GetType())).First().Key;
+
+                                if (castType == null) continue;
+
+                                if (!objects.ContainsKey(castType))
+                                    objects[castType] = new List<StructuralObject>() { (StructuralObject)Activator.CreateInstance(castType, o)};
                                 else
-                                    (objects[o.GetType()] as List<GSAObject>).Add(o);
+                                    (objects[castType] as List<StructuralObject>).Add( (StructuralObject)Activator.CreateInstance(castType, o) );
                             }
                         }
                         else
                         {
-                            (obj as GSAObject).ScaleToGSAUnits(receivers[kvp.Key].Units.ShortUnitName());
-                            
-                            if (!objects.ContainsKey(obj.GetType()))
-                                objects[obj.GetType()] = new List<GSAObject>() { obj as GSAObject };
+                            (obj as StructuralObject).Scale(scaleFactor);
+
+                            Type castType = typeCastPriorty.Where(t => t.Key.IsSubclassOf(obj.GetType())).First().Key;
+
+                            if (castType == null) continue;
+
+                            if (!objects.ContainsKey(castType))
+                                objects[castType] = new List<StructuralObject>() { (StructuralObject)Activator.CreateInstance(castType, obj) };
                             else
-                                (objects[obj.GetType()] as List<GSAObject>).Add(obj as GSAObject);
+                                (objects[castType] as List<StructuralObject>).Add( (StructuralObject)Activator.CreateInstance(castType, obj) );
                         }
                     }
                     catch (Exception ex)
@@ -327,73 +359,59 @@ namespace SpeckleGSA
                     }
                 }
             }
-
+            
             // Set up counter
             GSARefCounters.Clear();
 
-            foreach (KeyValuePair<Type, object> kvp in objects)
+            foreach (KeyValuePair<Type, List<StructuralObject>> kvp in objects)
             {
                 // Reserve reference
                 GSARefCounters.AddObjRefs((string)kvp.Key.GetField("GSAKeyword").GetValue(null),
-                    (kvp.Value as IList).Cast<GSAObject>().Select(o => o.Reference).ToList());
+                    (kvp.Value as IList).Cast<StructuralObject>().Select(o => o.Reference).ToList());
             }
 
             // Initialize object write priority list
-            SortedDictionary<int, List<Type>> typePriority = new SortedDictionary<int, List<Type>>();
-
-            IEnumerable<Type> objTypes = typeof(GSAObject)
-                .Assembly.GetTypes()
-                .Where(t => t.IsSubclassOf(typeof(GSAObject)) && !t.IsAbstract);
-
             Status.ChangeStatus("Preparing to write GSA Object");
 
-            foreach (Type t in objTypes)
-            {
-                if (t.GetMethod("WriteObjects",
-                    new Type[] { typeof(Dictionary<Type, object>) }) == null)
-                    continue;
-
-                int priority = 0;
-                if (t.GetField("WritePriority") != null)
-                    priority = (int)t.GetField("WritePriority").GetValue(null);
-
-                if (!typePriority.ContainsKey(priority))
-                    typePriority[priority] = new List<Type>();
-
-                typePriority[priority].Add(t);
-            }
 
             // Clear GSA file
-            foreach (KeyValuePair<int, List<Type>> kvp in typePriority)
+            foreach (KeyValuePair<Type, List<Type>> kvp in typePrerequisites)
             {
-                foreach (Type t in kvp.Value)
+                Status.ChangeStatus("Clearing " + kvp.Key.Name);
+
+                try
                 {
-                    Status.ChangeStatus("Clearing " + t.Name);
+                    string keyword = (string)kvp.Key.GetField("GSAKeyword").GetValue(null);
+                    int highestRecord = (int)GSA.RunGWACommand("HIGHEST," + keyword);
 
-                    try
-                    {
-                        string keyword = (string)t.GetField("GSAKeyword").GetValue(null);
-                        int highestRecord = (int)GSA.RunGWACommand("HIGHEST," + keyword);
-
-                        GSA.RunGWACommand("BLANK," + t.GetField("GSAKeyword").GetValue(null) + ",1," + highestRecord.ToString());
-                    }
-                    catch { }
+                    GSA.RunGWACommand("BLANK," + kvp.Key.GetField("GSAKeyword").GetValue(null) + ",1," + highestRecord.ToString());
                 }
+                catch { }
             }
 
             // Write objects
-            foreach (KeyValuePair<int, List<Type>> kvp in typePriority)
+            List<Type> currentBatch = new List<Type>();
+            do
             {
-                foreach (Type t in kvp.Value)
+                currentBatch = typePrerequisites.Where(i => i.Value.Count == 0).Select(i => i.Key).ToList();
+
+                foreach (Type t in currentBatch)
                 {
                     Status.ChangeStatus("Writing " + t.Name);
-                    
+
                     t.GetMethod("WriteObjects",
-                        new Type[] { typeof(Dictionary<Type, object>) })
+                        new Type[] { typeof(Dictionary<Type, List<StructuralObject>>) })
                         .Invoke(null, new object[] { objects });
+
+                    typePrerequisites.Remove(t);
+
+                    foreach (KeyValuePair<Type, List<Type>> kvp in typePrerequisites)
+                        if (kvp.Value.Contains(t))
+                            kvp.Value.Remove(t);
                 }
-            }
-            
+            } while (currentBatch.Count > 0);
+
+
             GSA.UpdateViews();
 
             Status.ChangeStatus("Receiving complete", 0);

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using SpeckleCore;
+using SpeckleStructures;
 
 namespace SpeckleGSA
 {
@@ -42,7 +43,8 @@ namespace SpeckleGSA
 
         public void UpdateDataAsync()
         {
-            ConverterHack hack = new ConverterHack();
+            GSAConverterHack hack1 = new GSAConverterHack();
+            StructuresConverterHack hack2 = new StructuresConverterHack();
 
             // Try to get stream
             ResponseStream streamGetResult = myReceiver.StreamGetAsync(myReceiver.StreamId, null).Result;
