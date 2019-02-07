@@ -217,7 +217,7 @@ namespace SpeckleGSA
             for (int i = 0; i < Coordinates.Count(); i++)
             {
                 GSANode n = new GSANode();
-                n.Coordinates = new Coordinates(Coordinates[i]);
+                n.Coordinates = new Coordinates(Coordinates.Values[i].ToArray());
                 children.Add(n);
             }
 

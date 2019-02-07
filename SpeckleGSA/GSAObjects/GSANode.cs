@@ -1,12 +1,9 @@
-﻿using System;
+﻿using SpeckleStructures;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Media.Media3D;
-using Interop.Gsa_10_0;
-using SpeckleStructures;
 
 namespace SpeckleGSA
 {

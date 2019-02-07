@@ -18,16 +18,19 @@ namespace SpeckleGSA
         public static readonly Type[] WritePrerequisite = new Type[1] { typeof(GSA1DProperty) };
 
         private List<int> Connectivity;
+        public int PolylineReference;
 
         #region Contructors and Converters
         public GSA1DElement()
         {
             Connectivity = new List<int>();
+            PolylineReference = 0;
         }
         
         public GSA1DElement(Structural1DElement baseClass)
         {
             Connectivity = new List<int>();
+            PolylineReference = 0;
 
             foreach (FieldInfo f in baseClass.GetType().GetFields())
                 f.SetValue(this, f.GetValue(baseClass));
@@ -247,7 +250,7 @@ namespace SpeckleGSA
             for (int i = 0; i < Coordinates.Count(); i++)
             {
                 GSANode n = new GSANode();
-                n.Coordinates = new Coordinates(Coordinates[i]);
+                n.Coordinates = new Coordinates(Coordinates.Values[i].ToArray());
                 children.Add(n);
             }
 

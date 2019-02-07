@@ -68,7 +68,7 @@ namespace SpeckleGSA
             int[] memberRefs = new int[0];
             GSA.GSAObject.EntitiesInList("all", GsaEntity.MEMBER, out memberRefs);
 
-            if (memberRefs.Length == 0)
+            if (memberRefs == null || memberRefs.Length == 0)
                 return;
 
             List<string> tempPieces = new List<string>();
@@ -147,7 +147,7 @@ namespace SpeckleGSA
             for (int i = 0; i < nodeRefs.Length; i++)
                 coordinates.AddRange(dict[typeof(GSANode)].Cast<GSANode>().Where(n => n.Reference == Convert.ToInt32(nodeRefs[i])).FirstOrDefault().Coordinates.ToArray());
 
-            SetFromEdge(new Coordinates(coordinates.ToArray()));
+            ElementsFromEdge(new Coordinates(coordinates.ToArray()));
 
             counter++; // Orientation node
 

@@ -92,7 +92,7 @@ namespace SpeckleGSA
             }
 
             dict[typeof(GSA2DElement)].Clear();
-            dict[typeof(GSA2DElementMesh)] = meshes;
+            dict[typeof(GSA2DElementMesh)].AddRange(meshes);
         }
 
         public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)

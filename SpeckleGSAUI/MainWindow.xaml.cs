@@ -33,7 +33,7 @@ namespace SpeckleGSAUI
 
         public string ModelName { get; set; }
 
-        public GSAController gsa;
+        public Controller gsa;
 
         public MainWindow()
         {
@@ -45,7 +45,7 @@ namespace SpeckleGSAUI
             StreamData = new ObservableCollection<Tuple<string, string>>();
 
             ModelName = "";
-            gsa = new GSAController();
+            gsa = new Controller();
 
             //For testing purposes
             ServerAddress.Text = "https://hestia.speckle.works/api/v1";
@@ -54,6 +54,7 @@ namespace SpeckleGSAUI
 
             //Default settings
             SendOnlyMeaningfulNodes.IsChecked = Settings.SendOnlyMeaningfulNodes;
+            Merge1DElementsIntoPolyline.IsChecked = Settings.Merge1DElementsIntoPolyline;
             Merge2DElementsIntoMesh.IsChecked = Settings.Merge2DElementsIntoMesh;
             
             Status.Init(this.AddMessage, this.AddError, this.ChangeStatus);

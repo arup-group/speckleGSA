@@ -52,23 +52,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="GSA.cs" />
-    <Compile Include="GSAObjects\GSA0DElement.cs" />
-    <Compile Include="GSAObjects\GSA0DLoad.cs" />
-    <Compile Include="GSAObjects\GSA1DElement.cs" />
-    <Compile Include="GSAObjects\GSA1DMember.cs" />
-    <Compile Include="GSAObjects\GSA1DProperty.cs" />
-    <Compile Include="GSAObjects\GSA2DElement.cs" />
-    <Compile Include="GSAObjects\GSA2DElementMesh.cs" />
-    <Compile Include="GSAObjects\GSA2DLoad.cs" />
-    <Compile Include="GSAObjects\GSA2DMember.cs" />
-    <Compile Include="GSAObjects\GSA2DProperty.cs" />
-    <Compile Include="GSAObjects\GSAMaterial.cs" />
-    <Compile Include="GSAObjects\GSANode.cs" />
-    <Compile Include="HelperFunctions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Settings.cs" />
-    <Compile Include="Status.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SpeckleStructures\SpeckleCore\SpeckleCore\SpeckleCore.csproj">

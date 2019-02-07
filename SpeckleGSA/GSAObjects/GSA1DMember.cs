@@ -19,11 +19,13 @@ namespace SpeckleGSA
         public static readonly Type[] WritePrerequisite = new Type[1] { typeof(GSA1DProperty) };
 
         public List<int> Connectivity;
+        public int PolylineReference;
 
         #region Contructors and Converters
         public GSA1DMember()
         {
             Connectivity = new List<int>();
+            PolylineReference = 0;
         }
 
         public GSA1DMember(Structural1DElement baseClass)
@@ -68,7 +70,7 @@ namespace SpeckleGSA
             int[] memberRefs = new int[0];
             GSA.GSAObject.EntitiesInList("all", GsaEntity.MEMBER, out memberRefs);
 
-            if (memberRefs.Length == 0)
+            if (memberRefs == null || memberRefs.Length == 0)
                 return;
 
             List<string> tempPieces = new List<string>();
@@ -191,7 +193,7 @@ namespace SpeckleGSA
             else
                 ls.Add("1D_GENERIC");
             ls.Add(Property.ToString());
-            ls.Add("1"); // Group
+            ls.Add(PolylineReference.ToString());  // TODO: This allows for targeting of elements from members group
             string topo = "";
             foreach (int c in Connectivity)
                 topo += c.ToString() + " ";
@@ -230,7 +232,7 @@ namespace SpeckleGSA
             for (int i = 0; i < Coordinates.Count(); i++)
             {
                 GSANode n = new GSANode();
-                n.Coordinates = new Coordinates(Coordinates[i]);
+                n.Coordinates = new Coordinates(Coordinates.Values[i].ToArray());
                 children.Add(n);
             }
 

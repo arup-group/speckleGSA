@@ -10,7 +10,7 @@ using SpeckleStructures;
 
 namespace SpeckleGSA
 {
-    public class GSAController
+    public class Controller
     {
         public string SenderPropertiesStreamID
         {
@@ -45,7 +45,7 @@ namespace SpeckleGSA
         private Dictionary<string, SpeckleGSASender> senders;
         private Dictionary<string, SpeckleGSAReceiver> receivers;
         
-        public GSAController()
+        public Controller()
         {
             userManager = null;
 
