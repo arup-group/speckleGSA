@@ -10,7 +10,7 @@
         
         mc:Ignorable="d"
         
-        Title="SpeckleGSA" Height="600" Width="500">
+        Title="SpeckleGSA" Height="600" Width="551">
     <Grid
         Margin="0,0,0,0">
         <Grid.RowDefinitions>
@@ -183,6 +183,7 @@
                         <GroupBox Grid.Column="0" Header="Sender" Margin="5">
                             <StackPanel>
                                 <CheckBox Margin="5" Content="Send only meaningful nodes" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="SendOnlyMeaningfulNodes"/>
+                                <CheckBox Margin="5" Content="Merge 1D elements into polyline" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="Merge1DElementsIntoPolyline"/>
                                 <CheckBox Margin="5" Content="Merge 2D elements into mesh" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="Merge2DElementsIntoMesh"/>
                             </StackPanel>
                         </GroupBox>

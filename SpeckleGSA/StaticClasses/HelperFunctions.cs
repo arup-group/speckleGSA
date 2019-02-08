@@ -10,6 +10,7 @@ using System.Drawing;
 using SpeckleCore;
 using System.Reflection;
 using System.Collections;
+using SpeckleStructures;
 
 namespace SpeckleGSA
 {
@@ -17,7 +18,7 @@ namespace SpeckleGSA
     {
         public const double EPS = 1e-16;
 
-        #region Enum
+        #region GSA Num Nodes and Type Parsers
         public enum LineNumNodes
         {
             LINE = 2,
@@ -52,7 +53,7 @@ namespace SpeckleGSA
             WEDGE15 = 15,
             WEDGE6 = 6
         };
-
+        
         public static int ParseElementType(this string type)
         {
             return (int)((ElementType)Enum.Parse(typeof(ElementType), type));
@@ -66,6 +67,22 @@ namespace SpeckleGSA
         public static int ParseElementNumNodes(this string type)
         {
             return (int)((ElementNumNodes)Enum.Parse(typeof(ElementNumNodes), type));
+        }
+
+        public static bool MemberIs1D(this string type)
+        {
+            if (type == "1D_GENERIC" | type == "COLUMN" | type == "BEAM")
+                return true;
+            else
+                return false;
+        }
+
+        public static bool MemberIs2D(this string type)
+        {
+            if (type == "2D_GENERIC" | type == "SLAB" | type == "WALL")
+                return true;
+            else
+                return false;
         }
         #endregion
 
@@ -145,164 +162,6 @@ namespace SpeckleGSA
             centroid[2] /= numNodes;
 
             return centroid;
-        }
-
-        private static double IntegrateHasher(this List<double> coor, List<int> vertices)
-        {
-            // Get coordinates
-            List<double> x = new List<double>();
-            List<double> y = new List<double>();
-            List<double> z = new List<double>();
-
-            foreach (int e in vertices)
-            {
-                x.Add(coor.Skip(e * 3).First());
-                y.Add(coor.Skip(e * 3 + 1).First());
-                z.Add(coor.Skip(e * 3 + 2).First());
-            }
-
-            // Close the loop
-            x.Add(x[0]);
-            y.Add(y[0]);
-            z.Add(z[0]);
-
-            //Integrate
-            double area1 = 0;
-            for (int i = 0; i < x.Count() - 1; i++)
-            {
-                area1 += x[i] * y[i + 1] - y[i] * x[i + 1];
-            }
-
-            if (Math.Abs(area1) > HelperFunctions.EPS) return area1;
-
-            //Integrate
-            double area2 = 0;
-            for (int i = 0; i < x.Count() - 1; i++)
-            {
-                area2 += x[i] * z[i + 1] - z[i] * y[i + 1];
-            }
-
-            if (Math.Abs(area2) > HelperFunctions.EPS) return area2;
-
-            //Integrate
-            double area3 = 0;
-            for (int i = 0; i < y.Count() - 1; i++)
-            {
-                area3 += y[i] * z[i + 1] - z[i] * y[i + 1];
-            }
-
-            if (Math.Abs(area3) > HelperFunctions.EPS) return area3;
-
-            return 0;
-        }
-
-        public static bool InTri(this List<double> coor, List<int> tri, int point)
-        {
-            // Get coordinates
-            List<double> x = new List<double>();
-            List<double> y = new List<double>();
-            List<double> z = new List<double>();
-
-            foreach (int t in tri)
-            {
-                x.Add(coor.Skip(t * 3).First());
-                y.Add(coor.Skip(t * 3 + 1).First());
-                z.Add(coor.Skip(t * 3 + 2).First());
-            }
-
-            Point3D p0 = new Point3D(x[0], y[0], z[0]);
-            Point3D p1 = new Point3D(x[1], y[1], z[1]);
-            Point3D p2 = new Point3D(x[2], y[2], z[2]);
-
-            Point3D p = new Point3D(coor.Skip(point * 3).First(),
-                coor.Skip(point * 3 + 1).First(),
-                coor.Skip(point * 3 + 2).First());
-
-            Vector3D u = Point3D.Subtract(p1, p0);
-            Vector3D v = Point3D.Subtract(p2, p0);
-            Vector3D n = Vector3D.CrossProduct(u, v);
-            Vector3D w = Point3D.Subtract(p, p0);
-
-            double gamma = Vector3D.DotProduct(Vector3D.CrossProduct(u, w), n) / (n.Length * n.Length);
-            double beta = Vector3D.DotProduct(Vector3D.CrossProduct(w, v), n) / (n.Length * n.Length);
-            double alpha = 1 - gamma - beta;
-
-            if (alpha >= 0 & beta >= 0 & gamma >= 0 & alpha <= 1 & beta <= 1 & gamma <= 1)
-                return true;
-            else
-                return false;
-        }
-
-        public static List<List<int>> SplitMesh(this List<int> mesh, List<double> coordinates)
-        {
-            if (mesh.Count() <= 4) return new List<List<int>>() { mesh };
-
-            List<int> meshCopy = new List<int>(mesh);
-
-            // Need to ensure same area!
-            double currArea = coordinates.IntegrateHasher(meshCopy);
-
-            // Assume area doesn't twist on itself
-            if (currArea < 0)
-            {
-                meshCopy.Reverse();
-                currArea *= -1;
-            }
-
-            int indexToCut = 0;
-            int numCut = 3;
-            double bestCost = currArea * 10; // TODO: figure out a better way
-            List<int> newFace1 = new List<int>();
-            List<int> newFace2 = new List<int>();
-
-            do
-            {
-                List<int> face1 = meshCopy.Take(numCut).ToList();
-                List<int> face2 = meshCopy.Skip(numCut - 1).ToList();
-                face2.Add(meshCopy[0]);
-
-                double cost1 = coordinates.IntegrateHasher(face1);
-                double cost2 = coordinates.IntegrateHasher(face2);
-
-                if (cost1 > 0 & cost2 > 0)
-                {
-                    // Check to make sure that the new region does not encompass the other's points
-                    bool flag = false;
-                    for (int i = 1; i < face2.Count() - 1; i++)
-                    {
-                        if (coordinates.InTri(face1, face2[i]))
-                        {
-                            flag = true;
-                            break;
-                        }
-                    }
-
-                    if (!flag)
-                    {
-                        double cost = Math.Abs(cost1 + cost2 - currArea);
-                        if (bestCost > cost)
-                        {
-                            // Track best solution
-                            bestCost = cost;
-                            newFace1 = face1;
-                            newFace2 = face2;
-                        }
-                    }
-                }
-
-                meshCopy.Add(meshCopy[0]);
-                meshCopy.RemoveAt(0);
-                indexToCut++;
-
-                if (indexToCut >= meshCopy.Count())
-                    break;
-
-            } while (bestCost > 1e-10);
-
-            List<List<int>> returnVals = new List<List<int>>();
-            returnVals.AddRange(newFace1.SplitMesh(coordinates));
-            returnVals.AddRange(newFace2.SplitMesh(coordinates));
-            return returnVals;
         }
         #endregion
 
@@ -558,10 +417,23 @@ namespace SpeckleGSA
 
             return pieces[pieces.Length - 1].ParseGSAList(type);
         }
+
+        public static int[] GetGroupsFromGSAList(this string list)
+        {
+            string[] pieces = list.ListSplit(" ");
+
+            List<int> groups = new List<int>();
+
+            foreach(string p in pieces)
+                if (p.Length > 0 && p[0] == 'G')
+                    groups.Add(Convert.ToInt32(p.Substring(1)));
+
+            return groups.ToArray();
+        }
         #endregion
 
         #region Color
-        public static object ParseGSAColor(this string str)
+        public static int? ParseGSAColor(this string str)
         {
             if (str.Contains("NO_RGB"))
                 return null;
@@ -592,30 +464,12 @@ namespace SpeckleGSA
             Color col = Color.FromKnownColor((KnownColor)Enum.Parse(typeof(KnownColor), colStr));
             return col.R + col.G * 256 + col.B * 256 * 256;
         }
-
-        public static int ToSpeckleColor(this object color)
-        {
-            if (color == null)
-                return Color.FromArgb(255, 100, 100, 100).ToArgb();
-
-            return Color.FromArgb(255,
-                           (int)color % 256,
-                           ((int)color / 256) % 256,
-                           ((int)color / 256 / 256) % 256).ToArgb();
-        }
-        
-        public static object ToGSAColor(this int color)
-        {
-            Color col = Color.FromArgb(color);
-            return col.R + col.G * 256 + col.B * 256 * 256;
-        }
         #endregion
 
         #region Axis
-        public static Dictionary<string, object> Parse0DAxis(int axis, double[] evalAtCoor = null)
+        public static Axis Parse0DAxis(int axis, double[] evalAtCoor = null)
         {
-            // Returns unit vector of each X, Y, Z axis
-            Dictionary<string, object> axisVectors = new Dictionary<string, object>();
+            Axis returnAxis = new Axis();
 
             Vector3D x;
             Vector3D y;
@@ -625,28 +479,28 @@ namespace SpeckleGSA
             {
                 case 0:
                     // Global
-                    axisVectors["X"] = new Dictionary<string, object> { { "x", 1 }, { "y", 0 }, { "z", 0 } };
-                    axisVectors["Y"] = new Dictionary<string, object> { { "x", 0 }, { "y", 1 }, { "z", 0 } };
-                    axisVectors["Z"] = new Dictionary<string, object> { { "x", 0 }, { "y", 0 }, { "z", 1 } };
-                    return axisVectors;
+                    returnAxis.SetAxis(new double[3] { 1, 0, 0 },
+                        new double[3] { 0, 1, 0 },
+                        new double[3] { 0, 0, 1 });
+                    return returnAxis;
                 case -11:
                     // X elevation
-                    axisVectors["X"] = new Dictionary<string, object> { { "x", 0 }, { "y", -1 }, { "z", 0 } };
-                    axisVectors["Y"] = new Dictionary<string, object> { { "x", 0 }, { "y", 0 }, { "z", 1 } };
-                    axisVectors["Z"] = new Dictionary<string, object> { { "x", -1 }, { "y", 0 }, { "z", 0 } };
-                    return axisVectors;
+                    returnAxis.SetAxis(new double[3] { 0, -1, 0 },
+                        new double[3] { 0, 0, 1 },
+                        new double[3] { -1, 0, 0 });
+                    return returnAxis;
                 case -12:
                     // Y elevation
-                    axisVectors["X"] = new Dictionary<string, object> { { "x", 1 }, { "y", 0 }, { "z", 0 } };
-                    axisVectors["Y"] = new Dictionary<string, object> { { "x", 0 }, { "y", 0 }, { "z", 1 } };
-                    axisVectors["Z"] = new Dictionary<string, object> { { "x", 0 }, { "y", -1 }, { "z", 0 } };
-                    return axisVectors;
+                    returnAxis.SetAxis(new double[3] { 1, 0, 0 },
+                        new double[3] { 0, 0, 1 },
+                        new double[3] { 0, -1, 0 });
+                    return returnAxis;
                 case -14:
                     // Vertical
-                    axisVectors["X"] = new Dictionary<string, object> { { "x", 0 }, { "y", 0 }, { "z", 1 } };
-                    axisVectors["Y"] = new Dictionary<string, object> { { "x", 1 }, { "y", 0 }, { "z", 0 } };
-                    axisVectors["Z"] = new Dictionary<string, object> { { "x", 0 }, { "y", 1 }, { "z", 0 } };
-                    return axisVectors;
+                    returnAxis.SetAxis(new double[3] { 0, 0, 1 },
+                        new double[3] { 1, 0, 0 },
+                        new double[3] { 0, 1, 0 });
+                    return returnAxis;
                 case -13:
                     // Global cylindrical
                     x = new Vector3D(evalAtCoor[0], evalAtCoor[1], 0);
@@ -654,19 +508,17 @@ namespace SpeckleGSA
                     z = new Vector3D(0, 0, 1);
                     y = Vector3D.CrossProduct(z, x);
 
-                    axisVectors["X"] = new Dictionary<string, object> { { "x", x.X }, { "y", x.Y }, { "z", x.Z } };
-                    axisVectors["Y"] = new Dictionary<string, object> { { "x", y.X }, { "y", y.Y }, { "z", y.Z } };
-                    axisVectors["Z"] = new Dictionary<string, object> { { "x", z.X }, { "y", z.Y }, { "z", z.Z } };
-                    return axisVectors;
+                    returnAxis.SetAxis(x, y, z);
+                    return returnAxis;
                 default:
                     string res = (string)GSA.RunGWACommand("GET,AXIS," + axis.ToString());
                     string[] pieces = res.Split(new char[] { ',' });
                     if (pieces.Length < 13)
                     {
-                        axisVectors["X"] = new Dictionary<string, object> { { "x", 1 }, { "y", 0 }, { "z", 0 } };
-                        axisVectors["Y"] = new Dictionary<string, object> { { "x", 0 }, { "y", 1 }, { "z", 0 } };
-                        axisVectors["Z"] = new Dictionary<string, object> { { "x", 0 }, { "y", 0 }, { "z", 1 } };
-                        return axisVectors;
+                        returnAxis.SetAxis(new double[3] { 1, 0, 0 },
+                            new double[3] { 0, 1, 0 },
+                            new double[3] { 0, 0, 1 });
+                        return returnAxis;
                     }
                     Vector3D origin = new Vector3D(Convert.ToDouble(pieces[4]), Convert.ToDouble(pieces[5]), Convert.ToDouble(pieces[6]));
 
@@ -694,10 +546,8 @@ namespace SpeckleGSA
                     switch (pieces[3])
                     {
                         case "CART":
-                            axisVectors["X"] = new Dictionary<string, object> { { "x", X.X }, { "y", X.Y }, { "z", X.Z } };
-                            axisVectors["Y"] = new Dictionary<string, object> { { "x", Y.X }, { "y", Y.Y }, { "z", Y.Z } };
-                            axisVectors["Z"] = new Dictionary<string, object> { { "x", Z.X }, { "y", Z.Y }, { "z", Z.Z } };
-                            return axisVectors;
+                            returnAxis.SetAxis(X, Y, Z);
+                            return returnAxis;
                         case "CYL":
                             x = new Vector3D(pos.X, pos.Y, 0);
                             x.Normalize();
@@ -705,10 +555,8 @@ namespace SpeckleGSA
                             y = Vector3D.CrossProduct(Z, x);
                             y.Normalize();
 
-                            axisVectors["X"] = new Dictionary<string, object> { { "x", x.X }, { "y", x.Y }, { "z", x.Z } };
-                            axisVectors["Y"] = new Dictionary<string, object> { { "x", y.X }, { "y", y.Y }, { "z", y.Z } };
-                            axisVectors["Z"] = new Dictionary<string, object> { { "x", z.X }, { "y", z.Y }, { "z", z.Z } };
-                            return axisVectors;
+                            returnAxis.SetAxis(x, y, z);
+                            return returnAxis;
                         case "SPH":
                             x = pos;
                             x.Normalize();
@@ -717,21 +565,21 @@ namespace SpeckleGSA
                             y = Vector3D.CrossProduct(z, x);
                             z.Normalize();
 
-                            axisVectors["X"] = new Dictionary<string, object> { { "x", x.X }, { "y", x.Y }, { "z", x.Z } };
-                            axisVectors["Y"] = new Dictionary<string, object> { { "x", y.X }, { "y", y.Y }, { "z", y.Z } };
-                            axisVectors["Z"] = new Dictionary<string, object> { { "x", z.X }, { "y", z.Y }, { "z", z.Z } };
-                            return axisVectors;
+                            returnAxis.SetAxis(x, y, z);
+                            return returnAxis;
                         default:
-                            axisVectors["X"] = new Dictionary<string, object> { { "x", 1 }, { "y", 0 }, { "z", 0 } };
-                            axisVectors["Y"] = new Dictionary<string, object> { { "x", 0 }, { "y", 1 }, { "z", 0 } };
-                            axisVectors["Z"] = new Dictionary<string, object> { { "x", 0 }, { "y", 0 }, { "z", 1 } };
-                            return axisVectors;
+                            returnAxis.SetAxis(new double[3] { 1, 0, 0 },
+                                new double[3] { 0, 1, 0 },
+                                new double[3] { 0, 0, 1 });
+                            return returnAxis;
                     }
             }
         }
 
-        public static Dictionary<string, object> Parse1DAxis(double[] coor, double rotationAngle = 0, double[] orientationNode = null)
+        public static Axis Parse1DAxis(double[] coor, double rotationAngle = 0, double[] orientationNode = null)
         {
+            Axis returnAxis = new Axis();
+
             Dictionary<string, object> axisVectors = new Dictionary<string, object>();
 
             Vector3D x;
@@ -769,58 +617,19 @@ namespace SpeckleGSA
             }
 
             //Rotation
-            Matrix3D rotMat = HelperFunctions.RotationMatrix(x, rotationAngle * (Math.PI / 180));
+            Matrix3D rotMat = HelperFunctions.RotationMatrix(x, rotationAngle.ToRadians());
             y = Vector3D.Multiply(y, rotMat);
             z = Vector3D.Multiply(z, rotMat);
 
-            axisVectors["X"] = new Dictionary<string, object> { { "x", x.X }, { "y", x.Y }, { "z", x.Z } };
-            axisVectors["Y"] = new Dictionary<string, object> { { "x", y.X }, { "y", y.Y }, { "z", y.Z } };
-            axisVectors["Z"] = new Dictionary<string, object> { { "x", z.X }, { "y", z.Y }, { "z", z.Z } };
+            returnAxis.SetAxis(x, y, z);
 
-            return axisVectors;
+            return returnAxis;
         }
 
-        public static double Get1DAngle(Dictionary<string, object> axis)
+        public static Axis Parse2DAxis(double[] coor, double rotationAngle = 0, bool isLocalAxis = false)
         {
-            Dictionary<string, object> X = axis["X"] as Dictionary<string, object>;
-            Dictionary<string, object> Y = axis["Y"] as Dictionary<string, object>;
-            Dictionary<string, object> Z = axis["Z"] as Dictionary<string, object>;
-
-            Vector3D x = new Vector3D(X["x"].ToDouble(), X["y"].ToDouble(), X["z"].ToDouble());
-            Vector3D y = new Vector3D(Y["x"].ToDouble(), Y["y"].ToDouble(), Y["z"].ToDouble());
-            Vector3D z = new Vector3D(Z["x"].ToDouble(), Z["y"].ToDouble(), Z["z"].ToDouble());
-
-            if (x.X == 0 & x.Y == 0)
-            {
-                // Column
-                Vector3D Yglobal = new Vector3D(0, 1, 0);
-
-                double angle = Math.Acos(Vector3D.DotProduct(Yglobal, y) / (Yglobal.Length * y.Length)).ToDegrees();
-                if (double.IsNaN(angle)) return 0;
-
-                Vector3D signVector = Vector3D.CrossProduct(Yglobal, y);
-                double sign = Vector3D.DotProduct(signVector, x);
-
-                return sign >= 0 ? angle : -angle;
-            }
-            else
-            {
-                Vector3D Zglobal = new Vector3D(0, 0, 1);
-                Vector3D Y0 = Vector3D.CrossProduct(Zglobal, x);
-                double angle = Math.Acos(Vector3D.DotProduct(Y0, y) / (Y0.Length * y.Length)).ToDegrees();
-                if (double.IsNaN(angle)) angle = 0;
-
-                Vector3D signVector = Vector3D.CrossProduct(Y0, y);
-                double sign = Vector3D.DotProduct(signVector, x);
-
-                return sign >= 0 ? angle : 360 - angle;
-            }
-        }
-
-        public static Dictionary<string, object> Parse2DAxis(double[] coor, double rotationAngle = 0, bool isLocalAxis = false)
-        {
-            Dictionary<string, object> axisVectors = new Dictionary<string, object>();
-
+            Axis returnAxis = new Axis();
+            
             Vector3D x;
             Vector3D y;
             Vector3D z;
@@ -885,23 +694,42 @@ namespace SpeckleGSA
             x = Vector3D.Multiply(x, rotMat);
             y = Vector3D.Multiply(y, rotMat);
 
-            axisVectors["X"] = new Dictionary<string, object> { { "x", x.X }, { "y", x.Y }, { "z", x.Z } };
-            axisVectors["Y"] = new Dictionary<string, object> { { "x", y.X }, { "y", y.Y }, { "z", y.Z } };
-            axisVectors["Z"] = new Dictionary<string, object> { { "x", z.X }, { "y", z.Y }, { "z", z.Z } };
+            returnAxis.SetAxis(x, y, z);
 
-            return axisVectors;
+            return returnAxis;
         }
 
-        public static double Get2DAngle(double[] coor, Dictionary<string, object> axis)
+        public static double Get1DAngle(Axis axis)
         {
-            Dictionary<string, object> X = axis["X"] as Dictionary<string, object>;
-            Dictionary<string, object> Y = axis["Y"] as Dictionary<string, object>;
-            Dictionary<string, object> Z = axis["Z"] as Dictionary<string, object>;
+            if (axis.X.X == 0 & axis.X.Y == 0)
+            {
+                // Column
+                Vector3D Yglobal = new Vector3D(0, 1, 0);
 
-            Vector3D x = new Vector3D(X["x"].ToDouble(), X["y"].ToDouble(), X["z"].ToDouble());
-            Vector3D y = new Vector3D(Y["x"].ToDouble(), Y["y"].ToDouble(), Y["z"].ToDouble());
-            Vector3D z = new Vector3D(Z["x"].ToDouble(), Z["y"].ToDouble(), Z["z"].ToDouble());
+                double angle = Math.Acos(Vector3D.DotProduct(Yglobal, axis.Y) / (Yglobal.Length * axis.Y.Length)).ToDegrees();
+                if (double.IsNaN(angle)) return 0;
 
+                Vector3D signVector = Vector3D.CrossProduct(Yglobal, axis.Y);
+                double sign = Vector3D.DotProduct(signVector, axis.X);
+
+                return sign >= 0 ? angle : -angle;
+            }
+            else
+            {
+                Vector3D Zglobal = new Vector3D(0, 0, 1);
+                Vector3D Y0 = Vector3D.CrossProduct(Zglobal, axis.X);
+                double angle = Math.Acos(Vector3D.DotProduct(Y0, axis.Y) / (Y0.Length * axis.Y.Length)).ToDegrees();
+                if (double.IsNaN(angle)) angle = 0;
+
+                Vector3D signVector = Vector3D.CrossProduct(Y0, axis.Y);
+                double sign = Vector3D.DotProduct(signVector, axis.X);
+
+                return sign >= 0 ? angle : 360 - angle;
+            }
+        }
+
+        public static double Get2DAngle(double[] coor, Axis axis)
+        {
             Vector3D x0;
             Vector3D z0;
 
@@ -925,49 +753,17 @@ namespace SpeckleGSA
             x0.Normalize();
 
             // Find angle
-            double angle = Math.Acos(Vector3D.DotProduct(x0, x) / (x0.Length * x.Length)).ToDegrees();
+            double angle = Math.Acos(Vector3D.DotProduct(x0, axis.X) / (x0.Length * axis.X.Length)).ToDegrees();
             if (double.IsNaN(angle)) return 0;
 
-            Vector3D signVector = Vector3D.CrossProduct(x0, x);
-            double sign = Vector3D.DotProduct(signVector, z);
+            Vector3D signVector = Vector3D.CrossProduct(x0, axis.X);
+            double sign = Vector3D.DotProduct(signVector, axis.Z);
 
             return sign >= 0 ? angle : -angle;
         }
         #endregion
 
-        #region Conversion
-        public static double[] ToCoor(this string str)
-        {
-            try
-            {
-                return str.Split(new char[] { ',' }).Select(x => Convert.ToDouble(x)).ToArray();
-            }
-            catch
-            {
-                return new double[3];
-            }
-        }
-
-        public static double ToDouble(this object obj)
-        {
-            if (obj.GetType() == typeof(int))
-                return ((int)obj);
-            else if (obj.GetType() == typeof(double))
-                return ((double)obj);
-            else
-                return 0;
-        }
-
-        public static string ToNumString(this object obj)
-        {
-            if (obj.GetType() == typeof(int))
-                return ((int)obj).ToString();
-            else if (obj.GetType() == typeof(double))
-                return ((double)obj).ToString();
-            else
-                return "0";
-        }
-
+        #region Unit Conversion
         public static double ConvertUnit(this double value, string originalDimension, string targetDimension)
         {
             if (originalDimension == targetDimension)
@@ -1046,209 +842,51 @@ namespace SpeckleGSA
                     return unit;
             }
         }
-
-        public static Dictionary<string,object> GetPropertyDict(this object obj)
-        {
-            Dictionary<string, object> properties = new Dictionary<string, object>();
-
-            foreach(var prop in obj.GetType().GetProperties())
-            {
-                if (!prop.CanWrite)
-                    continue;
-
-                string key = prop.Name;
-                object value = prop.GetValue(obj, null);
-                properties.Add(key, value);
-            }
-
-            return properties;
-        }
-
-        public static void SetPropertyDict(this object obj, Dictionary<string, object> properties)
-        {
-            foreach (var prop in obj.GetType().GetProperties())
-            {
-                if (!prop.CanWrite)
-                    continue;
-
-                if (!properties.ContainsKey(prop.Name)) continue;
-
-                if (properties[prop.Name] == null) continue;
-                
-                // TODO: This try catch is lazy. Fix it.
-                try
-                { 
-                    if (prop.PropertyType.IsArray) 
-                    {
-                        Type subType = prop.PropertyType.GetElementType();
-
-                        object value = (properties[prop.Name] as IEnumerable).Cast<object>()
-                            .Select(o => Convert.ChangeType(o, subType)).ToArray();
-
-                        if ((value as Array).Length > 0)
-                            prop.SetValue(obj, value);
-                    }
-                    else if (prop.IsList())
-                    {
-                        Type subType = prop.PropertyType.GetGenericArguments()[0];
-
-                        Type genericListType = typeof(List<>).MakeGenericType(subType);
-                        IList value = (IList)Activator.CreateInstance(genericListType);
-
-                        if (subType != typeof(object))
-                            foreach (object o in (properties[prop.Name] as IList))
-                                value.Add(Convert.ChangeType(o, subType));
-                        else
-                            foreach (object o in (properties[prop.Name] as IList))
-                                value.Add(o);
-
-                        if ((value as IList).Count > 0)
-                            prop.SetValue(obj, value);
-                    }
-                    else if (prop.IsDictionary())
-                    {
-                        prop.SetValue(obj, properties[prop.Name]);
-                    }
-                    else
-                    { 
-                        object value = Convert.ChangeType(properties[prop.Name], prop.PropertyType);
-
-                        if (value != null)
-                            prop.SetValue(obj, value);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
-            }
-        }
-
-        public static string GetGSAObjectEntityType(this SpeckleObject obj)
-        {
-            if (obj.Properties != null && obj.Properties.ContainsKey("Structural"))
-            {
-                Dictionary<string, object> temp = obj.Properties["Structural"] as Dictionary<string, object>;
-
-                if (temp.ContainsKey("Entity"))
-                    return (string)temp["Entity"];
-                else
-                    return null;
-            }
-            else
-                return null;
-        }
-
-        public static bool ElementDictExists(this SpeckleObject obj)
-        {
-            if (obj.Properties != null && obj.Properties.ContainsKey("Structural"))
-            {
-                Dictionary<string, object> temp = obj.Properties["Structural"] as Dictionary<string, object>;
-
-                if (temp.ContainsKey("Elements"))
-                    return true;
-                else
-                    return false;
-            }
-            else
-                return false;
-        }
-
         #endregion
 
         #region Comparison
-        public static bool MemberIs1D(this string type)
-        {
-            if (type == "1D_GENERIC" | type == "COLUMN" | type == "BEAM")
-                return true;
-            else
-                return false;
-        }
-
-        public static bool MemberIs2D(this string type)
-        {
-            if (type == "2D_GENERIC" | type == "SLAB" | type == "WALL")
-                return true;
-            else
-                return false;
-        }
-
-        public static bool IsList(this object o)
-        {
-            if (o == null) return false;
-            return o.GetType().IsGenericType &&
-                   o.GetType().GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
-        }
-
-        public static bool IsList(this PropertyInfo prop)
-        {
-            if (prop == null) return false;
-            return prop.PropertyType.IsGenericType &&
-                   prop.PropertyType.GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
-        }
-
-        public static bool IsDictionary(this object o)
-        {
-            if (o == null) return false;
-            return o.GetType().IsGenericType &&
-                   o.GetType().GetGenericTypeDefinition().IsAssignableFrom(typeof(Dictionary<,>));
-        }
-
-        public static bool IsDictionary(this PropertyInfo prop)
-        {
-            if (prop == null) return false;
-            return prop.PropertyType.IsGenericType &&
-                   prop.PropertyType.GetGenericTypeDefinition().IsAssignableFrom(typeof(Dictionary<,>));
-        }
-
         public static bool IsDigits(this string str)
         {
             foreach (char c in str)
-            {
                 if (c < '0' || c > '9')
                     return false;
-            }
 
             return true;
         }
+        #endregion
 
-        public static bool Equal(this object obj, double val)
+        #region Miscellanious
+        public static List<GSANode> CollapseNodes(List<GSANode> mainList, List<GSANode> addList)
         {
-            if (obj.GetType() == typeof(int))
-                return (int)obj == Math.Round(val);
-            else if (obj.GetType() == typeof(double))
-                return (double)obj == val;
-            else
-                return false;
-        }
+            if (addList == null || addList.Count() == 0) return mainList;
 
-        public static bool IsCoincident(this GSAObject n1, GSAObject n2)
-        {
-            if (n1.Coor.Count() != n2.Coor.Count()) return false;
-
-            double dist = 0;
-            for(int i = 0; i < n1.Coor.Count(); i++)
-                dist += Math.Pow(n1.Coor[i] - n2.Coor[i], 2);
-
-            if (dist < Math.Pow(EPS,2))
-                return true;
-            else
-                return false;
-        }
-
-        //TODO: NEED TO IMPLEMENT GENERIC LIST AND DICTIONARY RECURSIVE COMPARATOR
-
-        public static bool IsLoadingEqual(this Dictionary<string, object> load1, Dictionary<string, object> load2)
-        {
-            try
+            if (mainList == null || mainList.Count() == 0)
             {
-                if (Math.Abs((double)load1["x"] - (double)load2["x"]) > EPS) return false;
-                if (Math.Abs((double)load1["y"] - (double)load2["y"]) > EPS) return false;
-                if (Math.Abs((double)load1["z"] - (double)load2["z"]) > EPS) return false;
-
-                return true;
+                if (addList != null)
+                    foreach (GSANode n in addList)
+                        GSARefCounters.RefObject(n);
+                mainList = new List<GSANode>(addList);
+                return mainList;
             }
-            catch { return false; }
+
+            foreach (GSANode newNode in addList)
+            {
+                GSANode match = mainList.Where(n => n.Coordinates.Equals(newNode.Coordinates)).FirstOrDefault();
+
+                if (match != null)
+                {
+                    GSARefCounters.RefObject(match);
+                    newNode.Reference = match.Reference;
+                    match.Merge(newNode);
+                }
+                else
+                {
+                    GSARefCounters.RefObject(newNode);
+                    mainList.Add(newNode);
+                }
+            }
+
+            return mainList;
         }
         #endregion
     }
@@ -1277,24 +915,31 @@ namespace SpeckleGSA
             refsUsed.Clear();
         }
 
-        public static GSAObject RefObject(GSAObject obj)
+        public static int RefObject(string key)
         {
-            string key = (string)obj.GetType().GetField("GSAKeyword").GetValue(null);
+            if (!counter.ContainsKey(key))
+                counter[key] = 1;
 
-            if (obj.Reference == 0)
+            if (refsUsed.ContainsKey(key))
+                while (refsUsed[key].Contains(counter[key]))
+                    counter[key]++;
+
+            return counter[key]++;
+        }
+
+        public static StructuralObject RefObject(StructuralObject obj)
+        {
+            try
             {
-                if (!counter.ContainsKey(key))
-                    counter[key] = 1;
+                string key = (string)obj.GetType().GetField("GSAKeyword").GetValue(null);
 
-                if (refsUsed.ContainsKey(key))
-                    while (refsUsed[key].Contains(counter[key]))
-                        counter[key]++;
+                if (obj.Reference == 0)
+                    obj.Reference = RefObject(key);
 
-                obj.Reference = counter[key]++;
+                AddObjRefs(key, new List<int>() { obj.Reference });
+                return obj;
             }
-
-            AddObjRefs(key, new List<int>() { obj.Reference });
-            return obj;
+            catch { throw new Exception("Unable to reference object type " + obj.GetType().Name); }
         }
 
         public static void AddObjRefs(string key, List<int> refs)

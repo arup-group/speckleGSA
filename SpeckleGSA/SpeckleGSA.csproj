@@ -40,24 +40,42 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="GSAController.cs" />
-    <Compile Include="SpeckleGSAReceiver.cs" />
-    <Compile Include="SpeckleGSASender.cs" />
-    <Compile Include="StreamManager.cs" />
-    <Compile Include="UserManager.cs" />
+    <Compile Include="GSAObjects\GSA1DLoad.cs" />
+    <Compile Include="GSAObjects\GSA1DElementPolyline.cs" />
+    <Compile Include="StaticClasses\GSA.cs" />
+    <Compile Include="Controller.cs" />
+    <Compile Include="GSAObjects\GSA0DElement.cs" />
+    <Compile Include="GSAObjects\GSA0DLoad.cs" />
+    <Compile Include="GSAObjects\GSA1DElement.cs" />
+    <Compile Include="GSAObjects\GSA1DMember.cs" />
+    <Compile Include="GSAObjects\GSA1DProperty.cs" />
+    <Compile Include="GSAObjects\GSA2DElement.cs" />
+    <Compile Include="GSAObjects\GSA2DElementMesh.cs" />
+    <Compile Include="GSAObjects\GSA2DLoad.cs" />
+    <Compile Include="GSAObjects\GSA2DMember.cs" />
+    <Compile Include="GSAObjects\GSA2DProperty.cs" />
+    <Compile Include="GSAObjects\GSAMaterial.cs" />
+    <Compile Include="GSAObjects\GSANode.cs" />
+    <Compile Include="StaticClasses\HelperFunctions.cs" />
+    <Compile Include="StaticClasses\Settings.cs" />
+    <Compile Include="SpeckleInterface\SpeckleGSAReceiver.cs" />
+    <Compile Include="SpeckleInterface\SpeckleGSASender.cs" />
+    <Compile Include="StaticClasses\Status.cs" />
+    <Compile Include="SpeckleInterface\StreamManager.cs" />
+    <Compile Include="SpeckleInterface\UserManager.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\SpeckleCore\SpeckleCore\SpeckleCore.csproj">
+    <ProjectReference Include="..\SpeckleStructures\SpeckleCore\SpeckleCore\SpeckleCore.csproj">
       <Project>{cfe27d3d-8a1a-43f9-9387-8fd9e119e174}</Project>
       <Name>SpeckleCore</Name>
     </ProjectReference>
-    <ProjectReference Include="..\SpeckleGSACommon\SpeckleGSACommon.csproj">
-      <Project>{e43a36d3-c488-49ef-9177-01a3038e6b29}</Project>
-      <Name>SpeckleGSACommon</Name>
+    <ProjectReference Include="..\SpeckleStructures\SpeckleStructuresConverter\SpeckleStructuresConverter.csproj">
+      <Project>{2606279d-855d-43f1-8719-eb39bbc0e7e1}</Project>
+      <Name>SpeckleStructuresConverter</Name>
     </ProjectReference>
-    <ProjectReference Include="..\SpeckleGSAConverter\SpeckleGSAConverter.csproj">
-      <Project>{df558c64-1575-4db6-a20f-93c38bd9f60c}</Project>
-      <Name>SpeckleGSAConverter</Name>
+    <ProjectReference Include="..\SpeckleStructures\SpeckleStructures\SpeckleStructures.csproj">
+      <Project>{081db7cc-206c-47e2-a57d-df7c4d2d4b13}</Project>
+      <Name>SpeckleStructures</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

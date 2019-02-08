@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using SpeckleCore;
+using SpeckleStructures;
 
 namespace SpeckleGSA
 {
@@ -40,7 +41,7 @@ namespace SpeckleGSA
 
         public void SendGSAObjects(Dictionary<string, List<object>> payloadObjects)
         {
-            ConverterHack hack = new ConverterHack();
+            StructuresConverterHack hack = new StructuresConverterHack();
 
             // Convert and set up layers
             List<SpeckleObject> bucketObjects = new List<SpeckleObject>();
