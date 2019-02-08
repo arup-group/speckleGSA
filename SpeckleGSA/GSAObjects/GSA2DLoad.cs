@@ -72,7 +72,7 @@ namespace SpeckleGSA
             string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
 
             List<StructuralObject> elements = GSA.TargetAnalysisLayer ? dict[typeof(GSA2DElement)] : new List<StructuralObject>();
-            List<StructuralObject> members = GSA.TargetDesignLayer ? dict[typeof(GSA2DElement)] : new List<StructuralObject>();
+            List<StructuralObject> members = GSA.TargetDesignLayer ? dict[typeof(GSA2DMember)] : new List<StructuralObject>();
 
             double counter = 1;
             foreach (string p in pieces)

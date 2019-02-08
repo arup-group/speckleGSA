@@ -141,7 +141,7 @@ namespace SpeckleGSA
                 Type = Structural2DElementType.GENERIC;
             
             Property = Convert.ToInt32(pieces[counter++]);
-            Group = Convert.ToInt32(counter++); // Keep group for load targetting
+            Group = Convert.ToInt32(pieces[counter++]); // Keep group for load targetting
 
             List<double> coordinates = new List<double>();
             string[] nodeRefs = pieces[counter++].ListSplit(" ");
