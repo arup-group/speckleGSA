@@ -53,17 +53,17 @@ SpeckleGSA is still currently under (rapid) development which can cause many qui
 ### Dev Notes
 
 The SpeckleGSA repo is currently made up of the following projects:
+- SpeckleGSA: main project with receiver and sender and GSA class objects
+- SpeckleGSAUI: user interface
+- SpeckleStructures: submodule
+- SpeckleStructuresConverter: submodule
 - SpeckleCore: submodule
-- SpeckleGSA: main project with receiver and sender
-- SpeckleGSACommon: GSA class objects, helper functions, static classes
-- SpeckleGSAConverter: converter logic for all GSA (and other) objects
-- SpeckleGSAUI: front end of SpeckleGSA
 
 ### Building Process
 
 - Clone/fork the repo
-- Restore all Nuget package missin on the solution
-- If SpeckleCore hasn't been cloned, run `git submodule update --remote`
+- Restore all Nuget package missing on the solution
+- If SpeckleStructures hasn't been cloned, run `git submodule update --remote`
 - Set SpeckleGSAUI as start project and rebuild all
 
 ## About Speckle
