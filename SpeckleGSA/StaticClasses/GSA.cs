@@ -18,6 +18,8 @@ namespace SpeckleGSA
         
         public static string Units;
 
+        public static Dictionary<string, object> GSACache;
+
         public static void Init()
         {
             if (IsInit)
@@ -30,6 +32,8 @@ namespace SpeckleGSA
 
             IsInit = true;
 
+            GSACache = new Dictionary<string, object>();
+
             Status.AddMessage("Linked to GSA.");
         }
 
@@ -40,7 +44,8 @@ namespace SpeckleGSA
 
             GSAObject.NewFile();
             GSAObject.DisplayGsaWindow(true);
-            UpdateUnits();
+
+            GSACache = new Dictionary<string, object>();
 
             Status.AddMessage("Created new file.");
         }
@@ -54,6 +59,8 @@ namespace SpeckleGSA
             GSAObject.Open(path);
             GSAObject.DisplayGsaWindow(true);
 
+            GSACache = new Dictionary<string, object>();
+
             Status.AddMessage("Opened new file.");
         }
 
@@ -61,6 +68,14 @@ namespace SpeckleGSA
         {
             if (!IsInit)
                 return "";
+
+            if (!command.Contains("HIGHEST"))
+            {
+                if (!GSACache.ContainsKey(command))
+                    GSACache[command] = GSAObject.GwaCommand(command);
+
+                return GSACache[command];
+            }
 
             return GSAObject.GwaCommand(command);
         }
@@ -72,6 +87,8 @@ namespace SpeckleGSA
 
         public static void UpdateUnits()
         {
+            GSACache = new Dictionary<string, object>();
+
             Units = ((string)RunGWACommand("GET,UNIT_DATA.1,LENGTH")).ListSplit(",")[2];
         }
         
