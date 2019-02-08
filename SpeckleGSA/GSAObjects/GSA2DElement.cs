@@ -17,6 +17,8 @@ namespace SpeckleGSA
 
         public static readonly Type[] ReadPrerequisite = new Type[2] { typeof(GSANode), typeof(GSA2DProperty) };
         public static readonly Type[] WritePrerequisite = new Type[1] { typeof(GSA2DElementMesh) };
+        public static readonly bool AnalysisLayer = true;
+        public static readonly bool DesignLayer = false;
 
         private List<int> Connectivity;
         public int MeshReference;
@@ -59,9 +61,6 @@ namespace SpeckleGSA
         {
             if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
                 dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
-
-            foreach (Type t in ReadPrerequisite)
-                if (!dict.ContainsKey(t)) return;
 
             if (!GSA.TargetAnalysisLayer) return;
 

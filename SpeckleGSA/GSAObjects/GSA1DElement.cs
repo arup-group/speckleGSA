@@ -16,6 +16,8 @@ namespace SpeckleGSA
 
         public static readonly Type[] ReadPrerequisite = new Type[1] { typeof(GSANode) };
         public static readonly Type[] WritePrerequisite = new Type[1] { typeof(GSA1DProperty) };
+        public static readonly bool AnalysisLayer = true;
+        public static readonly bool DesignLayer = false;
 
         private List<int> Connectivity;
         public int PolylineReference;
@@ -57,10 +59,7 @@ namespace SpeckleGSA
         public static void GetObjects(Dictionary<Type, List<StructuralObject>> dict)
         {
             dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
-
-            foreach (Type t in ReadPrerequisite)
-                if (!dict.ContainsKey(t)) return;
-
+            
             if (!GSA.TargetAnalysisLayer) return;
 
             List<StructuralObject> e1Ds = new List<StructuralObject>();

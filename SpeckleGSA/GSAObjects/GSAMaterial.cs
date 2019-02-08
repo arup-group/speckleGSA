@@ -16,6 +16,8 @@ namespace SpeckleGSA
 
         public static readonly Type[] ReadPrerequisite = new Type[0];
         public static readonly Type[] WritePrerequisite = new Type[0];
+        public static readonly bool AnalysisLayer = true;
+        public static readonly bool DesignLayer = true;
 
         // Need local reference since materials can have same reference if different types
         public int LocalReference;
@@ -57,9 +59,6 @@ namespace SpeckleGSA
             if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
                 dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
 
-            foreach (Type t in ReadPrerequisite)
-                if (!dict.ContainsKey(t)) return;
-
             // TODO: Only supports steel and concrete
             string[] materialIdentifier = new string[]
                 { "MAT_STEEL", "MAT_CONCRETE" };
@@ -81,7 +80,7 @@ namespace SpeckleGSA
             for (int i = 0; i < pieces.Count(); i++)
             {
                 GSAMaterial mat = new GSAMaterial();
-                mat.ParseGWACommand(pieces[i]);
+                mat.ParseGWACommand(pieces[i], dict);
                 mat.Reference = i + 1; // Offset references
                 materials.Add(mat);
 

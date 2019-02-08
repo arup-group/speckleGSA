@@ -17,6 +17,8 @@ namespace SpeckleGSA
 
         public static readonly Type[] ReadPrerequisite = new Type[2] { typeof(GSA2DElement), typeof(GSA2DLoad) };
         public static readonly Type[] WritePrerequisite = new Type[0] { };
+        public static readonly bool AnalysisLayer = true;
+        public static readonly bool DesignLayer = true;
 
         #region Contructors and Converters
         public GSA2DElementMesh()
@@ -59,9 +61,6 @@ namespace SpeckleGSA
             if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
                 dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
 
-            foreach (Type t in ReadPrerequisite)
-                if (!dict.ContainsKey(t)) return;
-            
             // No need to run if targeting design layer since GSA2DMembers do not need mesh merging
             if (!GSA.TargetAnalysisLayer) return;
             if (!Settings.Merge2DElementsIntoMesh) return;

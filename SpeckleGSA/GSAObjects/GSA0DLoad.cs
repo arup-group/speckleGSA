@@ -17,7 +17,9 @@ namespace SpeckleGSA
 
         public static readonly Type[] ReadPrerequisite = new Type[1] { typeof(GSANode) };
         public static readonly Type[] WritePrerequisite = new Type[1] { typeof(GSANode) };
-        
+        public static readonly bool AnalysisLayer = true;
+        public static readonly bool DesignLayer = true;
+
         public int Axis;
 
         #region Contructors and Converters
@@ -56,10 +58,7 @@ namespace SpeckleGSA
         {
             if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
                 dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
-
-            foreach (Type t in ReadPrerequisite)
-                if (!dict.ContainsKey(t)) return;
-
+            
             List<StructuralObject> loads = new List<StructuralObject>();
 
             string res = (string)GSA.RunGWACommand("GET_ALL,LOAD_NODE");
@@ -79,19 +78,14 @@ namespace SpeckleGSA
                 // Placeholder load object to get list of nodes and load values
                 // Need to transform to axis so one load definition may be transformed to many
                 GSA0DLoad initLoad = new GSA0DLoad();
-                initLoad.ParseGWACommand(p);
-
-                // Only send those where the nodes actually exists
-                List<int> nodesApplied = initLoad.Nodes
-                    .Where(nRef => nodes.Select(n => n.Reference)
-                    .Contains(nRef)).ToList();
+                initLoad.ParseGWACommand(p,dict);
 
                 // Raise node flag to make sure it gets sent
-                foreach(GSANode n in nodes.Where(n => nodesApplied.Contains(n.Reference)).Cast<GSANode>())
+                foreach(GSANode n in nodes.Where(n => initLoad.Nodes.Contains(n.Reference)).Cast<GSANode>())
                     n.ForceSend = true;
 
                 // Create load for each node applied
-                foreach (int nRef in nodesApplied)
+                foreach (int nRef in initLoad.Nodes)
                 {
                     GSA0DLoad load = new GSA0DLoad();
                     load.Name = initLoad.Name;
@@ -147,7 +141,16 @@ namespace SpeckleGSA
 
             int counter = 1; // Skip identifier
             Name = pieces[counter++].Trim(new char[] { '"' });
-            Nodes = pieces[counter++].ParseGSAList(GsaEntity.NODE).ToList();
+
+            int[] targetNodes = pieces[counter++].ParseGSAList(GsaEntity.NODE);
+
+            if (dict.ContainsKey(typeof(GSANode)))
+            {
+                Nodes = dict[typeof(GSANode)].Cast<GSANode>()
+                    .Where(n => targetNodes.Contains(n.Reference))
+                    .Select(n => n.Reference).ToList();
+            }
+
             LoadCase = Convert.ToInt32(pieces[counter++]);
 
             string axis = pieces[counter++];
@@ -166,13 +169,13 @@ namespace SpeckleGSA
                     Loading.Z = Convert.ToDouble(pieces[counter++]);
                     break;
                 case "XX":
-                    Loading.X = Convert.ToDouble(pieces[counter++]);
+                    Loading.XX = Convert.ToDouble(pieces[counter++]);
                     break;
                 case "YY":
-                    Loading.Y = Convert.ToDouble(pieces[counter++]);
+                    Loading.YY = Convert.ToDouble(pieces[counter++]);
                     break;
                 case "ZZ":
-                    Loading.Z = Convert.ToDouble(pieces[counter++]);
+                    Loading.ZZ = Convert.ToDouble(pieces[counter++]);
                     break;
                 default:
                     // TODO: Error case maybe?
@@ -195,7 +198,7 @@ namespace SpeckleGSA
 
                 subLs.Add("SET");
                 subLs.Add(GSAKeyword);
-                subLs.Add(Name == "" ? " " : "");
+                subLs.Add(Name == "" ? " " : Name);
                 subLs.Add(string.Join(" ", Nodes));
                 subLs.Add(LoadCase.ToString());
                 subLs.Add("GLOBAL"); // Axis

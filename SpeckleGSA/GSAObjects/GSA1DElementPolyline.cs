@@ -17,6 +17,8 @@ namespace SpeckleGSA
 
         public static readonly Type[] ReadPrerequisite = new Type[1] { typeof(GSA1DElement) /*, typeof(GSA1DLoad) */ };
         public static readonly Type[] WritePrerequisite = new Type[0] { };
+        public static readonly bool AnalysisLayer = true;
+        public static readonly bool DesignLayer = true;
 
         #region Contructors and Converters
         public GSA1DElementPolyline()
@@ -58,9 +60,6 @@ namespace SpeckleGSA
         {
             if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
                 dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
-
-            foreach (Type t in ReadPrerequisite)
-                if (!dict.ContainsKey(t)) return;
             
             // No need to run if targeting design layer since GSA1DMembers do not need polyline merging
             if (!GSA.TargetAnalysisLayer) return;

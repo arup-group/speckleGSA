@@ -14,6 +14,8 @@ namespace SpeckleGSA
 
         public static readonly Type[] ReadPrerequisite = new Type[0];
         public static readonly Type[] WritePrerequisite = new Type[4] { typeof(GSA1DElement), typeof(GSA1DMember), typeof(GSA2DElement), typeof(GSA2DMember) };
+        public static readonly bool AnalysisLayer = true;
+        public static readonly bool DesignLayer = true;
 
         public bool ForceSend;
 
@@ -54,9 +56,6 @@ namespace SpeckleGSA
             if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
                 dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
 
-            foreach (Type t in ReadPrerequisite)
-                if (!dict.ContainsKey(t)) return;
-
             List<StructuralObject> nodes = new List<StructuralObject>();
 
             string res = (string)GSA.RunGWACommand("GET_ALL,NODE");
@@ -70,7 +69,7 @@ namespace SpeckleGSA
             foreach (string p in pieces)
             {
                 GSANode n = new GSANode();
-                n.ParseGWACommand(p);
+                n.ParseGWACommand(p, dict);
 
                 nodes.Add(n);
 

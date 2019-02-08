@@ -145,13 +145,33 @@ namespace SpeckleGSA
 
                 if (t.GetField("Stream") == null) continue;
 
+                if (t.GetField("AnalysisLayer") != null)
+                    if (GSA.TargetAnalysisLayer && !(bool)t.GetField("AnalysisLayer").GetValue(null)) continue;
+
+                if (t.GetField("DesignLayer") != null)
+                    if (GSA.TargetDesignLayer && !(bool)t.GetField("DesignLayer").GetValue(null)) continue;
+
                 List<Type> prereq = new List<Type>();
                 if (t.GetField("ReadPrerequisite") != null)
                     prereq = ((Type[])t.GetField("ReadPrerequisite").GetValue(null)).ToList();
                         
                 typePrerequisites[t] = prereq;
             }
-            
+
+            // Remove wrong layer objects from prerequisites
+            foreach (Type t in objTypes)
+            {
+                if (t.GetField("AnalysisLayer") != null)
+                    if (GSA.TargetAnalysisLayer && !(bool)t.GetField("AnalysisLayer").GetValue(null))
+                        foreach (KeyValuePair<Type, List<Type>> kvp in typePrerequisites)
+                            kvp.Value.Remove(t);
+
+                if (t.GetField("DesignLayer") != null)
+                    if (GSA.TargetDesignLayer && !(bool)t.GetField("DesignLayer").GetValue(null))
+                        foreach (KeyValuePair<Type, List<Type>> kvp in typePrerequisites)
+                            kvp.Value.Remove(t);
+            }
+
             // Read objects
             Dictionary<Type, List<StructuralObject>> bucketObjects = new Dictionary<Type, List<StructuralObject>>();
 
@@ -312,12 +332,32 @@ namespace SpeckleGSA
                 if (t.GetMethod("WriteObjects",
                     new Type[] { typeof(Dictionary<Type, List<StructuralObject>>) }) == null)
                     continue;
-                
+
+                if (t.GetField("AnalysisLayer") != null)
+                    if (GSA.TargetAnalysisLayer && !(bool)t.GetField("AnalysisLayer").GetValue(null)) continue;
+
+                if (t.GetField("DesignLayer") != null)
+                    if (GSA.TargetDesignLayer && !(bool)t.GetField("DesignLayer").GetValue(null)) continue;
+
                 List<Type> prereq = new List<Type>();
                 if (t.GetField("WritePrerequisite") != null)
                     prereq = ((Type[])t.GetField("WritePrerequisite").GetValue(null)).ToList();
 
                 typePrerequisites[t] = prereq;
+            }
+
+            // Remove wrong layer objects from prerequisites
+            foreach (Type t in objTypes)
+            {
+                if (t.GetField("AnalysisLayer") != null)
+                    if (GSA.TargetAnalysisLayer && !(bool)t.GetField("AnalysisLayer").GetValue(null))
+                        foreach(KeyValuePair<Type,List<Type>> kvp in typePrerequisites)
+                            kvp.Value.Remove(t);
+
+                if (t.GetField("DesignLayer") != null)
+                    if (GSA.TargetDesignLayer && !(bool)t.GetField("DesignLayer").GetValue(null))
+                        foreach (KeyValuePair<Type, List<Type>> kvp in typePrerequisites)
+                            kvp.Value.Remove(t);
             }
 
             List<KeyValuePair<Type,List<Type>>> typeCastPriorty = typePrerequisites.ToList();

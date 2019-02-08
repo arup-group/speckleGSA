@@ -17,6 +17,8 @@ namespace SpeckleGSA
 
         public static readonly Type[] ReadPrerequisite = new Type[1] { typeof(GSAMaterial) };
         public static readonly Type[] WritePrerequisite = new Type[1] { typeof(GSAMaterial) };
+        public static readonly bool AnalysisLayer = true;
+        public static readonly bool DesignLayer = true;
 
         public bool IsAxisLocal;
 
@@ -56,9 +58,6 @@ namespace SpeckleGSA
         {
             if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
                 dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
-
-            foreach (Type t in ReadPrerequisite)
-                if (!dict.ContainsKey(t)) return;
 
             List<StructuralObject> props = new List<StructuralObject>();
 

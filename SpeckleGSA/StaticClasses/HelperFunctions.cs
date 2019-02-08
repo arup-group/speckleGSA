@@ -417,6 +417,19 @@ namespace SpeckleGSA
 
             return pieces[pieces.Length - 1].ParseGSAList(type);
         }
+
+        public static int[] GetGroupsFromGSAList(this string list)
+        {
+            string[] pieces = list.ListSplit(" ");
+
+            List<int> groups = new List<int>();
+
+            foreach(string p in pieces)
+                if (p.Length > 0 && p[0] == 'G')
+                    groups.Add(Convert.ToInt32(p.Substring(1)));
+
+            return groups.ToArray();
+        }
         #endregion
 
         #region Color

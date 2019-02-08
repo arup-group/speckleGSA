@@ -17,20 +17,26 @@ namespace SpeckleGSA
 
         public static readonly Type[] ReadPrerequisite = new Type[1] { typeof(GSANode) };
         public static readonly Type[] WritePrerequisite = new Type[1] { typeof(GSA1DProperty) };
+        public static readonly bool AnalysisLayer = false;
+        public static readonly bool DesignLayer = true;
 
         public List<int> Connectivity;
+        public int Group;
         public int PolylineReference;
 
         #region Contructors and Converters
         public GSA1DMember()
         {
             Connectivity = new List<int>();
+            Group = 0;
             PolylineReference = 0;
         }
 
         public GSA1DMember(Structural1DElement baseClass)
         {
             Connectivity = new List<int>();
+            Group = 0;
+            PolylineReference = 0;
 
             foreach (FieldInfo f in baseClass.GetType().GetFields())
                 f.SetValue(this, f.GetValue(baseClass));
@@ -58,9 +64,6 @@ namespace SpeckleGSA
         {
             if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
                 dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
-
-            foreach (Type t in ReadPrerequisite)
-                if (!dict.ContainsKey(t)) return;
 
             if (!GSA.TargetDesignLayer) return;
 
@@ -144,7 +147,7 @@ namespace SpeckleGSA
                 Type = Structural1DElementType.GENERIC;
             
             Property = Convert.ToInt32(pieces[counter++]);
-            counter++; // Group
+            Group = Convert.ToInt32(counter++); // Keep group for load targetting
 
             List<double> coordinates = new List<double>();
             string[] nodeRefs = pieces[counter++].ListSplit(" ");
@@ -193,7 +196,10 @@ namespace SpeckleGSA
             else
                 ls.Add("1D_GENERIC");
             ls.Add(Property.ToString());
-            ls.Add(PolylineReference.ToString());  // TODO: This allows for targeting of elements from members group
+            if (PolylineReference == 0)
+                ls.Add(Reference.ToString());
+            else
+                ls.Add(PolylineReference.ToString());  // TODO: This allows for targeting of elements from members group
             string topo = "";
             foreach (int c in Connectivity)
                 topo += c.ToString() + " ";
