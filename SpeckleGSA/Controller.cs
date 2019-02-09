@@ -62,7 +62,7 @@ namespace SpeckleGSA
         #endregion
 
         #region GSA
-        public async Task ExportObjects(string restApi, string apiToken, string modelName)
+        public async Task ExportObjects(string restApi, string apiToken)
         {
             List<Task> taskList = new List<Task>();
 
@@ -72,6 +72,7 @@ namespace SpeckleGSA
                 return;
             }
 
+            GSA.ClearCache();
             GSA.UpdateUnits();
 
             // Initialize object read priority list
@@ -175,16 +176,18 @@ namespace SpeckleGSA
 
             foreach (KeyValuePair<string, List<object>> kvp in streamBuckets)
             {
-                // Create sender if not initialized
-                if (!senders.ContainsKey(kvp.Key))
+                // Create sender
+                senders[kvp.Key] = new SpeckleGSASender(restApi, apiToken);
+
+                if (!GSA.Senders.ContainsKey(kvp.Key))
                 {
                     Status.AddMessage(kvp.Key + " sender not initialized. Creating new " + kvp.Key + " sender.");
-                    senders[kvp.Key] = new SpeckleGSASender(restApi, apiToken);
-                    await senders[kvp.Key].InitializeSender();
+                    await senders[kvp.Key].InitializeSender(null, GSA.Title() + "." + kvp.Key);
+                    GSA.Senders[kvp.Key] = senders[kvp.Key].StreamID;
                 }
+                else
+                    await senders[kvp.Key].InitializeSender(GSA.Senders[kvp.Key], GSA.Title() + "." + kvp.Key);
 
-                senders[kvp.Key].UpdateName(modelName + "." + kvp.Key);
-                
                 // Send package asynchronously
                 Task task = new Task(() =>
                 {
@@ -206,13 +209,15 @@ namespace SpeckleGSA
             
             await Task.WhenAll(taskList);
 
+            GSA.SetSpeckleClients();
+
             // Complete
             Status.ChangeStatus("Sending complete", 0);
 
             Status.AddMessage("Sending complete!");
         }        
 
-        public async Task ImportObjects(string restApi, string apiToken, Dictionary<string, string> streamIDs)
+        public async Task ImportObjects(string restApi, string apiToken)
         {
             List<Task> taskList = new List<Task>();
 
@@ -224,24 +229,25 @@ namespace SpeckleGSA
                 return;
             }
 
+            GSA.ClearCache();
             GSA.UpdateUnits();
 
             // Pull objects from server asynchronously
             Dictionary<string,List<object>> convertedObjects = new Dictionary<string, List<object>>();
 
             Status.ChangeStatus("Receiving from server");
-            foreach (KeyValuePair<string, string> kvp in streamIDs)
+            foreach (string streamID in GSA.Receivers)
             {
-                if (kvp.Value == "")
-                    Status.AddMessage("No " + kvp.Key + " stream specified.");
+                if (streamID == "")
+                    Status.AddMessage("No " + streamID + " stream specified.");
                 else
                 {
-                    Status.AddMessage("Creating receiver " + kvp.Key);
-                    receivers[kvp.Key] = new SpeckleGSAReceiver(restApi, apiToken);
-                    await receivers[kvp.Key].InitializeReceiver(kvp.Value);
+                    Status.AddMessage("Creating receiver " + streamID);
+                    receivers[streamID] = new SpeckleGSAReceiver(restApi, apiToken);
+                    await receivers[streamID].InitializeReceiver(streamID);
 
-                    if (receivers[kvp.Key].StreamID == null || receivers[kvp.Key].StreamID == "")
-                        Status.AddError("Could not connect to " + kvp.Key + " stream.");
+                    if (receivers[streamID].StreamID == null || receivers[streamID].StreamID == "")
+                        Status.AddError("Could not connect to " + streamID + " stream.");
                     else
                     {
                         
@@ -249,7 +255,7 @@ namespace SpeckleGSA
                         {
                             try
                             {
-                                convertedObjects[kvp.Key] = receivers[kvp.Key].GetGSAObjects();
+                                convertedObjects[streamID] = receivers[streamID].GetGSAObjects();
                             }
                             catch (Exception ex)
                             {

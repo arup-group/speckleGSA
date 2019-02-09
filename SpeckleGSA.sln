@@ -15,6 +15,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleStructuresConverter"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpecklePopup", "SpeckleStructures\SpeckleCore\SpeckleAccountManager\SpecklePopup.csproj", "{D65594C8-EA2E-46CA-A756-B1634EDC3AE3}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SpeckleCore", "SpeckleCore", "{BFB0F873-A480-44ED-B2D7-FFB98E730E2E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SpeckleStructures", "SpeckleStructures", "{1238F962-A99F-4784-B49D-3168FDBC23A9}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SpeckleGSA", "SpeckleGSA", "{13D9326F-2E89-4AB6-B857-EBF8B664B1D9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -61,6 +67,14 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{6D8CA3AD-E530-4CDA-AF79-9715A7583F4F} = {13D9326F-2E89-4AB6-B857-EBF8B664B1D9}
+		{74BD53B7-5588-4CBC-86A3-EFBBC99DB7ED} = {13D9326F-2E89-4AB6-B857-EBF8B664B1D9}
+		{081DB7CC-206C-47E2-A57D-DF7C4D2D4B13} = {1238F962-A99F-4784-B49D-3168FDBC23A9}
+		{CFE27D3D-8A1A-43F9-9387-8FD9E119E174} = {BFB0F873-A480-44ED-B2D7-FFB98E730E2E}
+		{2606279D-855D-43F1-8719-EB39BBC0E7E1} = {1238F962-A99F-4784-B49D-3168FDBC23A9}
+		{D65594C8-EA2E-46CA-A756-B1634EDC3AE3} = {BFB0F873-A480-44ED-B2D7-FFB98E730E2E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E77BC609-6569-4F74-9DA0-A15172F583B2}

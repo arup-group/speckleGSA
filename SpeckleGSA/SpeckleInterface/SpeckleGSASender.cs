@@ -16,29 +16,38 @@ namespace SpeckleGSA
     {
         const double MAX_BUCKET_SIZE = 5e5;
 
-        public string StreamName { get => mySender == null ? null : mySender.Stream.Name; }
-        public string StreamID { get => mySender == null ? null : mySender.StreamId; }
+        public string StreamName { get; private set; }
+        public string StreamID { get; private set; }
 
         private SpeckleApiClient mySender;
         private string apiToken { get; set; }
-        
+
         public SpeckleGSASender(string serverAddress, string apiToken)
         {
             this.apiToken = apiToken;
+            this.StreamID = "";
+            this.StreamName = "";
 
             mySender = new SpeckleApiClient() { BaseUrl = serverAddress.ToString() };
         }
 
-        public async Task InitializeSender()
+        public async Task InitializeSender(string streamID = null, string streamName = "")
         {
             await mySender.IntializeSender(apiToken, "GSA", "GSA", "none");
-        }
+            this.StreamName = streamName;
 
-        public void UpdateName(string streamName)
-        {
-            mySender.Stream.Name = streamName;
+            if (streamID != null)
+            {
+                // TODO: workaround for having persistent sender
+                await mySender.StreamDeleteAsync(mySender.StreamId);
+                this.StreamID = streamID;
+            }
+            else
+            {
+                this.StreamID = mySender.Stream.StreamId;
+            }
         }
-
+        
         public void SendGSAObjects(Dictionary<string, List<object>> payloadObjects)
         {
             StructuresConverterHack hack = new StructuresConverterHack();
@@ -120,20 +129,20 @@ namespace SpeckleGSA
             SpeckleStream updateStream = new SpeckleStream();
             updateStream.Layers = layers;
             updateStream.Objects = placeholders;
-            updateStream.Name = mySender.Stream.Name;
+            updateStream.Name = StreamName;
             updateStream.BaseProperties = GSA.GetBaseProperties();
 
             try
             { 
-                var response = mySender.StreamUpdateAsync(mySender.Stream.StreamId, updateStream).Result;
+                var response = mySender.StreamUpdateAsync(StreamID, updateStream).Result;
                 mySender.Stream.Layers = updateStream.Layers.ToList();
                 mySender.Stream.Objects = placeholders;
                 
-                Status.AddMessage("Succesfully sent " + mySender.Stream.Name + " stream with " + updateStream.Objects.Count() + " objects.");
+                Status.AddMessage("Succesfully sent " + StreamName + " stream with " + updateStream.Objects.Count() + " objects.");
             }
             catch
             {
-                Status.AddError("Failed to send " + mySender.Stream.Name + " stream.");
+                Status.AddError("Failed to send " + StreamName + " stream.");
             }
         }
 

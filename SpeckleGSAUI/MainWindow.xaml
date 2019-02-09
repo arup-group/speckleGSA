@@ -43,7 +43,7 @@
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="auto"/>
                         </Grid.RowDefinitions>
-                        <Button Grid.Row="0" Click="Login" Content="Login" Margin="5" Padding="5" MinWidth="100"/>
+                        <Button Grid.Row="0" Click="Login" Content="Login" Margin="5" Padding="5" MinWidth="100" Grid.ColumnSpan="2"/>
                         <DataGrid
                             Grid.Row="1"
                             Margin="5"
@@ -53,7 +53,7 @@
                             ItemsSource="{Binding StreamData}"
                             SelectionMode="Single"
                             CopyingRowClipboardContent="CopyStreamList"
-                            GridLinesVisibility="None">
+                            GridLinesVisibility="None" Grid.ColumnSpan="2">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Name" Width="*" Binding="{Binding Item1}"/>
                                 <DataGridTextColumn Header="StreamID" Width="*" Binding="{Binding Item2}"/>
@@ -67,7 +67,7 @@
                                 </Style>
                             </DataGrid.CellStyle>
                         </DataGrid>
-                        <Button Grid.Row="2" Click="UpdateStreamList"  Content="Update Stream List" Margin="5" Padding="5" HorizontalAlignment="Right" MinWidth="100"/>
+                        <Button Grid.Row="2" Click="UpdateStreamList"  Content="Update Stream List" Margin="0,5,5,5" Padding="5" HorizontalAlignment="Right" MinWidth="100" Grid.Column="1"/>
                     </Grid>
                 </TabItem>
                 <TabItem Header="GSA">
@@ -84,21 +84,13 @@
                 </TabItem>
                 <TabItem Header="Sender">
                     <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="auto"/>
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="auto"/>
                         </Grid.RowDefinitions>
-                        <Label Grid.Row="0" Grid.Column="0" Content="Model Name" Margin="5"/>
-                        <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Path=ModelName}" Margin="5"/>
                         <DataGrid
                             x:Name="SenderStreams"
-                            Grid.Row="1"
-                            Grid.ColumnSpan="2"
+                            Grid.Row="0"
                             Margin="5"
                             CanUserSortColumns="False"
                             AutoGenerateColumns="False"
@@ -119,27 +111,48 @@
                                 </Style>
                             </DataGrid.CellStyle>
                         </DataGrid>
-                        <StackPanel Grid.Row="2" Grid.ColumnSpan="2" HorizontalAlignment="Right" Orientation="Horizontal">
+                        <StackPanel Grid.Row="1" HorizontalAlignment="Right" Orientation="Horizontal">
                             <Button Content="Send/Update Analysis Streams" Click="SendAnalysisLayer" Margin="5" Padding="5" HorizontalAlignment="Right" MinWidth="100"/>
                             <Button Content="Send/Update Design Streams" Click="SendDesignLayer" Margin="5" Padding="5" HorizontalAlignment="Right" MinWidth="100"/>
                         </StackPanel>
-                        
+
                     </Grid>
                 </TabItem>
                 <TabItem Header="Receiver">
                     <Grid>
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="auto"/>
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="auto"/>
                         </Grid.RowDefinitions>
-                        <RichTextBox x:Name="ReceiverStreams" Grid.Row="0" HorizontalContentAlignment="Center" Margin="5" AcceptsReturn="True" BorderThickness="1">
-                            <RichTextBox.Resources>
-                                <Style TargetType="{x:Type Paragraph}">
-                                    <Setter Property="Margin" Value="0"/>
+                        <DockPanel Grid.Row="0" LastChildFill="True">
+                            <Button DockPanel.Dock="Right" Click="AddReceiver" Content="Add Receiver" Margin="5" Padding="5" MinWidth="100"/>
+                            <TextBox x:Name="ReceiverTextbox" DockPanel.Dock="Left" Margin="5" Padding="5"/>
+                        </DockPanel>
+                        
+                        <DataGrid
+                            x:Name="ReceiverStreams"
+                            Grid.Row="1"
+                            Margin="5"
+                            CanUserSortColumns="False"
+                            AutoGenerateColumns="False"
+                            IsReadOnly="True"
+                            SelectionMode="Single"
+                            CopyingRowClipboardContent="CopyStreamList"
+                            GridLinesVisibility="None" Grid.ColumnSpan="2">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="StreamID" Width="*" Binding="{Binding}"/>
+                            </DataGrid.Columns>
+                            <DataGrid.CellStyle>
+                                <Style
+                                    TargetType="DataGridCell"
+                                    BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
                                 </Style>
-                            </RichTextBox.Resources>
-                        </RichTextBox>
-                        <StackPanel Grid.Row="1" HorizontalAlignment="Right" Orientation="Horizontal">
+                            </DataGrid.CellStyle>
+                        </DataGrid>
+                        <StackPanel Grid.Row="2" HorizontalAlignment="Right" Orientation="Horizontal" Grid.Column="1">
                             <Button Content="Receive Analysis Streams" Click="ReceiveAnalysisLayer" Margin="5" Padding="5" HorizontalAlignment="Right" MinWidth="100"/>
                             <Button Content="Receive Design Streams" Click="ReceiveDesignLayer" Margin="5" Padding="5" HorizontalAlignment="Right" MinWidth="100"/>
                         </StackPanel>

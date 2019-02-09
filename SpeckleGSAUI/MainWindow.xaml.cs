@@ -114,14 +114,46 @@ namespace SpeckleGSAUI
 
         private void NewGSAFile(object sender, RoutedEventArgs e)
         {
-            Task.Run(() => GSA.NewFile());
+            Task.Run(() => GSA.NewFile()).ContinueWith(
+                delegate
+                {
+                    try
+                    {
+                        Application.Current.Dispatcher.BeginInvoke(
+                            DispatcherPriority.Background,
+                            new Action(() =>
+                            {
+                                UpdateClientLists();
+                            }
+                            ));
+                    }
+                    catch
+                    { Status.ChangeStatus("Failed to send"); }
+                });
         }
 
         private void OpenGSAFile(object sender, RoutedEventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
             if (openFileDialog.ShowDialog() == true)
-                Task.Run(() => GSA.OpenFile(openFileDialog.FileName));
+            {
+                Task.Run(() => GSA.OpenFile(openFileDialog.FileName)).ContinueWith(
+                    delegate
+                    {
+                        try
+                        {
+                            Application.Current.Dispatcher.BeginInvoke(
+                                DispatcherPriority.Background,
+                                new Action(() =>
+                                {
+                                    UpdateClientLists();
+                                }
+                                ));
+                        }
+                        catch
+                        { Status.ChangeStatus("Failed to send"); }
+                    });
+            }
         }
         #endregion
 
@@ -150,7 +182,7 @@ namespace SpeckleGSAUI
                 return;
             }
 
-            Task.Run(() => controller.ExportObjects(RestApi, ApiToken, ModelName)).ContinueWith(
+            Task.Run(() => controller.ExportObjects(RestApi, ApiToken)).ContinueWith(
             delegate {
                 try
                 {
@@ -158,11 +190,7 @@ namespace SpeckleGSAUI
                         DispatcherPriority.Background,
                         new Action(() =>
                         {
-                            SenderStreams.Items.Clear();
-
-                            List<Tuple<string, string>> streams = controller.GetSenderStreams();
-                            foreach (Tuple<string, string> stream in streams)
-                                SenderStreams.Items.Add(stream);
+                            UpdateClientLists();
                         }
                         ));
                 }
@@ -173,6 +201,16 @@ namespace SpeckleGSAUI
         #endregion
 
         #region Receiver
+        private void AddReceiver(object sender, RoutedEventArgs e)
+        {
+            if (ReceiverTextbox.Text != "")
+            { 
+                GSA.Receivers.Add(ReceiverTextbox.Text);
+                GSA.SetSpeckleClients();
+                UpdateClientLists();
+            }
+        }
+
         private void ReceiveAnalysisLayer(object sender, RoutedEventArgs e)
         {
             GSA.TargetAnalysisLayer = true;
@@ -196,19 +234,22 @@ namespace SpeckleGSAUI
                 Status.AddError("Not logged in");
                 return;
             }
-
-            string streamInput = new TextRange(ReceiverStreams.Document.ContentStart, ReceiverStreams.Document.ContentEnd).Text;
-            if (streamInput == null)
-                return;
-
-            string[] streams = streamInput.Split(new string[] { "\r", "\n", "," }, StringSplitOptions.RemoveEmptyEntries);
-
-            Dictionary<string, string> streamDict = new Dictionary<string, string>();
-
-            for (int i = 0; i < streams.Length; i++)
-                streamDict.Add(i.ToString(), streams[i]);
-
-            Task.Run(() => controller.ImportObjects(RestApi, ApiToken, streamDict));
+            
+            Task.Run(() => controller.ImportObjects(RestApi, ApiToken)).ContinueWith(
+            delegate {
+                try
+                {
+                    Application.Current.Dispatcher.BeginInvoke(
+                        DispatcherPriority.Background,
+                        new Action(() =>
+                        {
+                            UpdateClientLists();
+                        }
+                        ));
+                }
+                catch
+                { Status.ChangeStatus("Failed to receive"); }
+            });
         }
         #endregion
 
@@ -263,9 +304,22 @@ namespace SpeckleGSAUI
         #endregion
 
         #region UI
+        private void UpdateClientLists()
+        {
+            SenderStreams.Items.Clear();
+            ReceiverStreams.Items.Clear();
+
+            foreach (KeyValuePair<string, string> sender in GSA.Senders)
+                SenderStreams.Items.Add(new Tuple<string,string>(sender.Key, sender.Value));
+
+            foreach (string receiver in GSA.Receivers)
+                ReceiverStreams.Items.Add(receiver);
+        }
+
         private void CopyStreamList(object sender, DataGridRowClipboardEventArgs e)
         {
-            e.ClipboardRowContent.RemoveAt(0);
+            if (e.ClipboardRowContent.Count() > 1)
+                e.ClipboardRowContent.RemoveAt(0);
         }
 
         private void UpdateSettings(object sender, RoutedEventArgs e)
