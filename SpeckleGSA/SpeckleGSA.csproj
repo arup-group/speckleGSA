@@ -61,8 +61,7 @@
     <Compile Include="SpeckleInterface\SpeckleGSAReceiver.cs" />
     <Compile Include="SpeckleInterface\SpeckleGSASender.cs" />
     <Compile Include="StaticClasses\Status.cs" />
-    <Compile Include="SpeckleInterface\StreamManager.cs" />
-    <Compile Include="SpeckleInterface\UserManager.cs" />
+    <Compile Include="StaticClasses\StreamManager.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SpeckleStructures\SpeckleCore\SpeckleCore\SpeckleCore.csproj">

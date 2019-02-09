@@ -26,7 +26,7 @@ namespace SpeckleGSA
                 return;
 
             GSAObject = new ComAuto();
-
+            
             TargetAnalysisLayer = false;
             TargetDesignLayer = true; // TODO
 

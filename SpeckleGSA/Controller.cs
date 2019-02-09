@@ -39,71 +39,17 @@ namespace SpeckleGSA
                     return "";
             }
         }
-
-        private StreamManager streamManager;
-        private UserManager userManager;
+        
         private Dictionary<string, SpeckleGSASender> senders;
         private Dictionary<string, SpeckleGSAReceiver> receivers;
         
         public Controller()
         {
-            userManager = null;
-
             senders = new Dictionary<string, SpeckleGSASender>();
             receivers = new Dictionary<string, SpeckleGSAReceiver>();
         }
         
         #region Server
-        public void Login(string email, string password, string serverAddress)
-        {
-            var tempUserManager = new UserManager(email, password, serverAddress);
-            
-            if (tempUserManager.Login() == 0)
-            { 
-                Status.AddMessage("Successfully logged in");
-                userManager = tempUserManager;
-                streamManager = new StreamManager(userManager.ServerAddress, userManager.ApiToken);
-            }
-            else
-                Status.AddError("Failed to login");
-        }
-
-        public List<Tuple<string, string>> GetStreamList()
-        {
-            if (userManager == null | streamManager == null)
-            {
-                Status.AddError("Not logged in");
-                return null;
-            }
-
-            try
-            {
-                Status.AddMessage("Fetching stream list.");
-                var response = streamManager.GetStreams().Result;
-                Status.AddMessage("Finished fetching stream list.");
-                return response;
-            }
-            catch (Exception e)
-            {
-                Status.AddError(e.Message);
-                return null;
-            }
-        }
-
-        public void CloneModelStreams()
-        {
-            if (userManager == null | streamManager == null)
-            {
-                Status.AddError("Not logged in");
-                return;
-            }
-            
-            foreach (KeyValuePair<string, SpeckleGSASender> kvp in senders)
-            {
-                streamManager.CloneStream(kvp.Value.StreamID).ContinueWith(res => Status.AddMessage("Cloned " + kvp.Key + " stream to ID : " + res.Result));
-            }
-        }
-
         public List<Tuple<string,string>> GetSenderStreams()
         {
             List<Tuple<string, string>> streams = new List<Tuple<string, string>>();
@@ -116,7 +62,7 @@ namespace SpeckleGSA
         #endregion
 
         #region GSA
-        public async Task ExportObjects(string modelName)
+        public async Task ExportObjects(string restApi, string apiToken, string modelName)
         {
             List<Task> taskList = new List<Task>();
 
@@ -233,7 +179,7 @@ namespace SpeckleGSA
                 if (!senders.ContainsKey(kvp.Key))
                 {
                     Status.AddMessage(kvp.Key + " sender not initialized. Creating new " + kvp.Key + " sender.");
-                    senders[kvp.Key] = new SpeckleGSASender(userManager.ServerAddress, userManager.ApiToken);
+                    senders[kvp.Key] = new SpeckleGSASender(restApi, apiToken);
                     await senders[kvp.Key].InitializeSender();
                 }
 
@@ -266,7 +212,7 @@ namespace SpeckleGSA
             Status.AddMessage("Sending complete!");
         }        
 
-        public async Task ImportObjects(Dictionary<string, string> streamIDs)
+        public async Task ImportObjects(string restApi, string apiToken, Dictionary<string, string> streamIDs)
         {
             List<Task> taskList = new List<Task>();
 
@@ -291,7 +237,7 @@ namespace SpeckleGSA
                 else
                 {
                     Status.AddMessage("Creating receiver " + kvp.Key);
-                    receivers[kvp.Key] = new SpeckleGSAReceiver(userManager.ServerAddress, userManager.ApiToken);
+                    receivers[kvp.Key] = new SpeckleGSAReceiver(restApi, apiToken);
                     await receivers[kvp.Key].InitializeReceiver(kvp.Value);
 
                     if (receivers[kvp.Key].StreamID == null || receivers[kvp.Key].StreamID == "")

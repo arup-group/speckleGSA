@@ -216,11 +216,11 @@ namespace SpeckleGSA
             ls.Add("NO_RGB");
             ls.Add(string.Join(",", Coordinates.ToArray()));
 
-            ls.Add("0"); // TODO: Skip unknown fields in NODE.3
-            ls.Add("0"); // TODO: Skip unknown fields in NODE.3
-            ls.Add("0"); // TODO: Skip unknown fields in NODE.3
+            //ls.Add("0"); // TODO: Skip unknown fields in NODE.3
+            //ls.Add("0"); // TODO: Skip unknown fields in NODE.3
+            //ls.Add("0"); // TODO: Skip unknown fields in NODE.3
 
-            //ls.Add("NO_GRID");
+            ls.Add("NO_GRID");
 
             ls.Add(AddAxistoGSA().ToString());
 

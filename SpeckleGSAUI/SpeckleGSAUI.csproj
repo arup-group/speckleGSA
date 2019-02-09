@@ -102,6 +102,10 @@
       <Project>{6d8ca3ad-e530-4cda-af79-9715a7583f4f}</Project>
       <Name>SpeckleGSA</Name>
     </ProjectReference>
+    <ProjectReference Include="..\SpeckleStructures\SpeckleCore\SpeckleAccountManager\SpecklePopup.csproj">
+      <Project>{d65594c8-ea2e-46ca-a756-b1634edc3ae3}</Project>
+      <Name>SpecklePopup</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Resource Include="icon.ico" />

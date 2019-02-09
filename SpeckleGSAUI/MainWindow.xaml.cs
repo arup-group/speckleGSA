@@ -32,8 +32,9 @@ namespace SpeckleGSAUI
         public ObservableCollection<Tuple<string, string>> StreamData { get; set; }
 
         public string ModelName { get; set; }
-
-        public Controller gsa;
+        public string RestApi;
+        public string ApiToken;
+        public Controller controller;
 
         public MainWindow()
         {
@@ -45,13 +46,8 @@ namespace SpeckleGSAUI
             StreamData = new ObservableCollection<Tuple<string, string>>();
 
             ModelName = "";
-            gsa = new Controller();
-
-            //For testing purposes
-            ServerAddress.Text = "https://hestia.speckle.works/api/v1";
-            EmailAddress.Text = "mishael.nuh@arup.com";
-            Password.Password = "temporaryPassword";
-
+            controller = new Controller();
+            
             //Default settings
             SendOnlyMeaningfulNodes.IsChecked = Settings.SendOnlyMeaningfulNodes;
             Merge1DElementsIntoPolyline.IsChecked = Settings.Merge1DElementsIntoPolyline;
@@ -64,16 +60,32 @@ namespace SpeckleGSAUI
         #region Speckle Operations
         private void Login(object sender, RoutedEventArgs e)
         {
-            string email = EmailAddress.Text;
-            string password = Password.Password;
-            string server = ServerAddress.Text;
+            SpecklePopup.MainWindow p = new SpecklePopup.MainWindow(false, true);
+            this.IsEnabled = false;
+            Brush oldBackground = this.Background;
+            this.Background = new SolidColorBrush(Color.FromArgb(255,81,140,255));
+            p.ShowDialog();
+            this.IsEnabled = true;
+            this.Background = oldBackground;
 
-            Task.Run(() => gsa.Login(email, password, server));
+            RestApi = p.restApi;
+            ApiToken = p.apitoken;
+
+            if (RestApi != null && ApiToken != null)
+                Status.AddMessage("Logged in to " + p.selectedEmail);
+            else
+                Status.AddError("Failed to log in");
         }
 
         private void UpdateStreamList(object sender, RoutedEventArgs e)
         {
-            Task.Run(() => gsa.GetStreamList()).ContinueWith(res =>
+            if (RestApi == null && ApiToken == null)
+            {
+                Status.AddError("Not logged in");
+                return;
+            }
+
+            Task.Run(() => StreamManager.GetStreams(RestApi, ApiToken)).ContinueWith(res =>
             {
                 Application.Current.Dispatcher.BeginInvoke(
                     DispatcherPriority.Background,
@@ -91,11 +103,6 @@ namespace SpeckleGSAUI
                     ));
             }
             );
-        }
-
-        private void CloneModelStreams(object sender, RoutedEventArgs e)
-        {
-            Task.Run(() => gsa.CloneModelStreams());
         }
         #endregion
 
@@ -137,7 +144,13 @@ namespace SpeckleGSAUI
 
         private void SendStream(object sender, RoutedEventArgs e)
         {
-            Task.Run(() => gsa.ExportObjects(ModelName)).ContinueWith(
+            if (RestApi == null && ApiToken == null)
+            {
+                Status.AddError("Not logged in");
+                return;
+            }
+
+            Task.Run(() => controller.ExportObjects(RestApi, ApiToken, ModelName)).ContinueWith(
             delegate {
                 try
                 {
@@ -147,14 +160,14 @@ namespace SpeckleGSAUI
                         {
                             SenderStreams.Items.Clear();
 
-                            List<Tuple<string, string>> streams = gsa.GetSenderStreams();
+                            List<Tuple<string, string>> streams = controller.GetSenderStreams();
                             foreach (Tuple<string, string> stream in streams)
                                 SenderStreams.Items.Add(stream);
                         }
                         ));
                 }
                 catch
-                { }
+                { Status.ChangeStatus("Failed to send"); }
             });
         }
         #endregion
@@ -178,6 +191,12 @@ namespace SpeckleGSAUI
 
         private void ReceiveStream(object sender, RoutedEventArgs e)
         {
+            if (RestApi == null && ApiToken == null)
+            {
+                Status.AddError("Not logged in");
+                return;
+            }
+
             string streamInput = new TextRange(ReceiverStreams.Document.ContentStart, ReceiverStreams.Document.ContentEnd).Text;
             if (streamInput == null)
                 return;
@@ -189,7 +208,7 @@ namespace SpeckleGSAUI
             for (int i = 0; i < streams.Length; i++)
                 streamDict.Add(i.ToString(), streams[i]);
 
-            Task.Run(() => gsa.ImportObjects(streamDict));
+            Task.Run(() => controller.ImportObjects(RestApi, ApiToken, streamDict));
         }
         #endregion
 

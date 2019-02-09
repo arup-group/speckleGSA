@@ -8,17 +8,12 @@ using SpeckleCore;
 
 namespace SpeckleGSA
 {
-    public class StreamManager
+    public static class StreamManager
     {
-        private SpeckleApiClient myClient;
-
-        public StreamManager(string serverAddress, string apiToken)
+        public static async Task<List<Tuple<string, string>>> GetStreams(string restApi, string apiToken)
         {
-            myClient = new SpeckleApiClient() { BaseUrl = serverAddress.ToString(), AuthToken = apiToken };
-        }
+            SpeckleApiClient myClient = new SpeckleApiClient() { BaseUrl = restApi, AuthToken = apiToken };
 
-        public async Task<List<Tuple<string, string>>> GetStreams()
-        {
             ResponseStream response = await myClient.StreamsGetAllAsync("fields=name,streamId");
 
             List<Tuple<string, string>> ret = new List<Tuple<string, string>>();
@@ -29,8 +24,10 @@ namespace SpeckleGSA
             return ret;
         }
 
-        public async Task<string> CloneStream(string streamID)
+        public static async Task<string> CloneStream(string restApi, string apiToken, string streamID)
         {
+            SpeckleApiClient myClient = new SpeckleApiClient() { BaseUrl = restApi, AuthToken = apiToken };
+
             ResponseStreamClone response = await myClient.StreamCloneAsync(streamID);
 
             return response.Clone.StreamId;
