@@ -12,34 +12,6 @@ namespace SpeckleGSA
 {
     public class Controller
     {
-        public string SenderPropertiesStreamID
-        {
-            get
-            {
-                if (senders.ContainsKey("properties"))
-                    return senders["properties"].StreamID;
-                else
-                    return "";
-            }
-        }
-        public string SenderNodesStreamID { get
-            {
-                if (senders.ContainsKey("nodes"))
-                    return senders["nodes"].StreamID;
-                else
-                    return "";
-            }
-        }
-        public string SenderElementsStreamID {
-            get
-            {
-                if (senders.ContainsKey("elements"))
-                    return senders["elements"].StreamID;
-                else
-                    return "";
-            }
-        }
-        
         private Dictionary<string, SpeckleGSASender> senders;
         private Dictionary<string, SpeckleGSAReceiver> receivers;
         
@@ -49,19 +21,6 @@ namespace SpeckleGSA
             receivers = new Dictionary<string, SpeckleGSAReceiver>();
         }
         
-        #region Server
-        public List<Tuple<string,string>> GetSenderStreams()
-        {
-            List<Tuple<string, string>> streams = new List<Tuple<string, string>>();
-
-            foreach (KeyValuePair<string, SpeckleGSASender> kvp in senders)
-                streams.Add(new Tuple<string, string>(kvp.Value.StreamName, kvp.Value.StreamID));
-
-            return streams;
-        }
-        #endregion
-
-        #region GSA
         public async Task ExportObjects(string restApi, string apiToken)
         {
             List<Task> taskList = new List<Task>();
@@ -420,7 +379,6 @@ namespace SpeckleGSA
             Status.ChangeStatus("Receiving complete", 0);
             Status.AddMessage("Receiving completed!");
         }
-        #endregion
     }
 
 }

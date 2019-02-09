@@ -45,6 +45,7 @@
                         </Grid.RowDefinitions>
                         <Button Grid.Row="0" Click="Login" Content="Login" Margin="5" Padding="5" MinWidth="100" Grid.ColumnSpan="2"/>
                         <DataGrid
+                            x:Name="StreamList"
                             Grid.Row="1"
                             Margin="5"
                             CanUserSortColumns="False"
@@ -58,6 +59,13 @@
                                 <DataGridTextColumn Header="Name" Width="*" Binding="{Binding Item1}"/>
                                 <DataGridTextColumn Header="StreamID" Width="*" Binding="{Binding Item2}"/>
                             </DataGrid.Columns>
+                            <DataGrid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="View stream" Click="StreamList_ViewStream"/>
+                                    <MenuItem Header="View stream data" Click="StreamList_ViewStreamData"/>
+                                    <MenuItem Header="View object data" Click="StreamList_ViewObjectData"/>
+                                </ContextMenu>
+                            </DataGrid.ContextMenu>
                             <DataGrid.CellStyle>
                                 <Style
                                         TargetType="DataGridCell"
@@ -102,6 +110,14 @@
                                 <DataGridTextColumn Header="Name" Width="*" Binding="{Binding Item1}"/>
                                 <DataGridTextColumn Header="StreamID" Width="*" Binding="{Binding Item2}"/>
                             </DataGrid.Columns>
+                            <DataGrid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="View stream" Click="SenderStreams_ViewStream"/>
+                                    <MenuItem Header="View stream data" Click="SenderStreams_ViewStreamData"/>
+                                    <MenuItem Header="View object data" Click="SenderStreams_ViewObjectData"/>
+                                    <MenuItem Header="Clone stream" Click="SenderStreams_CloneStreams"/>
+                                </ContextMenu>
+                            </DataGrid.ContextMenu>
                             <DataGrid.CellStyle>
                                 <Style
                                     TargetType="DataGridCell"
@@ -143,6 +159,13 @@
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="StreamID" Width="*" Binding="{Binding}"/>
                             </DataGrid.Columns>
+                            <DataGrid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="View stream" Click="ReceiverStreams_ViewStream"/>
+                                    <MenuItem Header="View stream data" Click="ReceiverStreams_ViewStreamData"/>
+                                    <MenuItem Header="View object data" Click="ReceiverStreams_ViewObjectData"/>
+                                </ContextMenu>
+                            </DataGrid.ContextMenu>
                             <DataGrid.CellStyle>
                                 <Style
                                     TargetType="DataGridCell"

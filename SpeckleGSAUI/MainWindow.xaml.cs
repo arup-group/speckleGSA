@@ -101,8 +101,7 @@ namespace SpeckleGSAUI
                         }
                     }
                     ));
-            }
-            );
+            });
         }
         #endregion
 
@@ -208,6 +207,8 @@ namespace SpeckleGSAUI
                 GSA.Receivers.Add(ReceiverTextbox.Text);
                 GSA.SetSpeckleClients();
                 UpdateClientLists();
+
+                ReceiverTextbox.Clear();
             }
         }
 
@@ -337,6 +338,133 @@ namespace SpeckleGSAUI
                 }
             }
             catch { }
+        }
+
+        private void StreamList_ViewStream(object sender, RoutedEventArgs e)
+        {
+            var cell = StreamList.CurrentCell.Item;
+
+            if (cell.GetType() == typeof(Tuple<string,string>))
+            {
+                string streamID = (cell as Tuple<string, string>).Item2;
+                System.Diagnostics.Process.Start(RestApi.Replace("api/v1", "view") + @"/?streams=" + streamID);
+            }
+        }
+
+        private void StreamList_ViewStreamData(object sender, RoutedEventArgs e)
+        {
+            var cell = StreamList.CurrentCell.Item;
+
+            if (cell.GetType() == typeof(Tuple<string, string>))
+            {
+                string streamID = (cell as Tuple<string, string>).Item2;
+                System.Diagnostics.Process.Start(RestApi + @"/streams/" + streamID);
+            }
+        }
+    
+        private void StreamList_ViewObjectData(object sender, RoutedEventArgs e)
+        {
+            var cell = StreamList.CurrentCell.Item;
+
+            if (cell.GetType() == typeof(Tuple<string, string>))
+            {
+                string streamID = (cell as Tuple<string, string>).Item2;
+                System.Diagnostics.Process.Start(RestApi + @"/streams/" + streamID + @"/objects?omit=displayValue,base64");
+            }
+        }
+
+        private void SenderStreams_ViewStream(object sender, RoutedEventArgs e)
+        {
+            var cell = SenderStreams.CurrentCell.Item;
+
+            if (cell.GetType() == typeof(Tuple<string, string>))
+            {
+                string streamID = (cell as Tuple<string, string>).Item2;
+                System.Diagnostics.Process.Start(RestApi.Replace("api/v1", "view") + @"/?streams=" + streamID);
+            }
+        }
+
+        private void SenderStreams_ViewStreamData(object sender, RoutedEventArgs e)
+        {
+            var cell = SenderStreams.CurrentCell.Item;
+
+            if (cell.GetType() == typeof(Tuple<string, string>))
+            {
+                string streamID = (cell as Tuple<string, string>).Item2;
+                System.Diagnostics.Process.Start(RestApi + @"/streams/" + streamID);
+            }
+        }
+
+        private void SenderStreams_ViewObjectData(object sender, RoutedEventArgs e)
+        {
+            var cell = SenderStreams.CurrentCell.Item;
+
+            if (cell.GetType() == typeof(Tuple<string, string>))
+            {
+                string streamID = (cell as Tuple<string, string>).Item2;
+                System.Diagnostics.Process.Start(RestApi + @"/streams/" + streamID + @"/objects?omit=displayValue,base64");
+            }
+        }
+
+        private void SenderStreams_CloneStreams(object sender, RoutedEventArgs e)
+        {
+            if (RestApi == null && ApiToken == null)
+            {
+                Status.AddError("Not logged in");
+                return;
+            }
+
+            var cell = SenderStreams.CurrentCell.Item;
+
+            if (cell.GetType() == typeof(Tuple<string, string>))
+            {
+                string streamID = (cell as Tuple<string, string>).Item2;
+                
+                Task.Run(() => StreamManager.CloneStream(RestApi, ApiToken, streamID)).ContinueWith(res =>
+                {
+                    Application.Current.Dispatcher.BeginInvoke(
+                        DispatcherPriority.Background,
+                        new Action(() =>
+                        {
+                            try
+                            {
+                                Status.AddMessage("Cloned to: " + res.Result);
+                            }
+                            catch { Status.AddError("Could not clone " + streamID); }
+                        }
+                        ));
+                });
+            }
+        }
+
+        private void ReceiverStreams_ViewStream(object sender, RoutedEventArgs e)
+        {
+            var streamID = ReceiverStreams.CurrentCell.Item;
+
+            if (streamID.GetType() == typeof(string))
+            {
+                System.Diagnostics.Process.Start(RestApi.Replace("api/v1", "view") + @"/?streams=" + (string)streamID);
+            }
+        }
+
+        private void ReceiverStreams_ViewStreamData(object sender, RoutedEventArgs e)
+        {
+            var streamID = ReceiverStreams.CurrentCell.Item;
+
+            if (streamID.GetType() == typeof(string))
+            {
+                System.Diagnostics.Process.Start(RestApi + @"/streams/" + (string)streamID);
+            }
+        }
+
+        private void ReceiverStreams_ViewObjectData(object sender, RoutedEventArgs e)
+        {
+            var streamID = ReceiverStreams.CurrentCell.Item;
+
+            if (streamID.GetType() == typeof(string))
+            {
+                System.Diagnostics.Process.Start(RestApi + @"/streams/" + (string)streamID + @"/objects?omit=displayValue,base64");
+            }
         }
         #endregion
 
