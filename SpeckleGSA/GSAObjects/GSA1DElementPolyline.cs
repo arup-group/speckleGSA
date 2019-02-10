@@ -15,7 +15,7 @@ namespace SpeckleGSA
         public static readonly string GSAKeyword = "";
         public static readonly string Stream = "elements";
 
-        public static readonly Type[] ReadPrerequisite = new Type[1] { typeof(GSA1DElement) /*, typeof(GSA1DLoad) */ };
+        public static readonly Type[] ReadPrerequisite = new Type[1] { typeof(GSA1DElement) };
         public static readonly Type[] WritePrerequisite = new Type[0] { };
         public static readonly bool AnalysisLayer = true;
         public static readonly bool DesignLayer = true;

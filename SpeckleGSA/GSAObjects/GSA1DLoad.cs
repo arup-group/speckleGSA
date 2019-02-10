@@ -84,7 +84,7 @@ namespace SpeckleGSA
                 GSA1DLoad initLoad = new GSA1DLoad();
                 initLoad.ParseGWACommand(p,dict);
 
-                if (!Settings.Merge1DElementsIntoPolyline)
+                if (!Settings.Merge1DElementsIntoPolyline && GSA.TargetAnalysisLayer)
                 { 
                     // Create load for each element applied
                     foreach (int nRef in initLoad.Elements)
@@ -129,45 +129,48 @@ namespace SpeckleGSA
                     }
                 }
 
-                // Create load for each member applied
-                foreach (int mRef in initLoad.Polylines)
+                if (GSA.TargetDesignLayer)
                 {
-                    GSA1DLoad load = new GSA1DLoad();
-                    load.Name = initLoad.Name;
-                    load.LoadCase = initLoad.LoadCase;
-
-                    // Transform load to defined axis
-                    GSA1DMember memb = members.Where(e => e.Reference == mRef).First() as GSA1DMember;
-                    Axis loadAxis = load.Axis == 0 ? new Axis() : memb.Axis; // Assumes if not global, local
-                    load.Loading = initLoad.Loading;
-                    load.Loading.TransformOntoAxis(loadAxis);
-
-                    // Perform projection
-                    if (load.Projected)
+                    // Create load for each member applied
+                    foreach (int mRef in initLoad.Elements)
                     {
-                        Vector3D loadDirection = new Vector3D(
-                            load.Loading.X,
-                            load.Loading.Y,
-                            load.Loading.Z);
+                        GSA1DLoad load = new GSA1DLoad();
+                        load.Name = initLoad.Name;
+                        load.LoadCase = initLoad.LoadCase;
 
-                        if (loadDirection.Length > 0)
+                        // Transform load to defined axis
+                        GSA1DMember memb = members.Where(e => e.Reference == mRef).First() as GSA1DMember;
+                        Axis loadAxis = load.Axis == 0 ? new Axis() : memb.Axis; // Assumes if not global, local
+                        load.Loading = initLoad.Loading;
+                        load.Loading.TransformOntoAxis(loadAxis);
+
+                        // Perform projection
+                        if (load.Projected)
                         {
-                            double angle = Vector3D.AngleBetween(loadDirection, memb.Axis.X);
-                            double factor = Math.Sin(angle);
-                            load.Loading.X *= factor;
-                            load.Loading.Y *= factor;
-                            load.Loading.Z *= factor;
-                        }
-                    }
+                            Vector3D loadDirection = new Vector3D(
+                                load.Loading.X,
+                                load.Loading.Y,
+                                load.Loading.Z);
 
-                    // If the loading already exists, add node ref to list
-                    GSA1DLoad match = loadSubList.Count() > 0 ? loadSubList.Where(l => l.Loading.Equals(load.Loading)).First() : null;
-                    if (match != null)
-                        match.Polylines.Add(mRef);
-                    else
-                    {
-                        load.Polylines.Add(mRef);
-                        loadSubList.Add(load);
+                            if (loadDirection.Length > 0)
+                            {
+                                double angle = Vector3D.AngleBetween(loadDirection, memb.Axis.X);
+                                double factor = Math.Sin(angle);
+                                load.Loading.X *= factor;
+                                load.Loading.Y *= factor;
+                                load.Loading.Z *= factor;
+                            }
+                        }
+
+                        // If the loading already exists, add node ref to list
+                        GSA1DLoad match = loadSubList.Count() > 0 ? loadSubList.Where(l => l.Loading.Equals(load.Loading)).First() : null;
+                        if (match != null)
+                            match.Elements.Add(mRef);
+                        else
+                        {
+                            load.Elements.Add(mRef);
+                            loadSubList.Add(load);
+                        }
                     }
                 }
 
@@ -224,7 +227,7 @@ namespace SpeckleGSA
                 {
                     int[] targetGroups = pieces[counter++].GetGroupsFromGSAList();
 
-                    Polylines = dict[typeof(GSA1DMember)].Cast<GSA1DMember>()
+                    Elements = dict[typeof(GSA1DMember)].Cast<GSA1DMember>()
                         .Where(m => targetGroups.Contains(m.Group))
                         .Select(m => m.Reference).ToList();
                 }
@@ -325,7 +328,6 @@ namespace SpeckleGSA
 
                 // TODO: This is a hack.
                 List<string> target = new List<string>();
-                target.AddRange(Polylines.Select(x => "G" + x.ToString()));
                 if (GSA.TargetAnalysisLayer)
                     target.AddRange(Elements.Select(x => x.ToString()));
                 else
