@@ -42,7 +42,7 @@ namespace SpeckleGSA
             Status.AddMessage("Linked to GSA.");
         }
 
-        public static void NewFile()
+        public static void NewFile(string emailAddress, string serverAddress)
         {
             if (!IsInit)
                 return;
@@ -51,12 +51,12 @@ namespace SpeckleGSA
             GSAObject.DisplayGsaWindow(true);
 
             ClearCache();
-            GetSpeckleClients();
+            GetSpeckleClients(emailAddress, serverAddress);
 
             Status.AddMessage("Created new file.");
         }
 
-        public static void OpenFile(string path)
+        public static void OpenFile(string path, string emailAddress, string serverAddress)
         {
             if (!IsInit)
                 return;
@@ -75,25 +75,39 @@ namespace SpeckleGSA
             }
             
             ClearCache();
-            GetSpeckleClients();
+            GetSpeckleClients(emailAddress, serverAddress);
 
             Status.AddMessage("Opened new file.");
         }
 
-        public static void GetSpeckleClients()
+        public static void Close()
+        {
+            if (!IsInit) return;
+
+            try
+            {
+                GSAObject.Close();
+            }
+            catch { }
+            ClearCache();
+            Senders.Clear();
+            Receivers.Clear();
+        }
+
+        public static void GetSpeckleClients(string emailAddress, string serverAddress)
         {
             Senders.Clear();
             Receivers.Clear();
 
-            string res = (string)RunGWACommand("GET_ALL,LIST");
+            string res = (string)RunGWACommand("GET_ALL,LIST",false);
 
             if (res == "")
                 return;
 
             string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
 
-            string senderList = pieces.Where(s => s.Contains("SpeckleSenders")).FirstOrDefault();
-            string receiverList = pieces.Where(s => s.Contains("SpeckleReceivers")).FirstOrDefault();
+            string senderList = pieces.Where(s => s.Contains("SpeckleSenders:" + emailAddress + ":" + serverAddress)).FirstOrDefault();
+            string receiverList = pieces.Where(s => s.Contains("SpeckleReceivers" + emailAddress + ":" + serverAddress)).FirstOrDefault();
 
             if (senderList != null)
             {
@@ -119,9 +133,9 @@ namespace SpeckleGSA
             }
         }
 
-        public static void SetSpeckleClients()
+        public static void SetSpeckleClients(string emailAddress, string serverAddress)
         {
-            string res = (string)RunGWACommand("GET_ALL,LIST");
+            string res = (string)RunGWACommand("GET_ALL,LIST",false);
 
             int senderListReference = 1;
             int receiverListReference = 2;
@@ -130,18 +144,18 @@ namespace SpeckleGSA
             { 
                 string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
 
-                string senderList = pieces.Where(s => s.Contains("SpeckleSenders")).FirstOrDefault();
+                string senderList = pieces.Where(s => s.Contains("SpeckleSenders:" + emailAddress + ":" + serverAddress)).FirstOrDefault();
                 if (senderList == null)
-                    senderListReference = (int)GSA.RunGWACommand("HIGHEST,LIST") + 1;
+                    senderListReference = (int)GSA.RunGWACommand("HIGHEST,LIST",false) + 1;
                 else
                 {
                     string[] pPieces = senderList.ListSplit(",");
                     senderListReference = Convert.ToInt32(pPieces[1]);
                 }
 
-                string receiverList = pieces.Where(s => s.Contains("SpeckleReceivers")).FirstOrDefault();
+                string receiverList = pieces.Where(s => s.Contains("SpeckleReceivers:" + emailAddress + ":" + serverAddress)).FirstOrDefault();
                 if (receiverList == null)
-                    receiverListReference = (int)GSA.RunGWACommand("HIGHEST,LIST") + 2;
+                    receiverListReference = (int)GSA.RunGWACommand("HIGHEST,LIST", false) + 2;
                 else
                 {
                     string[] pPieces = receiverList.ListSplit(",");
@@ -150,10 +164,10 @@ namespace SpeckleGSA
             }
 
             string senders = string.Join(" ", Senders.Select(kvp => "\"" + kvp.Key + ":" + kvp.Value + "\""));
-            RunGWACommand("SET,LIST," + senderListReference.ToString() + ",SpeckleSenders " + senders +",UNDEF, ");
+            RunGWACommand("SET,LIST," + senderListReference.ToString() + ",SpeckleSenders:" + emailAddress + ":" + serverAddress + " " + senders +",UNDEF, ", false);
             
             string receivers = string.Join(" ", Receivers.Select(r => "\"" + r + "\""));
-            RunGWACommand("SET,LIST," + receiverListReference.ToString() + ",SpeckleReceivers " + receivers + ",UNDEF, ");
+            RunGWACommand("SET,LIST," + receiverListReference.ToString() + ",SpeckleReceivers:" + emailAddress + ":" + serverAddress + " " + receivers + ",UNDEF, ", false);
         }
 
         public static string Title()
@@ -165,17 +179,20 @@ namespace SpeckleGSA
             return pieces[1];
         }
 
-        public static object RunGWACommand(string command)
+        public static object RunGWACommand(string command, bool cache = true)
         {
             if (!IsInit)
                 return "";
 
-            if (!command.Contains("HIGHEST"))
-            {
-                if (!GSACache.ContainsKey(command))
-                    GSACache[command] = GSAObject.GwaCommand(command);
+            if (cache)
+            { 
+                if (!command.Contains("HIGHEST") & !command.Contains("SET"))
+                {
+                    if (!GSACache.ContainsKey(command))
+                        GSACache[command] = GSAObject.GwaCommand(command);
 
-                return GSACache[command];
+                    return GSACache[command];
+                }
             }
 
             return GSAObject.GwaCommand(command);

@@ -12,8 +12,8 @@ namespace SpeckleGSA
 {
     public class Controller
     {
-        private Dictionary<string, SpeckleGSASender> senders;
-        private Dictionary<string, SpeckleGSAReceiver> receivers;
+        public Dictionary<string, SpeckleGSASender> senders;
+        public Dictionary<string, SpeckleGSAReceiver> receivers;
         
         public Controller()
         {
@@ -171,8 +171,6 @@ namespace SpeckleGSA
             }
             
             await Task.WhenAll(taskList);
-
-            GSA.SetSpeckleClients();
 
             // Complete
             Status.ChangeStatus("Sending complete", 0);

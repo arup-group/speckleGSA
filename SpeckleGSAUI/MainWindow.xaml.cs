@@ -31,7 +31,7 @@ namespace SpeckleGSAUI
         public ObservableCollection<string> Messages { get; set; }
         public ObservableCollection<Tuple<string, string>> StreamData { get; set; }
 
-        public string ModelName { get; set; }
+        public string EmailAddress;
         public string RestApi;
         public string ApiToken;
         public Controller controller;
@@ -44,8 +44,7 @@ namespace SpeckleGSAUI
             
             Messages = new ObservableCollection<string>();
             StreamData = new ObservableCollection<Tuple<string, string>>();
-
-            ModelName = "";
+            
             controller = new Controller();
             
             //Default settings
@@ -68,11 +67,16 @@ namespace SpeckleGSAUI
             this.IsEnabled = true;
             this.Background = oldBackground;
 
-            RestApi = p.restApi;
-            ApiToken = p.apitoken;
-
-            if (RestApi != null && ApiToken != null)
+            if (p.restApi != null && p.apitoken != null)
+            {
                 Status.AddMessage("Logged in to " + p.selectedEmail);
+
+                GSA.Close();
+                EmailAddress = p.selectedEmail;
+                RestApi = p.restApi;
+                ApiToken = p.apitoken;
+                UpdateClientLists();
+            }
             else
                 Status.AddError("Failed to log in");
         }
@@ -113,7 +117,7 @@ namespace SpeckleGSAUI
 
         private void NewGSAFile(object sender, RoutedEventArgs e)
         {
-            Task.Run(() => GSA.NewFile()).ContinueWith(
+            Task.Run(() => GSA.NewFile(EmailAddress, RestApi)).ContinueWith(
                 delegate
                 {
                     try
@@ -136,7 +140,7 @@ namespace SpeckleGSAUI
             OpenFileDialog openFileDialog = new OpenFileDialog();
             if (openFileDialog.ShowDialog() == true)
             {
-                Task.Run(() => GSA.OpenFile(openFileDialog.FileName)).ContinueWith(
+                Task.Run(() => GSA.OpenFile(openFileDialog.FileName, EmailAddress, RestApi)).ContinueWith(
                     delegate
                     {
                         try
@@ -181,6 +185,9 @@ namespace SpeckleGSAUI
                 return;
             }
 
+            GSA.GetSpeckleClients(EmailAddress, RestApi);
+            UpdateClientLists();
+
             Task.Run(() => controller.ExportObjects(RestApi, ApiToken)).ContinueWith(
             delegate {
                 try
@@ -189,6 +196,8 @@ namespace SpeckleGSAUI
                         DispatcherPriority.Background,
                         new Action(() =>
                         {
+                            GSA.SetSpeckleClients(EmailAddress, RestApi);
+
                             UpdateClientLists();
                         }
                         ));
@@ -205,7 +214,7 @@ namespace SpeckleGSAUI
             if (ReceiverTextbox.Text != "")
             { 
                 GSA.Receivers.Add(ReceiverTextbox.Text);
-                GSA.SetSpeckleClients();
+                GSA.SetSpeckleClients(EmailAddress, RestApi);
                 UpdateClientLists();
 
                 ReceiverTextbox.Clear();
@@ -235,7 +244,10 @@ namespace SpeckleGSAUI
                 Status.AddError("Not logged in");
                 return;
             }
-            
+
+            GSA.GetSpeckleClients(EmailAddress, RestApi);
+            UpdateClientLists();
+
             Task.Run(() => controller.ImportObjects(RestApi, ApiToken)).ContinueWith(
             delegate {
                 try
@@ -310,11 +322,13 @@ namespace SpeckleGSAUI
             SenderStreams.Items.Clear();
             ReceiverStreams.Items.Clear();
 
-            foreach (KeyValuePair<string, string> sender in GSA.Senders)
-                SenderStreams.Items.Add(new Tuple<string,string>(sender.Key, sender.Value));
+            if (GSA.Senders != null)
+                foreach (KeyValuePair<string, string> sender in GSA.Senders)
+                    SenderStreams.Items.Add(new Tuple<string,string>(sender.Key, sender.Value));
 
-            foreach (string receiver in GSA.Receivers)
-                ReceiverStreams.Items.Add(receiver);
+            if (GSA.Receivers != null)
+                foreach (string receiver in GSA.Receivers)
+                    ReceiverStreams.Items.Add(receiver);
         }
 
         private void CopyStreamList(object sender, DataGridRowClipboardEventArgs e)
