@@ -104,7 +104,11 @@ namespace SpeckleGSA
             
             // Remove unimportant nodes
             if (Settings.SendOnlyMeaningfulNodes && bucketObjects.ContainsKey(typeof(GSANode)))
-                bucketObjects[typeof(GSANode)] = bucketObjects[typeof(GSANode)].Where(n => (n as GSANode).ForceSend).ToList();
+                bucketObjects[typeof(GSANode)] = bucketObjects[typeof(GSANode)]
+                    .Where(n => (n as GSANode).ForceSend ||
+                    !(n as GSANode).Restraint.Equals(new SixVectorBool()) ||
+                    !(n as GSANode).Stiffness.Equals(new SixVectorDouble()) ||
+                    (n as GSANode).Mass > 0).ToList();
 
             // Convert objects to base class
             Dictionary<Type, List<StructuralObject>> tempBucket = new Dictionary<Type, List<StructuralObject>>();

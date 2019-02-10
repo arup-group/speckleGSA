@@ -148,11 +148,10 @@ namespace SpeckleGSA
                         ls.Add("GENERAL");
                 }
                 else
-                    ls.Add("");
+                    ls.Add("GENERAL");
             }
             else
-                ls.Add("");
-
+                ls.Add("GENERAL");
             ls.Add(Material.ToString());
             ls.Add("0"); // Analysis material
             ls.Add(GetGeometryDesc());
@@ -397,7 +396,7 @@ namespace SpeckleGSA
                 // TODO
             }
 
-            if (Coordinates.Count() < 9) return "STD%D%100";
+            if (Coordinates.Count() < 3) return "STD%C%100";
 
             List<string> ls = new List<string>();
 

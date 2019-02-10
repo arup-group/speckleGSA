@@ -155,7 +155,7 @@ namespace SpeckleGSA
             coor.Add(Convert.ToDouble(pieces[counter++]));
             Coordinates = new Coordinates(coor.ToArray());
 
-            counter += 3; // TODO: Skip unknown fields in NODE.3
+            //counter += 3; // TODO: Skip unknown fields in NODE.3
 
             while (counter < pieces.Length)
             {
@@ -224,7 +224,7 @@ namespace SpeckleGSA
 
             ls.Add(AddAxistoGSA().ToString());
 
-            if (!Restraint.X | !Restraint.Y | Restraint.Z | !Restraint.XX | !Restraint.YY | !Restraint.ZZ)
+            if (!Restraint.X & !Restraint.Y & Restraint.Z & !Restraint.XX & !Restraint.YY & !Restraint.ZZ)
                 ls.Add("NO_REST");
             else
             {
