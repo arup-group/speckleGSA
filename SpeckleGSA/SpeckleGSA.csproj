@@ -42,6 +42,7 @@
   <ItemGroup>
     <Compile Include="GSAObjects\GSA1DLoad.cs" />
     <Compile Include="GSAObjects\GSA1DElementPolyline.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StaticClasses\GSA.cs" />
     <Compile Include="Controller.cs" />
     <Compile Include="GSAObjects\GSA0DElement.cs" />
