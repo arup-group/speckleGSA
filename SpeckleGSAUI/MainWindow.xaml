@@ -164,6 +164,7 @@
                                     <MenuItem Header="View stream" Click="ReceiverStreams_ViewStream"/>
                                     <MenuItem Header="View stream data" Click="ReceiverStreams_ViewStreamData"/>
                                     <MenuItem Header="View object data" Click="ReceiverStreams_ViewObjectData"/>
+                                    <MenuItem Header="Remove stream" Click="ReceiverStreams_RemoveStream"/>
                                 </ContextMenu>
                             </DataGrid.ContextMenu>
                             <DataGrid.CellStyle>

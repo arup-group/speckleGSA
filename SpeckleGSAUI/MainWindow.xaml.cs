@@ -480,6 +480,18 @@ namespace SpeckleGSAUI
                 System.Diagnostics.Process.Start(RestApi + @"/streams/" + (string)streamID + @"/objects?omit=displayValue,base64");
             }
         }
+
+        private void ReceiverStreams_RemoveStream(object sender, RoutedEventArgs e)
+        {
+            var streamID = ReceiverStreams.CurrentCell.Item;
+
+            if (streamID.GetType() == typeof(string))
+            {
+                GSA.Receivers.Remove((string)streamID);
+                GSA.SetSpeckleClients(EmailAddress, RestApi);
+                UpdateClientLists();
+            }
+        }
         #endregion
 
     }

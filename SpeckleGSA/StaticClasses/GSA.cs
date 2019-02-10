@@ -107,7 +107,7 @@ namespace SpeckleGSA
             string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
 
             string senderList = pieces.Where(s => s.Contains("SpeckleSenders:" + emailAddress + ":" + serverAddress)).FirstOrDefault();
-            string receiverList = pieces.Where(s => s.Contains("SpeckleReceivers" + emailAddress + ":" + serverAddress)).FirstOrDefault();
+            string receiverList = pieces.Where(s => s.Contains("SpeckleReceivers:" + emailAddress + ":" + serverAddress)).FirstOrDefault();
 
             if (senderList != null)
             {
@@ -186,7 +186,7 @@ namespace SpeckleGSA
 
             if (cache)
             { 
-                if (!command.Contains("HIGHEST") & !command.Contains("SET"))
+                if (command.Contains("GET") & !command.Contains("HIGHEST"))
                 {
                     if (!GSACache.ContainsKey(command))
                         GSACache[command] = GSAObject.GwaCommand(command);
