@@ -27,17 +27,17 @@ namespace SpeckleGSA
             if (IsInit)
                 return;
 
-            GSAObject = new ComAuto();
+            //GSAObject = new ComAuto();
             
             TargetAnalysisLayer = false;
             TargetDesignLayer = true; // TODO
 
-            IsInit = true;
 
             GSACache = new Dictionary<string, object>();
-
             Senders = new Dictionary<string, string>();
             Receivers = new List<string>();
+
+            IsInit = true;
 
             Status.AddMessage("Linked to GSA.");
         }
@@ -46,6 +46,8 @@ namespace SpeckleGSA
         {
             if (!IsInit)
                 return;
+
+            GSAObject = new ComAuto();
 
             GSAObject.NewFile();
             GSAObject.DisplayGsaWindow(true);
@@ -61,18 +63,9 @@ namespace SpeckleGSA
             if (!IsInit)
                 return;
         
-            try
-            { 
-                GSAObject.Close();
-                GSAObject.Open(path);
-                GSAObject.DisplayGsaWindow(true);
-            }
-            catch
-            {
-                GSAObject = new ComAuto();
-                GSAObject.Open(path);
-                GSAObject.DisplayGsaWindow(true);
-            }
+            GSAObject = new ComAuto();
+            GSAObject.Open(path);
+            GSAObject.DisplayGsaWindow(true);
             
             ClearCache();
             GetSpeckleClients(emailAddress, serverAddress);
