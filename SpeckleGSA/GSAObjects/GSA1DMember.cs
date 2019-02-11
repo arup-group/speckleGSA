@@ -155,7 +155,7 @@ namespace SpeckleGSA
                 coordinates.AddRange(dict[typeof(GSANode)].Cast<GSANode>().Where(n => n.Reference == Convert.ToInt32(nodeRefs[i])).FirstOrDefault().Coordinates.ToArray());
 
             Coordinates = new Coordinates(coordinates.ToArray());
-
+            
             int orientationNodeRef = Convert.ToInt32(pieces[counter++]);
             double rotationAngle = Convert.ToDouble(pieces[counter++]);
 
@@ -165,6 +165,11 @@ namespace SpeckleGSA
                     dict[typeof(GSANode)].Cast<GSANode>().Where(n => n.Reference == orientationNodeRef).FirstOrDefault().Coordinates.ToArray());
             else
                 Axis = HelperFunctions.Parse1DAxis(Coordinates.ToArray(), rotationAngle);
+
+            counter += 7; //Skip to end conditions
+
+            EndCondition1 = ParseEndCondition(Convert.ToInt32(pieces[counter++]));
+            EndCondition2 = ParseEndCondition(Convert.ToInt32(pieces[counter++]));
 
             // Skip to offsets at fifth to last
             counter = pieces.Length - 5;
@@ -213,8 +218,25 @@ namespace SpeckleGSA
             ls.Add("0"); // Time 3
             ls.Add("0"); // TODO: What is this?
             ls.Add("ACTIVE"); // Dummy
-            ls.Add("1"); // End 1 condition
-            ls.Add("1"); // End 2 condition
+
+            if (EndCondition1.Equals(ParseEndCondition(1)))
+                ls.Add("1");
+            else if (EndCondition1.Equals(ParseEndCondition(2)))
+                ls.Add("2");
+            else if (EndCondition1.Equals(ParseEndCondition(3)))
+                ls.Add("3");
+            else
+                ls.Add("2");
+
+            if (EndCondition2.Equals(ParseEndCondition(1)))
+                ls.Add("1");
+            else if (EndCondition2.Equals(ParseEndCondition(2)))
+                ls.Add("2");
+            else if (EndCondition2.Equals(ParseEndCondition(3)))
+                ls.Add("3");
+            else
+                ls.Add("2");
+
             ls.Add("AUTOMATIC"); // Effective length option
             ls.Add("0"); // Pool
             ls.Add("0"); // Height
@@ -243,6 +265,34 @@ namespace SpeckleGSA
             }
 
             return children;
+        }
+
+        public SixVectorBool ParseEndCondition(int option)
+        {
+            switch(option)
+            {
+                case 1:
+                    // Pinned
+                    return new SixVectorBool(true, true, true, true, false, false);
+                case 2:
+                    // Fixed
+                    return new SixVectorBool(true, true, true, true, true, true);
+                case 3:
+                    // Free
+                    return new SixVectorBool(false, false, false, false, false, false);
+                case 4:
+                    // Full rotational
+                    return new SixVectorBool(true, true, true, true, true, true);
+                case 5:
+                    // Partial rotational
+                    return new SixVectorBool(true, true, true, true, false, false);
+                case 6:
+                    // Top flange lateral
+                    return new SixVectorBool(true, true, true, true, true, true);
+                default:
+                    // Pinned
+                    return new SixVectorBool(true, true, true, true, false, false);
+            }
         }
         #endregion
     }

@@ -142,44 +142,122 @@ namespace SpeckleGSA
             {
                 ls.Add("MAT_STEEL.3");
                 ls.Add(Reference.ToString());
-                ls.Add("MAT.6");
+                ls.Add("MAT.8");
                 ls.Add(Grade);
+                ls.Add("YES"); // Unlocked
+                ls.Add("200000000000"); // E
+                ls.Add("0.3"); // nu
+                ls.Add("76923076923"); // G
+                ls.Add("7850"); // rho
+                ls.Add("1.2e-05"); // alpha
+                ls.Add("MAT_ANAL.1");
+                ls.Add("0"); // TODO: What is this?
+                ls.Add("Steel");
+                ls.Add("-268435456"); // TODO: What is this?
+                ls.Add("MAT_ELAS_ISO");
+                ls.Add("6"); // TODO: What is this?
+                ls.Add("200000000000"); // E
+                ls.Add("0.3"); // nu
+                ls.Add("7850"); // rho
+                ls.Add("1.2e-05"); // alpha
+                ls.Add("76923076923"); // G
+                ls.Add("0"); // TODO: What is this?
+                ls.Add("0"); // TODO: What is this?
+                ls.Add("0"); // TODO: What is this?
+                ls.Add("0"); // TODO: What is this?
+                ls.Add("0"); // TODO: What is this?
+                ls.Add("0"); // TODO: What is this?
+                ls.Add("0"); // TODO: What is this?
+                ls.Add("0.05"); // Ultimate strain
+                ls.Add("MAT_CURVE_PARAM.2");
+                ls.Add("");
+                ls.Add("UNDEF");
+                ls.Add("1"); // Material factor on strength
+                ls.Add("1"); // Material factor on elastic modulus
+                ls.Add("MAT_CURVE_PARAM.2");
+                ls.Add("");
+                ls.Add("UNDEF");
+                ls.Add("1"); // Material factor on strength
+                ls.Add("1"); // Material factor on elastic modulus
+                ls.Add("0"); // Cost
+                ls.Add("350000000"); // Yield strength
+                ls.Add("450000000"); // Ultimate strength
+                ls.Add("0"); // Perfectly plastic strain limit
+                ls.Add("0"); // Hardening modulus
+
             }
-            else if (Type == StructuralMaterialType.CONCRETE)
+            else // if (Type == StructuralMaterialType.CONCRETE) // TODO: Default to concrete
             {
                 ls.Add("MAT_CONCRETE.16");
                 ls.Add(Reference.ToString());
-                ls.Add("MAT.6");
+                ls.Add("MAT.8");
                 ls.Add(Grade);
+                ls.Add("YES"); // Unlocked
+                ls.Add("28000000000"); // E
+                ls.Add("0.2"); // nu
+                ls.Add("11666666666"); // G
+                ls.Add("2400"); // rho
+                ls.Add("1e-05"); // alpha
+                ls.Add("MAT_ANAL.1");
+                ls.Add("0"); // TODO: What is this?
+                ls.Add("Concrete");
+                ls.Add("-268435456"); // TODO: What is this?
+                ls.Add("MAT_ELAS_ISO");
+                ls.Add("6"); // TODO: What is this?
+                ls.Add("28000000000"); // E
+                ls.Add("0.2"); // nu
+                ls.Add("2400"); // rho
+                ls.Add("1e-05"); // alpha
+                ls.Add("11666666666"); // G
+                ls.Add("0"); // TODO: What is this?
+                ls.Add("0"); // TODO: What is this?
+                ls.Add("0"); // TODO: What is this?
+                ls.Add("0"); // TODO: What is this?
+                ls.Add("0"); // TODO: What is this?
+                ls.Add("0"); // TODO: What is this?
+                ls.Add("0"); // TODO: What is this?
+                ls.Add("0"); // Ultimate strain
+                ls.Add("MAT_CURVE_PARAM.2");
+                ls.Add("");
+                ls.Add("UNDEF");
+                ls.Add("1"); // Material factor on strength
+                ls.Add("1"); // Material factor on elastic modulus
+                ls.Add("MAT_CURVE_PARAM.2");
+                ls.Add("");
+                ls.Add("UNDEF");
+                ls.Add("1"); // Material factor on strength
+                ls.Add("1"); // Material factor on elastic modulus
+                ls.Add("0"); // Cost
+                ls.Add("CYLINDER"); // Strength type
+                ls.Add("N"); // Cement class
+                ls.Add("35000000"); // Concrete strength
+                ls.Add("27912500"); // Uncracked strength
+                ls.Add("17500000"); // Cracked strength
+                ls.Add("2366431"); // Tensile strength
+                ls.Add("2366431"); // Peak strength for curves
+                ls.Add("0"); // TODO: What is this?
+                ls.Add("1"); // Ratio of initial elastic modulus to secant modulus
+                ls.Add("2"); // Parabolic coefficient
+                ls.Add("1"); // Modifier on elastic stiffness
+                ls.Add("0.00218389285990043"); // SLS strain at peak stress
+                ls.Add("0.0035"); // SLS max strain
+                ls.Add("0.00041125"); // ULS strain at plateau stress
+                ls.Add("0.0035"); // ULS max compressive strain
+                ls.Add("0.0035"); // TODO: What is this?
+                ls.Add("0.002"); // Plateau strain
+                ls.Add("0.0035"); // Max axial strain
+                ls.Add("NO"); // Lightweight?
+                ls.Add("0.02"); // Aggragate size
+                ls.Add("0"); // TODO: What is this?
+                ls.Add("0"); // TODO: What is this?
+                ls.Add("1"); // TODO: What is this?
+                ls.Add("0.8825"); // Constant stress depth
+                ls.Add("0"); // TODO: What is this?
+                ls.Add("0"); // TODO: What is this?
+                ls.Add("0"); // TODO: What is this?
+                ls.Add("0"); // TODO: What is this?
+                ls.Add("0"); // TODO: What is this?
             }
-            else
-            {
-                ls.Add("MAT.6");
-                ls.Add(Reference.ToString());
-                ls.Add(Grade);
-            }
-
-            ls.Add("YES");
-            ls.Add("0"); // E
-            ls.Add("0"); // nu
-            ls.Add("0"); // rho
-            ls.Add("0"); // alpha
-            ls.Add("0"); // num ULS C curve
-            ls.Add("0"); // num SLS C curve
-            ls.Add("0"); // num ULS T curve
-            ls.Add("0"); // num SLS T curve
-            ls.Add("0"); // limit strain
-            ls.Add("MAT_CURVE_PARAM.2");
-            ls.Add("");
-            ls.Add("UNDEF");
-            ls.Add("0");
-            ls.Add("0");
-            ls.Add("MAT_CURVE_PARAM.2");
-            ls.Add("");
-            ls.Add("UNDEF");
-            ls.Add("0");
-            ls.Add("0");
-            ls.Add("0"); // cost
             
             return string.Join(",", ls);
         }

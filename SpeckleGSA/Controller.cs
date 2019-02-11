@@ -238,6 +238,25 @@ namespace SpeckleGSA
                 .Assembly.GetTypes()
                 .Where(t => t.IsSubclassOf(typeof(StructuralObject)) && !t.IsAbstract);
 
+            // Clear GSA file
+            foreach (Type t in objTypes)
+            {
+                Status.ChangeStatus("Clearing " + t.Name);
+
+                try
+                {
+                    string keyword = (string)t.GetField("GSAKeyword").GetValue(null);
+
+                    int highestRecord = (int)GSA.RunGWACommand("HIGHEST," + keyword);
+
+                    if (highestRecord > 0)
+                        GSA.RunGWACommand("BLANK," + t.GetField("GSAKeyword").GetValue(null) + ",1," + highestRecord.ToString());
+                    else
+                        GSA.RunGWACommand("BLANK," + t.GetField("GSAKeyword").GetValue(null));
+                }
+                catch { }
+            }
+
             Status.ChangeStatus("Preparing to write GSA Objects");
 
             foreach (Type t in objTypes)
@@ -338,21 +357,6 @@ namespace SpeckleGSA
 
             // Initialize object write priority list
             Status.ChangeStatus("Preparing to write GSA Object");
-
-            // Clear GSA file
-            foreach (KeyValuePair<Type, List<Type>> kvp in typePrerequisites)
-            {
-                Status.ChangeStatus("Clearing " + kvp.Key.Name);
-
-                try
-                {
-                    string keyword = (string)kvp.Key.GetField("GSAKeyword").GetValue(null);
-                    int highestRecord = (int)GSA.RunGWACommand("HIGHEST," + keyword);
-
-                    GSA.RunGWACommand("BLANK," + kvp.Key.GetField("GSAKeyword").GetValue(null) + ",1," + highestRecord.ToString());
-                }
-                catch { }
-            }
 
             // Write objects
             List<Type> currentBatch = new List<Type>();
