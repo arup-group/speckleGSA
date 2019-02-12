@@ -166,7 +166,7 @@ namespace SpeckleGSA
             else
                 Axis = HelperFunctions.Parse1DAxis(Coordinates.ToArray(), rotationAngle);
 
-            counter += 7; //Skip to end conditions
+            counter += 9; //Skip to end conditions
 
             EndCondition1 = ParseEndCondition(Convert.ToInt32(pieces[counter++]));
             EndCondition2 = ParseEndCondition(Convert.ToInt32(pieces[counter++]));
@@ -211,7 +211,9 @@ namespace SpeckleGSA
             ls.Add(topo);
             ls.Add("0"); // Orientation node
             ls.Add(HelperFunctions.Get1DAngle(Axis).ToString());
-            ls.Add("0"); // Target mesh size
+            ls.Add("1"); // Target mesh size
+            ls.Add("MESH"); // TODO: What is this?
+            ls.Add("BEAM"); // Element type
             ls.Add("0"); // Fire
             ls.Add("0"); // Time 1
             ls.Add("0"); // Time 2

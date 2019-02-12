@@ -196,23 +196,15 @@ namespace SpeckleGSA
             ls.Add(topo);
             ls.Add("0"); // Orientation node
             ls.Add(HelperFunctions.Get2DAngle(Coordinates().ToArray(), Axis).ToString());
-            ls.Add("0"); // Target mesh size
+            ls.Add("1"); // Target mesh size
+            ls.Add("MESH"); // TODO: What is this?
+            ls.Add("LINEAR"); // Element type
             ls.Add("0"); // Fire
             ls.Add("0"); // Time 1
             ls.Add("0"); // Time 2
             ls.Add("0"); // Time 3
             ls.Add("0"); // TODO: What is this?
             ls.Add("ACTIVE"); // Dummy
-            ls.Add("0"); // End 1 condition
-            ls.Add("0"); // End 2 condition
-            ls.Add("AUTOMATIC"); // Effective length option
-            ls.Add("0"); // Pool
-            ls.Add("0"); // Height
-            ls.Add("MAN"); // Auto offset 1
-            ls.Add("MAN"); // Auto offset 2
-            ls.Add("0"); // Offset x 1
-            ls.Add("0"); // Offset x 2
-            ls.Add("0"); // Offset y
             ls.Add(Offset.ToString()); // Offset z
             ls.Add("ALL"); // Exposure
 
