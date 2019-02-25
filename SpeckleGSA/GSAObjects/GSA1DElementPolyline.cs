@@ -12,7 +12,7 @@ namespace SpeckleGSA
 {
     public class GSA1DElementPolyline : Structural1DElementPolyline
     {
-        public static readonly string GSAKeyword = "";
+        public static readonly string GSAKeyword = "MEMB";
         public static readonly string Stream = "elements";
 
         public static readonly Type[] ReadPrerequisite = new Type[1] { typeof(GSA1DElement) };

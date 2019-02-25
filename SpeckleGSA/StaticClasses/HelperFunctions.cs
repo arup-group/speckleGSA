@@ -927,17 +927,23 @@ namespace SpeckleGSA
             return counter[key]++;
         }
 
-        public static StructuralObject RefObject(StructuralObject obj)
+        public static int RefObject(StructuralObject obj)
         {
+            // Returns 0 if success else 1
             try
             {
                 string key = (string)obj.GetType().GetField("GSAKeyword").GetValue(null);
 
                 if (obj.Reference == 0)
                     obj.Reference = RefObject(key);
+                else
+                {
+                    if (refsUsed[key].Contains(obj.Reference))
+                        return 1;
+                }
 
                 AddObjRefs(key, new List<int>() { obj.Reference });
-                return obj;
+                return 0;
             }
             catch { throw new Exception("Unable to reference object type " + obj.GetType().Name); }
         }

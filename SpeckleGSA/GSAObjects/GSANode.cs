@@ -130,7 +130,8 @@ namespace SpeckleGSA
                 // Write 0D Elements
                 if (((GSANode)nodes[i]).Mass > 0)
                 {
-                    GSA0DElement e0D = GSARefCounters.RefObject(new GSA0DElement()) as GSA0DElement;
+                    GSA0DElement e0D =  new GSA0DElement();
+                    GSARefCounters.RefObject(e0D);
                     e0D.Type = "MASS";
                     e0D.Mass = ((GSANode)nodes[i]).Mass;
                     e0D.Connectivity = nodes[i].Reference;

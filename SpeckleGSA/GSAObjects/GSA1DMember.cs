@@ -109,7 +109,23 @@ namespace SpeckleGSA
             double counter = 1;
             foreach (StructuralObject m in m1Ds)
             {
-                GSARefCounters.RefObject(m);
+                int currRef = m.Reference;
+                if (GSARefCounters.RefObject(m) != 0)
+                {
+                    m.Reference = 0;
+                    GSARefCounters.RefObject(m);
+                    if (dict.ContainsKey(typeof(GSA1DLoad)))
+                    {
+                        foreach (StructuralObject o in dict[typeof(GSA1DLoad)])
+                        {
+                            if ((o as GSA1DLoad).Elements.Contains(currRef))
+                            {
+                                (o as GSA1DLoad).Elements.Remove(currRef);
+                                (o as GSA1DLoad).Elements.Add(m.Reference);
+                            }
+                        }
+                    }
+                }
 
                 List<StructuralObject> eNodes = (m as GSA1DMember).GetChildren();
 
