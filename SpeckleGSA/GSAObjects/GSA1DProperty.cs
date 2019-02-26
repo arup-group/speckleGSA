@@ -122,13 +122,13 @@ namespace SpeckleGSA
                     else if (matchingMaterial.Type == StructuralMaterialType.CONCRETE)
                         ls.Add("CONCRETE");
                     else
-                        ls.Add("GENERAL");
+                        ls.Add("UNDEF");
                 }
                 else
-                    ls.Add("GENERAL");
+                    ls.Add("UNDEF");
             }
             else
-                ls.Add("GENERAL");
+                ls.Add("UNDEF");
             ls.Add(Material.ToString());
             ls.Add("0"); // Analysis material
             ls.Add(GetGeometryDesc());
@@ -352,28 +352,70 @@ namespace SpeckleGSA
 
         public string GetGeometryDesc()
         {
+            if (Coordinates.Count() == 0) return "";
+
             if (Shape == Structural1DPropertyShape.CIRCULAR)
             {
-                // TODO
+                if (GSA.Units == "mm")
+                    return "STD%C%" + ((Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()) / 2).ToString();
+                else
+                    return "STD%C(" + GSA.Units + ")%" + ((Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()) / 2).ToString();
             }
             else if (Shape == Structural1DPropertyShape.RECTANGULAR)
             {
-                // TODO
+                if (GSA.Units == "mm")
+                    return "STD%R%" + ((Coordinates.Values.Select(v => v.Y).Max() - Coordinates.Values.Select(v => v.Y).Min()) / 2).ToString() + "%" + ((Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()) / 2).ToString();
+                else
+                    return "STD%R(" + GSA.Units + ")%" + ((Coordinates.Values.Select(v => v.Y).Max() - Coordinates.Values.Select(v => v.Y).Min()) / 2).ToString() + "%" + ((Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()) / 2).ToString();
             }
             else if (Shape == Structural1DPropertyShape.I)
             {
-                // TODO
+                List<double> xCoor = Coordinates.Values.Select(v => v.X).Distinct().ToList();
+                List<double> yCoor = Coordinates.Values.Select(v => v.Y).Distinct().ToList();
+
+                xCoor.Sort();
+                yCoor.Sort();
+
+                if (xCoor.Count() == 4 && yCoor.Count() == 4)
+                {
+                    double width = xCoor.Max() - xCoor.Min();
+                    double depth = yCoor.Max() - yCoor.Min();
+                    double T = yCoor[3] - yCoor[2];
+                    double t = xCoor[2] - xCoor[1];
+
+                    if (GSA.Units == "mm")
+                        return "STD%I%" + width.ToString() + "%" + depth.ToString() + "%" + T.ToString() + "%" + t.ToString();
+                    else
+                        return "STD%I(" + GSA.Units + ")%" + width.ToString() + "%" + depth.ToString() + "%" + T.ToString() + "%" + t.ToString();
+                }
             }
             else if (Shape == Structural1DPropertyShape.T)
             {
-                // TODO
+                List<double> xCoor = Coordinates.Values.Select(v => v.X).Distinct().ToList();
+                List<double> yCoor = Coordinates.Values.Select(v => v.Y).Distinct().ToList();
+
+                xCoor.Sort();
+                yCoor.Sort();
+
+                if (xCoor.Count() == 4 && yCoor.Count() == 3)
+                { 
+                    double width = xCoor.Max() - xCoor.Min();
+                    double depth = yCoor.Max() - yCoor.Min();
+                    double T = yCoor[2] - yCoor[1];
+                    double t = xCoor[2] - xCoor[1];
+
+                    if (GSA.Units == "mm")
+                        return "STD%T%" + width.ToString() + "%" + depth.ToString() + "%" + T.ToString() + "%" + t.ToString();
+                    else
+                        return "STD%T(" + GSA.Units + ")%" + width.ToString() + "%" + depth.ToString() + "%" + T.ToString() + "%" + t.ToString();
+                }
             }
             else
             {
                 // TODO
             }
 
-            if (Coordinates.Count() < 3) return "STD%C%100";
+            if (Coordinates.Count() < 3) return "";
 
             List<string> ls = new List<string>();
 
