@@ -7,16 +7,9 @@ using System.Windows.Media.Media3D;
 
 namespace SpeckleGSA
 {
+    [GSAObject("NODE", "nodes", true, true, new Type[] { }, new Type[] { typeof(GSA1DElement), typeof(GSA1DMember), typeof(GSA2DElement), typeof(GSA2DMember) })]
     public class GSANode : StructuralNode
     {
-        public static readonly string GSAKeyword = "NODE";
-        public static readonly string Stream = "nodes";
-
-        public static readonly Type[] ReadPrerequisite = new Type[0];
-        public static readonly Type[] WritePrerequisite = new Type[4] { typeof(GSA1DElement), typeof(GSA1DMember), typeof(GSA2DElement), typeof(GSA2DMember) };
-        public static readonly bool AnalysisLayer = true;
-        public static readonly bool DesignLayer = true;
-
         public bool ForceSend;
 
         #region Contructors and Converters
@@ -34,19 +27,6 @@ namespace SpeckleGSA
 
             foreach (PropertyInfo p in baseClass.GetType().GetProperties())
                 p.SetValue(this, p.GetValue(baseClass));
-        }
-
-        public StructuralObject GetBase()
-        {
-            StructuralObject baseClass = (StructuralObject)Activator.CreateInstance(this.GetType().BaseType);
-
-            foreach (FieldInfo f in baseClass.GetType().GetFields())
-                f.SetValue(baseClass, f.GetValue(this));
-
-            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
-                p.SetValue(baseClass, p.GetValue(this));
-
-            return baseClass;
         }
         #endregion
 
@@ -211,7 +191,7 @@ namespace SpeckleGSA
             List<string> ls = new List<string>();
 
             ls.Add("SET");
-            ls.Add(GSAKeyword);
+            ls.Add((string)this.GetAttribute("GSAKeyword"));
             ls.Add(Reference.ToString());
             ls.Add(Name);
             ls.Add("NO_RGB");

@@ -10,16 +10,9 @@ using System.Reflection;
 
 namespace SpeckleGSA
 {
+    [GSAObject("LOAD_2D_FACE", "loads", true, true, new Type[] { typeof(GSA2DElement), typeof(GSA2DMember) }, new Type[] { typeof(GSA2DElement), typeof(GSA2DMember) })]
     public class GSA2DLoad : Structural2DLoad
     {
-        public static readonly string GSAKeyword = "LOAD_2D_FACE";
-        public static readonly string Stream = "loads";
-
-        public static readonly Type[] ReadPrerequisite = new Type[2] { typeof(GSA2DElement), typeof(GSA2DMember) };
-        public static readonly Type[] WritePrerequisite = new Type[2] { typeof(GSA2DElement), typeof(GSA2DMember) };
-        public static readonly bool AnalysisLayer = true;
-        public static readonly bool DesignLayer = true;
-
         public int Axis;
         public bool Projected;
 
@@ -40,19 +33,6 @@ namespace SpeckleGSA
 
             foreach (PropertyInfo p in baseClass.GetType().GetProperties())
                 p.SetValue(this, p.GetValue(baseClass));
-        }
-
-        public StructuralObject GetBase()
-        {
-            StructuralObject baseClass = (StructuralObject)Activator.CreateInstance(this.GetType().BaseType);
-
-            foreach (FieldInfo f in baseClass.GetType().GetFields())
-                f.SetValue(baseClass, f.GetValue(this));
-
-            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
-                p.SetValue(baseClass, p.GetValue(this));
-
-            return baseClass;
         }
         #endregion
 
@@ -261,7 +241,7 @@ namespace SpeckleGSA
                 if (values[i] == 0) continue;
 
                 subLs.Add("SET");
-                subLs.Add(GSAKeyword);
+                subLs.Add((string)this.GetAttribute("GSAKeyword"));
                 subLs.Add(Name == "" ? " " : Name);
 
                 // TODO: This is a hack.

@@ -10,16 +10,9 @@ using System.Reflection;
 
 namespace SpeckleGSA
 {
+    [GSAObject("LOAD_BEAM", "loads", true, true, new Type[] { typeof(GSA1DElement), typeof(GSA1DMember) }, new Type[] { typeof(GSA1DElement), typeof(GSA1DMember) })]
     public class GSA1DLoad : Structural1DLoad
     {
-        public static readonly string GSAKeyword = "LOAD_BEAM";
-        public static readonly string Stream = "loads";
-
-        public static readonly Type[] ReadPrerequisite = new Type[2] { typeof(GSA1DElement), typeof(GSA1DMember) };
-        public static readonly Type[] WritePrerequisite = new Type[2] { typeof(GSA1DElement), typeof(GSA1DMember)  };
-        public static readonly bool AnalysisLayer = true;
-        public static readonly bool DesignLayer = true;
-
         public int Axis;
         public bool Projected;
 
@@ -40,19 +33,6 @@ namespace SpeckleGSA
 
             foreach (PropertyInfo p in baseClass.GetType().GetProperties())
                 p.SetValue(this, p.GetValue(baseClass));
-        }
-
-        public StructuralObject GetBase()
-        {
-            StructuralObject baseClass = (StructuralObject)Activator.CreateInstance(this.GetType().BaseType);
-
-            foreach (FieldInfo f in baseClass.GetType().GetFields())
-                f.SetValue(baseClass, f.GetValue(this));
-
-            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
-                p.SetValue(baseClass, p.GetValue(this));
-
-            return baseClass;
         }
         #endregion
 

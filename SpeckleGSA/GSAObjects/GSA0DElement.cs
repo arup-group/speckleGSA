@@ -7,11 +7,9 @@ using SpeckleStructures;
 
 namespace SpeckleGSA
 {
+    [GSAObject("EL", "elements", false, false, new Type[] { }, new Type[] { })]
     public class GSA0DElement : StructuralObject
     {
-        public static readonly string GSAKeyword = "EL";
-        public static readonly string Stream = "elements";
-
         public string Type;
         public int Property;
         public double Mass;
@@ -51,7 +49,7 @@ namespace SpeckleGSA
             List<string> ls = new List<string>();
 
             ls.Add("SET");
-            ls.Add(GSAKeyword);
+            ls.Add((string)this.GetAttribute("GSAKeyword"));
             ls.Add(Reference.ToString());
             ls.Add(""); // Name
             ls.Add("NO_RGB");

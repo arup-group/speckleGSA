@@ -40,6 +40,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="GSAObjects\GSAObject.cs" />
     <Compile Include="GSAObjects\GSALoadCase.cs" />
     <Compile Include="GSAObjects\GSA1DLoad.cs" />
     <Compile Include="GSAObjects\GSA1DElementPolyline.cs" />

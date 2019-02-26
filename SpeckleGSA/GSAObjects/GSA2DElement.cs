@@ -10,16 +10,9 @@ using SpeckleStructures;
 
 namespace SpeckleGSA
 {
+    [GSAObject("EL", "elements", true, false, new Type[] { typeof(GSANode), typeof(GSA2DProperty) }, new Type[] { typeof(GSA2DElementMesh) })]
     public class GSA2DElement : Structural2DElement
     {
-        public static readonly string GSAKeyword = "EL";
-        public static readonly string Stream = "elements";
-
-        public static readonly Type[] ReadPrerequisite = new Type[2] { typeof(GSANode), typeof(GSA2DProperty) };
-        public static readonly Type[] WritePrerequisite = new Type[1] { typeof(GSA2DElementMesh) };
-        public static readonly bool AnalysisLayer = true;
-        public static readonly bool DesignLayer = false;
-
         private List<int> Connectivity;
         public int MeshReference;
 
@@ -40,19 +33,6 @@ namespace SpeckleGSA
 
             foreach (PropertyInfo p in baseClass.GetType().GetProperties())
                 p.SetValue(this, p.GetValue(baseClass));
-        }
-
-        public StructuralObject GetBase()
-        {
-            StructuralObject baseClass = (StructuralObject)Activator.CreateInstance(this.GetType().BaseType);
-
-            foreach (FieldInfo f in baseClass.GetType().GetFields())
-                f.SetValue(baseClass, f.GetValue(this));
-
-            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
-                p.SetValue(baseClass, p.GetValue(this));
-
-            return baseClass;
         }
         #endregion
 
@@ -199,7 +179,7 @@ namespace SpeckleGSA
             List<string> ls = new List<string>();
 
             ls.Add("SET");
-            ls.Add(GSAKeyword);
+            ls.Add((string)this.GetAttribute("GSAKeyword"));
             ls.Add(Reference.ToString());
             ls.Add(Name);
             ls.Add(Color == null ? "NO_RGB" : Color.ToString());

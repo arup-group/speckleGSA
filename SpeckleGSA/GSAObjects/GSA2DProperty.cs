@@ -10,16 +10,9 @@ using SpeckleStructures;
 
 namespace SpeckleGSA
 {
+    [GSAObject("PROP_2D", "properties", true, true, new Type[] { typeof(GSAMaterial) }, new Type[] { typeof(GSAMaterial) })]
     public class GSA2DProperty : Structural2DProperty
     {
-        public static readonly string GSAKeyword = "PROP_2D";
-        public static readonly string Stream = "properties";
-
-        public static readonly Type[] ReadPrerequisite = new Type[1] { typeof(GSAMaterial) };
-        public static readonly Type[] WritePrerequisite = new Type[1] { typeof(GSAMaterial) };
-        public static readonly bool AnalysisLayer = true;
-        public static readonly bool DesignLayer = true;
-
         public bool IsAxisLocal;
 
         #region Contructors and Converters
@@ -37,19 +30,6 @@ namespace SpeckleGSA
 
             foreach (PropertyInfo p in baseClass.GetType().GetProperties())
                 p.SetValue(this, p.GetValue(baseClass));
-        }
-
-        public StructuralObject GetBase()
-        {
-            StructuralObject baseClass = (StructuralObject)Activator.CreateInstance(this.GetType().BaseType);
-
-            foreach (FieldInfo f in baseClass.GetType().GetFields())
-                f.SetValue(baseClass, f.GetValue(this));
-
-            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
-                p.SetValue(baseClass, p.GetValue(this));
-
-            return baseClass;
         }
         #endregion
 
@@ -138,7 +118,7 @@ namespace SpeckleGSA
             List<string> ls = new List<string>();
 
             ls.Add("SET");
-            ls.Add(GSAKeyword);
+            ls.Add((string)this.GetAttribute("GSAKeyword"));
             ls.Add(Reference.ToString());
             ls.Add(Name);
             ls.Add("NO_RGB");

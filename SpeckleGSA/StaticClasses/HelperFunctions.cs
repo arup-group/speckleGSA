@@ -888,6 +888,37 @@ namespace SpeckleGSA
 
             return mainList;
         }
+
+        public static StructuralObject GetBase(this StructuralObject obj)
+        {
+            StructuralObject baseClass = (StructuralObject)Activator.CreateInstance(obj.GetType().BaseType);
+
+            foreach (FieldInfo f in baseClass.GetType().GetFields())
+                f.SetValue(baseClass, f.GetValue(obj));
+
+            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
+                p.SetValue(baseClass, p.GetValue(obj));
+
+            return baseClass;
+        }
+
+        public static object GetAttribute(this object t, string attribute)
+        {
+            try
+            { 
+                if (t is Type)
+                { 
+                    GSAObject attObj = (GSAObject)Attribute.GetCustomAttribute((Type)t, typeof(GSAObject));
+                    return typeof(GSAObject).GetProperty(attribute).GetValue(attObj);
+                }
+                else
+                {
+                    GSAObject attObj = (GSAObject)Attribute.GetCustomAttribute(t.GetType(), typeof(GSAObject));
+                    return typeof(GSAObject).GetProperty(attribute).GetValue(attObj);
+                }
+            }
+            catch { return null; }
+        }
         #endregion
     }
 
@@ -932,7 +963,7 @@ namespace SpeckleGSA
             // Returns 0 if success else 1
             try
             {
-                string key = (string)obj.GetType().GetField("GSAKeyword").GetValue(null);
+                string key = (string)obj.GetAttribute("GSAKeyword");
 
                 if (obj.Reference == 0)
                     obj.Reference = RefObject(key);

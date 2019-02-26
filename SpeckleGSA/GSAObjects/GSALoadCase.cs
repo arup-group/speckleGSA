@@ -8,20 +8,11 @@ using SpeckleStructures;
 
 namespace SpeckleGSA
 {
+    [GSAObject("LOAD_TITLE", "loads", true, true, new Type[] { }, new Type[] { })]
     public class GSALoadCase : StructuralLoadCase
     {
-        public static readonly string GSAKeyword = "LOAD_TITLE";
-        public static readonly string Stream = "loads";
-        public static readonly bool AnalysisLayer = true;
-        public static readonly bool DesignLayer = true;
-
-        public static readonly Type[] ReadPrerequisite = new Type[0];
-        public static readonly Type[] WritePrerequisite = new Type[0];
-        
         #region Contructors and Converters
-        public GSALoadCase()
-        {
-        }
+        public GSALoadCase() { }
 
         public GSALoadCase(StructuralLoadCase baseClass)
         {
@@ -30,19 +21,6 @@ namespace SpeckleGSA
 
             foreach (PropertyInfo p in baseClass.GetType().GetProperties())
                 p.SetValue(this, p.GetValue(baseClass));
-        }
-
-        public StructuralObject GetBase()
-        {
-            StructuralObject baseClass = (StructuralObject)Activator.CreateInstance(this.GetType().BaseType);
-
-            foreach (FieldInfo f in baseClass.GetType().GetFields())
-                f.SetValue(baseClass, f.GetValue(this));
-
-            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
-                p.SetValue(baseClass, p.GetValue(this));
-
-            return baseClass;
         }
         #endregion
 
@@ -130,7 +108,7 @@ namespace SpeckleGSA
             List<string> ls = new List<string>();
 
             ls.Add("SET");
-            ls.Add(GSAKeyword);
+            ls.Add((string)this.GetAttribute("GSAKeyword"));
             ls.Add(Reference.ToString());
             ls.Add(Name); // Name
             if (Type == StructuralLoadCaseType.DEAD)

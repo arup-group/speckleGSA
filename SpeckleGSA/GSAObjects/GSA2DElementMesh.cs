@@ -10,16 +10,9 @@ using SpeckleStructures;
 
 namespace SpeckleGSA
 {
+    [GSAObject("MEMB", "elements", true, true, new Type[] { typeof(GSA2DElement) }, new Type[] { })]
     public class GSA2DElementMesh : Structural2DElementMesh
     {
-        public static readonly string GSAKeyword = "MEMB";
-        public static readonly string Stream = "elements";
-
-        public static readonly Type[] ReadPrerequisite = new Type[1] { typeof(GSA2DElement) };
-        public static readonly Type[] WritePrerequisite = new Type[0] { };
-        public static readonly bool AnalysisLayer = true;
-        public static readonly bool DesignLayer = true;
-
         #region Contructors and Converters
         public GSA2DElementMesh()
         {
@@ -39,19 +32,6 @@ namespace SpeckleGSA
 
             foreach (PropertyInfo p in baseClass.GetType().GetProperties())
                 p.SetValue(this, p.GetValue(baseClass));
-        }
-
-        public StructuralObject GetBase()
-        {
-            StructuralObject baseClass = (StructuralObject)Activator.CreateInstance(this.GetType().BaseType);
-
-            foreach (FieldInfo f in baseClass.GetType().GetFields())
-                f.SetValue(baseClass, f.GetValue(this));
-
-            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
-                p.SetValue(baseClass, p.GetValue(this));
-
-            return baseClass;
         }
         #endregion
 

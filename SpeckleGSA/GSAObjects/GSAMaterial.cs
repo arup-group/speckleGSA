@@ -9,16 +9,9 @@ using SpeckleStructures;
 
 namespace SpeckleGSA
 {
+    [GSAObject("MAT", "properties", true, true, new Type[] { }, new Type[] { })]
     public class GSAMaterial : StructuralMaterial
     {
-        public static readonly string GSAKeyword  = "MAT";
-        public static readonly string Stream = "properties";
-
-        public static readonly Type[] ReadPrerequisite = new Type[0];
-        public static readonly Type[] WritePrerequisite = new Type[0];
-        public static readonly bool AnalysisLayer = true;
-        public static readonly bool DesignLayer = true;
-
         // Need local reference since materials can have same reference if different types
         public int LocalReference;
 
@@ -37,19 +30,6 @@ namespace SpeckleGSA
 
             foreach (PropertyInfo p in baseClass.GetType().GetProperties())
                 p.SetValue(this, p.GetValue(baseClass));
-        }
-
-        public StructuralObject GetBase()
-        {
-            StructuralObject baseClass = (StructuralObject)Activator.CreateInstance(this.GetType().BaseType);
-
-            foreach (FieldInfo f in baseClass.GetType().GetFields())
-                f.SetValue(baseClass, f.GetValue(this));
-
-            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
-                p.SetValue(baseClass, p.GetValue(this));
-
-            return baseClass;
         }
         #endregion
 
