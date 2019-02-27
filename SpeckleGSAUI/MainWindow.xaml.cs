@@ -73,6 +73,8 @@ namespace SpeckleGSAUI
                 Status.AddMessage("Logged in to " + p.selectedEmail);
 
                 GSA.Close();
+                SenderTab.IsEnabled = false;
+                ReceiverTab.IsEnabled = false;
                 EmailAddress = p.selectedEmail;
                 RestApi = p.restApi;
                 ApiToken = p.apitoken;
@@ -113,6 +115,8 @@ namespace SpeckleGSAUI
         #region GSA
         private void NewGSAFile(object sender, RoutedEventArgs e)
         {
+            SenderTab.IsEnabled = false;
+            ReceiverTab.IsEnabled = false;
             Task.Run(() => GSA.NewFile(EmailAddress, RestApi)).ContinueWith(
                 delegate
                 {
@@ -123,6 +127,8 @@ namespace SpeckleGSAUI
                             new Action(() =>
                             {
                                 UpdateClientLists();
+                                SenderTab.IsEnabled = true;
+                                ReceiverTab.IsEnabled = true;
                             }
                             ));
                     }
@@ -136,6 +142,8 @@ namespace SpeckleGSAUI
             OpenFileDialog openFileDialog = new OpenFileDialog();
             if (openFileDialog.ShowDialog() == true)
             {
+                SenderTab.IsEnabled = false;
+                ReceiverTab.IsEnabled = false;
                 Task.Run(() => GSA.OpenFile(openFileDialog.FileName, EmailAddress, RestApi)).ContinueWith(
                     delegate
                     {
@@ -146,6 +154,8 @@ namespace SpeckleGSAUI
                                 new Action(() =>
                                 {
                                     UpdateClientLists();
+                                    SenderTab.IsEnabled = true;
+                                    ReceiverTab.IsEnabled = true;
                                 }
                                 ));
                         }

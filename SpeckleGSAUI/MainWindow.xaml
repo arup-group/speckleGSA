@@ -88,7 +88,7 @@
                         <Button Grid.Row="1" Content="Open File" Click="OpenGSAFile" Margin="5" Padding="5"/>
                     </Grid>
                 </TabItem>
-                <TabItem Header="Sender">
+                <TabItem Header="Sender" x:Name="SenderTab" IsEnabled="False">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="*"/>
@@ -132,7 +132,7 @@
 
                     </Grid>
                 </TabItem>
-                <TabItem Header="Receiver">
+                <TabItem Header="Receiver" x:Name="ReceiverTab" IsEnabled="False">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="auto"/>

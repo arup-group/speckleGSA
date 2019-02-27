@@ -98,5 +98,10 @@ namespace SpeckleGSA
                 Status.AddMessage("Received " + myReceiver.Stream.Name + " stream with " + myReceiver.Stream.Objects.Count() + " objects.");
             }
         }
+
+        public void Dispose()
+        {
+            myReceiver.Dispose(true);
+        }
     }
 }

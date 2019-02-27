@@ -177,5 +177,10 @@ namespace SpeckleGSA
 
             return objectUpdatePayloads;
         }
+
+        public void Dispose()
+        {
+            mySender.Dispose(true);
+        }
     }
 }

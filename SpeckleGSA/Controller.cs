@@ -151,27 +151,13 @@ namespace SpeckleGSA
                 else
                     await senders[kvp.Key].InitializeSender(GSA.Senders[kvp.Key], GSA.Title() + "." + kvp.Key);
 
-                // Send package asynchronously
-                Task task = new Task(() =>
-                {
-                    try
-                    { 
-                        senders[kvp.Key].SendGSAObjects(
-                            new Dictionary<string, List<object>>() {
-                                { "All", kvp.Value }
-                            });
-                    }
-                    catch (Exception ex)
-                    {
-                        Status.AddError(ex.Message);
-                    }
-                });
-                task.Start();
-                taskList.Add(task);
+                senders[kvp.Key].SendGSAObjects(
+                    new Dictionary<string, List<object>>() {
+                        { "All", kvp.Value }
+                    });
+                senders[kvp.Key].Dispose();
             }
             
-            await Task.WhenAll(taskList);
-
             // Complete
             Status.ChangeStatus("Sending complete", 0);
 
@@ -222,7 +208,11 @@ namespace SpeckleGSA
                             {
                                 Status.AddError(ex.Message);
                             }
-                        });
+                        }).ContinueWith(
+                            delegate
+                            {
+                                receivers[streamID].Dispose();
+                            });
                         task.Start();
                         taskList.Add(task);
                     }
