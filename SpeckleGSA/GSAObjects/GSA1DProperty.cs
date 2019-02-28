@@ -357,16 +357,16 @@ namespace SpeckleGSA
             if (Shape == Structural1DPropertyShape.CIRCULAR)
             {
                 if (GSA.Units == "mm")
-                    return "STD%C%" + ((Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()) / 2).ToString();
+                    return "STD%C%" + (Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()).ToString();
                 else
-                    return "STD%C(" + GSA.Units + ")%" + ((Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()) / 2).ToString();
+                    return "STD%C(" + GSA.Units + ")%" + (Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()).ToString();
             }
             else if (Shape == Structural1DPropertyShape.RECTANGULAR)
             {
                 if (GSA.Units == "mm")
-                    return "STD%R%" + ((Coordinates.Values.Select(v => v.Y).Max() - Coordinates.Values.Select(v => v.Y).Min()) / 2).ToString() + "%" + ((Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()) / 2).ToString();
+                    return "STD%R%" + (Coordinates.Values.Select(v => v.Y).Max() - Coordinates.Values.Select(v => v.Y).Min()).ToString() + "%" + (Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()).ToString();
                 else
-                    return "STD%R(" + GSA.Units + ")%" + ((Coordinates.Values.Select(v => v.Y).Max() - Coordinates.Values.Select(v => v.Y).Min()) / 2).ToString() + "%" + ((Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()) / 2).ToString();
+                    return "STD%R(" + GSA.Units + ")%" + (Coordinates.Values.Select(v => v.Y).Max() - Coordinates.Values.Select(v => v.Y).Min()).ToString() + "%" + (Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()).ToString();
             }
             else if (Shape == Structural1DPropertyShape.I)
             {

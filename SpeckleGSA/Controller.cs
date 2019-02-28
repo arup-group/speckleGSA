@@ -197,29 +197,18 @@ namespace SpeckleGSA
                         Status.AddError("Could not connect to " + streamID + " stream.");
                     else
                     {
-                        
-                        Task task = new Task(() =>
+                        try
                         {
-                            try
-                            {
-                                convertedObjects[streamID] = receivers[streamID].GetGSAObjects();
-                            }
-                            catch (Exception ex)
-                            {
-                                Status.AddError(ex.Message);
-                            }
-                        }).ContinueWith(
-                            delegate
-                            {
-                                receivers[streamID].Dispose();
-                            });
-                        task.Start();
-                        taskList.Add(task);
+                            convertedObjects[streamID] = receivers[streamID].GetGSAObjects();
+                            receivers[streamID].Dispose();
+                        }
+                        catch (Exception ex)
+                        {
+                            Status.AddError(ex.Message);
+                        }
                     }
                 }
             }
-
-            await Task.WhenAll(taskList);
 
             // Initialize object write priority list
             Dictionary<Type, List<Type>> typePrerequisites = new Dictionary<Type, List<Type>>();
