@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Interop.Gsa_10_0;
 
@@ -105,10 +106,9 @@ namespace SpeckleGSA
             if (senderList != null)
             {
                 string[] pPieces = senderList.ListSplit(",");
-                List<string[]> senders = pPieces[2].ListSplit(" ")
-                    .Where(s => !s.Contains("SpeckleSenders") && s.Length > 0)
-                    .Select(s => s.Trim(new char[] { '"' })
-                    .Split(new char[] { ':' }))
+
+                List<string[]> senders = Regex.Matches(pPieces[2], @"(?<={).*?(?=})").Cast<Match>()
+                    .Select(m => m.Value.Split(new char[] { ':' }))
                     .Where(s => s.Length == 2)
                     .ToList();
 
@@ -119,9 +119,8 @@ namespace SpeckleGSA
             if (receiverList != null)
             {
                 string[] pPieces = receiverList.ListSplit(",");
-                Receivers = pPieces[2].ListSplit(" ")
-                    .Where(s => !s.Contains("SpeckleReceivers") && s.Length > 0)
-                    .Select(s => s.Trim(new char[] { '"' }))
+                Receivers = Regex.Matches(pPieces[2], @"(?<={).*?(?=})").Cast<Match>()
+                    .Select(m => m.Value)
                     .ToList();
             }
         }
@@ -156,10 +155,10 @@ namespace SpeckleGSA
                 }
             }
 
-            string senders = string.Join(" ", Senders.Select(kvp => "\"" + kvp.Key + ":" + kvp.Value + "\""));
+            string senders = string.Join(" ", Senders.Select(kvp => '{' + kvp.Key + ":" + kvp.Value + '}'));
             RunGWACommand("SET,LIST," + senderListReference.ToString() + ",SpeckleSenders:" + emailAddress + ":" + serverAddress + " " + senders +",UNDEF, ", false);
             
-            string receivers = string.Join(" ", Receivers.Select(r => "\"" + r + "\""));
+            string receivers = string.Join(" ", Receivers.Select(r => '{' + r + '}'));
             RunGWACommand("SET,LIST," + receiverListReference.ToString() + ",SpeckleReceivers:" + emailAddress + ":" + serverAddress + " " + receivers + ",UNDEF, ", false);
         }
 

@@ -120,42 +120,51 @@ namespace SpeckleGSA
             bucketObjects = tempBucket;
 
             // Seperate objects into streams
-            Dictionary<string, List<object>> streamBuckets = new Dictionary<string, List<object>>();
+            Dictionary<string, Dictionary<string, List<object>>> streamBuckets = new Dictionary<string, Dictionary<string, List<object>>>();
 
             Status.ChangeStatus("Preparing stream buckets");
 
             foreach (KeyValuePair<Type, List<StructuralObject>> kvp in bucketObjects)
             {
-                string stream = (string)kvp.Key.GetAttribute("Stream");
+                string stream;
+
+                if (Settings.SeperateStreams)
+                    stream = (string)kvp.Key.GetAttribute("Stream");
+                else
+                    stream = "ALL";
 
                 if (!streamBuckets.ContainsKey(stream))
-                    streamBuckets[stream] = (kvp.Value as IList).Cast<object>().ToList();
+                    streamBuckets[stream] = new Dictionary<string, List<object>>() { { kvp.Key.BaseType.Name.ToString(), (kvp.Value as IList).Cast<object>().ToList() } };
                 else
-                    streamBuckets[stream].AddRange((kvp.Value as IList).Cast<object>().ToList());
+                    streamBuckets[stream][kvp.Key.BaseType.Name.ToString()] = (kvp.Value as IList).Cast<object>().ToList();
             }
 
             // Send package
             Status.ChangeStatus("Sending to Server");
 
-            foreach (KeyValuePair<string, List<object>> kvp in streamBuckets)
+            foreach (KeyValuePair<string, Dictionary<string, List<object>>> kvp in streamBuckets)
             {
-                // Create sender
-                senders[kvp.Key] = new SpeckleGSASender(restApi, apiToken);
+                string streamName = GSA.Title() + "." + kvp.Key;
+                
+                if (Settings.SeperateStreams)
+                    streamName = GSA.Title() + "." + kvp.Key;
+                else
+                    streamName = GSA.Title();
 
-                if (!GSA.Senders.ContainsKey(kvp.Key))
+                // Create sender
+                senders[streamName] = new SpeckleGSASender(restApi, apiToken);
+
+                if (!GSA.Senders.ContainsKey(streamName))
                 {
-                    Status.AddMessage(kvp.Key + " sender not initialized. Creating new " + kvp.Key + " sender.");
-                    await senders[kvp.Key].InitializeSender(null, GSA.Title() + "." + kvp.Key);
-                    GSA.Senders[kvp.Key] = senders[kvp.Key].StreamID;
+                    Status.AddMessage(streamName + " sender not initialized. Creating new " + streamName + " sender.");
+                    await senders[streamName].InitializeSender(null, streamName);
+                    GSA.Senders[streamName] = senders[streamName].StreamID;
                 }
                 else
-                    await senders[kvp.Key].InitializeSender(GSA.Senders[kvp.Key], GSA.Title() + "." + kvp.Key);
+                    await senders[streamName].InitializeSender(GSA.Senders[streamName], streamName);
 
-                senders[kvp.Key].SendGSAObjects(
-                    new Dictionary<string, List<object>>() {
-                        { "All", kvp.Value }
-                    });
-                senders[kvp.Key].Dispose();
+                senders[streamName].SendGSAObjects(kvp.Value);
+                senders[streamName].Dispose();
             }
             
             // Complete

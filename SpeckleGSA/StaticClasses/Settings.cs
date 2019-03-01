@@ -11,5 +11,6 @@ namespace SpeckleGSA
         public static bool SendOnlyMeaningfulNodes = true;
         public static bool Merge2DElementsIntoMesh = false;
         public static bool Merge1DElementsIntoPolyline = false;
+        public static bool SeperateStreams = false;
     }
 }

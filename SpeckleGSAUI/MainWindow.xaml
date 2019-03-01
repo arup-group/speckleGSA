@@ -52,7 +52,7 @@
                             AutoGenerateColumns="False"
                             IsReadOnly="True"
                             ItemsSource="{Binding StreamData}"
-                            SelectionMode="Single"
+                            SelectionMode="Extended"
                             CopyingRowClipboardContent="CopyStreamList"
                             GridLinesVisibility="None" Grid.ColumnSpan="2">
                             <DataGrid.Columns>
@@ -101,7 +101,7 @@
                             CanUserSortColumns="False"
                             AutoGenerateColumns="False"
                             IsReadOnly="True"
-                            SelectionMode="Single"
+                            SelectionMode="Extended"
                             CopyingRowClipboardContent="CopyStreamList"
                             GridLinesVisibility="None">
                             <DataGrid.Columns>
@@ -140,10 +140,14 @@
                             <RowDefinition Height="auto"/>
                         </Grid.RowDefinitions>
                         <DockPanel Grid.Row="0" LastChildFill="True">
-                            <Button DockPanel.Dock="Right" Click="AddReceiver" Content="Add Receiver" Margin="5" Padding="5" MinWidth="100"/>
-                            <TextBox x:Name="ReceiverTextbox" DockPanel.Dock="Left" Margin="5" Padding="5"/>
+                            <Button DockPanel.Dock="Right" Click="ClearReceiver" Content="Clear All"  Margin="5" Padding="5" MinWidth="100"/>
+                            <Button DockPanel.Dock="Right" Click="PasteClipboardReceiver" Content="Paste Clipboard"  Margin="5" Padding="5"  MinWidth="100"/>
+                            <Rectangle DockPanel.Dock="Right" VerticalAlignment="Stretch" Width="1" Margin="2" Stroke="DarkGray" />
+                            <DockPanel DockPanel.Dock="Left" LastChildFill="True">
+                                <Button DockPanel.Dock="Right" Click="AddReceiver" Content="Add Receiver" Margin="5" Padding="5" MinWidth="100"/>
+                                <TextBox x:Name="ReceiverTextbox" Margin="5" Padding="5"/>
+                            </DockPanel>
                         </DockPanel>
-                        
                         <DataGrid
                             x:Name="ReceiverStreams"
                             Grid.Row="1"
@@ -151,7 +155,7 @@
                             CanUserSortColumns="False"
                             AutoGenerateColumns="False"
                             IsReadOnly="True"
-                            SelectionMode="Single"
+                            SelectionMode="Extended"
                             CopyingRowClipboardContent="CopyStreamList"
                             GridLinesVisibility="None" Grid.ColumnSpan="2">
                             <DataGrid.Columns>
@@ -191,6 +195,7 @@
                                 <CheckBox Margin="5" Content="Send only meaningful nodes" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="SendOnlyMeaningfulNodes"/>
                                 <CheckBox Margin="5" Content="Merge 1D elements into polyline" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="Merge1DElementsIntoPolyline"/>
                                 <CheckBox Margin="5" Content="Merge 2D elements into mesh" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="Merge2DElementsIntoMesh"/>
+                                <CheckBox Margin="5" Content="Seperate sender streams" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="SeperateStreams"/>
                             </StackPanel>
                         </GroupBox>
                         <GroupBox Grid.Column="1" Header="Receiver" Margin="5">

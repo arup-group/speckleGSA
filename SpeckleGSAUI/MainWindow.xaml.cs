@@ -51,6 +51,7 @@ namespace SpeckleGSAUI
             SendOnlyMeaningfulNodes.IsChecked = Settings.SendOnlyMeaningfulNodes;
             Merge1DElementsIntoPolyline.IsChecked = Settings.Merge1DElementsIntoPolyline;
             Merge2DElementsIntoMesh.IsChecked = Settings.Merge2DElementsIntoMesh;
+            SeperateStreams.IsChecked = Settings.SeperateStreams;
 
             GSA.Init();
             Status.Init(this.AddMessage, this.AddError, this.ChangeStatus);
@@ -227,6 +228,25 @@ namespace SpeckleGSAUI
             }
         }
 
+        private void PasteClipboardReceiver(object sender, RoutedEventArgs e)
+        {
+            string[] paste = Clipboard.GetText(TextDataFormat.Text).Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (string p in paste)
+                GSA.Receivers.Add(p);
+
+            GSA.SetSpeckleClients(EmailAddress, RestApi);
+            UpdateClientLists();
+        }
+
+        private void ClearReceiver(object sender, RoutedEventArgs e)
+        {
+            GSA.Receivers.Clear();
+            GSA.SetSpeckleClients(EmailAddress, RestApi);
+
+            UpdateClientLists();
+        }
+
         private void ReceiveAnalysisLayer(object sender, RoutedEventArgs e)
         {
             GSA.TargetAnalysisLayer = true;
@@ -367,7 +387,8 @@ namespace SpeckleGSAUI
             if (cell.GetType() == typeof(Tuple<string,string>))
             {
                 string streamID = (cell as Tuple<string, string>).Item2;
-                System.Diagnostics.Process.Start(RestApi.Replace("api/v1", "view") + @"/?streams=" + streamID);
+                string url = RestApi.Split(new string[] { "api" }, StringSplitOptions.RemoveEmptyEntries)[0];
+                System.Diagnostics.Process.Start(url + @"view/?streams=" + streamID);
             }
         }
 
@@ -400,7 +421,8 @@ namespace SpeckleGSAUI
             if (cell.GetType() == typeof(Tuple<string, string>))
             {
                 string streamID = (cell as Tuple<string, string>).Item2;
-                System.Diagnostics.Process.Start(RestApi.Replace("api/v1", "view") + @"/?streams=" + streamID);
+                string url = RestApi.Split(new string[] { "api" }, StringSplitOptions.RemoveEmptyEntries)[0];
+                System.Diagnostics.Process.Start(url + @"view/?streams=" + streamID);
             }
         }
 
@@ -463,7 +485,8 @@ namespace SpeckleGSAUI
 
             if (streamID.GetType() == typeof(string))
             {
-                System.Diagnostics.Process.Start(RestApi.Replace("api/v1", "view") + @"/?streams=" + (string)streamID);
+                string url = RestApi.Split(new string[] { "api" }, StringSplitOptions.RemoveEmptyEntries)[0];
+                System.Diagnostics.Process.Start(url + @"view/?streams=" + (string)streamID);
             }
         }
 
