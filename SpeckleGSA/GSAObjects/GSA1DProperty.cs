@@ -164,7 +164,7 @@ namespace SpeckleGSA
             string unit = Regex.Match(pieces[1], @"(?<=()(.*)(?=))").Value;
             if (unit == "") unit = "mm";
 
-            if (pieces[1][0] == 'R')
+            if (pieces[1] == "R")
             {
                 // Rectangle
                 double height = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
@@ -177,7 +177,23 @@ namespace SpeckleGSA
                 Shape = Structural1DPropertyShape.RECTANGULAR;
                 Hollow = false;
             }
-            else if (pieces[1][0] == 'C')
+            else if (pieces[1] == "RHS")
+            {
+                // Hollow Rectangle
+                double height = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
+                double width = Convert.ToDouble(pieces[3]).ConvertUnit(unit, GSA.Units);
+                double t1 = Convert.ToDouble(pieces[4]).ConvertUnit(unit, GSA.Units);
+                double t2 = Convert.ToDouble(pieces[5]).ConvertUnit(unit, GSA.Units);
+                Coordinates = new Coordinates(new double[] {
+                    width /2, height/2 , 0,
+                    -width/2, height/2 , 0,
+                    -width/2, -height/2 , 0,
+                    width/2, -height/2 , 0});
+                Shape = Structural1DPropertyShape.RECTANGULAR;
+                Hollow = true;
+                Thickness = (t1 + t2) / 2; // TODO: Takes average thickness
+            }
+            else if (pieces[1] == "C")
             {
                 // Circle
                 double diameter = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
@@ -192,7 +208,24 @@ namespace SpeckleGSA
                 Shape = Structural1DPropertyShape.CIRCULAR;
                 Hollow = false;
             }
-            else if (pieces[1][0] == 'I')
+            else if (pieces[1] == "CHS")
+            {
+                // Hollow Circle
+                double diameter = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
+                double t = Convert.ToDouble(pieces[3]).ConvertUnit(unit, GSA.Units);
+                List<double> coor = new List<double>();
+                for (int i = 0; i < 360; i += 10)
+                {
+                    coor.Add(diameter / 2 * Math.Cos(i.ToRadians()));
+                    coor.Add(diameter / 2 * Math.Sin(i.ToRadians()));
+                    coor.Add(0);
+                }
+                Coordinates = new Coordinates(coor.ToArray());
+                Shape = Structural1DPropertyShape.CIRCULAR;
+                Hollow = true;
+                Thickness = t;
+            }
+            else if (pieces[1] == "I")
             {
                 // I Section
                 double depth = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
@@ -216,7 +249,7 @@ namespace SpeckleGSA
                 Shape = Structural1DPropertyShape.I;
                 Hollow = false;
             }
-            else if (pieces[1][0] == 'T')
+            else if (pieces[1] == "T")
             {
                 // T Section
                 double depth = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
@@ -236,7 +269,7 @@ namespace SpeckleGSA
                 Shape = Structural1DPropertyShape.T;
                 Hollow = false;
             }
-            else if (pieces[1].Substring(0,2) == "CH")
+            else if (pieces[1] == "CH")
             {
                 // Channel Section
                 double depth = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
@@ -256,7 +289,7 @@ namespace SpeckleGSA
                 Shape = Structural1DPropertyShape.GENERIC;
                 Hollow = false;
             }
-            else if (pieces[1][0] == 'A')
+            else if (pieces[1] == "A")
             {
                 // Angle Section
                 double depth = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
@@ -274,7 +307,7 @@ namespace SpeckleGSA
                 Shape = Structural1DPropertyShape.GENERIC;
                 Hollow = false;
             }
-            else if (pieces[1].Substring(0, 2) == "TR")
+            else if (pieces[1] == "TR")
             {
                 // Taper Section
                 double depth = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
@@ -288,7 +321,7 @@ namespace SpeckleGSA
                 Shape = Structural1DPropertyShape.GENERIC;
                 Hollow = false;
             }
-            else if (pieces[1][0] == 'E')
+            else if (pieces[1] == "E")
             {
                 // Ellipse Section
                 double depth = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
@@ -313,9 +346,19 @@ namespace SpeckleGSA
                 Hollow = false;
             }
             else
-                SetStandardDesc("STD%C%100");
-
-            // TODO: IMPLEMENT ALL SECTIONS
+            {
+                // TODO: IMPLEMENT ALL SECTIONS
+                Status.AddError("Section " + Name + " of type " + pieces[1] + " is unsupported.");
+                Coordinates = new Coordinates(new double[]
+                {
+                    0, 0, 0,
+                    0, 0, 0,
+                    0, 0, 0,
+                    0, 0, 0,
+                });
+                Shape = Structural1DPropertyShape.GENERIC;
+                Hollow = false;
+            }
         }
 
         public void SetGeometryDesc(string desc)
@@ -345,9 +388,19 @@ namespace SpeckleGSA
                 Hollow = false;
             }
             else
-                SetStandardDesc("STD%C%100");
-
-            // TODO: IMPLEMENT ALL SECTIONS
+            {
+                // TODO: IMPLEMENT ALL SECTIONS
+                Status.AddError("Section " + Name + " of type " + pieces[1] + " is unsupported.");
+                Coordinates = new Coordinates(new double[]
+                {
+                    0, 0, 0,
+                    0, 0, 0,
+                    0, 0, 0,
+                    0, 0, 0,
+                });
+                Shape = Structural1DPropertyShape.GENERIC;
+                Hollow = false;
+            }
         }
 
         public string GetGeometryDesc()
@@ -356,17 +409,37 @@ namespace SpeckleGSA
 
             if (Shape == Structural1DPropertyShape.CIRCULAR)
             {
-                if (GSA.Units == "mm")
-                    return "STD%C%" + (Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()).ToString();
+                if (Hollow)
+                {
+                    if (GSA.Units == "mm")
+                        return "STD%CHS%" + (Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()).ToString() + "%" + Thickness.ToString();
+                    else
+                        return "STD%CHS(" + GSA.Units + ")%" + (Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()).ToString() + "%" + Thickness.ToString();
+                }
                 else
-                    return "STD%C(" + GSA.Units + ")%" + (Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()).ToString();
+                {
+                    if (GSA.Units == "mm")
+                        return "STD%C%" + (Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()).ToString();
+                    else
+                        return "STD%C(" + GSA.Units + ")%" + (Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()).ToString();
+                }
             }
             else if (Shape == Structural1DPropertyShape.RECTANGULAR)
             {
-                if (GSA.Units == "mm")
-                    return "STD%R%" + (Coordinates.Values.Select(v => v.Y).Max() - Coordinates.Values.Select(v => v.Y).Min()).ToString() + "%" + (Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()).ToString();
+                if (Hollow)
+                {
+                    if (GSA.Units == "mm")
+                        return "STD%RHS%" + (Coordinates.Values.Select(v => v.Y).Max() - Coordinates.Values.Select(v => v.Y).Min()).ToString() + "%" + (Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()).ToString() + "%" + Thickness.ToString();
+                    else
+                        return "STD%RHS(" + GSA.Units + ")%" + (Coordinates.Values.Select(v => v.Y).Max() - Coordinates.Values.Select(v => v.Y).Min()).ToString() + "%" + (Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()).ToString() + "%" + Thickness.ToString();
+                }
                 else
-                    return "STD%R(" + GSA.Units + ")%" + (Coordinates.Values.Select(v => v.Y).Max() - Coordinates.Values.Select(v => v.Y).Min()).ToString() + "%" + (Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()).ToString();
+                {
+                    if (GSA.Units == "mm")
+                        return "STD%R%" + (Coordinates.Values.Select(v => v.Y).Max() - Coordinates.Values.Select(v => v.Y).Min()).ToString() + "%" + (Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()).ToString();
+                    else
+                        return "STD%R(" + GSA.Units + ")%" + (Coordinates.Values.Select(v => v.Y).Max() - Coordinates.Values.Select(v => v.Y).Min()).ToString() + "%" + (Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()).ToString();
+                }
             }
             else if (Shape == Structural1DPropertyShape.I)
             {
@@ -384,9 +457,9 @@ namespace SpeckleGSA
                     double t = xCoor[2] - xCoor[1];
 
                     if (GSA.Units == "mm")
-                        return "STD%I%" + width.ToString() + "%" + depth.ToString() + "%" + T.ToString() + "%" + t.ToString();
+                        return "STD%I%" + depth.ToString() + "%" + width.ToString() + "%" + T.ToString() + "%" + t.ToString();
                     else
-                        return "STD%I(" + GSA.Units + ")%" + width.ToString() + "%" + depth.ToString() + "%" + T.ToString() + "%" + t.ToString();
+                        return "STD%I(" + GSA.Units + ")%" + depth.ToString() + "%" + width.ToString() + "%" + T.ToString() + "%" + t.ToString();
                 }
             }
             else if (Shape == Structural1DPropertyShape.T)
@@ -405,14 +478,14 @@ namespace SpeckleGSA
                     double t = xCoor[2] - xCoor[1];
 
                     if (GSA.Units == "mm")
-                        return "STD%T%" + width.ToString() + "%" + depth.ToString() + "%" + T.ToString() + "%" + t.ToString();
+                        return "STD%T%" + depth.ToString() + "%" + width.ToString() + "%" + T.ToString() + "%" + t.ToString();
                     else
-                        return "STD%T(" + GSA.Units + ")%" + width.ToString() + "%" + depth.ToString() + "%" + T.ToString() + "%" + t.ToString();
+                        return "STD%T(" + GSA.Units + ")%" + depth.ToString() + "%" + width.ToString() + "%" + T.ToString() + "%" + t.ToString();
                 }
             }
             else
             {
-                // TODO
+                Status.AddError("Section " + Name + " added as perimeter desc.");
             }
 
             if (Coordinates.Count() < 3) return "";
