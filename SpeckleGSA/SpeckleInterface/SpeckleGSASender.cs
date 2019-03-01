@@ -164,7 +164,7 @@ namespace SpeckleGSA
 
                 if (currentBucketSize > MAX_BUCKET_SIZE)
                 {
-                    Status.AddMessage("Reached payload limit. Making a new one, current  #: " + objectUpdatePayloads.Count);
+                    //Status.AddMessage("Reached payload limit. Making a new one, current  #: " + objectUpdatePayloads.Count);
                     objectUpdatePayloads.Add(currentBucketObjects);
                     currentBucketObjects = new List<SpeckleObject>();
                     currentBucketSize = 0;
