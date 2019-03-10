@@ -43,7 +43,7 @@ build:
 
 after_build:
   # zip everything into a zip file containing package folder structure
-  - 7z a SpeckleGSA-%APPVEYOR_BUILD_VERSION%.zip "%APPVEYOR_BUILD_FOLDER%\SpeckleGSA\bin\Release\*"
+  - 7z a SpeckleGSA-%APPVEYOR_BUILD_VERSION%.zip "%APPVEYOR_BUILD_FOLDER%\SpeckleGSAUI\bin\Release\*"
 
 artifacts:
   path: SpeckleGSA-%APPVEYOR_BUILD_VERSION%.zip
