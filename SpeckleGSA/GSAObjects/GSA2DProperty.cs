@@ -10,7 +10,7 @@ using SpeckleStructures;
 
 namespace SpeckleGSA
 {
-    [GSAObject("PROP_2D", "properties", true, true, new Type[] { typeof(GSAMaterial) }, new Type[] { typeof(GSAMaterial) })]
+    [GSAObject("PROP_2D.5", "properties", true, true, new Type[] { typeof(GSAMaterial) }, new Type[] { typeof(GSAMaterial) })]
     public class GSA2DProperty : Structural2DProperty
     {
         public bool IsAxisLocal;

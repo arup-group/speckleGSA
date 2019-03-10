@@ -41,7 +41,7 @@ namespace SpeckleGSA
 
             // TODO: Only supports steel and concrete
             string[] materialIdentifier = new string[]
-                { "MAT_STEEL", "MAT_CONCRETE" };
+                { "MAT_STEEL.3", "MAT_CONCRETE.16" };
 
             List<StructuralObject> materials = new List<StructuralObject>();
 

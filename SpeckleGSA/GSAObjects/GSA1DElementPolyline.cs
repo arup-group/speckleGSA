@@ -10,7 +10,7 @@ using SpeckleStructures;
 
 namespace SpeckleGSA
 {
-    [GSAObject("MEMB", "elements", true, true, new Type[] { typeof(GSA1DElement) }, new Type[] { })]
+    [GSAObject("MEMB.7", "elements", true, true, new Type[] { typeof(GSA1DElement) }, new Type[] { })]
     public class GSA1DElementPolyline : Structural1DElementPolyline
     {
         #region Contructors and Converters

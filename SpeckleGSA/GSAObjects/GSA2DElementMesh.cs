@@ -10,7 +10,7 @@ using SpeckleStructures;
 
 namespace SpeckleGSA
 {
-    [GSAObject("MEMB", "elements", true, true, new Type[] { typeof(GSA2DElement) }, new Type[] { })]
+    [GSAObject("MEMB.7", "elements", true, true, new Type[] { typeof(GSA2DElement) }, new Type[] { })]
     public class GSA2DElementMesh : Structural2DElementMesh
     {
         #region Contructors and Converters

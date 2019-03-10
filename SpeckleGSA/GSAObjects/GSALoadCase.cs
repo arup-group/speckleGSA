@@ -8,7 +8,7 @@ using SpeckleStructures;
 
 namespace SpeckleGSA
 {
-    [GSAObject("LOAD_TITLE", "loads", true, true, new Type[] { }, new Type[] { })]
+    [GSAObject("LOAD_TITLE.2", "loads", true, true, new Type[] { }, new Type[] { })]
     public class GSALoadCase : StructuralLoadCase
     {
         #region Contructors and Converters

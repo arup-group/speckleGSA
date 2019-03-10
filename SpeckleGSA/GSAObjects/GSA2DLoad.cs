@@ -10,7 +10,7 @@ using System.Reflection;
 
 namespace SpeckleGSA
 {
-    [GSAObject("LOAD_2D_FACE", "loads", true, true, new Type[] { typeof(GSA2DElement), typeof(GSA2DMember) }, new Type[] { typeof(GSA2DElement), typeof(GSA2DMember) })]
+    [GSAObject("LOAD_2D_FACE.2", "loads", true, true, new Type[] { typeof(GSA2DElement), typeof(GSA2DMember) }, new Type[] { typeof(GSA2DElement), typeof(GSA2DMember) })]
     public class GSA2DLoad : Structural2DLoad
     {
         public int Axis;

@@ -7,7 +7,7 @@ using System.Windows.Media.Media3D;
 
 namespace SpeckleGSA
 {
-    [GSAObject("NODE", "nodes", true, true, new Type[] { }, new Type[] { typeof(GSA1DElement), typeof(GSA1DMember), typeof(GSA2DElement), typeof(GSA2DMember) })]
+    [GSAObject("NODE.2", "nodes", true, true, new Type[] { }, new Type[] { typeof(GSA1DElement), typeof(GSA1DMember), typeof(GSA2DElement), typeof(GSA2DMember) })]
     public class GSANode : StructuralNode
     {
         public bool ForceSend;

@@ -7,7 +7,7 @@ using SpeckleStructures;
 
 namespace SpeckleGSA
 {
-    [GSAObject("EL", "elements", false, false, new Type[] { }, new Type[] { })]
+    [GSAObject("EL.3", "elements", false, false, new Type[] { }, new Type[] { })]
     public class GSA0DElement : StructuralObject
     {
         public string Type;

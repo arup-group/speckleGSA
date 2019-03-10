@@ -9,7 +9,7 @@ using SpeckleStructures;
 
 namespace SpeckleGSA
 {
-    [GSAObject("EL", "elements", true, false, new Type[] { typeof(GSANode) }, new Type[] { typeof(GSA1DProperty) })]
+    [GSAObject("EL.3", "elements", true, false, new Type[] { typeof(GSANode) }, new Type[] { typeof(GSA1DProperty) })]
     public class GSA1DElement : Structural1DElement
     {
         private List<int> Connectivity;

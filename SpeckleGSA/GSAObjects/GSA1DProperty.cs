@@ -10,7 +10,7 @@ using System.Reflection;
 
 namespace SpeckleGSA
 {
-    [GSAObject("PROP_SEC", "properties", true, true, new Type[] { typeof(GSAMaterial) }, new Type[] { typeof(GSAMaterial) })]
+    [GSAObject("PROP_SEC.3", "properties", true, true, new Type[] { typeof(GSAMaterial) }, new Type[] { typeof(GSAMaterial) })]
     public class GSA1DProperty : Structural1DProperty
     {
         #region Contructors and Converters

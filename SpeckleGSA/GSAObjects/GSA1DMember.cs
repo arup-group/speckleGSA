@@ -10,7 +10,7 @@ using System.Reflection;
 
 namespace SpeckleGSA
 {
-    [GSAObject("MEMB", "elements", false, true, new Type[] { typeof(GSANode) }, new Type[] { typeof(GSA1DProperty) })]
+    [GSAObject("MEMB.7", "elements", false, true, new Type[] { typeof(GSANode) }, new Type[] { typeof(GSA1DProperty) })]
     public class GSA1DMember : Structural1DElement
     {
         public List<int> Connectivity;
