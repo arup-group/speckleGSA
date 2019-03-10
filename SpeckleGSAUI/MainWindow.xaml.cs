@@ -390,12 +390,12 @@ namespace SpeckleGSAUI
                     case UIStatus.SENDING:
                         e.Handled = true;
                         UITabControl.SelectedIndex = previousTabIndex;
-                        MessageBox.Show("Unable to switch tabs which sending");
+                        MessageBox.Show("Unable to switch tabs while sending");
                         break;
                     case UIStatus.RECEIVING:
                         e.Handled = true;
                         UITabControl.SelectedIndex = previousTabIndex;
-                        MessageBox.Show("Unable to switch tabs which receiving");
+                        MessageBox.Show("Unable to switch tabs while receiving");
                         break;
                     default:
                         previousTabIndex = UITabControl.SelectedIndex;
