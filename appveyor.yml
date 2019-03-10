@@ -1,0 +1,50 @@
+# General Configuration
+version: 0.5.0.{build}
+skip_branch_with_pr: true
+
+# Environment Configuration
+image: Visual Studio 2017
+cache:
+  - '%LocalAppData%\NuGet\v3-cache'
+
+install:
+  #init and update submodules
+  - git submodule update --recursive --init
+  # grab latest SpeckleStructures artifact
+  - ps: |
+      $project = Invoke-RestMethod -Method Get -Uri "https://ci.appveyor.com/api/projects/mishaelnuh99558/specklestructures" -Headers @{ "Content-type" = "application/json" }
+      $jobId = $project.build.jobs[0].jobId
+      $artifacts = Invoke-RestMethod -Method Get -Uri "https://ci.appveyor.com/api/buildjobs/$jobId/artifacts" -Headers @{ "Content-type" = "application/json" }
+      $artifactFileName = $artifacts[0].fileName
+      $localArtifactPath = "$Env:APPVEYOR_BUILD_FOLDER\$artifactFileName"
+      Invoke-RestMethod -Method Get -Uri "https://ci.appveyor.com/api/buildjobs/$jobId/artifacts/$artifactFileName" -OutFile $localArtifactPath
+      7z x $localArtifactPath "-o$Env:APPVEYOR_BUILD_FOLDER\SpeckleStructuresClasses" SpeckleStructuresClasses.dll -r
+      Remove-Item -path $localArtifactPath
+
+ # version
+assembly_info:
+  patch: true
+  file: AssemblyVersionInfo.*
+  assembly_version: '{version}'
+  assembly_file_version: '{version}'
+
+
+# Build Configuration
+platform: Any CPU
+configuration: Release
+
+
+before_build:
+  - nuget restore
+
+build:
+  project: SpeckleGSA.sln
+  verbosity: minimal
+
+after_build:
+  # zip everything into a zip file containing package folder structure
+  - 7z a SpeckleGSA-%APPVEYOR_BUILD_VERSION%.zip "%APPVEYOR_BUILD_FOLDER%\SpeckleGSA\bin\Release\*"
+
+artifacts:
+  path: SpeckleGSA-%APPVEYOR_BUILD_VERSION%.zip
+  name: Release
