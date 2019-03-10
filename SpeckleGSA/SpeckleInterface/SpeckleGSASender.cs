@@ -48,6 +48,11 @@ namespace SpeckleGSA
             }
         }
         
+        public void UpdateName(string streamName)
+        {
+            this.StreamName = streamName;
+        }
+
         public void SendGSAObjects(Dictionary<string, List<object>> payloadObjects)
         {
             StructuresConverterHack hack = new StructuresConverterHack();
@@ -79,7 +84,7 @@ namespace SpeckleGSA
                 objectCounter += convertedObjects.Count;
             }
 
-            Status.AddMessage("Succesfully converted: " + bucketObjects.Count() + " objects.");
+            //Status.AddMessage("Succesfully converted: " + bucketObjects.Count() + " objects.");
 
             // Prune objects with placeholders using local DB
             LocalContext.PruneExistingObjects(bucketObjects, mySender.BaseUrl);
@@ -137,6 +142,8 @@ namespace SpeckleGSA
                 var response = mySender.StreamUpdateAsync(StreamID, updateStream).Result;
                 mySender.Stream.Layers = updateStream.Layers.ToList();
                 mySender.Stream.Objects = placeholders;
+
+                mySender.BroadcastMessage("stream", StreamID, new { eventType = "update-global" });
                 
                 Status.AddMessage("Succesfully sent " + StreamName + " stream with " + updateStream.Objects.Count() + " objects.");
             }

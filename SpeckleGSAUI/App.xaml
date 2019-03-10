@@ -5,6 +5,57 @@
              StartupUri="MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
+            <Style x:Key="ButtonFocusVisual">
+                <Setter Property="Control.Template">
+                    <Setter.Value>
+                        <ControlTemplate>
+                            <Rectangle Margin="2" SnapsToDevicePixels="true" Stroke="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}" StrokeThickness="1" StrokeDashArray="1 2"/>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <SolidColorBrush x:Key="ButtonNormalBorder" Color="#FF707070"/>
+            <Style x:Key="AnalysisDesignToggle" TargetType="{x:Type ToggleButton}">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource ButtonFocusVisual}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource ButtonNormalBorder}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}"/>
+                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                <Setter Property="Padding" Value="1"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type ToggleButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" Margin="{TemplateBinding Padding}" RecognizesAccessKey="True" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                <Border x:Name="design" Width="75" Height="25" Background="#0080ff" Margin="10,0,0,0" BorderBrush="#0080ff" BorderThickness="3 3 0 3">
+                                    <TextBlock x:Name="designText" Text="Design" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FFFFFF"/>
+                                </Border>
+                                <Border x:Name="analysis" Width="75" Height="25" Background="#0080ff" BorderBrush="#0080ff" BorderThickness="0 3 3 3">
+                                    <TextBlock x:Name="analysisText" Text="Analysis" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FFFFFF"/>
+                                </Border>
+                            </StackPanel>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsEnabled" Value="false">
+                                    <Setter TargetName="design" Property="Background" Value="#AAAAAA"/>
+                                    <Setter TargetName="design" Property="BorderBrush" Value="#AAAAAA"/>
+                                    <Setter TargetName="analysis" Property="Background" Value="#AAAAAA"/>
+                                    <Setter TargetName="analysis" Property="BorderBrush" Value="#AAAAAA"/>
+                                </Trigger>
+                                <Trigger Property="IsChecked" Value="false">
+                                    <Setter TargetName="design" Property="Background" Value="White"/>
+                                    <Setter TargetName="designText" Property="Foreground" Value="Black"/>
+                                </Trigger>
+                                <Trigger Property="IsChecked" Value="true">
+                                    <Setter TargetName="analysis" Property="Background" Value="White"/>
+                                    <Setter TargetName="analysisText" Property="Foreground" Value="Black"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
         </ResourceDictionary>
+        
     </Application.Resources>
 </Application>

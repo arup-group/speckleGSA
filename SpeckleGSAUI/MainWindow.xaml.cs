@@ -28,13 +28,26 @@ namespace SpeckleGSAUI
     /// </summary>
     public partial class MainWindow : Window
     {
+        const string PLAY_BUTTON = "M10,16.5V7.5L16,12M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z";
+        const string PAUSE_BUTTON = "M15,16H13V8H15M11,16H9V8H11M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z";
+
         public ObservableCollection<string> Messages { get; set; }
         public ObservableCollection<Tuple<string, string>> StreamData { get; set; }
+
+        enum UIStatus
+        {
+            SENDING, RECEIVING, IDLE
+        };
 
         public string EmailAddress;
         public string RestApi;
         public string ApiToken;
         public Controller controller;
+        public Sender gsaSender;
+
+        public Timer senderTimer;
+        private UIStatus status;
+        private int previousTabIndex;
 
         public MainWindow()
         {
@@ -46,12 +59,20 @@ namespace SpeckleGSAUI
             StreamData = new ObservableCollection<Tuple<string, string>>();
             
             controller = new Controller();
-            
+            gsaSender = new Sender();
+            senderTimer = new Timer();
+            status = UIStatus.IDLE;
+            previousTabIndex = 0;
+
             //Default settings
             SendOnlyMeaningfulNodes.IsChecked = Settings.SendOnlyMeaningfulNodes;
             Merge1DElementsIntoPolyline.IsChecked = Settings.Merge1DElementsIntoPolyline;
             Merge2DElementsIntoMesh.IsChecked = Settings.Merge2DElementsIntoMesh;
             SeperateStreams.IsChecked = Settings.SeperateStreams;
+
+            //Draw buttons
+            SendButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
+            SendButtonPath.Fill = Brushes.LightGray;
 
             GSA.Init();
             Status.Init(this.AddMessage, this.AddError, this.ChangeStatus);
@@ -168,23 +189,7 @@ namespace SpeckleGSAUI
         #endregion
 
         #region Sender
-        private void SendAnalysisLayer(object sender, RoutedEventArgs e)
-        {
-            GSA.TargetAnalysisLayer = true;
-            GSA.TargetDesignLayer = false;
-
-            SendStream(sender, e);
-        }
-
-        private void SendDesignLayer(object sender, RoutedEventArgs e)
-        {
-            GSA.TargetAnalysisLayer = false;
-            GSA.TargetDesignLayer = true;
-
-            SendStream(sender, e);
-        }
-
-        private void SendStream(object sender, RoutedEventArgs e)
+        private async void SendStream(object sender, RoutedEventArgs e)
         {
             if (RestApi == null && ApiToken == null)
             {
@@ -192,26 +197,59 @@ namespace SpeckleGSAUI
                 return;
             }
 
-            GSA.GetSpeckleClients(EmailAddress, RestApi);
-            UpdateClientLists();
+            if (status == UIStatus.IDLE)
+            {
+                SendButtonPath.Data = Geometry.Parse(PAUSE_BUTTON);
+                SendButtonPath.Fill = Brushes.DimGray;
 
-            Task.Run(() => controller.ExportObjects(RestApi, ApiToken)).ContinueWith(
-            delegate {
-                try
+                if (SenderLayerToggle.IsChecked.Value)
                 {
-                    Application.Current.Dispatcher.BeginInvoke(
-                        DispatcherPriority.Background,
-                        new Action(() =>
-                        {
-                            GSA.SetSpeckleClients(EmailAddress, RestApi);
-
-                            UpdateClientLists();
-                        }
-                        ));
+                    GSA.TargetAnalysisLayer = true;
+                    GSA.TargetDesignLayer = false;
                 }
-                catch
-                { Status.ChangeStatus("Failed to send"); }
-            });
+                else
+                {
+
+                    GSA.TargetAnalysisLayer = false;
+                    GSA.TargetDesignLayer = true;
+                }
+                SenderLayerToggle.IsEnabled = false;
+
+                GSA.GetSpeckleClients(EmailAddress, RestApi);
+                gsaSender = new Sender();
+                await gsaSender.Initialize(RestApi, ApiToken);
+                GSA.SetSpeckleClients(EmailAddress, RestApi);
+
+                senderTimer = new Timer(2000);
+                senderTimer.Elapsed += SenderTimerTrigger;
+                senderTimer.AutoReset = false;
+                senderTimer.Start();
+
+                SendButtonPath.Fill = (SolidColorBrush)(new BrushConverter().ConvertFrom("#0080ff"));
+                status = UIStatus.SENDING;
+            }
+            else if (status == UIStatus.SENDING)
+            {
+                SendButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
+                SendButtonPath.Fill = Brushes.LightGray;
+
+                SenderLayerToggle.IsEnabled = true;
+
+                senderTimer.Stop();
+                status = UIStatus.IDLE;
+            }
+        }
+
+        private void SenderTimerTrigger(Object source, ElapsedEventArgs e)
+        {
+            gsaSender.Trigger();
+            Application.Current.Dispatcher.BeginInvoke(
+                DispatcherPriority.Background,
+                new Action(() => UpdateClientLists()
+                )
+            );
+
+            senderTimer.Start();
         }
         #endregion
 
@@ -343,6 +381,29 @@ namespace SpeckleGSAUI
         #endregion
 
         #region UI
+        private void ChangeTab(object sender, SelectionChangedEventArgs e)
+        {
+            if (e.OriginalSource == UITabControl)
+            {
+                switch (status)
+                {
+                    case UIStatus.SENDING:
+                        e.Handled = true;
+                        UITabControl.SelectedIndex = previousTabIndex;
+                        MessageBox.Show("Unable to switch tabs which sending");
+                        break;
+                    case UIStatus.RECEIVING:
+                        e.Handled = true;
+                        UITabControl.SelectedIndex = previousTabIndex;
+                        MessageBox.Show("Unable to switch tabs which receiving");
+                        break;
+                    default:
+                        previousTabIndex = UITabControl.SelectedIndex;
+                        break;
+                }
+            }
+        }
+
         private void UpdateClientLists()
         {
             SenderStreams.Items.Clear();

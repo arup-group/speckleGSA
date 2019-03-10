@@ -9,13 +9,23 @@ using SpeckleStructures;
 namespace SpeckleGSA
 {
     [GSAObject("LOAD_TITLE.2", "loads", true, true, new Type[] { }, new Type[] { })]
-    public class GSALoadCase : StructuralLoadCase
+    public class GSALoadCase : StructuralLoadCase, IGSAObject
     {
+        public string GWACommand { get; set; }
+        public List<string> SubGWACommand { get; set; }
+
         #region Contructors and Converters
-        public GSALoadCase() { }
+        public GSALoadCase()
+        {
+            GWACommand = "";
+            SubGWACommand = new List<string>();
+        }
 
         public GSALoadCase(StructuralLoadCase baseClass)
         {
+            GWACommand = "";
+            SubGWACommand = new List<string>();
+
             foreach (FieldInfo f in baseClass.GetType().GetFields())
                 f.SetValue(this, f.GetValue(baseClass));
 
@@ -25,32 +35,38 @@ namespace SpeckleGSA
         #endregion
 
         #region GSA Functions
-        public static void GetObjects(Dictionary<Type, List<StructuralObject>> dict)
+        public static bool GetObjects(Dictionary<Type, List<object>> dict)
         {
             if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
-                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
+                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<object>();
 
-            List<StructuralObject> loadCases = new List<StructuralObject>();
+            List<object> loadCases = new List<object>();
 
-            string res = (string)GSA.RunGWACommand("GET_ALL,LOAD_TITLE");
+            string[] lines = GSA.GetGWAGetCommands("GET_ALL,LOAD_TITLE");
+            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL,LOAD_TITLE");
 
-            if (res == "")
-                return;
+            // Remove deleted lines
+            dict[typeof(GSALoadCase)].RemoveAll(l => deletedLines.Contains(((IGSAObject)l).GWACommand));
+            foreach (KeyValuePair<Type, List<object>> kvp in dict)
+                kvp.Value.RemoveAll(l => ((IGSAObject)l).SubGWACommand.Any(x => deletedLines.Contains(x)));
 
-            string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
-
-            double counter = 1;
-            foreach (string p in pieces)
+            // Filter only new lines
+            string[] prevLines = dict[typeof(GSALoadCase)].Select(l => ((GSALoadCase)l).GWACommand).ToArray();
+            string[] newLines = lines.Where(l => !prevLines.Contains(l)).ToArray();
+            
+            foreach (string p in newLines)
             {
                 GSALoadCase lc = new GSALoadCase();
                 lc.ParseGWACommand(p, dict);
 
                 loadCases.Add(lc);
-
-                Status.ChangeStatus("Reading load cases", counter++ / pieces.Length * 100);
             }
 
-            dict[typeof(GSALoadCase)] = loadCases;
+            dict[typeof(GSALoadCase)].AddRange(loadCases);
+
+            if (loadCases.Count() > 0 || deletedLines.Length > 0) return true;
+
+            return false;
         }
 
         public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
@@ -63,8 +79,10 @@ namespace SpeckleGSA
                 GSA.RunGWACommand(((GSALoadCase)lc).GetGWACommand());
         }
 
-        public void ParseGWACommand(string command, Dictionary<Type, List<StructuralObject>> dict = null)
+        public void ParseGWACommand(string command, Dictionary<Type, List<object>> dict = null)
         {
+            GWACommand = command;
+
             string[] pieces = command.ListSplit(",");
 
             int counter = 1; // Skip identifier

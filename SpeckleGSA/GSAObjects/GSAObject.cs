@@ -56,4 +56,19 @@ namespace SpeckleGSA
             get { return writePrerequisite; }
         }
     }
+
+    public interface IGSAObject
+    {
+        string GWACommand
+        {
+            get;
+            set;
+        }
+
+        List<string> SubGWACommand
+        {
+            get;
+            set;
+        }
+    }
 }

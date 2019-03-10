@@ -11,22 +11,30 @@ using SpeckleStructures;
 namespace SpeckleGSA
 {
     [GSAObject("MEMB.7", "elements", true, true, new Type[] { typeof(GSA2DElement) }, new Type[] { })]
-    public class GSA2DElementMesh : Structural2DElementMesh
+    public class GSA2DElementMesh : Structural2DElementMesh, IGSAObject
     {
+        public string GWACommand { get; set; }
+        public List<string> SubGWACommand { get; set; }
+        
         #region Contructors and Converters
         public GSA2DElementMesh()
         {
-
+            GWACommand = "";
+            SubGWACommand = new List<string>();
         }
         
         public GSA2DElementMesh(GSA2DElement element)
             : base (element)
         {
-
+            GWACommand = "";
+            SubGWACommand = new List<string>();
         }
 
         public GSA2DElementMesh(Structural2DElementMesh baseClass)
         {
+            GWACommand = "";
+            SubGWACommand = new List<string>();
+
             foreach (FieldInfo f in baseClass.GetType().GetFields())
                 f.SetValue(this, f.GetValue(baseClass));
 
@@ -36,43 +44,44 @@ namespace SpeckleGSA
         #endregion
 
         #region GSA Functions
-        public static void GetObjects(Dictionary<Type, List<StructuralObject>> dict)
-        {
-            if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
-                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
+        // Disable sending as mesh as its problematic for continuous sending
+        //public static void GetObjects(Dictionary<Type, List<object>> dict)
+        //{
+        //    if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
+        //        dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<object>();
 
-            // No need to run if targeting design layer since GSA2DMembers do not need mesh merging
-            if (!GSA.TargetAnalysisLayer) return;
-            if (!Settings.Merge2DElementsIntoMesh) return;
+        //    // No need to run if targeting design layer since GSA2DMembers do not need mesh merging
+        //    if (!GSA.TargetAnalysisLayer) return;
+        //    if (!Settings.Merge2DElementsIntoMesh) return;
 
-            List<StructuralObject> meshes = new List<StructuralObject>();
+        //    List<object> meshes = new List<object>();
 
-            // Create mesh from each element
-            foreach (StructuralObject e2D in dict[typeof(GSA2DElement)])
-            {
-                GSA2DElementMesh mesh = new GSA2DElementMesh(e2D as GSA2DElement);
-                meshes.Add(mesh);
-            }
-            
-            // Merge the mesh!
-            for (int i = 0; i < meshes.Count(); i++)
-            {
-                List<StructuralObject> matches = meshes.Where((m, j) => (meshes[i] as GSA2DElementMesh).MeshMergeable(m as GSA2DElementMesh) & j != i).ToList();
+        //    // Create mesh from each element
+        //    foreach (object e2D in dict[typeof(GSA2DElement)])
+        //    {
+        //        GSA2DElementMesh mesh = new GSA2DElementMesh(e2D as GSA2DElement);
+        //        meshes.Add(mesh);
+        //    }
 
-                foreach (StructuralObject m in matches)
-                    (meshes[i] as GSA2DElementMesh).MergeMesh(m as GSA2DElementMesh);
+        //    // Merge the mesh!
+        //    for (int i = 0; i < meshes.Count(); i++)
+        //    {
+        //        List<object> matches = meshes.Where((m, j) => (meshes[i] as GSA2DElementMesh).MeshMergeable(m as GSA2DElementMesh) & j != i).ToList();
 
-                foreach (StructuralObject m in matches)
-                    meshes.Remove(m);
+        //        foreach (StructuralObject m in matches)
+        //            (meshes[i] as GSA2DElementMesh).MergeMesh(m as GSA2DElementMesh);
 
-                if (matches.Count() > 0) i--;
+        //        foreach (StructuralObject m in matches)
+        //            meshes.Remove(m);
 
-                Status.ChangeStatus("Merging 2D elements (#: " + meshes.Count().ToString() + ")");
-            }
+        //        if (matches.Count() > 0) i--;
 
-            dict[typeof(GSA2DElement)].Clear();
-            dict[typeof(GSA2DElementMesh)].AddRange(meshes);
-        }
+        //        Status.ChangeStatus("Merging 2D elements (#: " + meshes.Count().ToString() + ")");
+        //    }
+
+        //    dict[typeof(GSA2DElement)].Clear();
+        //    dict[typeof(GSA2DElementMesh)].AddRange(meshes);
+        //}
 
         public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
         {

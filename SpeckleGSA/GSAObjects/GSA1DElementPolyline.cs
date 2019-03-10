@@ -11,22 +11,30 @@ using SpeckleStructures;
 namespace SpeckleGSA
 {
     [GSAObject("MEMB.7", "elements", true, true, new Type[] { typeof(GSA1DElement) }, new Type[] { })]
-    public class GSA1DElementPolyline : Structural1DElementPolyline
+    public class GSA1DElementPolyline : Structural1DElementPolyline, IGSAObject
     {
+        public string GWACommand { get; set; }
+        public List<string> SubGWACommand { get; set; }
+
         #region Contructors and Converters
         public GSA1DElementPolyline()
         {
-
+            GWACommand = "";
+            SubGWACommand = new List<string>();
         }
         
         public GSA1DElementPolyline(GSA1DElement element)
             : base (element)
         {
-
+            GWACommand = "";
+            SubGWACommand = new List<string>();
         }
 
         public GSA1DElementPolyline(Structural1DElementPolyline baseClass)
         {
+            GWACommand = "";
+            SubGWACommand = new List<string>();
+
             foreach (FieldInfo f in baseClass.GetType().GetFields())
                 f.SetValue(this, f.GetValue(baseClass));
 
@@ -36,43 +44,44 @@ namespace SpeckleGSA
         #endregion
 
         #region GSA Functions
-        public static void GetObjects(Dictionary<Type, List<StructuralObject>> dict)
-        {
-            if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
-                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
+        // Disable sending as polyline as its problematic for continuous sending
+        //public static void GetObjects(Dictionary<Type, List<object>> dict)
+        //{
+        //    if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
+        //        dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<object>();
             
-            // No need to run if targeting design layer since GSA1DMembers do not need polyline merging
-            if (!GSA.TargetAnalysisLayer) return;
-            if (!Settings.Merge1DElementsIntoPolyline) return;
+        //    // No need to run if targeting design layer since GSA1DMembers do not need polyline merging
+        //    if (!GSA.TargetAnalysisLayer) return;
+        //    if (!Settings.Merge1DElementsIntoPolyline) return;
 
-            List<StructuralObject> polylines = new List<StructuralObject>();
+        //    List<object> polylines = new List<object>();
 
-            // Create polyline from each element
-            foreach (StructuralObject e1D in dict[typeof(GSA1DElement)])
-            {
-                GSA1DElementPolyline poly = new GSA1DElementPolyline(e1D as GSA1DElement);
-                polylines.Add(poly);
-            }
+        //    // Create polyline from each element
+        //    foreach (object e1D in dict[typeof(GSA1DElement)])
+        //    {
+        //        GSA1DElementPolyline poly = new GSA1DElementPolyline(e1D as GSA1DElement);
+        //        polylines.Add(poly);
+        //    }
             
-            // Merge the polylines!
-            for (int i = 0; i < polylines.Count(); i++)
-            {
-                List<StructuralObject> matches = polylines.Where((p, j) => (polylines[i] as GSA1DElementPolyline).PolylineMergeable(p as GSA1DElementPolyline) & j != i).ToList();
+        //    // Merge the polylines!
+        //    for (int i = 0; i < polylines.Count(); i++)
+        //    {
+        //        List<object> matches = polylines.Where((p, j) => (polylines[i] as GSA1DElementPolyline).PolylineMergeable(p as GSA1DElementPolyline) & j != i).ToList();
 
-                foreach (StructuralObject m in matches)
-                    (polylines[i] as GSA1DElementPolyline).MergePolyline(m as GSA1DElementPolyline);
+        //        foreach (StructuralObject m in matches)
+        //            (polylines[i] as GSA1DElementPolyline).MergePolyline(m as GSA1DElementPolyline);
 
-                foreach (StructuralObject m in matches)
-                    polylines.Remove(m);
+        //        foreach (StructuralObject m in matches)
+        //            polylines.Remove(m);
 
-                if (matches.Count() > 0) i--;
+        //        if (matches.Count() > 0) i--;
 
-                Status.ChangeStatus("Merging 1D elements (#: " + polylines.Count().ToString() + ")");
-            }
+        //        Status.ChangeStatus("Merging 1D elements (#: " + polylines.Count().ToString() + ")");
+        //    }
 
-            dict[typeof(GSA1DElement)].Clear();
-            dict[typeof(GSA1DElementPolyline)].AddRange(polylines);
-        }
+        //    dict[typeof(GSA1DElement)].Clear();
+        //    dict[typeof(GSA1DElementPolyline)].AddRange(polylines);
+        //}
 
         public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
         {

@@ -889,7 +889,7 @@ namespace SpeckleGSA
             return mainList;
         }
 
-        public static StructuralObject GetBase(this StructuralObject obj)
+        public static StructuralObject GetBase(this object obj)
         {
             StructuralObject baseClass = (StructuralObject)Activator.CreateInstance(obj.GetType().BaseType);
 

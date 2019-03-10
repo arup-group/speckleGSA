@@ -8,16 +8,21 @@ using SpeckleStructures;
 namespace SpeckleGSA
 {
     [GSAObject("EL.3", "elements", false, false, new Type[] { }, new Type[] { })]
-    public class GSA0DElement : StructuralObject
+    public class GSA0DElement : StructuralObject, IGSAObject
     {
         public string Type;
         public int Property;
         public double Mass;
         public int Connectivity;
 
+        public string GWACommand { get; set; }
+        public List<string> SubGWACommand { get; set; }
+
         #region Contructors and Converters
         public GSA0DElement()
         {
+            GWACommand = "";
+            SubGWACommand = new List<string>();
             Type = "MASS";
             Property = 0;
             Mass = 0;
@@ -26,8 +31,10 @@ namespace SpeckleGSA
         #endregion
 
         #region GSA Functions
-        public void ParseGWACommand(string command, Dictionary<Type, List<StructuralObject>> dict = null)
+        public void ParseGWACommand(string command, Dictionary<Type, List<object>> dict = null)
         {
+            GWACommand = command;
+
             string[] pieces = command.ListSplit(",");
 
             int counter = 1; // Skip identifier
@@ -44,7 +51,7 @@ namespace SpeckleGSA
             // Rest is unimportant for 0D element
         }
 
-        public string GetGWACommand(Dictionary<Type, List<StructuralObject>> dict = null)
+        public string GetGWACommand(Dictionary<Type, List<object>> dict = null)
         {
             List<string> ls = new List<string>();
 

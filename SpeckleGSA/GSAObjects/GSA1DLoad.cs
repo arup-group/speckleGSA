@@ -11,20 +11,27 @@ using System.Reflection;
 namespace SpeckleGSA
 {
     [GSAObject("LOAD_BEAM", "loads", true, true, new Type[] { typeof(GSA1DElement), typeof(GSA1DMember) }, new Type[] { typeof(GSA1DElement), typeof(GSA1DMember) })]
-    public class GSA1DLoad : Structural1DLoad
+    public class GSA1DLoad : Structural1DLoad, IGSAObject
     {
         public int Axis;
         public bool Projected;
 
+        public string GWACommand { get; set; }
+        public List<string> SubGWACommand { get; set; }
+
         #region Contructors and Converters
         public GSA1DLoad()
         {
+            GWACommand = "";
+            SubGWACommand = new List<string>();
             Axis = 0;
             Projected = false;
         }
 
         public GSA1DLoad(Structural1DLoad baseClass)
         {
+            GWACommand = "";
+            SubGWACommand = new List<string>();
             Axis = 0;
             Projected = false;
 
@@ -37,25 +44,29 @@ namespace SpeckleGSA
         #endregion
 
         #region GSA Functions
-        public static void GetObjects(Dictionary<Type, List<StructuralObject>> dict)
+        public static bool GetObjects(Dictionary<Type, List<object>> dict)
         {
             if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
-                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
+                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<object>();
             
-            List<StructuralObject> loads = new List<StructuralObject>();
+            List<object> loads = new List<object>();
 
-            string res = (string)GSA.RunGWACommand("GET_ALL,LOAD_BEAM");
+            string[] lines = GSA.GetGWAGetCommands("GET_ALL,LOAD_BEAM");
+            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL,LOAD_BEAM");
 
-            if (res == "")
-                return;
+            // Remove deleted lines
+            dict[typeof(GSA1DLoad)].RemoveAll(l => deletedLines.Contains(((IGSAObject)l).GWACommand));
+            foreach (KeyValuePair<Type, List<object>> kvp in dict)
+                kvp.Value.RemoveAll(l => ((IGSAObject)l).SubGWACommand.Any(x => deletedLines.Contains(x)));
 
-            string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+            // Filter only new lines
+            string[] prevLines = dict[typeof(GSA1DLoad)].Select(l => ((GSA1DLoad)l).GWACommand).ToArray();
+            string[] newLines = lines.Where(l => !prevLines.Contains(l)).ToArray();
 
-            List<StructuralObject> elements = GSA.TargetAnalysisLayer ? dict[typeof(GSA1DElement)] : new List<StructuralObject>();
-            List<StructuralObject> members = GSA.TargetDesignLayer ? dict[typeof(GSA1DMember)] : new List<StructuralObject>();
-
-            double counter = 1;
-            foreach (string p in pieces)
+            List<object> elements = GSA.TargetAnalysisLayer ? dict[typeof(GSA1DElement)] : new List<object>();
+            List<object> members = GSA.TargetDesignLayer ? dict[typeof(GSA1DMember)] : new List<object>();
+            
+            foreach (string p in newLines)
             {
                 List<GSA1DLoad> loadSubList = new List<GSA1DLoad>();
 
@@ -70,11 +81,13 @@ namespace SpeckleGSA
                     foreach (int nRef in initLoad.Elements)
                     {
                         GSA1DLoad load = new GSA1DLoad();
+                        load.GWACommand = initLoad.GWACommand;
+                        load.SubGWACommand = new List<string>(initLoad.SubGWACommand);
                         load.Name = initLoad.Name;
                         load.LoadCase = initLoad.LoadCase;
 
                         // Transform load to defined axis
-                        GSA1DElement elem = elements.Where(e => e.Reference == nRef).First() as GSA1DElement;
+                        GSA1DElement elem = elements.Where(e => ((GSA1DElement)e).Reference == nRef).First() as GSA1DElement;
                         Axis loadAxis = load.Axis == 0 ? new Axis() : elem.Axis; // Assumes if not global, local
                         load.Loading = initLoad.Loading;
                         load.Loading.TransformOntoAxis(loadAxis);
@@ -115,11 +128,13 @@ namespace SpeckleGSA
                     foreach (int mRef in initLoad.Elements)
                     {
                         GSA1DLoad load = new GSA1DLoad();
+                        load.GWACommand = initLoad.GWACommand;
+                        load.SubGWACommand = new List<string>(initLoad.SubGWACommand);
                         load.Name = initLoad.Name;
                         load.LoadCase = initLoad.LoadCase;
 
                         // Transform load to defined axis
-                        GSA1DMember memb = members.Where(e => e.Reference == mRef).First() as GSA1DMember;
+                        GSA1DMember memb = members.Where(e => ((GSA1DMember)e).Reference == mRef).First() as GSA1DMember;
                         Axis loadAxis = load.Axis == 0 ? new Axis() : memb.Axis; // Assumes if not global, local
                         load.Loading = initLoad.Loading;
                         load.Loading.TransformOntoAxis(loadAxis);
@@ -155,11 +170,13 @@ namespace SpeckleGSA
                 }
 
                 loads.AddRange(loadSubList);
-
-                Status.ChangeStatus("Reading 1D loads", counter++ / pieces.Length * 100);
             }
 
             dict[typeof(GSA1DLoad)].AddRange(loads);
+
+            if (loads.Count() > 0 || deletedLines.Length > 0) return true;
+
+            return false;
         }
 
         public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
@@ -181,8 +198,10 @@ namespace SpeckleGSA
             }
         }
 
-        public void ParseGWACommand(string command, Dictionary<Type, List<StructuralObject>> dict = null)
+        public void ParseGWACommand(string command, Dictionary<Type, List<object>> dict = null)
         {
+            GWACommand = command;
+
             string[] pieces = command.ListSplit(",");
 
             int counter = 0;
@@ -196,20 +215,24 @@ namespace SpeckleGSA
 
                 if (dict.ContainsKey(typeof(GSA1DElement)))
                 {
-                    Elements = dict[typeof(GSA1DElement)].Cast<GSA1DElement>()
-                        .Where(n => targetElements.Contains(n.Reference))
-                        .Select(n => n.Reference).ToList();
+                    List<GSA1DElement> elems = dict[typeof(GSA1DElement)].Cast<GSA1DElement>()
+                        .Where(n => targetElements.Contains(n.Reference)).ToList();
+
+                    Elements = elems.Select(n => n.Reference).ToList();
+                    SubGWACommand.AddRange(elems.Select(n => n.GWACommand));
                 }
             }
             else
             {
+                int[] targetGroups = pieces[counter++].GetGroupsFromGSAList();
+
                 if (dict.ContainsKey(typeof(GSA1DMember)))
                 {
-                    int[] targetGroups = pieces[counter++].GetGroupsFromGSAList();
+                    List<GSA1DMember> membs = dict[typeof(GSA1DMember)].Cast<GSA1DMember>()
+                        .Where(m => targetGroups.Contains(m.Group)).ToList();
 
-                    Elements = dict[typeof(GSA1DMember)].Cast<GSA1DMember>()
-                        .Where(m => targetGroups.Contains(m.Group))
-                        .Select(m => m.Reference).ToList();
+                    Elements = membs.Select(m => m.Reference).ToList();
+                    SubGWACommand.AddRange(membs.Select(n => n.GWACommand));
                 }
             }
 
@@ -224,43 +247,44 @@ namespace SpeckleGSA
             double value = 0;
 
             // TODO: Only reads UDL load properly
-            switch (identifier)
+            if (identifier.Contains("LOAD_BEAM_POINT.2"))
             {
-                case "LOAD_BEAM_POINT.2":
-                    Status.AddError("Beam point load not supported.");
-                    counter++; // Position
-                    counter++; // Value
-                    value = 0;
-                    break;
-                case "LOAD_BEAM_UDL.2":
-                    value = Convert.ToDouble(pieces[counter++]);
-                    break;
-                case "LOAD_BEAM_LINE.2":
-                    Status.AddError("Beam line load not supported. Average will be taken.");
-                    value = Convert.ToDouble(pieces[counter++]);
-                    value += Convert.ToDouble(pieces[counter++]);
-                    value /= 2;
-                    break;
-                case "LOAD_BEAM_PATCH.2":
-                    Status.AddError("Beam patch load not supported. Average of values will be taken.");
-                    counter++; // Position
-                    value = Convert.ToDouble(pieces[counter++]);
-                    counter++; // Position
-                    value += Convert.ToDouble(pieces[counter++]);
-                    value /= 2;
-                    break;
-                case "LOAD_BEAM_TRILIN.2":
-                    Status.AddError("Beam trilinier load not supported. Average of values will be taken.");
-                    counter++; // Position
-                    value = Convert.ToDouble(pieces[counter++]);
-                    counter++; // Position
-                    value += Convert.ToDouble(pieces[counter++]);
-                    value /= 2;
-                    break;
-                default:
-                    Status.AddError("Unable to parse beam load " + identifier);
-                    value = 0;
-                    break;
+                Status.AddError("Beam point load not supported.");
+                counter++; // Position
+                counter++; // Value
+                value = 0;
+            }
+            else if (identifier.Contains("LOAD_BEAM_UDL.2"))
+                value = Convert.ToDouble(pieces[counter++]);
+            else if (identifier.Contains("LOAD_BEAM_LINE.2"))
+            {
+                Status.AddError("Beam line load not supported. Average will be taken.");
+                value = Convert.ToDouble(pieces[counter++]);
+                value += Convert.ToDouble(pieces[counter++]);
+                value /= 2;
+            }
+            else if (identifier.Contains("LOAD_BEAM_PATCH.2"))
+            {
+                Status.AddError("Beam patch load not supported. Average of values will be taken.");
+                counter++; // Position
+                value = Convert.ToDouble(pieces[counter++]);
+                counter++; // Position
+                value += Convert.ToDouble(pieces[counter++]);
+                value /= 2;
+            }
+            else if (identifier.Contains("LOAD_BEAM_TRILIN.2"))
+            {
+                Status.AddError("Beam trilinier load not supported. Average of values will be taken.");
+                counter++; // Position
+                value = Convert.ToDouble(pieces[counter++]);
+                counter++; // Position
+                value += Convert.ToDouble(pieces[counter++]);
+                value /= 2;
+            }
+            else
+            {
+                Status.AddError("Unable to parse beam load " + identifier);
+                value = 0;
             }
 
             switch (direction.ToUpper())

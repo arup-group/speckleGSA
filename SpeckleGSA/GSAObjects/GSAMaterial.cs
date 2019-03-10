@@ -10,19 +10,26 @@ using SpeckleStructures;
 namespace SpeckleGSA
 {
     [GSAObject("MAT", "properties", true, true, new Type[] { }, new Type[] { })]
-    public class GSAMaterial : StructuralMaterial
+    public class GSAMaterial : StructuralMaterial, IGSAObject
     {
         // Need local reference since materials can have same reference if different types
         public int LocalReference;
 
+        public string GWACommand { get; set; }
+        public List<string> SubGWACommand { get; set; }
+
         #region Contructors and Converters
         public GSAMaterial()
         {
+            GWACommand = "";
+            SubGWACommand = new List<string>();
             LocalReference = 0;
         }
 
         public GSAMaterial(StructuralMaterial baseClass)
         {
+            GWACommand = "";
+            SubGWACommand = new List<string>();
             LocalReference = 0;
 
             foreach (FieldInfo f in baseClass.GetType().GetFields())
@@ -34,26 +41,37 @@ namespace SpeckleGSA
         #endregion
 
         #region GSA Functions
-        public static void GetObjects(Dictionary<Type, List<StructuralObject>> dict)
+        public static bool GetObjects(Dictionary<Type, List<object>> dict)
         {
             if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
-                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
+                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<object>();
 
             // TODO: Only supports steel and concrete
             string[] materialIdentifier = new string[]
                 { "MAT_STEEL.3", "MAT_CONCRETE.16" };
 
-            List<StructuralObject> materials = new List<StructuralObject>();
+            List<object> materials = new List<object>();
 
             List<string> pieces = new List<string>();
+            bool deleted = false;
             foreach (string id in materialIdentifier)
             {
-                string res = (string)GSA.RunGWACommand("GET_ALL," + id);
+                string[] lines = GSA.GetGWAGetCommands("GET_ALL," + id);
+                string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL," + id);
 
-                if (res == "")
-                    continue;
+                if (deletedLines.Length > 0)
+                    deleted = true;
 
-                pieces.AddRange(res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries));
+                // Remove deleted lines
+                dict[typeof(GSAMaterial)].RemoveAll(l => deletedLines.Contains(((IGSAObject)l).GWACommand));
+                foreach (KeyValuePair<Type, List<object>> kvp in dict)
+                    kvp.Value.RemoveAll(l => ((IGSAObject)l).SubGWACommand.Any(x => deletedLines.Contains(x)));
+
+                // Filter only new lines
+                string[] prevLines = dict[typeof(GSAMaterial)].Select(l => ((GSAMaterial)l).GWACommand).ToArray();
+                string[] newLines = lines.Where(l => !prevLines.Contains(l)).ToArray();
+
+                pieces.AddRange(newLines);
             }
             pieces = pieces.Distinct().ToList();
             
@@ -63,11 +81,13 @@ namespace SpeckleGSA
                 mat.ParseGWACommand(pieces[i], dict);
                 mat.Reference = i + 1; // Offset references
                 materials.Add(mat);
-
-                Status.ChangeStatus("Reading materials", (double)(i+1) / pieces.Count() * 100);
             }
 
             dict[typeof(GSAMaterial)].AddRange(materials);
+
+            if (materials.Count() > 0 || deleted) return true;
+
+            return false;
         }
 
         public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
@@ -86,8 +106,10 @@ namespace SpeckleGSA
             }
         }
 
-        public void ParseGWACommand(string command, Dictionary<Type, List<StructuralObject>> dict = null)
+        public void ParseGWACommand(string command, Dictionary<Type, List<object>> dict = null)
         {
+            GWACommand = command;
+
             string[] pieces = command.ListSplit(",");
 
             int counter = 0;

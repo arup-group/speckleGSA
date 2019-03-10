@@ -8,18 +8,25 @@ using System.Windows.Media.Media3D;
 namespace SpeckleGSA
 {
     [GSAObject("NODE.2", "nodes", true, true, new Type[] { }, new Type[] { typeof(GSA1DElement), typeof(GSA1DMember), typeof(GSA2DElement), typeof(GSA2DMember) })]
-    public class GSANode : StructuralNode
+    public class GSANode : StructuralNode, IGSAObject
     {
         public bool ForceSend;
+
+        public string GWACommand { get; set; }
+        public List<string> SubGWACommand { get; set; }
 
         #region Contructors and Converters
         public GSANode()
         {
+            GWACommand = "";
+            SubGWACommand = new List<string>();
             ForceSend = false;
         }
 
         public GSANode(StructuralNode baseClass)
         {
+            GWACommand = "";
+            SubGWACommand = new List<string>();
             ForceSend = false;
 
             foreach (FieldInfo f in baseClass.GetType().GetFields())
@@ -31,57 +38,84 @@ namespace SpeckleGSA
         #endregion
 
         #region GSA Functions
-        public static void GetObjects(Dictionary<Type, List<StructuralObject>> dict)
+        public static bool GetObjects(Dictionary<Type, List<object>> dict)
         {
             if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
-                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
+                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<object>();
 
-            List<StructuralObject> nodes = new List<StructuralObject>();
+            List<object> nodes = new List<object>();
 
-            string res = (string)GSA.RunGWACommand("GET_ALL,NODE");
+            string[] lines = GSA.GetGWAGetCommands("GET_ALL,NODE");
+            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL,NODE");
 
-            if (res == "")
-                return;
+            // Remove deleted lines
+            dict[typeof(GSANode)].RemoveAll(l => deletedLines.Contains(((IGSAObject)l).GWACommand));
+            foreach (KeyValuePair<Type, List<object>> kvp in dict)
+                kvp.Value.RemoveAll(l => ((IGSAObject)l).SubGWACommand.Any(x => deletedLines.Contains(x)));
 
-            string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
-
-            double counter = 1;
-            foreach (string p in pieces)
+            // Filter only new lines
+            string[] prevLines = dict[typeof(GSANode)].Select(l => ((GSANode)l).GWACommand).ToArray();
+            string[] newLines = lines.Where(l => !prevLines.Contains(l)).ToArray();
+            
+            foreach (string p in newLines)
             {
                 GSANode n = new GSANode();
                 n.ParseGWACommand(p, dict);
 
                 nodes.Add(n);
-
-                Status.ChangeStatus("Reading nodes", counter++ / pieces.Length * 100);
             }
 
             // Read 0D elements here
-            res = (string)GSA.RunGWACommand("GET_ALL,EL");
+            string[] e0DLines = GSA.GetGWAGetCommands("GET_ALL,EL");
+            string[] e0DDeletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL,EL");
 
-            if (res != "")
+            // Filter only new lines
+            string[] e0DPrevLines = dict[typeof(GSANode)].SelectMany(l => ((GSANode)l).SubGWACommand).ToArray();
+            string[] e0DNewLines = e0DLines.Where(l => !e0DPrevLines.Contains(l)).ToArray();
+
+            bool e0dChanged = false;
+
+            foreach (string p in e0DDeletedLines)
             {
-                pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
-
-                counter = 1;
-                foreach (string p in pieces)
+                string[] pPieces = p.ListSplit(",");
+                if (pPieces[4].ParseElementNumNodes() == 1)
                 {
-                    string[] pPieces = p.ListSplit(",");
-                    if (pPieces[4].ParseElementNumNodes() == 1)
-                    {
-                        GSA0DElement e0D = new GSA0DElement();
-                        e0D.ParseGWACommand(p, dict);
+                    GSA0DElement e0D = new GSA0DElement();
+                    e0D.ParseGWACommand(p, dict);
 
-                        nodes.Cast<GSANode>()
-                            .Where(n => n.Reference == e0D.Connectivity).First()
-                            .Mass = e0D.Mass;
-                    }
+                    nodes.Cast<GSANode>()
+                        .Where(n => n.Reference == e0D.Connectivity).First()
+                        .Mass = 0;
 
-                    Status.ChangeStatus("Reading 0D elements", counter++ / pieces.Length * 100);
+                    e0dChanged = true;
+                }
+            }
+            
+            foreach (string p in e0DNewLines)
+            {
+                string[] pPieces = p.ListSplit(",");
+                if (pPieces[4].ParseElementNumNodes() == 1)
+                {
+                    GSA0DElement e0D = new GSA0DElement();
+                    e0D.ParseGWACommand(p, dict);
+
+                    nodes.Cast<GSANode>()
+                        .Where(n => n.Reference == e0D.Connectivity).First()
+                        .Mass = e0D.Mass;
+
+                    nodes.Cast<GSANode>()
+                        .Where(n => n.Reference == e0D.Connectivity).First()
+                        .SubGWACommand.Add(e0D.GWACommand);
+
+                    e0dChanged = true;
                 }
             }
 
-            dict[typeof(GSANode)] = nodes;
+            dict[typeof(GSANode)].AddRange(nodes);
+
+            if (nodes.Count() > 0 || deletedLines.Length > 0 || e0dChanged) return true;
+
+            return false;
         }
 
         public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
@@ -122,8 +156,10 @@ namespace SpeckleGSA
             }
         }
 
-        public void ParseGWACommand(string command, Dictionary<Type, List<StructuralObject>> dict = null)
+        public void ParseGWACommand(string command, Dictionary<Type, List<object>> dict = null)
         {
+            GWACommand = command;
+
             string[] pieces = command.ListSplit(",");
 
             int counter = 1; // Skip identifier

@@ -16,7 +16,8 @@ namespace SpeckleGSA
 
         public static bool TargetAnalysisLayer;
         public static bool TargetDesignLayer;
-        
+
+        private static Dictionary<string, object> PreviousGSACache;
         private static Dictionary<string, object> GSACache;
 
         public static string Units { get; private set; }
@@ -33,7 +34,7 @@ namespace SpeckleGSA
             TargetAnalysisLayer = false;
             TargetDesignLayer = true; // TODO
 
-
+            PreviousGSACache = new Dictionary<string, object>();
             GSACache = new Dictionary<string, object>();
             Senders = new Dictionary<string, string>();
             Receivers = new List<string>();
@@ -170,15 +171,102 @@ namespace SpeckleGSA
 
             return pieces[1];
         }
+        
+        public static string[] GetGWAGetCommands(string command)
+        {
+            if (!command.Contains("GET"))
+                throw new Exception("GetGWAGetCommands() only takes in GET commands");
 
+            object result = RunGWACommand(command);
+            string[] newPieces = ((string)result).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries).Select((s, idx) => idx.ToString() + ":" + s).ToArray();
+            return newPieces;
+        }
+
+        public static string[] GetNewGWAGetCommands(string command)
+        {
+            if (!command.Contains("GET"))
+                throw new Exception("GetNewGWAGetCommands() only takes in GET commands");
+
+            object result = RunGWACommand(command);
+
+            if (PreviousGSACache.ContainsKey(command))
+            {
+                if ((result as string) == (PreviousGSACache[command] as string))
+                    return new string[0];
+
+                string[] newPieces = ((string)result).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries).Select((s,idx) => idx.ToString() + ":" + s).ToArray();
+                string[] prevPieces = ((string)PreviousGSACache[command]).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries).Select((s, idx) => idx.ToString() + ":" + s).ToArray();
+
+                string[] ret = newPieces.Where(n => !prevPieces.Contains(n)).ToArray();
+                
+                return ret;
+            }
+            else
+            {
+                return ((string)result).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries).Select((s, idx) => idx.ToString() + ":" + s).ToArray();
+            }
+        }
+
+        public static string[] GetDeletedGWAGetCommands(string command)
+        {
+            if (!command.Contains("GET"))
+                throw new Exception("GetDeletedGWAGetCommands() only takes in GET commands");
+
+            object result = RunGWACommand(command);
+
+            if (PreviousGSACache.ContainsKey(command))
+            {
+                if ((result as string) == (PreviousGSACache[command] as string))
+                    return new string[0];
+
+                string[] newPieces = ((string)result).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries).Select((s, idx) => idx.ToString() + ":" + s).ToArray();
+                string[] prevPieces = ((string)PreviousGSACache[command]).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries).Select((s, idx) => idx.ToString() + ":" + s).ToArray();
+
+                string[] ret = prevPieces.Where(p => !newPieces.Contains(p)).ToArray();
+                
+                return ret;
+            }
+            else
+                return new string[0];
+        }
+        
         public static object RunGWACommand(string command, bool cache = true)
         {
             if (!IsInit)
                 return "";
 
             if (cache)
-            { 
+            {
                 if (command.Contains("GET") & !command.Contains("HIGHEST"))
+                {
+                    if (!GSACache.ContainsKey(command))
+                    {
+                        if (command.Contains("GET_ALL,MEMB"))
+                        {
+                            // TODO: Member GET_ALL work around
+                            int[] memberRefs = new int[0];
+                            GSAObject.EntitiesInList("all", GsaEntity.MEMBER, out memberRefs);
+
+                            if (memberRefs == null || memberRefs.Length == 0)
+                                return "";
+
+                            List<string> result = new List<string>();
+
+                            foreach (int r in memberRefs)
+                                (result as List<string>).Add((string)RunGWACommand("GET,MEMB," + r.ToString()));
+
+                            GSACache[command] = string.Join("\n", result);
+                        }
+                        else
+                        { 
+                            GSACache[command] = GSAObject.GwaCommand(command);
+                        }
+                    }
+
+                    return GSACache[command];
+                }
+
+                if (command.Contains("SET"))
                 {
                     if (!GSACache.ContainsKey(command))
                         GSACache[command] = GSAObject.GwaCommand(command);
@@ -229,6 +317,7 @@ namespace SpeckleGSA
 
         public static void ClearCache()
         {
+            PreviousGSACache = new Dictionary<string,object>(GSACache);
             GSACache.Clear();
         }
     }

@@ -11,20 +11,28 @@ using System.Reflection;
 namespace SpeckleGSA
 {
     [GSAObject("LOAD_2D_FACE.2", "loads", true, true, new Type[] { typeof(GSA2DElement), typeof(GSA2DMember) }, new Type[] { typeof(GSA2DElement), typeof(GSA2DMember) })]
-    public class GSA2DLoad : Structural2DLoad
+    public class GSA2DLoad : Structural2DLoad, IGSAObject
     {
         public int Axis;
         public bool Projected;
 
+        public string GWACommand { get; set; }
+        public List<string> SubGWACommand { get; set; }
+
         #region Contructors and Converters
         public GSA2DLoad()
         {
+            GWACommand = "";
+            SubGWACommand = new List<string>();
             Axis = 0;
             Projected = false;
         }
 
         public GSA2DLoad(Structural2DLoad baseClass)
         {
+            GWACommand = "";
+            SubGWACommand = new List<string>();
+
             Axis = 0;
             Projected = false;
 
@@ -37,25 +45,29 @@ namespace SpeckleGSA
         #endregion
 
         #region GSA Functions
-        public static void GetObjects(Dictionary<Type, List<StructuralObject>> dict)
+        public static bool GetObjects(Dictionary<Type, List<object>> dict)
         {
             if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
-                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
+                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<object>();
 
             List<StructuralObject> loads = new List<StructuralObject>();
 
-            string res = (string)GSA.RunGWACommand("GET_ALL,LOAD_2D_FACE");
+            string[] lines = GSA.GetGWAGetCommands("GET_ALL,LOAD_2D_FACE");
+            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL,LOAD_2D_FACE");
 
-            if (res == "")
-                return;
+            // Remove deleted lines
+            dict[typeof(GSA2DLoad)].RemoveAll(l => deletedLines.Contains(((IGSAObject)l).GWACommand));
+            foreach (KeyValuePair<Type, List<object>> kvp in dict)
+                kvp.Value.RemoveAll(l => ((IGSAObject)l).SubGWACommand.Any(x => deletedLines.Contains(x)));
 
-            string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+            // Filter only new lines
+            string[] prevLines = dict[typeof(GSA2DLoad)].Select(l => ((GSA2DLoad)l).GWACommand).ToArray();
+            string[] newLines = lines.Where(l => !prevLines.Contains(l)).ToArray();
 
-            List<StructuralObject> elements = GSA.TargetAnalysisLayer ? dict[typeof(GSA2DElement)] : new List<StructuralObject>();
-            List<StructuralObject> members = GSA.TargetDesignLayer ? dict[typeof(GSA2DMember)] : new List<StructuralObject>();
-
-            double counter = 1;
-            foreach (string p in pieces)
+            List<object> elements = GSA.TargetAnalysisLayer ? dict[typeof(GSA2DElement)] : new List<object>();
+            List<object> members = GSA.TargetDesignLayer ? dict[typeof(GSA2DMember)] : new List<object>();
+            
+            foreach (string p in newLines)
             {
                 List<GSA2DLoad> loadSubList = new List<GSA2DLoad>();
 
@@ -70,11 +82,13 @@ namespace SpeckleGSA
                     foreach (int eRef in initLoad.Elements)
                     {
                         GSA2DLoad load = new GSA2DLoad();
+                        load.GWACommand = initLoad.GWACommand;
+                        load.SubGWACommand = new List<string>(initLoad.SubGWACommand);
                         load.Name = initLoad.Name;
                         load.LoadCase = initLoad.LoadCase;
 
                         // Transform load to defined axis
-                        GSA2DElement elem = elements.Where(e => e.Reference == eRef).First() as GSA2DElement;
+                        GSA2DElement elem = elements.Where(e => ((GSA2DElement)e).Reference == eRef).First() as GSA2DElement;
                         Axis loadAxis = HelperFunctions.Parse2DAxis(elem.Coordinates.ToArray(), 0, load.Axis != 0); // Assumes if not global, local
                         load.Loading = initLoad.Loading;
                         if (load.Projected)
@@ -102,11 +116,13 @@ namespace SpeckleGSA
                     foreach (int mRef in initLoad.Elements)
                     {
                         GSA2DLoad load = new GSA2DLoad();
+                        load.GWACommand = initLoad.GWACommand;
+                        load.SubGWACommand = new List<string>(initLoad.SubGWACommand);
                         load.Name = initLoad.Name;
                         load.LoadCase = initLoad.LoadCase;
 
                         // Transform load to defined axis
-                        GSA2DMember memb = members.Where(m => m.Reference == mRef).First() as GSA2DMember;
+                        GSA2DMember memb = members.Where(m => ((GSA2DMember)m).Reference == mRef).First() as GSA2DMember;
                         Axis loadAxis = HelperFunctions.Parse2DAxis(memb.Coordinates().ToArray(), 0, load.Axis != 0); // Assumes if not global, local
                         load.Loading = initLoad.Loading;
                         if (load.Projected)
@@ -129,10 +145,13 @@ namespace SpeckleGSA
                 }
 
                 loads.AddRange(loadSubList);
-                Status.ChangeStatus("Reading 2D face loads", counter++ / pieces.Length * 100);
             }
 
             dict[typeof(GSA2DLoad)].AddRange(loads);
+            
+            if (loads.Count() > 0 || deletedLines.Length > 0) return true;
+
+            return false;
         }
 
         public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
@@ -168,8 +187,10 @@ namespace SpeckleGSA
             }
         }
 
-        public void ParseGWACommand(string command, Dictionary<Type, List<StructuralObject>> dict = null)
+        public void ParseGWACommand(string command, Dictionary<Type, List<object>> dict = null)
         {
+            GWACommand = command;
+
             string[] pieces = command.ListSplit(",");
 
             int counter = 1; // Skip identifier
@@ -180,10 +201,12 @@ namespace SpeckleGSA
                 int[] targetElements = pieces[counter++].ParseGSAList(GsaEntity.ELEMENT);
 
                 if (dict.ContainsKey(typeof(GSA2DElement)))
-                { 
-                    Elements = dict[typeof(GSA2DElement)].Cast<GSA2DElement>()
-                        .Where(n => targetElements.Contains(n.Reference))
-                        .Select(n => n.Reference).ToList();
+                {
+                    List<GSA2DElement> elems = dict[typeof(GSA2DElement)].Cast<GSA2DElement>()
+                        .Where(n => targetElements.Contains(n.Reference)).ToList();
+
+                    Elements = elems.Select(n => n.Reference).ToList();
+                    SubGWACommand.AddRange(elems.Select(n => n.GWACommand));
                 }
             }
             else
@@ -192,9 +215,11 @@ namespace SpeckleGSA
 
                 if (dict.ContainsKey(typeof(GSA2DMember)))
                 {
-                    Elements = dict[typeof(GSA2DMember)].Cast<GSA2DMember>()
-                        .Where(m => targetGroups.Contains(m.Group))
-                        .Select(m => m.Reference).ToList();
+                    List<GSA2DMember> membs = dict[typeof(GSA2DMember)].Cast<GSA2DMember>()
+                        .Where(m => targetGroups.Contains(m.Group)).ToList();
+
+                    Elements = membs.Select(m => m.Reference).ToList();
+                    SubGWACommand.AddRange(membs.Select(n => n.GWACommand));
                 }
             }
 

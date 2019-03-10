@@ -11,20 +11,27 @@ using SpeckleStructures;
 namespace SpeckleGSA
 {
     [GSAObject("EL.3", "elements", true, false, new Type[] { typeof(GSANode), typeof(GSA2DProperty) }, new Type[] { typeof(GSA2DElementMesh) })]
-    public class GSA2DElement : Structural2DElement
+    public class GSA2DElement : Structural2DElement, IGSAObject
     {
         private List<int> Connectivity;
         public int MeshReference;
 
+        public string GWACommand { get; set; }
+        public List<string> SubGWACommand { get; set; }
+
         #region Contructors and Converters
         public GSA2DElement()
         {
+            GWACommand = "";
+            SubGWACommand = new List<string>();
             Connectivity = new List<int>();
             MeshReference = 0;
         }
 
         public GSA2DElement(Structural2DElement baseClass)
         {
+            GWACommand = "";
+            SubGWACommand = new List<string>();
             Connectivity = new List<int>();
             MeshReference = 0;
 
@@ -37,26 +44,30 @@ namespace SpeckleGSA
         #endregion
 
         #region GSA Functions
-        public static void GetObjects(Dictionary<Type, List<StructuralObject>> dict)
+        public static bool GetObjects(Dictionary<Type, List<object>> dict)
         {
             if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
-                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
+                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<object>();
 
-            if (!GSA.TargetAnalysisLayer) return;
+            if (!GSA.TargetAnalysisLayer) return false;
 
-            List<StructuralObject> e2Ds = new List<StructuralObject>();
+            List<object> e2Ds = new List<object>();
 
-            string res = (string)GSA.RunGWACommand("GET_ALL,EL");
+            string[] lines = GSA.GetGWAGetCommands("GET_ALL,EL");
+            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL,EL");
 
-            if (res == "")
-                return;
+            // Remove deleted lines
+            dict[typeof(GSA2DElement)].RemoveAll(l => deletedLines.Contains(((IGSAObject)l).GWACommand));
+            foreach (KeyValuePair<Type, List<object>> kvp in dict)
+                kvp.Value.RemoveAll(l => ((IGSAObject)l).SubGWACommand.Any(x => deletedLines.Contains(x)));
 
-            string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+            // Filter only new lines
+            string[] prevLines = dict[typeof(GSA2DElement)].Select(l => ((GSA2DElement)l).GWACommand).ToArray();
+            string[] newLines = lines.Where(l => !prevLines.Contains(l)).ToArray();
 
-            List<StructuralObject> nodes = dict[typeof(GSANode)];
-
-            double counter = 1;
-            foreach (string p in pieces)
+            List<object> nodes = dict[typeof(GSANode)];
+            
+            foreach (string p in newLines)
             {
                 string[] pPieces = p.ListSplit(",");
                 int numConnectivity = pPieces[4].ParseElementNumNodes();
@@ -68,10 +79,13 @@ namespace SpeckleGSA
 
                     e2Ds.Add(e2D);
                 }
-                Status.ChangeStatus("Reading 2D elements", counter++ / pieces.Length * 100);
             }
 
             dict[typeof(GSA2DElement)].AddRange(e2Ds);
+
+            if (e2Ds.Count() > 0 || deletedLines.Length > 0) return true;
+
+            return false;
         }
 
         public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
@@ -116,8 +130,10 @@ namespace SpeckleGSA
             }
         }
 
-        public void ParseGWACommand(string command, Dictionary<Type, List<StructuralObject>> dict = null)
+        public void ParseGWACommand(string command, Dictionary<Type, List<object>> dict = null)
         {
+            GWACommand = command;
+
             string[] pieces = command.ListSplit(",");
 
             int counter = 1; // Skip identifier
@@ -133,18 +149,21 @@ namespace SpeckleGSA
             for (int i = 0; i < type.ParseElementNumNodes(); i++)
             {
                 int key = Convert.ToInt32(pieces[counter++]);
-                Coordinates.Add(dict[typeof(GSANode)].Cast<GSANode>().Where(n => n.Reference == key).FirstOrDefault().Coordinates);
+                GSANode node = dict[typeof(GSANode)].Cast<GSANode>().Where(n => n.Reference == key).FirstOrDefault();
+                Coordinates.Add(node.Coordinates);
+                SubGWACommand.Add(node.GWACommand);
             }
 
             counter++; // Orientation node
 
             if (dict.ContainsKey(typeof(GSA2DProperty)))
             { 
-                List<StructuralObject> props = dict[typeof(GSA2DProperty)];
+                List<object> props = dict[typeof(GSA2DProperty)];
                 GSA2DProperty prop = props.Cast<GSA2DProperty>().Where(p => p.Reference == Property).FirstOrDefault();
                 Axis = HelperFunctions.Parse2DAxis(Coordinates.ToArray(),
                     Convert.ToDouble(pieces[counter++]),
                     prop == null ? false : (prop as GSA2DProperty).IsAxisLocal);
+                SubGWACommand.Add(prop.GWACommand);
             }
             else
             {

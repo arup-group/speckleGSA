@@ -12,166 +12,169 @@ namespace SpeckleGSA
 {
     public class Controller
     {
-        public Dictionary<string, SpeckleGSASender> senders;
+        //public Dictionary<string, SpeckleGSASender> senders;
         public Dictionary<string, SpeckleGSAReceiver> receivers;
+
+        //public Dictionary<Type, List<object>> senderObjectCache;
         
         public Controller()
         {
-            senders = new Dictionary<string, SpeckleGSASender>();
+            //senders = new Dictionary<string, SpeckleGSASender>();
             receivers = new Dictionary<string, SpeckleGSAReceiver>();
+
+            //senderObjectCache = new Dictionary<Type, List<object>>();
         }
         
-        public async Task ExportObjects(string restApi, string apiToken)
-        {
-            List<Task> taskList = new List<Task>();
+        //public async Task ExportObjects(string restApi, string apiToken)
+        //{
+        //    List<Task> taskList = new List<Task>();
 
-            if (!GSA.IsInit)
-            {
-                Status.AddError("GSA link not found.");
-                return;
-            }
+        //    if (!GSA.IsInit)
+        //    {
+        //        Status.AddError("GSA link not found.");
+        //        return;
+        //    }
 
-            GSA.ClearCache();
-            GSA.UpdateUnits();
+        //    GSA.ClearCache();
+        //    GSA.UpdateUnits();
 
-            // Initialize object read priority list
-            Dictionary<Type, List<Type>> typePrerequisites = new Dictionary<Type, List<Type>>();
+        //    // Initialize object read priority list
+        //    Dictionary<Type, List<Type>> typePrerequisites = new Dictionary<Type, List<Type>>();
             
-            IEnumerable<Type> objTypes = typeof(GSA)
-                .Assembly.GetTypes()
-                .Where(t => t.IsSubclassOf(typeof(StructuralObject)) && !t.IsAbstract);
+        //    IEnumerable<Type> objTypes = typeof(GSA)
+        //        .Assembly.GetTypes()
+        //        .Where(t => t.IsSubclassOf(typeof(StructuralObject)) && !t.IsAbstract);
 
-            Status.ChangeStatus("Preparing to read GSA Objects");
+        //    Status.ChangeStatus("Preparing to read GSA Objects");
 
-            foreach (Type t in objTypes)
-            {
-                if (t.GetMethod("GetObjects",
-                    new Type[] { typeof(Dictionary<Type, List<StructuralObject>>) }) == null)
-                    continue;
+        //    foreach (Type t in objTypes)
+        //    {
+        //        if (t.GetMethod("GetObjects",
+        //            new Type[] { typeof(Dictionary<Type, List<object>>) }) == null)
+        //            continue;
 
-                if (t.GetAttribute("Stream") == null) continue;
+        //        if (t.GetAttribute("Stream") == null) continue;
 
-                if (t.GetAttribute("AnalysisLayer") != null)
-                    if (GSA.TargetAnalysisLayer && !(bool)t.GetAttribute("AnalysisLayer")) continue;
+        //        if (t.GetAttribute("AnalysisLayer") != null)
+        //            if (GSA.TargetAnalysisLayer && !(bool)t.GetAttribute("AnalysisLayer")) continue;
 
-                if (t.GetAttribute("DesignLayer") != null)
-                    if (GSA.TargetDesignLayer && !(bool)t.GetAttribute("DesignLayer")) continue;
+        //        if (t.GetAttribute("DesignLayer") != null)
+        //            if (GSA.TargetDesignLayer && !(bool)t.GetAttribute("DesignLayer")) continue;
 
-                List<Type> prereq = new List<Type>();
-                if (t.GetAttribute("ReadPrerequisite") != null)
-                    prereq = ((Type[])t.GetAttribute("ReadPrerequisite")).ToList();
+        //        List<Type> prereq = new List<Type>();
+        //        if (t.GetAttribute("ReadPrerequisite") != null)
+        //            prereq = ((Type[])t.GetAttribute("ReadPrerequisite")).ToList();
                         
-                typePrerequisites[t] = prereq;
-            }
+        //        typePrerequisites[t] = prereq;
+        //    }
 
-            // Remove wrong layer objects from prerequisites
-            foreach (Type t in objTypes)
-            {
-                if (t.GetAttribute("AnalysisLayer") != null)
-                    if (GSA.TargetAnalysisLayer && !(bool)t.GetAttribute("AnalysisLayer"))
-                        foreach (KeyValuePair<Type, List<Type>> kvp in typePrerequisites)
-                            kvp.Value.Remove(t);
+        //    // Remove wrong layer objects from prerequisites
+        //    foreach (Type t in objTypes)
+        //    {
+        //        if (t.GetAttribute("AnalysisLayer") != null)
+        //            if (GSA.TargetAnalysisLayer && !(bool)t.GetAttribute("AnalysisLayer"))
+        //                foreach (KeyValuePair<Type, List<Type>> kvp in typePrerequisites)
+        //                    kvp.Value.Remove(t);
 
-                if (t.GetAttribute("DesignLayer") != null)
-                    if (GSA.TargetDesignLayer && !(bool)t.GetAttribute("DesignLayer"))
-                        foreach (KeyValuePair<Type, List<Type>> kvp in typePrerequisites)
-                            kvp.Value.Remove(t);
-            }
+        //        if (t.GetAttribute("DesignLayer") != null)
+        //            if (GSA.TargetDesignLayer && !(bool)t.GetAttribute("DesignLayer"))
+        //                foreach (KeyValuePair<Type, List<Type>> kvp in typePrerequisites)
+        //                    kvp.Value.Remove(t);
+        //    }
 
-            // Read objects
-            Dictionary<Type, List<StructuralObject>> bucketObjects = new Dictionary<Type, List<StructuralObject>>();
-
-            List<Type> currentBatch = new List<Type>();
-            do
-            {
-                currentBatch = typePrerequisites.Where(i => i.Value.Count == 0).Select(i => i.Key).ToList();
+        //    // Read objects
+        //    List<Type> currentBatch = new List<Type>();
+        //    do
+        //    {
+        //        currentBatch = typePrerequisites.Where(i => i.Value.Count == 0).Select(i => i.Key).ToList();
                 
-                foreach (Type t in currentBatch)
-                {
-                    Status.ChangeStatus("Reading " + t.Name);
+        //        foreach (Type t in currentBatch)
+        //        {
+        //            Status.ChangeStatus("Reading " + t.Name);
 
-                    t.GetMethod("GetObjects",
-                        new Type[] { typeof(Dictionary<Type, List<StructuralObject>>) })
-                        .Invoke(null, new object[] { bucketObjects });
+        //            t.GetMethod("GetObjects",
+        //                new Type[] { typeof(Dictionary<Type, List<object>>) })
+        //                .Invoke(null, new object[] { senderObjectCache });
                     
-                    typePrerequisites.Remove(t);
+        //            typePrerequisites.Remove(t);
 
-                    foreach (KeyValuePair<Type,List<Type>> kvp in typePrerequisites)
-                        if (kvp.Value.Contains(t))
-                            kvp.Value.Remove(t);
-                }
-            } while (currentBatch.Count > 0);
+        //            foreach (KeyValuePair<Type,List<Type>> kvp in typePrerequisites)
+        //                if (kvp.Value.Contains(t))
+        //                    kvp.Value.Remove(t);
+        //        }
+        //    } while (currentBatch.Count > 0);
             
-            // Remove unimportant nodes
-            if (Settings.SendOnlyMeaningfulNodes && bucketObjects.ContainsKey(typeof(GSANode)))
-                bucketObjects[typeof(GSANode)] = bucketObjects[typeof(GSANode)]
-                    .Where(n => (n as GSANode).ForceSend ||
-                    !(n as GSANode).Restraint.Equals(new SixVectorBool()) ||
-                    !(n as GSANode).Stiffness.Equals(new SixVectorDouble()) ||
-                    (n as GSANode).Mass > 0).ToList();
+        //    // Remove unimportant nodes
+        //    if (Settings.SendOnlyMeaningfulNodes && senderObjectCache.ContainsKey(typeof(GSANode)))
+        //        senderObjectCache[typeof(GSANode)] = senderObjectCache[typeof(GSANode)]
+        //            .Where(n => (n as GSANode).ForceSend ||
+        //            !(n as GSANode).Restraint.Equals(new SixVectorBool()) ||
+        //            !(n as GSANode).Stiffness.Equals(new SixVectorDouble()) ||
+        //            (n as GSANode).Mass > 0).ToList();
 
-            // Convert objects to base class
-            Dictionary<Type, List<StructuralObject>> tempBucket = new Dictionary<Type, List<StructuralObject>>();
-            foreach (KeyValuePair<Type, List<StructuralObject>> kvp in bucketObjects)
-            {
-                tempBucket[kvp.Key] = kvp.Value.Select(
-                    x => x.GetBase()).Cast<StructuralObject>().ToList();
-            }
-            bucketObjects = tempBucket;
+        //    // Convert objects to base class
+        //    Dictionary<Type, List<StructuralObject>> convertedBucket = new Dictionary<Type, List<StructuralObject>>();
+        //    foreach (KeyValuePair<Type, List<object>> kvp in senderObjectCache)
+        //    {
+        //        convertedBucket[kvp.Key] = kvp.Value.Select(
+        //            x => x.GetBase()).Cast<StructuralObject>().ToList();
+        //    }
 
-            // Seperate objects into streams
-            Dictionary<string, Dictionary<string, List<object>>> streamBuckets = new Dictionary<string, Dictionary<string, List<object>>>();
+        //    // Seperate objects into streams
+        //    Dictionary<string, Dictionary<string, List<object>>> streamBuckets = new Dictionary<string, Dictionary<string, List<object>>>();
 
-            Status.ChangeStatus("Preparing stream buckets");
+        //    Status.ChangeStatus("Preparing stream buckets");
 
-            foreach (KeyValuePair<Type, List<StructuralObject>> kvp in bucketObjects)
-            {
-                string stream;
+        //    foreach (KeyValuePair<Type, List<StructuralObject>> kvp in convertedBucket)
+        //    {
+        //        string stream;
 
-                if (Settings.SeperateStreams)
-                    stream = (string)kvp.Key.GetAttribute("Stream");
-                else
-                    stream = "ALL";
+        //        if (Settings.SeperateStreams)
+        //            stream = (string)kvp.Key.GetAttribute("Stream");
+        //        else
+        //            stream = "ALL";
 
-                if (!streamBuckets.ContainsKey(stream))
-                    streamBuckets[stream] = new Dictionary<string, List<object>>() { { kvp.Key.BaseType.Name.ToString(), (kvp.Value as IList).Cast<object>().ToList() } };
-                else
-                    streamBuckets[stream][kvp.Key.BaseType.Name.ToString()] = (kvp.Value as IList).Cast<object>().ToList();
-            }
+        //        if (!streamBuckets.ContainsKey(stream))
+        //            streamBuckets[stream] = new Dictionary<string, List<object>>() { { kvp.Key.BaseType.Name.ToString(), (kvp.Value as IList).Cast<object>().ToList() } };
+        //        else
+        //            streamBuckets[stream][kvp.Key.BaseType.Name.ToString()] = (kvp.Value as IList).Cast<object>().ToList();
+        //    }
 
-            // Send package
-            Status.ChangeStatus("Sending to Server");
+        //    // Send package
+        //    Status.ChangeStatus("Sending to Server");
 
-            foreach (KeyValuePair<string, Dictionary<string, List<object>>> kvp in streamBuckets)
-            {
-                string streamName = GSA.Title() + "." + kvp.Key;
+        //    foreach (KeyValuePair<string, Dictionary<string, List<object>>> kvp in streamBuckets)
+        //    {
+        //        string streamName = GSA.Title() + "." + kvp.Key;
                 
-                if (Settings.SeperateStreams)
-                    streamName = GSA.Title() + "." + kvp.Key;
-                else
-                    streamName = GSA.Title();
+        //        if (Settings.SeperateStreams)
+        //            streamName = GSA.Title() + "." + kvp.Key;
+        //        else
+        //            streamName = GSA.Title();
 
-                // Create sender
-                senders[streamName] = new SpeckleGSASender(restApi, apiToken);
+        //        // Create sender
+        //        if (!senders.ContainsKey(streamName))
+        //        {
+        //            senders[streamName] = new SpeckleGSASender(restApi, apiToken);
 
-                if (!GSA.Senders.ContainsKey(streamName))
-                {
-                    Status.AddMessage(streamName + " sender not initialized. Creating new " + streamName + " sender.");
-                    await senders[streamName].InitializeSender(null, streamName);
-                    GSA.Senders[streamName] = senders[streamName].StreamID;
-                }
-                else
-                    await senders[streamName].InitializeSender(GSA.Senders[streamName], streamName);
-
-                senders[streamName].SendGSAObjects(kvp.Value);
-                senders[streamName].Dispose();
-            }
+        //            if (!GSA.Senders.ContainsKey(streamName))
+        //            {
+        //                Status.AddMessage(streamName + " sender not initialized. Creating new " + streamName + " sender.");
+        //                await senders[streamName].InitializeSender(null, streamName);
+        //                GSA.Senders[streamName] = senders[streamName].StreamID;
+        //            }
+        //            else
+        //                await senders[streamName].InitializeSender(GSA.Senders[streamName], streamName);
+        //        }
+                
+        //        senders[streamName].SendGSAObjects(kvp.Value);
+        //    }
             
-            // Complete
-            Status.ChangeStatus("Sending complete", 0);
+        //    // Complete
+        //    Status.ChangeStatus("Sending complete", 0);
 
-            Status.AddMessage("Sending complete!");
-        }        
+        //    Status.AddMessage("Sending complete!");
+        //}        
 
         public async Task ImportObjects(string restApi, string apiToken)
         {

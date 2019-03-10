@@ -35,7 +35,9 @@
         <Grid
             Grid.Row="1"
             Margin="20,0,20,0">
-            <TabControl>
+            <TabControl
+                x:Name="UITabControl"
+                SelectionChanged="ChangeTab">
                 <TabItem Header="Server">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -91,12 +93,28 @@
                 <TabItem Header="Sender" x:Name="SenderTab" IsEnabled="False">
                     <Grid>
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="*"/>
                             <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
+                        <Grid Grid.Row="0" Background="Transparent">
+                            <Viewbox Width="48" Height="48" MouseDown="SendStream" Margin="25">
+                                <Canvas Width="24" Height="24">
+                                    <Path x:Name="SendButtonPath"
+                                              Fill="#0080FF" />
+                                </Canvas>
+                            </Viewbox>
+                        </Grid>
+                        <StackPanel Grid.Row="1" HorizontalAlignment="Right" Orientation="Horizontal">
+                            <ToggleButton
+                                x:Name="SenderLayerToggle"
+                                Margin="5"
+                                Content="Layer to Stream:"
+                                Style="{StaticResource AnalysisDesignToggle}"/>
+                        </StackPanel>
                         <DataGrid
                             x:Name="SenderStreams"
-                            Grid.Row="0"
+                            Grid.Row="2"
                             Margin="5"
                             CanUserSortColumns="False"
                             AutoGenerateColumns="False"
@@ -125,11 +143,6 @@
                                 </Style>
                             </DataGrid.CellStyle>
                         </DataGrid>
-                        <StackPanel Grid.Row="1" HorizontalAlignment="Right" Orientation="Horizontal">
-                            <Button Content="Send/Update Analysis Streams" Click="SendAnalysisLayer" Margin="5" Padding="5" HorizontalAlignment="Right" MinWidth="100"/>
-                            <Button Content="Send/Update Design Streams" Click="SendDesignLayer" Margin="5" Padding="5" HorizontalAlignment="Right" MinWidth="100"/>
-                        </StackPanel>
-
                     </Grid>
                 </TabItem>
                 <TabItem Header="Receiver" x:Name="ReceiverTab" IsEnabled="False">
