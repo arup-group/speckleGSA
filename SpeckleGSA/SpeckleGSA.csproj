@@ -8,7 +8,7 @@
     <OutputType>Library</OutputType>
     <RootNamespace>SpeckleGSA</RootNamespace>
     <AssemblyName>SpeckleGSA</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <TargetFrameworkProfile />
@@ -68,20 +68,6 @@
     <Compile Include="StaticClasses\StreamManager.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\SpeckleStructures\SpeckleCore\SpeckleCore\SpeckleCore.csproj">
-      <Project>{cfe27d3d-8a1a-43f9-9387-8fd9e119e174}</Project>
-      <Name>SpeckleCore</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\SpeckleStructures\SpeckleStructuresConverter\SpeckleStructuresConverter.csproj">
-      <Project>{2606279d-855d-43f1-8719-eb39bbc0e7e1}</Project>
-      <Name>SpeckleStructuresConverter</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\SpeckleStructures\SpeckleStructures\SpeckleStructures.csproj">
-      <Project>{081db7cc-206c-47e2-a57d-df7c4d2d4b13}</Project>
-      <Name>SpeckleStructures</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <Reference Include="Interop.Gsa_10_0">
       <HintPath>..\Resource\Interop.Gsa_10_0.dll</HintPath>
       <EmbedInteropTypes>True</EmbedInteropTypes>
@@ -95,6 +81,15 @@
     <Reference Include="System" />
     <Reference Include="System.Drawing" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\SpeckleStructures\SpeckleCoreGeometry\SpeckleCore\SpeckleCore\SpeckleCore.csproj">
+      <Project>{cfe27d3d-8a1a-43f9-9387-8fd9e119e174}</Project>
+      <Name>SpeckleCore</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SpeckleStructures\SpeckleStructuresClasses\SpeckleStructuresClasses.csproj">
+      <Project>{081db7cc-206c-47e2-a57d-df7c4d2d4b13}</Project>
+      <Name>SpeckleStructuresClasses</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

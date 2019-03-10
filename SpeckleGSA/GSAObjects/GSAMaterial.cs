@@ -5,7 +5,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Interop.Gsa_10_0;
-using SpeckleStructures;
+using SpeckleStructuresClasses;
 
 namespace SpeckleGSA
 {

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using SpeckleCore;
-using SpeckleStructures;
+using SpeckleStructuresClasses;
 
 namespace SpeckleGSA
 {
@@ -27,6 +27,9 @@ namespace SpeckleGSA
             this.apiToken = apiToken;
 
             myReceiver = new SpeckleApiClient() { BaseUrl = serverAddress.ToString() };
+
+            SpeckleInitializer.Initialize();
+            LocalContext.Init();
         }
 
         public async Task InitializeReceiver(string streamID)
@@ -43,8 +46,6 @@ namespace SpeckleGSA
 
         public void UpdateDataAsync()
         {
-            StructuresConverterHack hack = new StructuresConverterHack();
-
             // Try to get stream
             ResponseStream streamGetResult = myReceiver.StreamGetAsync(myReceiver.StreamId, null).Result;
 
@@ -66,7 +67,7 @@ namespace SpeckleGSA
                 }
                 catch { }
 
-                string[] payload = myReceiver.Stream.Objects.Where(o => o.Type == SpeckleObjectType.Placeholder).Select(o => o._id).ToArray();
+                string[] payload = myReceiver.Stream.Objects.Where(o => o.Type == "Placeholder").Select(o => o._id).ToArray();
 
                 List<SpeckleObject> receivedObjects = new List<SpeckleObject>();
 

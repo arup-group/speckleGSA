@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using Interop.Gsa_10_0;
-using SpeckleStructures;
+using SpeckleStructuresClasses;
 using System.Reflection;
 
 namespace SpeckleGSA

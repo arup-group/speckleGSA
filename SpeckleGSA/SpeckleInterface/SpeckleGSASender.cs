@@ -8,7 +8,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using SpeckleCore;
-using SpeckleStructures;
+using SpeckleStructuresClasses;
 
 namespace SpeckleGSA
 {
@@ -29,6 +29,9 @@ namespace SpeckleGSA
             this.StreamName = "";
 
             mySender = new SpeckleApiClient() { BaseUrl = serverAddress.ToString() };
+
+            SpeckleInitializer.Initialize();
+            LocalContext.Init();
         }
 
         public async Task InitializeSender(string streamID = null, string streamName = "")
@@ -55,8 +58,6 @@ namespace SpeckleGSA
 
         public void SendGSAObjects(Dictionary<string, List<object>> payloadObjects)
         {
-            StructuresConverterHack hack = new StructuresConverterHack();
-
             // Convert and set up layers
             List<SpeckleObject> bucketObjects = new List<SpeckleObject>();
             List<Layer> layers = new List<Layer>();
@@ -95,7 +96,7 @@ namespace SpeckleGSA
             // Seperate objects into sizeable payloads
             List<List<SpeckleObject>> payloads = CreatePayloads(bucketObjects);
 
-            if (bucketObjects.Count(o => o.Type == SpeckleObjectType.Placeholder) < bucketObjects.Count)
+            if (bucketObjects.Count(o => o.Type == "Placeholder") < bucketObjects.Count)
             {
                 // Send objects which are in payload and add to local DB with updated IDs
                 foreach (List<SpeckleObject> payload in payloads)

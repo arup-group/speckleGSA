@@ -10,7 +10,7 @@ using System.Drawing;
 using SpeckleCore;
 using System.Reflection;
 using System.Collections;
-using SpeckleStructures;
+using SpeckleStructuresClasses;
 
 namespace SpeckleGSA
 {
@@ -166,199 +166,199 @@ namespace SpeckleGSA
         #endregion
 
         #region Arc Helper Methods
-        public static SpeckleArc ArcRadiustoSpeckleArc(double[] coor, double radius, bool greaterThanHalf = false)
-        {
-            Point3D[] points = new Point3D[] {
-                new Point3D(coor[0], coor[1], coor[2]),
-                new Point3D(coor[3], coor[4], coor[5]),
-                new Point3D(coor[6], coor[7], coor[8])
-            };
+        //public static SpeckleArc ArcRadiustoSpeckleArc(double[] coor, double radius, bool greaterThanHalf = false)
+        //{
+        //    Point3D[] points = new Point3D[] {
+        //        new Point3D(coor[0], coor[1], coor[2]),
+        //        new Point3D(coor[3], coor[4], coor[5]),
+        //        new Point3D(coor[6], coor[7], coor[8])
+        //    };
 
-            Vector3D v1 = Point3D.Subtract(points[1], points[0]);
-            Vector3D v2 = Point3D.Subtract(points[2], points[0]);
-            Vector3D v3 = Vector3D.CrossProduct(v1, v2);
+        //    Vector3D v1 = Point3D.Subtract(points[1], points[0]);
+        //    Vector3D v2 = Point3D.Subtract(points[2], points[0]);
+        //    Vector3D v3 = Vector3D.CrossProduct(v1, v2);
 
-            double theta = -Math.Acos(v1.Length / (2 * radius));
+        //    double theta = -Math.Acos(v1.Length / (2 * radius));
 
-            v1.Normalize();
-            v2.Normalize();
-            v3.Normalize();
+        //    v1.Normalize();
+        //    v2.Normalize();
+        //    v3.Normalize();
 
-            Matrix3D originRotMat;
-            if (!greaterThanHalf)
-                originRotMat = HelperFunctions.RotationMatrix(v3, theta);
-            else
-                originRotMat = HelperFunctions.RotationMatrix(Vector3D.Multiply(-1, v3), theta);
+        //    Matrix3D originRotMat;
+        //    if (!greaterThanHalf)
+        //        originRotMat = HelperFunctions.RotationMatrix(v3, theta);
+        //    else
+        //        originRotMat = HelperFunctions.RotationMatrix(Vector3D.Multiply(-1, v3), theta);
 
-            Vector3D shiftToOrigin = Vector3D.Multiply(radius, Vector3D.Multiply(v1, originRotMat));
+        //    Vector3D shiftToOrigin = Vector3D.Multiply(radius, Vector3D.Multiply(v1, originRotMat));
 
-            Point3D origin = Point3D.Add(points[0], shiftToOrigin);
+        //    Point3D origin = Point3D.Add(points[0], shiftToOrigin);
 
-            Vector3D startVector = new Vector3D(
-                points[0].X - origin.X,
-                points[0].Y - origin.Y,
-                points[0].Z - origin.Z);
+        //    Vector3D startVector = new Vector3D(
+        //        points[0].X - origin.X,
+        //        points[0].Y - origin.Y,
+        //        points[0].Z - origin.Z);
 
-            Vector3D endVector = new Vector3D(
-                points[1].X - origin.X,
-                points[1].Y - origin.Y,
-                points[1].Z - origin.Z);
+        //    Vector3D endVector = new Vector3D(
+        //        points[1].X - origin.X,
+        //        points[1].Y - origin.Y,
+        //        points[1].Z - origin.Z);
 
-            if (v3.Z == 1)
-            {
-            }
-            else if (v3.Z == -1)
-            {
-                startVector = Vector3D.Multiply(-1, startVector);
-                endVector = Vector3D.Multiply(-1, endVector);
+        //    if (v3.Z == 1)
+        //    {
+        //    }
+        //    else if (v3.Z == -1)
+        //    {
+        //        startVector = Vector3D.Multiply(-1, startVector);
+        //        endVector = Vector3D.Multiply(-1, endVector);
 
 
-                Matrix3D reverseRotation = HelperFunctions.RotationMatrix(new Vector3D(1, 0, 0), Math.PI);
+        //        Matrix3D reverseRotation = HelperFunctions.RotationMatrix(new Vector3D(1, 0, 0), Math.PI);
 
-                startVector = Vector3D.Multiply(startVector, reverseRotation);
-                endVector = Vector3D.Multiply(endVector, reverseRotation);
-            }
-            else
-            {
-                Vector3D unitReverseRotationvector = Vector3D.CrossProduct(v3, new Vector3D(0, 0, 1));
-                unitReverseRotationvector.Normalize();
+        //        startVector = Vector3D.Multiply(startVector, reverseRotation);
+        //        endVector = Vector3D.Multiply(endVector, reverseRotation);
+        //    }
+        //    else
+        //    {
+        //        Vector3D unitReverseRotationvector = Vector3D.CrossProduct(v3, new Vector3D(0, 0, 1));
+        //        unitReverseRotationvector.Normalize();
 
-                Matrix3D reverseRotation = HelperFunctions.RotationMatrix(unitReverseRotationvector, Vector3D.AngleBetween(v3, new Vector3D(0, 0, 1)).ToRadians());
+        //        Matrix3D reverseRotation = HelperFunctions.RotationMatrix(unitReverseRotationvector, Vector3D.AngleBetween(v3, new Vector3D(0, 0, 1)).ToRadians());
 
-                startVector = Vector3D.Multiply(startVector, reverseRotation);
-                endVector = Vector3D.Multiply(endVector, reverseRotation);
-            }
+        //        startVector = Vector3D.Multiply(startVector, reverseRotation);
+        //        endVector = Vector3D.Multiply(endVector, reverseRotation);
+        //    }
 
-            double startAngle = Vector3D.AngleBetween(startVector, new Vector3D(1, 0, 0)).ToRadians();
-            if (startVector.Y < 0) startAngle = 2 * Math.PI - startAngle;
+        //    double startAngle = Vector3D.AngleBetween(startVector, new Vector3D(1, 0, 0)).ToRadians();
+        //    if (startVector.Y < 0) startAngle = 2 * Math.PI - startAngle;
 
-            double endAngle = Vector3D.AngleBetween(endVector, new Vector3D(1, 0, 0)).ToRadians();
-            if (endVector.Y < 0) endAngle = 2 * Math.PI - endAngle;
+        //    double endAngle = Vector3D.AngleBetween(endVector, new Vector3D(1, 0, 0)).ToRadians();
+        //    if (endVector.Y < 0) endAngle = 2 * Math.PI - endAngle;
 
-            double angle = endAngle - startAngle;
-            if (angle < 0) angle = 2 * Math.PI + angle;
+        //    double angle = endAngle - startAngle;
+        //    if (angle < 0) angle = 2 * Math.PI + angle;
 
-            if ((greaterThanHalf & angle < Math.PI) | (!greaterThanHalf & angle > Math.PI))
-            {
-                double temp = startAngle;
-                startAngle = endAngle;
-                endAngle = temp;
-                angle = 2 * Math.PI - angle;
-            }
+        //    if ((greaterThanHalf & angle < Math.PI) | (!greaterThanHalf & angle > Math.PI))
+        //    {
+        //        double temp = startAngle;
+        //        startAngle = endAngle;
+        //        endAngle = temp;
+        //        angle = 2 * Math.PI - angle;
+        //    }
 
-            Vector3D unitX = new Vector3D(1, 0, 0);
-            Vector3D unitY = new Vector3D(0, 1, 0);
+        //    Vector3D unitX = new Vector3D(1, 0, 0);
+        //    Vector3D unitY = new Vector3D(0, 1, 0);
 
-            Vector3D unitRotationvector = Vector3D.CrossProduct(new Vector3D(0, 0, 1), v3);
-            unitRotationvector.Normalize();
-            Matrix3D rotation = HelperFunctions.RotationMatrix(unitRotationvector, Vector3D.AngleBetween(v3, new Vector3D(0, 0, 1)).ToRadians());
+        //    Vector3D unitRotationvector = Vector3D.CrossProduct(new Vector3D(0, 0, 1), v3);
+        //    unitRotationvector.Normalize();
+        //    Matrix3D rotation = HelperFunctions.RotationMatrix(unitRotationvector, Vector3D.AngleBetween(v3, new Vector3D(0, 0, 1)).ToRadians());
 
-            unitX = Vector3D.Multiply(unitX, rotation);
-            unitY = Vector3D.Multiply(unitY, rotation);
+        //    unitX = Vector3D.Multiply(unitX, rotation);
+        //    unitY = Vector3D.Multiply(unitY, rotation);
 
-            SpecklePlane plane = new SpecklePlane(
-                new SpecklePoint(origin.X, origin.Y, origin.Z),
-                new SpeckleVector(v3.X, v3.Y, v3.Z),
-                new SpeckleVector(unitX.X, unitX.Y, unitX.Z),
-                new SpeckleVector(unitY.Y, unitY.Y, unitY.Z));
+        //    SpecklePlane plane = new SpecklePlane(
+        //        new SpecklePoint(origin.X, origin.Y, origin.Z),
+        //        new SpeckleVector(v3.X, v3.Y, v3.Z),
+        //        new SpeckleVector(unitX.X, unitX.Y, unitX.Z),
+        //        new SpeckleVector(unitY.Y, unitY.Y, unitY.Z));
 
-            return new SpeckleArc(
-                plane,
-                radius,
-                startAngle,
-                endAngle,
-                angle);
-        }
+        //    return new SpeckleArc(
+        //        plane,
+        //        radius,
+        //        startAngle,
+        //        endAngle,
+        //        angle);
+        //}
 
-        public static SpeckleArc Arc3PointtoSpeckleArc(double[] coor)
-        {
-            Point3D[] points = new Point3D[] {
-                new Point3D(coor[0], coor[1], coor[2]),
-                new Point3D(coor[3], coor[4], coor[5]),
-                new Point3D(coor[6], coor[7], coor[8])
-            };
+        //public static SpeckleArc Arc3PointtoSpeckleArc(double[] coor)
+        //{
+        //    Point3D[] points = new Point3D[] {
+        //        new Point3D(coor[0], coor[1], coor[2]),
+        //        new Point3D(coor[3], coor[4], coor[5]),
+        //        new Point3D(coor[6], coor[7], coor[8])
+        //    };
 
-            Vector3D v1 = Point3D.Subtract(points[1], points[0]);
-            Vector3D v2 = Point3D.Subtract(points[2], points[1]);
-            Vector3D v3 = Point3D.Subtract(points[0], points[2]);
+        //    Vector3D v1 = Point3D.Subtract(points[1], points[0]);
+        //    Vector3D v2 = Point3D.Subtract(points[2], points[1]);
+        //    Vector3D v3 = Point3D.Subtract(points[0], points[2]);
 
-            double a = v1.Length;
-            double b = v2.Length;
-            double c = v3.Length;
-            double halfPerimeter = (a + b + c) / 2;
-            double triArea = Math.Sqrt(halfPerimeter * (halfPerimeter - a) * (halfPerimeter - b) * (halfPerimeter - c));
-            double radius = a * b * c / (triArea * 4);
+        //    double a = v1.Length;
+        //    double b = v2.Length;
+        //    double c = v3.Length;
+        //    double halfPerimeter = (a + b + c) / 2;
+        //    double triArea = Math.Sqrt(halfPerimeter * (halfPerimeter - a) * (halfPerimeter - b) * (halfPerimeter - c));
+        //    double radius = a * b * c / (triArea * 4);
 
-            // Check if greater than half of a circle
-            Point3D midPoint = new Point3D(
-               (coor[0] + coor[3]) / 2,
-               (coor[1] + coor[4]) / 2,
-               (coor[2] + coor[5]) / 2);
-            Vector3D checkVector = Point3D.Subtract(points[2], midPoint);
+        //    // Check if greater than half of a circle
+        //    Point3D midPoint = new Point3D(
+        //       (coor[0] + coor[3]) / 2,
+        //       (coor[1] + coor[4]) / 2,
+        //       (coor[2] + coor[5]) / 2);
+        //    Vector3D checkVector = Point3D.Subtract(points[2], midPoint);
 
-            return ArcRadiustoSpeckleArc(coor, radius, checkVector.Length > radius);
-        }
+        //    return ArcRadiustoSpeckleArc(coor, radius, checkVector.Length > radius);
+        //}
 
-        public static double[] SpeckleArctoArc3Point(SpeckleArc arc)
-        {
-            Vector3D v3 = new Vector3D(
-                arc.Plane.Normal.Value[0],
-                arc.Plane.Normal.Value[1],
-                arc.Plane.Normal.Value[2]);
+        //public static double[] SpeckleArctoArc3Point(SpeckleArc arc)
+        //{
+        //    Vector3D v3 = new Vector3D(
+        //        arc.Plane.Normal.Value[0],
+        //        arc.Plane.Normal.Value[1],
+        //        arc.Plane.Normal.Value[2]);
 
-            Vector3D origin = new Vector3D(
-                arc.Plane.Origin.Value[0],
-                arc.Plane.Origin.Value[1],
-                arc.Plane.Origin.Value[2]);
+        //    Vector3D origin = new Vector3D(
+        //        arc.Plane.Origin.Value[0],
+        //        arc.Plane.Origin.Value[1],
+        //        arc.Plane.Origin.Value[2]);
 
-            double radius = arc.Radius.Value;
-            double startAngle = arc.StartAngle.Value;
-            double endAngle = arc.EndAngle.Value;
-            double midAngle = startAngle < endAngle ?
-                (startAngle + endAngle) / 2 :
-                (startAngle + endAngle) / 2 + Math.PI;
+        //    double radius = arc.Radius.Value;
+        //    double startAngle = arc.StartAngle.Value;
+        //    double endAngle = arc.EndAngle.Value;
+        //    double midAngle = startAngle < endAngle ?
+        //        (startAngle + endAngle) / 2 :
+        //        (startAngle + endAngle) / 2 + Math.PI;
 
-            Vector3D p1 = new Vector3D(radius * Math.Cos(startAngle), radius * Math.Sin(startAngle), 0);
-            Vector3D p2 = new Vector3D(radius * Math.Cos(endAngle), radius * Math.Sin(endAngle), 0);
-            Vector3D p3 = new Vector3D(radius * Math.Cos(midAngle), radius * Math.Sin(midAngle), 0);
+        //    Vector3D p1 = new Vector3D(radius * Math.Cos(startAngle), radius * Math.Sin(startAngle), 0);
+        //    Vector3D p2 = new Vector3D(radius * Math.Cos(endAngle), radius * Math.Sin(endAngle), 0);
+        //    Vector3D p3 = new Vector3D(radius * Math.Cos(midAngle), radius * Math.Sin(midAngle), 0);
 
-            if (v3.Z == 1)
-            {
-            }
-            else if (v3.Z == -1)
-            {
-                p1 = Vector3D.Multiply(-1, p1);
-                p2 = Vector3D.Multiply(-1, p2);
-                p3 = Vector3D.Multiply(-1, p3);
+        //    if (v3.Z == 1)
+        //    {
+        //    }
+        //    else if (v3.Z == -1)
+        //    {
+        //        p1 = Vector3D.Multiply(-1, p1);
+        //        p2 = Vector3D.Multiply(-1, p2);
+        //        p3 = Vector3D.Multiply(-1, p3);
 
-                Matrix3D reverseRotation = HelperFunctions.RotationMatrix(new Vector3D(1, 0, 0), Math.PI);
+        //        Matrix3D reverseRotation = HelperFunctions.RotationMatrix(new Vector3D(1, 0, 0), Math.PI);
 
-                p1 = Vector3D.Multiply(p1, reverseRotation);
-                p2 = Vector3D.Multiply(p2, reverseRotation);
-                p3 = Vector3D.Multiply(p3, reverseRotation);
-            }
-            else
-            {
-                Vector3D unitRotationvector = Vector3D.CrossProduct(new Vector3D(0, 0, 1), v3);
-                unitRotationvector.Normalize();
-                Matrix3D rotation = HelperFunctions.RotationMatrix(unitRotationvector, Vector3D.AngleBetween(v3, new Vector3D(0, 0, 1)).ToRadians());
+        //        p1 = Vector3D.Multiply(p1, reverseRotation);
+        //        p2 = Vector3D.Multiply(p2, reverseRotation);
+        //        p3 = Vector3D.Multiply(p3, reverseRotation);
+        //    }
+        //    else
+        //    {
+        //        Vector3D unitRotationvector = Vector3D.CrossProduct(new Vector3D(0, 0, 1), v3);
+        //        unitRotationvector.Normalize();
+        //        Matrix3D rotation = HelperFunctions.RotationMatrix(unitRotationvector, Vector3D.AngleBetween(v3, new Vector3D(0, 0, 1)).ToRadians());
 
-                p1 = Vector3D.Multiply(p1, rotation);
-                p2 = Vector3D.Multiply(p2, rotation);
-                p3 = Vector3D.Multiply(p3, rotation);
-            }
+        //        p1 = Vector3D.Multiply(p1, rotation);
+        //        p2 = Vector3D.Multiply(p2, rotation);
+        //        p3 = Vector3D.Multiply(p3, rotation);
+        //    }
 
-            p1 = Vector3D.Add(p1, origin);
-            p2 = Vector3D.Add(p2, origin);
-            p3 = Vector3D.Add(p3, origin);
+        //    p1 = Vector3D.Add(p1, origin);
+        //    p2 = Vector3D.Add(p2, origin);
+        //    p3 = Vector3D.Add(p3, origin);
 
-            return new double[]
-            {
-                p1.X,p1.Y,p1.Z,
-                p2.X,p2.Y,p2.Z,
-                p3.X,p3.Y,p3.Z,
-            };
-        }
+        //    return new double[]
+        //    {
+        //        p1.X,p1.Y,p1.Z,
+        //        p2.X,p2.Y,p2.Z,
+        //        p3.X,p3.Y,p3.Z,
+        //    };
+        //}
         #endregion
 
         #region Lists

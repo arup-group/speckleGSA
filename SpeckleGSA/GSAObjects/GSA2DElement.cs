@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Media.Media3D;
 using Interop.Gsa_10_0;
-using SpeckleStructures;
+using SpeckleStructuresClasses;
 
 namespace SpeckleGSA
 {

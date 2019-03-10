@@ -20,6 +20,7 @@ using System.Windows.Interop;
 using Microsoft.Win32;
 using System.Windows.Threading;
 using System.Collections.ObjectModel;
+using SpecklePopup;
 
 namespace SpeckleGSAUI
 {
