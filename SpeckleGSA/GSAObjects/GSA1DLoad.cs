@@ -159,7 +159,7 @@ namespace SpeckleGSA
                 Status.ChangeStatus("Reading 1D loads", counter++ / pieces.Length * 100);
             }
 
-            dict[typeof(GSA0DLoad)].AddRange(loads);
+            dict[typeof(GSA1DLoad)].AddRange(loads);
         }
 
         public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
