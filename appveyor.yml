@@ -30,7 +30,7 @@ assembly_info:
 
 
 # Build Configuration
-platform: x64
+platform: Any CPU
 configuration: Release
 
 
