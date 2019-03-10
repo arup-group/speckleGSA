@@ -9,8 +9,7 @@ namespace SpeckleGSA
     public class Settings
     {
         public static bool SendOnlyMeaningfulNodes = true;
-        public static bool Merge2DElementsIntoMesh = false;
-        public static bool Merge1DElementsIntoPolyline = false;
         public static bool SeperateStreams = false;
+        public static int PollingRate = 2000;
     }
 }

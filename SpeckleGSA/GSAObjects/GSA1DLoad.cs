@@ -75,7 +75,7 @@ namespace SpeckleGSA
                 GSA1DLoad initLoad = new GSA1DLoad();
                 initLoad.ParseGWACommand(p,dict);
 
-                if (!Settings.Merge1DElementsIntoPolyline && GSA.TargetAnalysisLayer)
+                if (GSA.TargetAnalysisLayer)
                 { 
                     // Create load for each element applied
                     foreach (int nRef in initLoad.Elements)

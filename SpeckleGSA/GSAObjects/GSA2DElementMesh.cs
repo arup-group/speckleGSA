@@ -90,11 +90,11 @@ namespace SpeckleGSA
             if (GSA.TargetDesignLayer)
             {
                 if (dict.ContainsKey(typeof(GSA2DMember)))
-                    dict[typeof(GSA2DMember)].AddRange(dict[typeof(GSA2DElementMesh)].Cast<Structural2DElementMesh>()
-                        .Select(o => new GSA2DMember(o)));
+                    dict[typeof(GSA2DMember)].AddRange(dict[typeof(GSA2DElementMesh)].Cast<GSA2DElementMesh>()
+                        .Select(o => new GSA2DMember(o.GetBase() as Structural2DElementMesh)));
                 else
-                    dict[typeof(GSA2DMember)] = dict[typeof(GSA2DElementMesh)].Cast<Structural2DElementMesh>()
-                        .Select(o => new GSA2DMember(o)).Cast<StructuralObject>().ToList();
+                    dict[typeof(GSA2DMember)] = dict[typeof(GSA2DElementMesh)].Cast<GSA2DElementMesh>()
+                        .Select(o => new GSA2DMember(o.GetBase() as Structural2DElementMesh)).Cast<StructuralObject>().ToList();
             }
             else
             {

@@ -66,9 +66,8 @@ namespace SpeckleGSAUI
 
             //Default settings
             SendOnlyMeaningfulNodes.IsChecked = Settings.SendOnlyMeaningfulNodes;
-            Merge1DElementsIntoPolyline.IsChecked = Settings.Merge1DElementsIntoPolyline;
-            Merge2DElementsIntoMesh.IsChecked = Settings.Merge2DElementsIntoMesh;
             SeperateStreams.IsChecked = Settings.SeperateStreams;
+            PollingRate.Text = Settings.PollingRate.ToString();
 
             //Draw buttons
             SendButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
@@ -220,7 +219,7 @@ namespace SpeckleGSAUI
                 await gsaSender.Initialize(RestApi, ApiToken);
                 GSA.SetSpeckleClients(EmailAddress, RestApi);
 
-                senderTimer = new Timer(2000);
+                senderTimer = new Timer(Settings.PollingRate);
                 senderTimer.Elapsed += SenderTimerTrigger;
                 senderTimer.AutoReset = false;
                 senderTimer.Start();
@@ -437,8 +436,15 @@ namespace SpeckleGSAUI
                     propertyValue = (sender as CheckBox).IsChecked;
                     typeof(Settings).GetField(propertyName).SetValue(null, propertyValue);
                 }
+                else if (sender is TextBox)
+                {
+                    propertyName = (sender as TextBox).Name;
+                    propertyValue = (sender as TextBox).Text;
+                    typeof(Settings).GetField(propertyName).SetValue(null, Convert.ChangeType(PollingRate, typeof(Settings).GetField(propertyName).FieldType));
+                }
             }
-            catch { }
+            catch
+            { }
         }
 
         private void StreamList_ViewStream(object sender, RoutedEventArgs e)

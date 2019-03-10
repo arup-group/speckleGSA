@@ -60,7 +60,11 @@ namespace SpeckleGSA
                 LocalContext.AddOrUpdateStream(myReceiver.Stream, myReceiver.BaseUrl);
 
                 // Get cached objects
-                LocalContext.GetCachedObjects(myReceiver.Stream.Objects, myReceiver.BaseUrl);
+                try
+                {
+                    LocalContext.GetCachedObjects(myReceiver.Stream.Objects, myReceiver.BaseUrl);
+                }
+                catch { }
 
                 string[] payload = myReceiver.Stream.Objects.Where(o => o.Type == SpeckleObjectType.Placeholder).Select(o => o._id).ToArray();
 

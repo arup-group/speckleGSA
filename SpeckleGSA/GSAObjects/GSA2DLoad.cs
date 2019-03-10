@@ -76,7 +76,7 @@ namespace SpeckleGSA
                 GSA2DLoad initLoad = new GSA2DLoad();
                 initLoad.ParseGWACommand(p,dict);
                 
-                if (!Settings.Merge2DElementsIntoMesh & GSA.TargetAnalysisLayer)
+                if (GSA.TargetAnalysisLayer)
                 { 
                     // Create load for each element applied
                     foreach (int eRef in initLoad.Elements)
