@@ -78,9 +78,8 @@
     </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
-    <Reference Include="SpeckleStructuresClasses, Version=0.1.0.1, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SpeckleStructuresClasses\SpeckleStructuresClasses.dll</HintPath>
+    <Reference Include="SpeckleStructuresClasses">
+      <HintPath>..\Resource\SpeckleStructuresClasses.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Drawing" />
