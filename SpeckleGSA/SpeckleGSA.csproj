@@ -66,7 +66,6 @@
     <Compile Include="Receiver.cs" />
     <Compile Include="Sender.cs" />
     <Compile Include="StaticClasses\GSA.cs" />
-    <Compile Include="Controller.cs" />
     <Compile Include="GSAObjects\GSA0DElement.cs" />
     <Compile Include="GSAObjects\GSA0DLoad.cs" />
     <Compile Include="GSAObjects\GSA1DElement.cs" />

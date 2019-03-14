@@ -20,7 +20,6 @@ using System.Windows.Interop;
 using Microsoft.Win32;
 using System.Windows.Threading;
 using System.Collections.ObjectModel;
-using SpecklePopup;
 
 namespace SpeckleGSAUI
 {
@@ -43,10 +42,10 @@ namespace SpeckleGSAUI
         public string EmailAddress;
         public string RestApi;
         public string ApiToken;
-        public Controller controller;
         public Sender gsaSender;
+        public Receiver gsaReceiver;
 
-        public Timer senderTimer;
+        public Timer triggerTimer;
         private UIStatus status;
         private int previousTabIndex;
 
@@ -59,9 +58,10 @@ namespace SpeckleGSAUI
             Messages = new ObservableCollection<string>();
             StreamData = new ObservableCollection<Tuple<string, string>>();
             
-            controller = new Controller();
             gsaSender = new Sender();
-            senderTimer = new Timer();
+            gsaReceiver = new Receiver();
+
+            triggerTimer = new Timer();
             status = UIStatus.IDLE;
             previousTabIndex = 0;
 
@@ -73,6 +73,8 @@ namespace SpeckleGSAUI
             //Draw buttons
             SendButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
             SendButtonPath.Fill = Brushes.LightGray;
+            ReceiveButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
+            ReceiveButtonPath.Fill = Brushes.LightGray;
 
             GSA.Init();
             Status.Init(this.AddMessage, this.AddError, this.ChangeStatus);
@@ -199,6 +201,7 @@ namespace SpeckleGSAUI
 
             if (status == UIStatus.IDLE)
             {
+                status = UIStatus.SENDING;
                 SendButtonPath.Data = Geometry.Parse(PAUSE_BUTTON);
                 SendButtonPath.Fill = Brushes.DimGray;
 
@@ -220,23 +223,22 @@ namespace SpeckleGSAUI
                 await gsaSender.Initialize(RestApi, ApiToken);
                 GSA.SetSpeckleClients(EmailAddress, RestApi);
 
-                senderTimer = new Timer(Settings.PollingRate);
-                senderTimer.Elapsed += SenderTimerTrigger;
-                senderTimer.AutoReset = false;
-                senderTimer.Start();
+                triggerTimer = new Timer(Settings.PollingRate);
+                triggerTimer.Elapsed += SenderTimerTrigger;
+                triggerTimer.AutoReset = false;
+                triggerTimer.Start();
 
                 SendButtonPath.Fill = (SolidColorBrush)(new BrushConverter().ConvertFrom("#0080ff"));
-                status = UIStatus.SENDING;
             }
             else if (status == UIStatus.SENDING)
             {
+                status = UIStatus.IDLE;
                 SendButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
                 SendButtonPath.Fill = Brushes.LightGray;
 
                 SenderLayerToggle.IsEnabled = true;
 
-                senderTimer.Stop();
-                status = UIStatus.IDLE;
+                triggerTimer.Dispose();
             }
         }
 
@@ -249,7 +251,7 @@ namespace SpeckleGSAUI
                 )
             );
 
-            senderTimer.Start();
+            triggerTimer.Start();
         }
         #endregion
 
@@ -284,24 +286,8 @@ namespace SpeckleGSAUI
 
             UpdateClientLists();
         }
-
-        private void ReceiveAnalysisLayer(object sender, RoutedEventArgs e)
-        {
-            GSA.TargetAnalysisLayer = true;
-            GSA.TargetDesignLayer = false;
-
-            ReceiveStream(sender, e);
-        }
-
-        private void ReceiveDesignLayer(object sender, RoutedEventArgs e)
-        {
-            GSA.TargetAnalysisLayer = false;
-            GSA.TargetDesignLayer = true;
-
-            ReceiveStream(sender, e);
-        }
-
-        private void ReceiveStream(object sender, RoutedEventArgs e)
+        
+        private async void ReceiveStream(object sender, RoutedEventArgs e)
         {
             if (RestApi == null && ApiToken == null)
             {
@@ -309,24 +295,59 @@ namespace SpeckleGSAUI
                 return;
             }
 
-            GSA.GetSpeckleClients(EmailAddress, RestApi);
-            UpdateClientLists();
+            if (status == UIStatus.IDLE)
+            {
+                status = UIStatus.SENDING;
+                ReceiveButtonPath.Data = Geometry.Parse(PAUSE_BUTTON);
+                ReceiveButtonPath.Fill = Brushes.DimGray;
 
-            Task.Run(() => controller.ImportObjects(RestApi, ApiToken)).ContinueWith(
-            delegate {
-                try
+                if (ReceiverLayerToggle.IsChecked.Value)
                 {
-                    Application.Current.Dispatcher.BeginInvoke(
-                        DispatcherPriority.Background,
-                        new Action(() =>
-                        {
-                            UpdateClientLists();
-                        }
-                        ));
+                    GSA.TargetAnalysisLayer = true;
+                    GSA.TargetDesignLayer = false;
                 }
-                catch
-                { Status.ChangeStatus("Failed to receive"); }
-            });
+                else
+                {
+
+                    GSA.TargetAnalysisLayer = false;
+                    GSA.TargetDesignLayer = true;
+                }
+                ReceiverLayerToggle.IsEnabled = false;
+
+                GSA.GetSpeckleClients(EmailAddress, RestApi);
+                gsaReceiver = new Receiver();
+                await gsaReceiver.Initialize(RestApi, ApiToken);
+                GSA.SetSpeckleClients(EmailAddress, RestApi);
+
+                triggerTimer = new Timer(Settings.PollingRate);
+                triggerTimer.Elapsed += ReceiverTimerTrigger;
+                triggerTimer.AutoReset = false;
+                triggerTimer.Start();
+
+                ReceiveButtonPath.Fill = (SolidColorBrush)(new BrushConverter().ConvertFrom("#0080ff"));
+            }
+            else if (status == UIStatus.SENDING)
+            {
+                status = UIStatus.IDLE;
+                ReceiveButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
+                ReceiveButtonPath.Fill = Brushes.LightGray;
+
+                ReceiverLayerToggle.IsEnabled = true;
+
+                triggerTimer.Dispose();
+            }
+        }
+
+        private void ReceiverTimerTrigger(Object source, ElapsedEventArgs e)
+        {
+            gsaReceiver.Trigger();
+            Application.Current.Dispatcher.BeginInvoke(
+                DispatcherPriority.Background,
+                new Action(() => UpdateClientLists()
+                )
+            );
+
+            triggerTimer.Start();
         }
         #endregion
 

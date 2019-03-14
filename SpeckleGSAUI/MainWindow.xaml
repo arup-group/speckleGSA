@@ -149,10 +149,26 @@
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="auto"/>
-                            <RowDefinition Height="*"/>
                             <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <DockPanel Grid.Row="0" LastChildFill="True">
+                        <Grid Grid.Row="0" Background="Transparent">
+                            <Viewbox Width="48" Height="48" MouseDown="ReceiveStream" Margin="25">
+                                <Canvas Width="24" Height="24">
+                                    <Path x:Name="ReceiveButtonPath"
+                                              Fill="#0080FF" />
+                                </Canvas>
+                            </Viewbox>
+                        </Grid>
+                        <StackPanel Grid.Row="1" HorizontalAlignment="Right" Orientation="Horizontal">
+                            <ToggleButton
+                                x:Name="ReceiverLayerToggle"
+                                Margin="5"
+                                Content="Layer to Stream:"
+                                Style="{StaticResource AnalysisDesignToggle}"/>
+                        </StackPanel>
+                        <DockPanel Grid.Row="2" LastChildFill="True">
                             <Button DockPanel.Dock="Right" Click="ClearReceiver" Content="Clear All"  Margin="5" Padding="5" MinWidth="100"/>
                             <Button DockPanel.Dock="Right" Click="PasteClipboardReceiver" Content="Paste Clipboard"  Margin="5" Padding="5"  MinWidth="100"/>
                             <Rectangle DockPanel.Dock="Right" VerticalAlignment="Stretch" Width="1" Margin="2" Stroke="DarkGray" />
@@ -163,7 +179,7 @@
                         </DockPanel>
                         <DataGrid
                             x:Name="ReceiverStreams"
-                            Grid.Row="1"
+                            Grid.Row="3"
                             Margin="5"
                             CanUserSortColumns="False"
                             AutoGenerateColumns="False"
@@ -191,10 +207,6 @@
                                 </Style>
                             </DataGrid.CellStyle>
                         </DataGrid>
-                        <StackPanel Grid.Row="2" HorizontalAlignment="Right" Orientation="Horizontal" Grid.Column="1">
-                            <Button Content="Receive Analysis Streams" Click="ReceiveAnalysisLayer" Margin="5" Padding="5" HorizontalAlignment="Right" MinWidth="100"/>
-                            <Button Content="Receive Design Streams" Click="ReceiveDesignLayer" Margin="5" Padding="5" HorizontalAlignment="Right" MinWidth="100"/>
-                        </StackPanel>
                     </Grid>
                 </TabItem>
                 <TabItem Header="Settings">
