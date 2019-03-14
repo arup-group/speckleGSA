@@ -18,6 +18,8 @@ namespace SpeckleGSA
         private string apiToken { get; set; }
         private string serverAddress { get; set; }
 
+        public event EventHandler<EventArgs> UpdateGlobalTrigger;
+
         public string StreamID { get => myReceiver == null? null : myReceiver.StreamId; }
         public string StreamName { get => myReceiver == null ? null : myReceiver.Stream.Name; }
         public string Units { get => myReceiver == null ? null : myReceiver.Stream.BaseProperties["units"]; }
@@ -35,16 +37,42 @@ namespace SpeckleGSA
         public async Task InitializeReceiver(string streamID)
         {
             await myReceiver.IntializeReceiver(streamID, "GSA", "GSA", "none", apiToken);
+
+            myReceiver.OnWsMessage += OnWsMessage;
         }
         
         public List<object> GetGSAObjects()
         {
-            UpdateDataAsync();
-            
+            UpdateGlobal();
+
             return Converter.Deserialise(myReceiver.Stream.Objects);
         }
 
-        public void UpdateDataAsync()
+        public void OnWsMessage( object source, SpeckleEventArgs e)
+        {
+            if (e == null) return;
+            if (e.EventObject == null) return;
+            switch ((string)e.EventObject.args.eventType)
+            {
+                case "update-global":
+                    UpdateGlobalTrigger(null, null);
+                    break;
+                case "update-children":
+                    UpdateChildren();
+                    break;
+                default:
+                    Status.AddError("Unknown event: " + (string)e.EventObject.args.eventType);
+                    break;
+            }
+        }
+
+        public void UpdateChildren()
+        {
+            var result = myReceiver.StreamGetAsync(myReceiver.StreamId, "fields=children").Result;
+            myReceiver.Stream.Children = result.Resource.Children;
+        }
+
+        public void UpdateGlobal()
         {
             // Try to get stream
             ResponseStream streamGetResult = myReceiver.StreamGetAsync(myReceiver.StreamId, null).Result;

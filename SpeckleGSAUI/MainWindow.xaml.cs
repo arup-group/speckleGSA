@@ -237,8 +237,6 @@ namespace SpeckleGSAUI
                 SendButtonPath.Fill = Brushes.LightGray;
 
                 SenderLayerToggle.IsEnabled = true;
-
-                triggerTimer.Dispose();
             }
         }
 
@@ -251,7 +249,8 @@ namespace SpeckleGSAUI
                 )
             );
 
-            triggerTimer.Start();
+            if (status == UIStatus.SENDING)
+                triggerTimer.Start();
         }
         #endregion
 
@@ -297,7 +296,7 @@ namespace SpeckleGSAUI
 
             if (status == UIStatus.IDLE)
             {
-                status = UIStatus.SENDING;
+                status = UIStatus.RECEIVING;
                 ReceiveButtonPath.Data = Geometry.Parse(PAUSE_BUTTON);
                 ReceiveButtonPath.Fill = Brushes.DimGray;
 
@@ -318,36 +317,17 @@ namespace SpeckleGSAUI
                 gsaReceiver = new Receiver();
                 await gsaReceiver.Initialize(RestApi, ApiToken);
                 GSA.SetSpeckleClients(EmailAddress, RestApi);
-
-                triggerTimer = new Timer(Settings.PollingRate);
-                triggerTimer.Elapsed += ReceiverTimerTrigger;
-                triggerTimer.AutoReset = false;
-                triggerTimer.Start();
-
+                Task.Run(() => gsaReceiver.Trigger(null, null));
                 ReceiveButtonPath.Fill = (SolidColorBrush)(new BrushConverter().ConvertFrom("#0080ff"));
             }
-            else if (status == UIStatus.SENDING)
+            else if (status == UIStatus.RECEIVING)
             {
                 status = UIStatus.IDLE;
                 ReceiveButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
                 ReceiveButtonPath.Fill = Brushes.LightGray;
 
                 ReceiverLayerToggle.IsEnabled = true;
-
-                triggerTimer.Dispose();
             }
-        }
-
-        private void ReceiverTimerTrigger(Object source, ElapsedEventArgs e)
-        {
-            gsaReceiver.Trigger();
-            Application.Current.Dispatcher.BeginInvoke(
-                DispatcherPriority.Background,
-                new Action(() => UpdateClientLists()
-                )
-            );
-
-            triggerTimer.Start();
         }
         #endregion
 

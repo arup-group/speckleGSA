@@ -94,6 +94,7 @@ namespace SpeckleGSA
                     Status.AddMessage("Creating receiver " + streamID);
                     Receivers[streamID] = new SpeckleGSAReceiver(restApi, apiToken);
                     await Receivers[streamID].InitializeReceiver(streamID);
+                    Receivers[streamID].UpdateGlobalTrigger += Trigger;
                 }
             }
 
@@ -101,7 +102,7 @@ namespace SpeckleGSA
             IsInit = true;
         }
 
-        public void Trigger()
+        public void Trigger(object sender, EventArgs e)
         {
             if (IsBusy) return;
             if (!IsInit) return;
@@ -116,7 +117,7 @@ namespace SpeckleGSA
             // Read objects
             foreach (KeyValuePair<string, SpeckleGSAReceiver> kvp in Receivers)
                 convertedObjects[kvp.Key] = Receivers[kvp.Key].GetGSAObjects();
-
+            
             // Populate new item dictionary
             Status.ChangeStatus("Bucketing objects");
 
@@ -129,6 +130,7 @@ namespace SpeckleGSA
                 foreach (object obj in kvp.Value)
                 {
                     if (obj == null) continue;
+                    if (obj is SpeckleCore.SpecklePlaceholder) continue;
 
                     try
                     {
