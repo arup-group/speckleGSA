@@ -228,6 +228,10 @@
                         </GroupBox>
                         <GroupBox Grid.Column="1" Header="Receiver" Margin="5">
                             <StackPanel>
+                                <DockPanel Margin="5" LastChildFill="True">
+                                    <TextBlock DockPanel.Dock="Left" Text="Coincident Node Allowance:"/>
+                                    <TextBox Margin="5 0 0 0" x:Name="CoincidentNodeAllowance"/>
+                                </DockPanel>
                             </StackPanel>
                         </GroupBox>
                     </Grid>

@@ -69,6 +69,7 @@ namespace SpeckleGSAUI
             SendOnlyMeaningfulNodes.IsChecked = Settings.SendOnlyMeaningfulNodes;
             SeperateStreams.IsChecked = Settings.SeperateStreams;
             PollingRate.Text = Settings.PollingRate.ToString();
+            CoincidentNodeAllowance.Text = Settings.CoincidentNodeAllowance.ToString();
 
             //Draw buttons
             SendButtonPath.Data = Geometry.Parse(PLAY_BUTTON);

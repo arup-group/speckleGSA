@@ -326,7 +326,8 @@ namespace SpeckleGSA
 
                 if (values[i] == 0) continue;
 
-                subLs.Add("SET");
+                subLs.Add("SET_AT");
+                subLs.Add(Reference.ToString());
                 subLs.Add("LOAD_BEAM_UDL"); // TODO: Only writes to UDL load
                 subLs.Add(Name == "" ? " " : Name);
 

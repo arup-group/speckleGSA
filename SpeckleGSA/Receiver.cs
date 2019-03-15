@@ -40,6 +40,8 @@ namespace SpeckleGSA
                 return;
             }
 
+            GSA.FullClearCache();
+
             // Initialize object write priority list
             IEnumerable<Type> objTypes = typeof(GSA)
                 .Assembly.GetTypes()
@@ -81,6 +83,30 @@ namespace SpeckleGSA
             // Generate which GSA object to cast for each type
             TypeCastPriority = TypePrerequisites.ToList();
             TypeCastPriority.Sort((x, y) => x.Value.Count().CompareTo(y.Value.Count()));
+
+            // Clear GSA file
+            foreach (KeyValuePair<Type, List<Type>> kvp in TypePrerequisites)
+            {
+                Status.ChangeStatus("Clearing " + kvp.Key.Name);
+
+                try
+                {
+                    string keyword = (string)kvp.Key.GetAttribute("GSAKeyword");
+
+                    int highestRecord = (int)GSA.RunGWACommand("HIGHEST," + keyword);
+
+                    if (highestRecord > 0)
+                    {
+                        GSA.RunGWACommand("DELETE," + kvp.Key.GetAttribute("GSAKeyword") + ",1," + highestRecord.ToString());
+                    }
+                    else
+                    {
+                        // TODO: Causes GSA to crash sometimes
+                        //GSA.RunGWACommand("DELETE," + kvp.Key.GetAttribute("GSAKeyword"));
+                    }
+                }
+                catch { }
+            }
 
             // Create receivers
             Status.ChangeStatus("Accessing stream");
@@ -171,30 +197,6 @@ namespace SpeckleGSA
                 }
             }
 
-            // Clear GSA file
-            foreach (KeyValuePair<Type,List<Type>> kvp in TypePrerequisites)
-            {
-                Status.ChangeStatus("Clearing " + kvp.Key.Name);
-
-                try
-                {
-                    string keyword = (string)kvp.Key.GetAttribute("GSAKeyword");
-
-                    int highestRecord = (int)GSA.RunGWACommand("HIGHEST," + keyword);
-
-                    if (highestRecord > 0)
-                    {
-                        GSA.RunGWACommand("DELETE," + kvp.Key.GetAttribute("GSAKeyword") + ",1," + highestRecord.ToString());
-                    }
-                    else
-                    {
-                        // TODO: Causes GSA to crash sometimes
-                        //GSA.RunGWACommand("DELETE," + kvp.Key.GetAttribute("GSAKeyword"));
-                    }
-                }
-                catch { }
-            }
-
             // Set up counter
             GSARefCounters.Clear();
 
@@ -226,6 +228,7 @@ namespace SpeckleGSA
                 }
             } while (currentBatch.Count > 0);
 
+            GSA.BlankDepreciatedGWASetCommands();
             GSA.UpdateViews();
 
             IsBusy = false;

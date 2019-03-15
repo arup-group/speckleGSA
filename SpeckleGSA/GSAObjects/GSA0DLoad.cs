@@ -195,7 +195,8 @@ namespace SpeckleGSA
                 
                 if (values[i] == 0) continue;
 
-                subLs.Add("SET");
+                subLs.Add("SET_AT");
+                subLs.Add(Reference.ToString());
                 subLs.Add((string)this.GetAttribute("GSAKeyword"));
                 subLs.Add(Name == "" ? " " : Name);
                 subLs.Add(string.Join(" ", Nodes));

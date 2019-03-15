@@ -17,8 +17,11 @@ namespace SpeckleGSA
         public static bool TargetAnalysisLayer;
         public static bool TargetDesignLayer;
 
-        private static Dictionary<string, object> PreviousGSACache;
-        private static Dictionary<string, object> GSACache;
+        private static Dictionary<string, object> PreviousGSAGetCache;
+        private static Dictionary<string, object> GSAGetCache;
+
+        private static Dictionary<string, object> PreviousGSASetCache;
+        private static Dictionary<string, object> GSASetCache;
 
         public static string Units { get; private set; }
         public static Dictionary<string, string> Senders { get; set; }
@@ -34,8 +37,10 @@ namespace SpeckleGSA
             TargetAnalysisLayer = false;
             TargetDesignLayer = true; // TODO
 
-            PreviousGSACache = new Dictionary<string, object>();
-            GSACache = new Dictionary<string, object>();
+            PreviousGSAGetCache = new Dictionary<string, object>();
+            GSAGetCache = new Dictionary<string, object>();
+            PreviousGSASetCache = new Dictionary<string, object>();
+            GSASetCache = new Dictionary<string, object>();
             Senders = new Dictionary<string, string>();
             Receivers = new List<string>();
 
@@ -189,13 +194,13 @@ namespace SpeckleGSA
 
             object result = RunGWACommand(command);
 
-            if (PreviousGSACache.ContainsKey(command))
+            if (PreviousGSAGetCache.ContainsKey(command))
             {
-                if ((result as string) == (PreviousGSACache[command] as string))
+                if ((result as string) == (PreviousGSAGetCache[command] as string))
                     return new string[0];
 
                 string[] newPieces = ((string)result).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries).Select((s,idx) => idx.ToString() + ":" + s).ToArray();
-                string[] prevPieces = ((string)PreviousGSACache[command]).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries).Select((s, idx) => idx.ToString() + ":" + s).ToArray();
+                string[] prevPieces = ((string)PreviousGSAGetCache[command]).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries).Select((s, idx) => idx.ToString() + ":" + s).ToArray();
 
                 string[] ret = newPieces.Where(n => !prevPieces.Contains(n)).ToArray();
                 
@@ -214,13 +219,13 @@ namespace SpeckleGSA
 
             object result = RunGWACommand(command);
 
-            if (PreviousGSACache.ContainsKey(command))
+            if (PreviousGSAGetCache.ContainsKey(command))
             {
-                if ((result as string) == (PreviousGSACache[command] as string))
+                if ((result as string) == (PreviousGSAGetCache[command] as string))
                     return new string[0];
 
                 string[] newPieces = ((string)result).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries).Select((s, idx) => idx.ToString() + ":" + s).ToArray();
-                string[] prevPieces = ((string)PreviousGSACache[command]).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries).Select((s, idx) => idx.ToString() + ":" + s).ToArray();
+                string[] prevPieces = ((string)PreviousGSAGetCache[command]).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries).Select((s, idx) => idx.ToString() + ":" + s).ToArray();
 
                 string[] ret = prevPieces.Where(p => !newPieces.Contains(p)).ToArray();
                 
@@ -230,6 +235,30 @@ namespace SpeckleGSA
                 return new string[0];
         }
         
+        public static void BlankDepreciatedGWASetCommands()
+        {
+            List<string> prevSets = PreviousGSASetCache.Keys.Where(l => l.Contains("SET")).ToList();
+
+            for (int i = 0; i < prevSets.Count(); i++)
+            {
+                string[] split = prevSets[i].ListSplit(",");
+                prevSets[i] = split[1] + "," + split[2];
+
+            }
+
+            prevSets = prevSets.Where(l => !GSASetCache.Keys.Any(x => x.Contains(l))).ToList();
+            
+            foreach(string p in prevSets)
+            {
+                string[] split = p.ListSplit(",");
+
+                if (split[1].IsDigits())
+                    RunGWACommand("BLANK," + split[0] + "," + split[1], false);
+                else
+                    RunGWACommand("BLANK," + split[1] + "," + split[0], false);
+            }
+        }
+
         public static object RunGWACommand(string command, bool cache = true)
         {
             if (!IsInit)
@@ -239,7 +268,7 @@ namespace SpeckleGSA
             {
                 if (command.Contains("GET") & !command.Contains("HIGHEST"))
                 {
-                    if (!GSACache.ContainsKey(command))
+                    if (!GSAGetCache.ContainsKey(command))
                     {
                         if (command.Contains("GET_ALL,MEMB"))
                         {
@@ -255,23 +284,26 @@ namespace SpeckleGSA
                             foreach (int r in memberRefs)
                                 (result as List<string>).Add((string)RunGWACommand("GET,MEMB," + r.ToString()));
 
-                            GSACache[command] = string.Join("\n", result);
+                            GSAGetCache[command] = string.Join("\n", result);
                         }
                         else
-                        { 
-                            GSACache[command] = GSAObject.GwaCommand(command);
+                        {
+                            GSAGetCache[command] = GSAObject.GwaCommand(command);
                         }
                     }
 
-                    return GSACache[command];
+                    return GSAGetCache[command];
                 }
 
                 if (command.Contains("SET"))
                 {
-                    if (!GSACache.ContainsKey(command))
-                        GSACache[command] = GSAObject.GwaCommand(command);
+                    if (PreviousGSASetCache.ContainsKey(command))
+                        GSASetCache[command] = PreviousGSASetCache[command];
 
-                    return GSACache[command];
+                    if (!GSASetCache.ContainsKey(command))
+                        GSASetCache[command] = GSAObject.GwaCommand(command);
+
+                    return GSASetCache[command];
                 }
             }
 
@@ -285,9 +317,7 @@ namespace SpeckleGSA
 
         public static void UpdateUnits()
         {
-            GSACache = new Dictionary<string, object>();
-
-            Units = ((string)RunGWACommand("GET,UNIT_DATA.1,LENGTH")).ListSplit(",")[2];
+            Units = ((string)RunGWACommand("GET,UNIT_DATA.1,LENGTH", false)).ListSplit(",")[2];
         }
         
         public static Dictionary<string, object> GetBaseProperties()
@@ -317,8 +347,18 @@ namespace SpeckleGSA
 
         public static void ClearCache()
         {
-            PreviousGSACache = new Dictionary<string,object>(GSACache);
-            GSACache.Clear();
+            PreviousGSAGetCache = new Dictionary<string, object>(GSAGetCache);
+            GSAGetCache.Clear();
+            PreviousGSASetCache = new Dictionary<string,object>(GSASetCache);
+            GSASetCache.Clear();
+        }
+
+        public static void FullClearCache()
+        {
+            PreviousGSAGetCache.Clear();
+            GSAGetCache.Clear();
+            PreviousGSASetCache.Clear();
+            GSASetCache.Clear();
         }
     }
 }

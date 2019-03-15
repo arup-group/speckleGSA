@@ -35,6 +35,8 @@ namespace SpeckleGSA
                 return;
             }
 
+            GSA.FullClearCache();
+
             // Initialize object read priority list
             IEnumerable<Type> objTypes = typeof(GSA)
                 .Assembly.GetTypes()
