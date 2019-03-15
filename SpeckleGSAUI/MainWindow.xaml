@@ -10,12 +10,13 @@
         
         mc:Ignorable="d"
         
-        Title="SpeckleGSA" Height="600" Width="551">
+        Title="SpeckleGSA" Height="700" Width="500">
     <Grid
         Margin="0,0,0,0">
         <Grid.RowDefinitions>
             <RowDefinition Height="auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="auto"/>
             <RowDefinition Height="200"/>
         </Grid.RowDefinitions>
         <Grid
@@ -233,9 +234,10 @@
                 </TabItem>
             </TabControl>
         </Grid>
+        <GridSplitter Grid.Row="2" Height="5" Margin="20 0 20 0" HorizontalAlignment="Stretch" Background="LightGray" />
         <Grid 
-            Grid.Row="2"
-            Margin="20,20,20,20"
+            Grid.Row="3"
+            Margin="20,0,20,20"
             Background="White">
             <Grid.RowDefinitions>
                 <RowDefinition Height="auto"/>
