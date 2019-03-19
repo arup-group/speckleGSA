@@ -12,7 +12,6 @@ namespace SpeckleGSA
     [GSAObject("EL.3", "elements", true, false, new Type[] { typeof(GSANode) }, new Type[] { typeof(GSA1DProperty) })]
     public class GSA1DElement : Structural1DElement, IGSAObject
     {
-        private List<int> Connectivity;
         public int PolylineReference;
 
         public string GWACommand { get; set; }
@@ -23,7 +22,6 @@ namespace SpeckleGSA
         {
             GWACommand = "";
             SubGWACommand = new List<string>();
-            Connectivity = new List<int>();
             PolylineReference = 0;
         }
         
@@ -31,7 +29,6 @@ namespace SpeckleGSA
         {
             GWACommand = "";
             SubGWACommand = new List<string>();
-            Connectivity = new List<int>();
             PolylineReference = 0;
 
             foreach (FieldInfo f in baseClass.GetType().GetFields())
@@ -111,16 +108,6 @@ namespace SpeckleGSA
                         }
                     }
                 }
-
-                List<StructuralObject> eNodes = (e as GSA1DElement).GetChildren();
-
-                // Ensure no coincident nodes
-                if (!dict.ContainsKey(typeof(GSANode)))
-                    dict[typeof(GSANode)] = new List<StructuralObject>();
-                
-                dict[typeof(GSANode)] = HelperFunctions.CollapseNodes(dict[typeof(GSANode)].Cast<GSANode>().ToList(), eNodes.Cast<GSANode>().ToList()).Cast<StructuralObject>().ToList();
-
-                (e as GSA1DElement).Connectivity = eNodes.Select(n => n.Reference).ToList();
 
                 GSA.RunGWACommand((e as GSA1DElement).GetGWACommand());
 
@@ -209,8 +196,8 @@ namespace SpeckleGSA
             ls.Add("BEAM"); // Type
             ls.Add(Property.ToString());
             ls.Add("0"); // Group
-            foreach (int c in Connectivity)
-                ls.Add(c.ToString());
+            foreach (ThreeVectorDouble coor in Coordinates.Values)
+                ls.Add(GSA.NodeAt(coor.X, coor.Y, coor.Z).ToString());
 
             ls.Add("0"); // Orientation Node
             ls.Add(HelperFunctions.Get1DAngle(Axis).ToString());

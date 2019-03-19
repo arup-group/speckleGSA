@@ -13,7 +13,6 @@ namespace SpeckleGSA
     [GSAObject("MEMB.7", "elements", false, true, new Type[] { typeof(GSANode), typeof(GSA2DProperty) }, new Type[] { typeof(GSA2DElementMesh) })]
     public class GSA2DMember : Structural2DElementMesh, IGSAObject
     {
-        public List<int> Connectivity;
         public int Group;
 
         public string GWACommand { get; set; }
@@ -24,7 +23,6 @@ namespace SpeckleGSA
         {
             GWACommand = "";
             SubGWACommand = new List<string>();
-            Connectivity = new List<int>();
             Group = 0;
         }
         
@@ -32,8 +30,7 @@ namespace SpeckleGSA
         {
             GWACommand = "";
             SubGWACommand = new List<string>();
-
-            Connectivity = new List<int>();
+            
             Group = 0;
 
             foreach (FieldInfo f in baseClass.GetType().GetFields())
@@ -110,17 +107,7 @@ namespace SpeckleGSA
                         }
                     }
                 }
-
-                List<StructuralObject> eNodes = (m as GSA2DMember).GetChildren();
-
-                // Ensure no coincident nodes
-                if (!dict.ContainsKey(typeof(GSANode)))
-                    dict[typeof(GSANode)] = new List<StructuralObject>();
-
-                dict[typeof(GSANode)] = HelperFunctions.CollapseNodes(dict[typeof(GSANode)].Cast<GSANode>().ToList(), eNodes.Cast<GSANode>().ToList()).Cast<StructuralObject>().ToList();
-
-                (m as GSA2DMember).Connectivity = eNodes.Select(n => n.Reference).ToList();
-
+                
                 GSA.RunGWACommand((m as GSA2DMember).GetGWACommand());
                 Status.ChangeStatus("Writing 2D members", counter++ / m2Ds.Count() * 100);
             }
@@ -201,8 +188,11 @@ namespace SpeckleGSA
             ls.Add(Property.ToString());
             ls.Add(Reference.ToString()); // TODO: This allows for targeting of elements from members group
             string topo = "";
-            foreach (int c in Connectivity)
-                topo += c.ToString() + " ";
+            List<int[]> connectivities = EdgeConnectivities();
+            Coordinates coordinates = Coordinates();
+            foreach (int[] conn in connectivities)
+                foreach (int c in conn)
+                    topo += GSA.NodeAt(coordinates.Values[c].X, coordinates.Values[c].Y, coordinates.Values[c].Z).ToString() + " ";
             ls.Add(topo);
             ls.Add("0"); // Orientation node
             ls.Add(HelperFunctions.Get2DAngle(Coordinates().ToArray(), Axis).ToString());
@@ -219,27 +209,6 @@ namespace SpeckleGSA
             ls.Add("ALL"); // Exposure
 
             return string.Join(",", ls);
-        }
-        #endregion
-
-        #region Helper Functions
-        public List<StructuralObject> GetChildren()
-        {
-            List<StructuralObject> children = new List<StructuralObject>();
-
-            List<int[]> connectivities = EdgeConnectivities();
-            Coordinates coordinates = Coordinates();
-
-            foreach(int[] conn in connectivities)
-            { 
-                foreach(int c in conn)
-                { 
-                    GSANode n = new GSANode();
-                    n.Coordinates = new Coordinates(coordinates.Values[c].ToArray());
-                    children.Add(n);
-                }
-            }
-            return children;
         }
         #endregion
     }

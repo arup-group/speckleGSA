@@ -319,6 +319,17 @@ namespace SpeckleGSA
         {
             Units = ((string)RunGWACommand("GET,UNIT_DATA.1,LENGTH", false)).ListSplit(",")[2];
         }
+
+        public static int NodeAt(double x, double y, double z)
+        {
+            int idx = GSAObject.Gen_NodeAt(x, y, z, Settings.CoincidentNodeAllowance);
+
+            // Add artificial cache
+            if (!GSASetCache.ContainsKey("SET,NODE," + idx.ToString()))
+                GSASetCache["SET,NODE," + idx.ToString()] = 0;
+
+            return idx;
+        }
         
         public static Dictionary<string, object> GetBaseProperties()
         {

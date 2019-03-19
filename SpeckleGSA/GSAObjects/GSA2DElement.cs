@@ -13,7 +13,6 @@ namespace SpeckleGSA
     [GSAObject("EL.3", "elements", true, false, new Type[] { typeof(GSANode), typeof(GSA2DProperty) }, new Type[] { typeof(GSA2DElementMesh) })]
     public class GSA2DElement : Structural2DElement, IGSAObject
     {
-        private List<int> Connectivity;
         public int MeshReference;
 
         public string GWACommand { get; set; }
@@ -24,7 +23,6 @@ namespace SpeckleGSA
         {
             GWACommand = "";
             SubGWACommand = new List<string>();
-            Connectivity = new List<int>();
             MeshReference = 0;
         }
 
@@ -32,7 +30,6 @@ namespace SpeckleGSA
         {
             GWACommand = "";
             SubGWACommand = new List<string>();
-            Connectivity = new List<int>();
             MeshReference = 0;
 
             foreach (FieldInfo f in baseClass.GetType().GetFields())
@@ -115,16 +112,6 @@ namespace SpeckleGSA
                     }
                 }
 
-                List<StructuralObject> eNodes = (e as GSA2DElement).GetChildren();
-
-                // Ensure no coincident nodes
-                if (!dict.ContainsKey(typeof(GSANode)))
-                    dict[typeof(GSANode)] = new List<StructuralObject>();
-
-                dict[typeof(GSANode)] = HelperFunctions.CollapseNodes(dict[typeof(GSANode)].Cast<GSANode>().ToList(), eNodes.Cast<GSANode>().ToList()).Cast<StructuralObject>().ToList();
-
-                (e as GSA2DElement).Connectivity = eNodes.Select(n => n.Reference).ToList();
-
                 GSA.RunGWACommand((e as GSA2DElement).GetGWACommand());
                 Status.ChangeStatus("Writing 2D elements", counter++ / e2Ds.Count() * 100);
             }
@@ -205,8 +192,8 @@ namespace SpeckleGSA
             ls.Add(Coordinates.Count() == 3 ? "TRI3" : "QUAD4");
             ls.Add(Property.ToString());
             ls.Add("0"); // Group
-            foreach (int c in Connectivity)
-                ls.Add(c.ToString());
+            foreach (ThreeVectorDouble coor in Coordinates.Values)
+                ls.Add(GSA.NodeAt(coor.X, coor.Y, coor.Z).ToString());
             ls.Add("0"); //Orientation node
             ls.Add(HelperFunctions.Get2DAngle(Coordinates.ToArray(),Axis).ToString());
             ls.Add("NO_RLS");

@@ -13,7 +13,6 @@ namespace SpeckleGSA
     [GSAObject("MEMB.7", "elements", false, true, new Type[] { typeof(GSANode) }, new Type[] { typeof(GSA1DProperty) })]
     public class GSA1DMember : Structural1DElement, IGSAObject
     {
-        public List<int> Connectivity;
         public int Group;
         public int PolylineReference;
 
@@ -25,7 +24,6 @@ namespace SpeckleGSA
         {
             GWACommand = "";
             SubGWACommand = new List<string>();
-            Connectivity = new List<int>();
             Group = 0;
             PolylineReference = 0;
         }
@@ -34,7 +32,6 @@ namespace SpeckleGSA
         {
             GWACommand = "";
             SubGWACommand = new List<string>();
-            Connectivity = new List<int>();
             Group = 0;
             PolylineReference = 0;
 
@@ -113,16 +110,6 @@ namespace SpeckleGSA
                         }
                     }
                 }
-
-                List<StructuralObject> eNodes = (m as GSA1DMember).GetChildren();
-
-                // Ensure no coincident nodes
-                if (!dict.ContainsKey(typeof(GSANode)))
-                    dict[typeof(GSANode)] = new List<StructuralObject>();
-
-                dict[typeof(GSANode)] = HelperFunctions.CollapseNodes(dict[typeof(GSANode)].Cast<GSANode>().ToList(), eNodes.Cast<GSANode>().ToList()).Cast<StructuralObject>().ToList();
-
-                (m as GSA1DMember).Connectivity = eNodes.Select(n => n.Reference).ToList();
 
                 GSA.RunGWACommand((m as GSA1DMember).GetGWACommand());
 
@@ -218,8 +205,8 @@ namespace SpeckleGSA
             else
                 ls.Add(PolylineReference.ToString());  // TODO: This allows for targeting of elements from members group
             string topo = "";
-            foreach (int c in Connectivity)
-                topo += c.ToString() + " ";
+            foreach (ThreeVectorDouble coor in Coordinates.Values)
+                topo += GSA.NodeAt(coor.X, coor.Y, coor.Z).ToString() + " ";
             ls.Add(topo);
             ls.Add("0"); // Orientation node
             ls.Add(HelperFunctions.Get1DAngle(Axis).ToString());

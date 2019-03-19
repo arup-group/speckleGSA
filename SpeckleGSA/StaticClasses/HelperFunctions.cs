@@ -853,60 +853,9 @@ namespace SpeckleGSA
 
             return true;
         }
-
-        public static bool Coincident(Coordinates c1, Coordinates c2, double allowableError = 0)
-        {
-            double error = 0;
-
-            if (c1.Values.Count() != c2.Values.Count()) return false;
-            for(int i = 0; i < c1.Values.Count(); i++)
-            {
-                error += Math.Pow(c1.Values[i].X - c2.Values[i].X, 2);
-                error += Math.Pow(c1.Values[i].Y - c2.Values[i].Y, 2);
-                error += Math.Pow(c1.Values[i].Z - c2.Values[i].Z, 2);
-
-                if (error > allowableError)
-                    return false;
-            }
-
-            return true;
-        }
         #endregion
 
         #region Miscellanious
-        public static List<GSANode> CollapseNodes(List<GSANode> mainList, List<GSANode> addList)
-        {
-            if (addList == null || addList.Count() == 0) return mainList;
-
-            if (mainList == null || mainList.Count() == 0)
-            {
-                if (addList != null)
-                    foreach (GSANode n in addList)
-                        GSARefCounters.RefObject(n);
-                mainList = new List<GSANode>(addList);
-                return mainList;
-            }
-
-            foreach (GSANode newNode in addList)
-            {
-                GSANode match = mainList.Where(n => Coincident(n.Coordinates, newNode.Coordinates, Settings.CoincidentNodeAllowance)).FirstOrDefault();
-
-                if (match != null)
-                {
-                    GSARefCounters.RefObject(match);
-                    newNode.Reference = match.Reference;
-                    match.Merge(newNode);
-                }
-                else
-                {
-                    GSARefCounters.RefObject(newNode);
-                    mainList.Add(newNode);
-                }
-            }
-
-            return mainList;
-        }
-
         public static StructuralObject GetBase(this object obj)
         {
             StructuralObject baseClass = (StructuralObject)Activator.CreateInstance(obj.GetType().BaseType);
