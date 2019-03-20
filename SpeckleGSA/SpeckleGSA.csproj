@@ -96,9 +96,6 @@
     </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
-    <Reference Include="SpeckleStructuresClasses">
-      <HintPath>..\Resource\SpeckleStructuresClasses.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Drawing" />
   </ItemGroup>
@@ -106,6 +103,10 @@
     <ProjectReference Include="..\SpeckleCore\SpeckleCore\SpeckleCore.csproj">
       <Project>{cfe27d3d-8a1a-43f9-9387-8fd9e119e174}</Project>
       <Name>SpeckleCore</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SpeckleStructures\SpeckleStructuresClasses\SpeckleStructuresClasses.csproj">
+      <Project>{081db7cc-206c-47e2-a57d-df7c4d2d4b13}</Project>
+      <Name>SpeckleStructuresClasses</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
