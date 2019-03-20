@@ -144,6 +144,7 @@ namespace SpeckleGSA
             List<string> newObjectIDs = new List<string>();
 
             // Read objects
+            Status.ChangeStatus("Receiving stream");
             foreach (KeyValuePair<string, SpeckleGSAReceiver> kvp in Receivers)
                 convertedObjects[kvp.Key] = Receivers[kvp.Key].GetGSAObjects();
             

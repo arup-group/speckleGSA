@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -55,7 +57,11 @@ namespace SpeckleGSA
                 return;
 
             GSAObject = new ComAuto();
-
+            GSAObject.LogFeatureUsage("api::specklegsa::" +
+                FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
+                    .ProductVersion + "::GSA " + GSAObject.VersionString()
+                    .Split(new char[] { '\n' })[0]
+                    .Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries)[1]);
             GSAObject.NewFile();
             GSAObject.DisplayGsaWindow(true);
 
@@ -69,8 +75,13 @@ namespace SpeckleGSA
         {
             if (!IsInit)
                 return;
-        
+
             GSAObject = new ComAuto();
+            GSAObject.LogFeatureUsage("api::specklegsa::" +
+                FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
+                    .ProductVersion + "::GSA " + GSAObject.VersionString()
+                    .Split(new char[] { '\n' })[0]
+                    .Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries)[1]);
             GSAObject.Open(path);
             GSAObject.DisplayGsaWindow(true);
             

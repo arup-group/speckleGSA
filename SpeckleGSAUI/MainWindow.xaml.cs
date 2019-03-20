@@ -36,7 +36,7 @@ namespace SpeckleGSAUI
 
         enum UIStatus
         {
-            SENDING, RECEIVING, IDLE
+            SENDING, RECEIVING, IDLE, BUSY
         };
 
         public string EmailAddress;
@@ -202,7 +202,7 @@ namespace SpeckleGSAUI
 
             if (status == UIStatus.IDLE)
             {
-                status = UIStatus.SENDING;
+                status = UIStatus.BUSY;
                 SendButtonPath.Data = Geometry.Parse(PAUSE_BUTTON);
                 SendButtonPath.Fill = Brushes.DimGray;
 
@@ -227,6 +227,7 @@ namespace SpeckleGSAUI
                 triggerTimer = new Timer(Settings.PollingRate);
                 triggerTimer.Elapsed += SenderTimerTrigger;
                 triggerTimer.AutoReset = false;
+                status = UIStatus.SENDING;
                 triggerTimer.Start();
 
                 SendButtonPath.Fill = (SolidColorBrush)(new BrushConverter().ConvertFrom("#0080ff"));
@@ -297,7 +298,7 @@ namespace SpeckleGSAUI
 
             if (status == UIStatus.IDLE)
             {
-                status = UIStatus.RECEIVING;
+                status = UIStatus.BUSY;
                 ReceiveButtonPath.Data = Geometry.Parse(PAUSE_BUTTON);
                 ReceiveButtonPath.Fill = Brushes.DimGray;
 
@@ -318,7 +319,9 @@ namespace SpeckleGSAUI
                 gsaReceiver = new Receiver();
                 await gsaReceiver.Initialize(RestApi, ApiToken);
                 GSA.SetSpeckleClients(EmailAddress, RestApi);
+                status = UIStatus.RECEIVING;
                 Task.Run(() => gsaReceiver.Trigger(null, null));
+
                 ReceiveButtonPath.Fill = (SolidColorBrush)(new BrushConverter().ConvertFrom("#0080ff"));
             }
             else if (status == UIStatus.RECEIVING)
@@ -389,6 +392,10 @@ namespace SpeckleGSAUI
             {
                 switch (status)
                 {
+                    case UIStatus.BUSY:
+                        e.Handled = true;
+                        UITabControl.SelectedIndex = previousTabIndex;
+                        break;
                     case UIStatus.SENDING:
                         e.Handled = true;
                         UITabControl.SelectedIndex = previousTabIndex;
