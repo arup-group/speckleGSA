@@ -1,3 +1,6 @@
 [submodule "SpeckleCore"]
 	path = SpeckleCore
 	url = https://github.com/speckleworks/SpeckleCore
+[submodule "SpeckleStructures"]
+	path = SpeckleStructures
+	url = git@gitlab.arup.com:tor_digital/SpeckleStructures.git
