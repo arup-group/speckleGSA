@@ -251,11 +251,19 @@ namespace SpeckleGSA
             foreach(string p in prevSets)
             {
                 string[] split = p.ListSplit(",");
-
+                
                 if (split[1].IsDigits())
-                    RunGWACommand("BLANK," + split[0] + "," + split[1], false);
+                {
+                    // Uses SET
+                    if (!GSARefCounters.InBaseline(split[0], Convert.ToInt32(split[1])))
+                        RunGWACommand("BLANK," + split[0] + "," + split[1], false);
+                }
                 else
-                    RunGWACommand("BLANK," + split[1] + "," + split[0], false);
+                {
+                    // Uses SET_AT
+                    if (!GSARefCounters.InBaseline(split[1], Convert.ToInt32(split[0])))
+                        RunGWACommand("BLANK," + split[1] + "," + split[0], false);
+                }
             }
         }
 
@@ -324,9 +332,12 @@ namespace SpeckleGSA
         {
             int idx = GSAObject.Gen_NodeAt(x, y, z, Settings.CoincidentNodeAllowance);
 
+            // Add to ref counters
+            GSARefCounters.AddObjRefs("NODE.2", new List<int>() { idx });
+
             // Add artificial cache
-            if (!GSASetCache.ContainsKey("SET,NODE," + idx.ToString()))
-                GSASetCache["SET,NODE," + idx.ToString()] = 0;
+            if (!GSASetCache.ContainsKey("SET,NODE.2," + idx.ToString()))
+                GSASetCache["SET,NODE.2," + idx.ToString()] = 0;
 
             return idx;
         }

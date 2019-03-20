@@ -99,7 +99,11 @@ namespace SpeckleGSA
             double counter = 1;
             foreach (StructuralObject m in materials)
             {
-                GSARefCounters.RefObject(m);
+                if (GSARefCounters.RefObject(m) != 0)
+                {
+                    m.Reference = 0;
+                    GSARefCounters.RefObject(m);
+                }
 
                 GSA.RunGWACommand((m as GSAMaterial).GetGWACommand());
                 Status.ChangeStatus("Writing materials", counter++ / materials.Count() * 100);

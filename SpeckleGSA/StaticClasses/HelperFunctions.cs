@@ -893,6 +893,7 @@ namespace SpeckleGSA
     {
         private static Dictionary<string, int> counter = new Dictionary<string, int>();
         private static Dictionary<string, List<int>> refsUsed = new Dictionary<string, List<int>>();
+        private static Dictionary<string, List<int>> baseLine = new Dictionary<string, List<int>>();
 
         public static int TotalObjects
         {
@@ -911,6 +912,35 @@ namespace SpeckleGSA
         {
             counter.Clear();
             refsUsed.Clear();
+            baseLine.Clear();
+        }
+
+        public static void SetBaseline()
+        {
+            baseLine.Clear();
+            foreach (KeyValuePair<string, List<int>> kvp in refsUsed)
+            {
+                baseLine[kvp.Key] = new List<int>(kvp.Value);
+            }
+        }
+
+        public static void ResetToBaseline()
+        {
+            refsUsed.Clear();
+            foreach (KeyValuePair<string, List<int>> kvp in baseLine)
+            {
+                refsUsed[kvp.Key] = new List<int>(kvp.Value);
+            }
+        }
+
+        public static bool InBaseline(string key, int index)
+        {
+            if (baseLine.ContainsKey(key))
+                if (baseLine[key].Contains(index))
+                    return true;
+            
+            return false;
+
         }
 
         public static int RefObject(string key)

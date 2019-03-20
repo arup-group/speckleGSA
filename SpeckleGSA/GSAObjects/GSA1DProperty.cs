@@ -78,7 +78,11 @@ namespace SpeckleGSA
             double counter = 1;
             foreach (StructuralObject p in props)
             {
-                GSARefCounters.RefObject(p);
+                if (GSARefCounters.RefObject(p) != 0)
+                {
+                    p.Reference = 0;
+                    GSARefCounters.RefObject(p);
+                }
 
                 GSA.RunGWACommand((p as GSA1DProperty).GetGWACommand(dict));
                 Status.ChangeStatus("Writing 1D properties", counter++ / props.Count() * 100);

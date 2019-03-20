@@ -84,7 +84,8 @@ namespace SpeckleGSA
             TypeCastPriority = TypePrerequisites.ToList();
             TypeCastPriority.Sort((x, y) => x.Value.Count().CompareTo(y.Value.Count()));
 
-            // Clear GSA file
+            // Add existing GSA file objects to counters
+            GSARefCounters.Clear();
             foreach (KeyValuePair<Type, List<Type>> kvp in TypePrerequisites)
             {
                 Status.ChangeStatus("Clearing " + kvp.Key.Name);
@@ -97,7 +98,8 @@ namespace SpeckleGSA
 
                     if (highestRecord > 0)
                     {
-                        GSA.RunGWACommand("DELETE," + kvp.Key.GetAttribute("GSAKeyword") + ",1," + highestRecord.ToString());
+                        GSARefCounters.AddObjRefs(keyword, Enumerable.Range(1, highestRecord).ToList());
+                        //GSA.RunGWACommand("DELETE," + kvp.Key.GetAttribute("GSAKeyword") + ",1," + highestRecord.ToString());
                     }
                     else
                     {
@@ -107,6 +109,7 @@ namespace SpeckleGSA
                 }
                 catch { }
             }
+            GSARefCounters.SetBaseline();
 
             // Create receivers
             Status.ChangeStatus("Accessing stream");
@@ -198,7 +201,8 @@ namespace SpeckleGSA
             }
 
             // Set up counter
-            GSARefCounters.Clear();
+            GSARefCounters.ResetToBaseline();
+            //GSARefCounters.Clear();
 
             foreach (KeyValuePair<Type, List<StructuralObject>> kvp in newObjects)
             {

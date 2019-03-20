@@ -120,8 +120,13 @@ namespace SpeckleGSA
             double counter = 1;
             foreach (StructuralObject l in loads)
             {
-                GSARefCounters.RefObject(l);
-                
+                if (GSARefCounters.RefObject(l) != 0)
+                {
+                    l.Reference = 0;
+                    GSARefCounters.RefObject(l);
+                }
+
+
                 List<string> commands = (l as GSA0DLoad).GetGWACommand();
                 foreach (string c in commands)
                     GSA.RunGWACommand(c);

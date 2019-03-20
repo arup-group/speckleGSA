@@ -127,17 +127,24 @@ namespace SpeckleGSA
             // Need iterator to make sure that we don't match with the same node in LINQ
             for (int i = 0; i < nodes.Count(); i++)
             {
-                GSARefCounters.RefObject(nodes[i]);
+                nodes[i].Reference = GSA.NodeAt((nodes[i] as GSANode).Coordinates.ToArray()[0], (nodes[i] as GSANode).Coordinates.ToArray()[1], (nodes[i] as GSANode).Coordinates.ToArray()[2]);
+                //GSARefCounters.RefObject(nodes[i]);
+                
+                //if (GSARefCounters.RefObject(nodes[i]) != 0)
+                //{
+                //    nodes[i].Reference = 0;
+                //    GSARefCounters.RefObject(nodes[i]);
+                //}
 
-                List<StructuralObject> matches = nodes.Where(
-                    (n, j) => j != i & n.Reference == nodes[i].Reference)
-                    .ToList();
+                //List<StructuralObject> matches = nodes.Where(
+                //    (n, j) => j != i & n.Reference == nodes[i].Reference)
+                //    .ToList();
 
-                foreach (StructuralObject m in matches)
-                {
-                    (nodes[i] as GSANode).Merge(m as GSANode);
-                    nodes.Remove(m);
-                }
+                //foreach (StructuralObject m in matches)
+                //{
+                //    (nodes[i] as GSANode).Merge(m as GSANode);
+                //    nodes.Remove(m);
+                //}
                 
                 GSA.RunGWACommand(((GSANode)nodes[i]).GetGWACommand());
                 
@@ -146,6 +153,11 @@ namespace SpeckleGSA
                 {
                     GSA0DElement e0D =  new GSA0DElement();
                     GSARefCounters.RefObject(e0D);
+                    if (GSARefCounters.RefObject(e0D) != 0)
+                    {
+                        e0D.Reference = 0;
+                        GSARefCounters.RefObject(e0D);
+                    }
                     e0D.Type = "MASS";
                     e0D.Mass = ((GSANode)nodes[i]).Mass;
                     e0D.Connectivity = nodes[i].Reference;
