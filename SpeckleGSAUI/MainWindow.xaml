@@ -96,6 +96,7 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="auto"/>
                             <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <Grid Grid.Row="0" Background="Transparent">
@@ -113,9 +114,16 @@
                                 Content="Layer to Stream:"
                                 Style="{StaticResource AnalysisDesignToggle}"/>
                         </StackPanel>
+                        <StackPanel Grid.Row="2" HorizontalAlignment="Right" Orientation="Horizontal">
+                            <ToggleButton
+                                x:Name="SenderContinuousToggle"
+                                Margin="5"
+                                Content="Streaming Method:"
+                                Style="{StaticResource ContinuousSingleToggle}"/>
+                        </StackPanel>
                         <DataGrid
                             x:Name="SenderStreams"
-                            Grid.Row="2"
+                            Grid.Row="3"
                             Margin="5"
                             CanUserSortColumns="False"
                             AutoGenerateColumns="False"
@@ -152,6 +160,7 @@
                             <RowDefinition Height="auto"/>
                             <RowDefinition Height="auto"/>
                             <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <Grid Grid.Row="0" Background="Transparent">
@@ -169,7 +178,14 @@
                                 Content="Layer to Stream:"
                                 Style="{StaticResource AnalysisDesignToggle}"/>
                         </StackPanel>
-                        <DockPanel Grid.Row="2" LastChildFill="True">
+                        <StackPanel Grid.Row="2" HorizontalAlignment="Right" Orientation="Horizontal">
+                            <ToggleButton
+                                x:Name="ReceiverContinuousToggle"
+                                Margin="5"
+                                Content="Streaming Method:"
+                                Style="{StaticResource ContinuousSingleToggle}"/>
+                        </StackPanel>
+                        <DockPanel Grid.Row="3" LastChildFill="True">
                             <Button DockPanel.Dock="Right" Click="ClearReceiver" Content="Clear All"  Margin="5" Padding="5" MinWidth="100"/>
                             <Button DockPanel.Dock="Right" Click="PasteClipboardReceiver" Content="Paste Clipboard"  Margin="5" Padding="5"  MinWidth="100"/>
                             <Rectangle DockPanel.Dock="Right" VerticalAlignment="Stretch" Width="1" Margin="2" Stroke="DarkGray" />
@@ -180,7 +196,7 @@
                         </DockPanel>
                         <DataGrid
                             x:Name="ReceiverStreams"
-                            Grid.Row="3"
+                            Grid.Row="4"
                             Margin="5"
                             CanUserSortColumns="False"
                             AutoGenerateColumns="False"

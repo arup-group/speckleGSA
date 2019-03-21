@@ -218,19 +218,43 @@ namespace SpeckleGSAUI
                     GSA.TargetDesignLayer = true;
                 }
                 SenderLayerToggle.IsEnabled = false;
+                SenderContinuousToggle.IsEnabled = false;
 
                 GSA.GetSpeckleClients(EmailAddress, RestApi);
                 gsaSender = new Sender();
                 await gsaSender.Initialize(RestApi, ApiToken);
                 GSA.SetSpeckleClients(EmailAddress, RestApi);
 
-                triggerTimer = new Timer(Settings.PollingRate);
-                triggerTimer.Elapsed += SenderTimerTrigger;
-                triggerTimer.AutoReset = false;
-                status = UIStatus.SENDING;
-                triggerTimer.Start();
+                if (SenderContinuousToggle.IsChecked.Value)
+                {
+                    await Task.Run(() => gsaSender.Trigger())
+                        .ContinueWith(res =>
+                        {
+                            Application.Current.Dispatcher.BeginInvoke(
+                                DispatcherPriority.Background,
+                                new Action(() =>
+                                {
+                                    UpdateClientLists();
+                                    status = UIStatus.IDLE;
+                                    SendButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
+                                    SendButtonPath.Fill = Brushes.LightGray;
 
-                SendButtonPath.Fill = (SolidColorBrush)(new BrushConverter().ConvertFrom("#0080ff"));
+                                    SenderLayerToggle.IsEnabled = true;
+                                    SenderContinuousToggle.IsEnabled = true;
+                                })
+                            );
+                        });
+                }
+                else
+                {
+                    triggerTimer = new Timer(Settings.PollingRate);
+                    triggerTimer.Elapsed += SenderTimerTrigger;
+                    triggerTimer.AutoReset = false;
+                    status = UIStatus.SENDING;
+                    triggerTimer.Start();
+
+                    SendButtonPath.Fill = (SolidColorBrush)(new BrushConverter().ConvertFrom("#0080ff"));
+                }
             }
             else if (status == UIStatus.SENDING)
             {
@@ -239,6 +263,7 @@ namespace SpeckleGSAUI
                 SendButtonPath.Fill = Brushes.LightGray;
 
                 SenderLayerToggle.IsEnabled = true;
+                SenderContinuousToggle.IsEnabled = true;
             }
         }
 
@@ -314,23 +339,48 @@ namespace SpeckleGSAUI
                     GSA.TargetDesignLayer = true;
                 }
                 ReceiverLayerToggle.IsEnabled = false;
+                ReceiverContinuousToggle.IsEnabled = false;
 
                 GSA.GetSpeckleClients(EmailAddress, RestApi);
                 gsaReceiver = new Receiver();
                 await gsaReceiver.Initialize(RestApi, ApiToken);
                 GSA.SetSpeckleClients(EmailAddress, RestApi);
                 status = UIStatus.RECEIVING;
-                Task.Run(() => gsaReceiver.Trigger(null, null));
+                if (ReceiverContinuousToggle.IsChecked.Value)
+                {
+                    await Task.Run(() => gsaReceiver.Trigger(null, null))
+                        .ContinueWith(res =>
+                        {
+                            Application.Current.Dispatcher.BeginInvoke(
+                                DispatcherPriority.Background,
+                                new Action(() =>
+                                {
+                                    gsaReceiver.Dispose();
+                                    status = UIStatus.IDLE;
+                                    ReceiveButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
+                                    ReceiveButtonPath.Fill = Brushes.LightGray;
 
-                ReceiveButtonPath.Fill = (SolidColorBrush)(new BrushConverter().ConvertFrom("#0080ff"));
+                                    ReceiverLayerToggle.IsEnabled = true;
+                                    ReceiverContinuousToggle.IsEnabled = true;
+                                })
+                            );
+                        });
+                }
+                else
+                {
+                    await Task.Run(() => gsaReceiver.Trigger(null, null));
+                    ReceiveButtonPath.Fill = (SolidColorBrush)(new BrushConverter().ConvertFrom("#0080ff"));
+                }
             }
             else if (status == UIStatus.RECEIVING)
             {
+                gsaReceiver.Dispose();
                 status = UIStatus.IDLE;
                 ReceiveButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
                 ReceiveButtonPath.Fill = Brushes.LightGray;
 
                 ReceiverLayerToggle.IsEnabled = true;
+                ReceiverContinuousToggle.IsEnabled = true;
             }
         }
         #endregion

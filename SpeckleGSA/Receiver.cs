@@ -239,5 +239,11 @@ namespace SpeckleGSA
             IsBusy = false;
             Status.ChangeStatus("Finished receiving", 100);
         }
+        
+        public void Dispose()
+        {
+            foreach (string streamID in GSA.Receivers)
+                Receivers[streamID].UpdateGlobalTrigger -= Trigger;
+        }
     }
 }
