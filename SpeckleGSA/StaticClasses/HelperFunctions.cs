@@ -966,8 +966,9 @@ namespace SpeckleGSA
                     obj.Reference = RefObject(key);
                 else
                 {
-                    if (refsUsed[key].Contains(obj.Reference))
-                        return 1;
+                    if (refsUsed.ContainsKey(key))
+                        if (refsUsed[key].Contains(obj.Reference))
+                            return 1;
                 }
 
                 AddObjRefs(key, new List<int>() { obj.Reference });

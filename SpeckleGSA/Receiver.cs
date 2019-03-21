@@ -205,12 +205,12 @@ namespace SpeckleGSA
             GSARefCounters.ResetToBaseline();
             //GSARefCounters.Clear();
 
-            foreach (KeyValuePair<Type, List<StructuralObject>> kvp in newObjects)
-            {
-                // Reserve reference
-                GSARefCounters.AddObjRefs((string)kvp.Key.GetAttribute("GSAKeyword"),
-                    (kvp.Value as IList).Cast<StructuralObject>().Select(o => o.Reference).ToList());
-            }
+            //foreach (KeyValuePair<Type, List<StructuralObject>> kvp in newObjects)
+            //{
+            //    // Reserve reference
+            //    GSARefCounters.AddObjRefs((string)kvp.Key.GetAttribute("GSAKeyword"),
+            //        (kvp.Value as IList).Cast<StructuralObject>().Select(o => o.Reference).ToList());
+            //}
 
             // Write objects
             List<Type> currentBatch = new List<Type>();
