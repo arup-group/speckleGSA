@@ -18,124 +18,106 @@ namespace SpeckleGSA
 
         public string GWACommand { get; set; }
         public List<string> SubGWACommand { get; set; }
-
-        #region Contructors and Converters
-        public GSA1DLoad()
-        {
-            GWACommand = "";
-            SubGWACommand = new List<string>();
-            Axis = 0;
-            Projected = false;
-        }
-
-        public GSA1DLoad(Structural1DLoad baseClass)
-        {
-            GWACommand = "";
-            SubGWACommand = new List<string>();
-            Axis = 0;
-            Projected = false;
-
-            foreach (FieldInfo f in baseClass.GetType().GetFields())
-                f.SetValue(this, f.GetValue(baseClass));
-
-            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
-                p.SetValue(this, p.GetValue(baseClass));
-        }
-        #endregion
-
-        #region GSA Functions
-        public static bool GetObjects(Dictionary<Type, List<object>> dict)
+        
+        #region Sending Functions
+        public static bool GetObjects(Dictionary<Type, List<IGSAObject>> dict)
         {
             if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
-                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<object>();
-            
-            List<object> loads = new List<object>();
+                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<IGSAObject>();
 
+            List<GSA1DLoad> loads = new List<GSA1DLoad>();
+            List<GSA1DElement> elements = GSA.TargetAnalysisLayer ? dict[typeof(GSA1DElement)].Cast<GSA1DElement>().ToList() : new List<GSA1DElement>();
+            List<GSA1DMember> members = GSA.TargetDesignLayer ? dict[typeof(GSA1DMember)].Cast<GSA1DMember>().ToList() : new List<GSA1DMember>();
+            
             string[] lines = GSA.GetGWAGetCommands("GET_ALL,LOAD_BEAM");
             string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL,LOAD_BEAM");
 
             // Remove deleted lines
-            dict[typeof(GSA1DLoad)].RemoveAll(l => deletedLines.Contains(((IGSAObject)l).GWACommand));
-            foreach (KeyValuePair<Type, List<object>> kvp in dict)
-                kvp.Value.RemoveAll(l => ((IGSAObject)l).SubGWACommand.Any(x => deletedLines.Contains(x)));
+            dict[typeof(GSA1DLoad)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
+            foreach (KeyValuePair<Type, List<IGSAObject>> kvp in dict)
+                kvp.Value.RemoveAll(l => l.SubGWACommand.Any(x => deletedLines.Contains(x)));
 
             // Filter only new lines
-            string[] prevLines = dict[typeof(GSA1DLoad)].Select(l => ((GSA1DLoad)l).GWACommand).ToArray();
+            string[] prevLines = dict[typeof(GSA1DLoad)].Select(l => l.GWACommand).ToArray();
             string[] newLines = lines.Where(l => !prevLines.Contains(l)).ToArray();
 
-            List<object> elements = GSA.TargetAnalysisLayer ? dict[typeof(GSA1DElement)] : new List<object>();
-            List<object> members = GSA.TargetDesignLayer ? dict[typeof(GSA1DMember)] : new List<object>();
-            
             foreach (string p in newLines)
             {
                 List<GSA1DLoad> loadSubList = new List<GSA1DLoad>();
 
                 // Placeholder load object to get list of elements and load values
                 // Need to transform to axis so one load definition may be transformed to many
-                GSA1DLoad initLoad = new GSA1DLoad();
-                initLoad.ParseGWACommand(p,dict);
+                GSA1DLoad initLoad = ParseGWACommand(p, elements, members);
 
                 if (GSA.TargetAnalysisLayer)
-                { 
+                {
                     // Create load for each element applied
-                    foreach (int nRef in initLoad.Elements)
+                    foreach (string nRef in initLoad.ElementRefs)
                     {
                         GSA1DLoad load = new GSA1DLoad();
                         load.GWACommand = initLoad.GWACommand;
                         load.SubGWACommand = new List<string>(initLoad.SubGWACommand);
                         load.Name = initLoad.Name;
-                        load.LoadCase = initLoad.LoadCase;
+                        load.LoadCaseRef = initLoad.LoadCaseRef;
 
                         // Transform load to defined axis
-                        GSA1DElement elem = elements.Where(e => ((GSA1DElement)e).Reference == nRef).First() as GSA1DElement;
-                        Axis loadAxis = load.Axis == 0 ? new Axis() : elem.Axis; // Assumes if not global, local
+                        GSA1DElement elem = elements.Where(e => e.StructuralID == nRef).First();
+                        StructuralAxis loadAxis = load.Axis == 0 ? new StructuralAxis(
+                            new StructuralVectorThree(new double[] { 1, 0, 0 }),
+                            new StructuralVectorThree(new double[] { 0, 1, 0 }),
+                            new StructuralVectorThree(new double[] { 0, 0, 1 })) :
+                            HelperFunctions.ToAxis(elem.Value.ToArray(), elem.ZAxis); // Assumes if not global, local
                         load.Loading = initLoad.Loading;
                         load.Loading.TransformOntoAxis(loadAxis);
-                    
+
                         // Perform projection
                         if (load.Projected)
                         {
                             Vector3D loadDirection = new Vector3D(
-                                load.Loading.X,
-                                load.Loading.Y,
-                                load.Loading.Z);
+                                load.Loading.Value[0],
+                                load.Loading.Value[1],
+                                load.Loading.Value[2]);
 
                             if (loadDirection.Length > 0)
                             {
-                                double angle = Vector3D.AngleBetween(loadDirection, elem.Axis.X);
+                                Vector3D axisX = new Vector3D(elem.Value[5] - elem.Value[0], elem.Value[4] - elem.Value[1], elem.Value[3] - elem.Value[2]);
+                                double angle = Vector3D.AngleBetween(loadDirection, axisX);
                                 double factor = Math.Sin(angle);
-                                load.Loading.X *= factor;
-                                load.Loading.Y *= factor;
-                                load.Loading.Z *= factor;
+                                load.Loading.Value[0] *= factor;
+                                load.Loading.Value[1] *= factor;
+                                load.Loading.Value[2] *= factor;
                             }
                         }
 
-                        // If the loading already exists, add node ref to list
+                        // If the loading already exists, add element ref to list
                         GSA1DLoad match = loadSubList.Count() > 0 ? loadSubList.Where(l => l.Loading.Equals(load.Loading)).First() : null;
                         if (match != null)
-                            match.Elements.Add(nRef);
+                            match.ElementRefs.Add(nRef);
                         else
                         {
-                            load.Elements.Add(nRef);
+                            load.ElementRefs.Add(nRef);
                             loadSubList.Add(load);
                         }
                     }
                 }
-
-                if (GSA.TargetDesignLayer)
+                else if (GSA.TargetDesignLayer)
                 {
-                    // Create load for each member applied
-                    foreach (int mRef in initLoad.Elements)
+                    // Create load for each element applied
+                    foreach (string nRef in initLoad.ElementRefs)
                     {
                         GSA1DLoad load = new GSA1DLoad();
                         load.GWACommand = initLoad.GWACommand;
                         load.SubGWACommand = new List<string>(initLoad.SubGWACommand);
                         load.Name = initLoad.Name;
-                        load.LoadCase = initLoad.LoadCase;
+                        load.LoadCaseRef = initLoad.LoadCaseRef;
 
                         // Transform load to defined axis
-                        GSA1DMember memb = members.Where(e => ((GSA1DMember)e).Reference == mRef).First() as GSA1DMember;
-                        Axis loadAxis = load.Axis == 0 ? new Axis() : memb.Axis; // Assumes if not global, local
+                        GSA1DMember memb = members.Where(e => e.StructuralID == nRef).First();
+                        StructuralAxis loadAxis = load.Axis == 0 ? new StructuralAxis(
+                            new StructuralVectorThree(new double[] { 1, 0, 0 }),
+                            new StructuralVectorThree(new double[] { 0, 1, 0 }),
+                            new StructuralVectorThree(new double[] { 0, 0, 1 })) :
+                            HelperFunctions.ToAxis(memb.Value.ToArray(), memb.ZAxis); // Assumes if not global, local
                         load.Loading = initLoad.Loading;
                         load.Loading.TransformOntoAxis(loadAxis);
 
@@ -143,27 +125,28 @@ namespace SpeckleGSA
                         if (load.Projected)
                         {
                             Vector3D loadDirection = new Vector3D(
-                                load.Loading.X,
-                                load.Loading.Y,
-                                load.Loading.Z);
+                                load.Loading.Value[0],
+                                load.Loading.Value[1],
+                                load.Loading.Value[2]);
 
                             if (loadDirection.Length > 0)
                             {
-                                double angle = Vector3D.AngleBetween(loadDirection, memb.Axis.X);
+                                Vector3D axisX = new Vector3D(memb.Value[5] - memb.Value[0], memb.Value[4] - memb.Value[1], memb.Value[3] - memb.Value[2]);
+                                double angle = Vector3D.AngleBetween(loadDirection, axisX);
                                 double factor = Math.Sin(angle);
-                                load.Loading.X *= factor;
-                                load.Loading.Y *= factor;
-                                load.Loading.Z *= factor;
+                                load.Loading.Value[0] *= factor;
+                                load.Loading.Value[1] *= factor;
+                                load.Loading.Value[2] *= factor;
                             }
                         }
 
-                        // If the loading already exists, add node ref to list
+                        // If the loading already exists, add element ref to list
                         GSA1DLoad match = loadSubList.Count() > 0 ? loadSubList.Where(l => l.Loading.Equals(load.Loading)).First() : null;
                         if (match != null)
-                            match.Elements.Add(mRef);
+                            match.ElementRefs.Add(nRef);
                         else
                         {
-                            load.Elements.Add(mRef);
+                            load.ElementRefs.Add(nRef);
                             loadSubList.Add(load);
                         }
                     }
@@ -179,75 +162,54 @@ namespace SpeckleGSA
             return false;
         }
 
-        public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
+        public static GSA1DLoad ParseGWACommand(string command, List<GSA1DElement> elements, List<GSA1DMember> members)
         {
-            if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType)) return;
+            GSA1DLoad ret = new Structural1DLoad() as GSA1DLoad;
 
-            List<StructuralObject> loads = dict[typeof(GSA1DLoad)];
-
-            double counter = 1;
-            foreach (StructuralObject l in loads)
-            {
-                if (GSARefCounters.RefObject(l) != 0)
-                {
-                    l.Reference = 0;
-                    GSARefCounters.RefObject(l);
-                }
-
-                List<string> commands = (l as GSA1DLoad).GetGWACommand();
-                foreach (string c in commands)
-                    GSA.RunGWACommand(c);
-
-                Status.ChangeStatus("Writing 1D loads", counter++ / loads.Count() * 100);
-            }
-        }
-
-        public void ParseGWACommand(string command, Dictionary<Type, List<object>> dict = null)
-        {
-            GWACommand = command;
+            ret.GWACommand = command;
 
             string[] pieces = command.ListSplit(",");
 
-            int counter = 0;
+            int counter = 0; // Skip identifier
             string identifier = pieces[counter++];
 
-            Name = pieces[counter++].Trim(new char[] { '"' });
-            
+            ret.Name = pieces[counter++].Trim(new char[] { '"' });
+
             if (GSA.TargetAnalysisLayer)
             {
                 int[] targetElements = pieces[counter++].ParseGSAList(GsaEntity.ELEMENT);
 
-                if (dict.ContainsKey(typeof(GSA1DElement)))
+                if (elements != null)
                 {
-                    List<GSA1DElement> elems = dict[typeof(GSA1DElement)].Cast<GSA1DElement>()
-                        .Where(n => targetElements.Contains(n.Reference)).ToList();
+                    List<GSA1DElement> elems = elements.Where(n => targetElements.Contains(Convert.ToInt32(n.StructuralID))).ToList();
 
-                    Elements = elems.Select(n => n.Reference).ToList();
-                    SubGWACommand.AddRange(elems.Select(n => n.GWACommand));
+                    ret.ElementRefs = elems.Select(n => n.StructuralID).ToList();
+                    ret.SubGWACommand.AddRange(elems.Select(n => n.GWACommand));
                 }
             }
             else
             {
                 int[] targetGroups = pieces[counter++].GetGroupsFromGSAList();
 
-                if (dict.ContainsKey(typeof(GSA1DMember)))
+                if (members != null)
                 {
-                    List<GSA1DMember> membs = dict[typeof(GSA1DMember)].Cast<GSA1DMember>()
-                        .Where(m => targetGroups.Contains(m.Group)).ToList();
+                    List<GSA1DMember> membs = members.Where(m => targetGroups.Contains(m.Group)).ToList();
 
-                    Elements = membs.Select(m => m.Reference).ToList();
-                    SubGWACommand.AddRange(membs.Select(n => n.GWACommand));
+                    ret.ElementRefs = membs.Select(m => m.StructuralID).ToList();
+                    ret.SubGWACommand.AddRange(membs.Select(n => n.GWACommand));
                 }
             }
 
-            LoadCase = Convert.ToInt32(pieces[counter++]);
+            ret.LoadCaseRef = pieces[counter++];
 
             string axis = pieces[counter++];
-            Axis = axis == "GLOBAL" ? 0 : Convert.ToInt32(axis);
+            ret.Axis = axis == "GLOBAL" ? 0 : Convert.ToInt32(axis);
 
-            Projected = pieces[counter++] == "YES";
+            ret.Projected = pieces[counter++] == "YES";
 
+            ret.Loading = new StructuralVectorSix(new double[6]);
             string direction = pieces[counter++].ToLower();
+
             double value = 0;
 
             // TODO: Only reads UDL load properly
@@ -294,65 +256,86 @@ namespace SpeckleGSA
             switch (direction.ToUpper())
             {
                 case "X":
-                    Loading.X = value;
+                    ret.Loading.Value[0] = value;
                     break;
                 case "Y":
-                    Loading.Y = value;
+                    ret.Loading.Value[1] = value;
                     break;
                 case "Z":
-                    Loading.Z = value;
+                    ret.Loading.Value[2] = value;
                     break;
                 case "XX":
-                    Loading.XX = value;
+                    ret.Loading.Value[3] = value;
                     break;
                 case "YY":
-                    Loading.YY = value;
+                    ret.Loading.Value[4] = value;
                     break;
                 case "ZZ":
-                    Loading.ZZ = value;
+                    ret.Loading.Value[5] = value;
                     break;
                 default:
                     // TODO: Error case maybe?
                     break;
             }
+
+            return ret;
+        }
+        #endregion
+
+        #region Receiving Functions
+        public static void SetObjects(Dictionary<Type, List<IStructural>> dict)
+        {
+            if (!dict.ContainsKey(typeof(Structural1DLoad))) return;
+
+            foreach (IStructural obj in dict[typeof(Structural1DLoad)])
+            {
+                Set(obj as Structural1DLoad);
+            }
         }
 
-        public List<string> GetGWACommand(Dictionary<Type, object> dict = null)
+        public static void Set(Structural1DLoad load)
         {
-            List<string> ls = new List<string>();
+            if (load == null)
+                return;
 
-            double[] values = Loading.ToArray();
+            if (load.Loading == null)
+                return;
+
+            string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+
+            int index = Indexer.ResolveIndex(keyword, load);
+            List<int> elementRefs;
+            if (GSA.TargetAnalysisLayer)
+                elementRefs = Indexer.ResolveIndices(typeof(GSA1DElement).GetGSAKeyword(), load.ElementRefs);
+            else
+                elementRefs = Indexer.ResolveIndices(typeof(GSA1DMember).GetGSAKeyword(), load.ElementRefs);
+            int loadCaseRef = Indexer.ResolveIndex(typeof(GSALoadCase).GetGSAKeyword(), load.LoadCaseRef);
+
             string[] direction = new string[6] { "X", "Y", "Z", "X", "Y", "Z" };
 
-            for (int i = 0; i < 6; i++)
+            for (int i = 0; i < load.Loading.Value.Count(); i++)
             {
-                List<string> subLs = new List<string>();
+                List<string> ls = new List<string>();
 
-                if (values[i] == 0) continue;
+                if (load.Loading.Value[i] == 0) continue;
 
-                subLs.Add("SET_AT");
-                subLs.Add(Reference.ToString());
-                subLs.Add("LOAD_BEAM_UDL"); // TODO: Only writes to UDL load
-                subLs.Add(Name == "" ? " " : Name);
-
+                ls.Add("SET_AT");
+                ls.Add(index.ToString());
+                ls.Add("LOAD_BEAM_UDL"); // TODO: Only writes to UDL load
+                ls.Add(load.Name == null || load.Name == "" ? " " : load.Name);
                 // TODO: This is a hack.
-                List<string> target = new List<string>();
                 if (GSA.TargetAnalysisLayer)
-                    target.AddRange(Elements.Select(x => x.ToString()));
-                else
-                    target.AddRange(Elements.Select(x => "G" + x.ToString()));
-                subLs.Add(string.Join(" ", target));
+                    ls.Add(string.Join(" ", elementRefs));
+                else if (GSA.TargetDesignLayer)
+                    ls.Add(string.Join(" ", elementRefs.Select(x => "G" + x)));
+                ls.Add(loadCaseRef.ToString());
+                ls.Add("GLOBAL"); // Axis
+                ls.Add("NO"); // Projected
+                ls.Add(direction[i]);
+                ls.Add(load.Loading.Value[i].ToString());
 
-                subLs.Add(LoadCase.ToString());
-                subLs.Add("GLOBAL"); // Axis
-                subLs.Add("NO"); // Projected
-                subLs.Add(direction[i]);
-                subLs.Add(values[i].ToString());
-
-                ls.Add(string.Join(",", subLs));
+                GSA.RunGWACommand(string.Join(",", ls));
             }
-
-            return ls;
         }
         #endregion
     }
