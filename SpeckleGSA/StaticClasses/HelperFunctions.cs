@@ -468,6 +468,21 @@ namespace SpeckleGSA
         #endregion
 
         #region Axis
+        public static StructuralAxis ToAxis(double[] coor, StructuralVectorThree zAxis)
+        {
+            Vector3D axisX = new Vector3D(coor[5] - coor[0], coor[4] - coor[1], coor[3] - coor[2]);
+            Vector3D axisZ = new Vector3D(zAxis.Value[0], zAxis.Value[1], zAxis.Value[2]);
+            Vector3D axisY = Vector3D.CrossProduct(axisZ, axisX);
+
+            StructuralAxis axis = new StructuralAxis(
+                new StructuralVectorThree(new double[] { axisX.X, axisX.Y, axisX.Z }),
+                new StructuralVectorThree(new double[] { axisY.X, axisY.Y, axisY.Z }),
+                new StructuralVectorThree(new double[] { axisZ.X, axisZ.Y, axisZ.Z })
+            );
+            axis.Normalize();
+            return axis;
+        }
+
         public static StructuralAxis Parse0DAxis(int axis, double[] evalAtCoor = null)
         {
             Vector3D x;
@@ -716,18 +731,7 @@ namespace SpeckleGSA
 
         public static double Get1DAngle(double[] coor, StructuralVectorThree zAxis)
         {
-            Vector3D axisX = new Vector3D(coor[5] - coor[0], coor[4] - coor[1], coor[3] - coor[2]);
-            Vector3D axisZ = new Vector3D(zAxis.Value[0], zAxis.Value[1], zAxis.Value[2]);
-            Vector3D axisY = Vector3D.CrossProduct(axisZ, axisX);
-
-            StructuralAxis axis = new StructuralAxis(
-                new StructuralVectorThree(new double[] { axisX.X, axisX.Y, axisX.Z }),
-                new StructuralVectorThree(new double[] { axisY.X, axisY.Y, axisY.Z }),
-                new StructuralVectorThree(new double[] { axisZ.X, axisZ.Y, axisZ.Z })
-            );
-            axis.Normalize();
-
-            return Get1DAngle(axis);
+            return Get1DAngle(ToAxis(coor, zAxis));
         }
 
         public static double Get1DAngle(StructuralAxis axis)
@@ -895,6 +899,11 @@ namespace SpeckleGSA
         #endregion
 
         #region Miscellanious
+        public static string GetGSAKeyword(this object t)
+        {
+            return (string)t.GetAttribute("GSAKeyword");
+        }
+
         public static object GetAttribute(this object t, string attribute)
         {
             try
@@ -912,8 +921,22 @@ namespace SpeckleGSA
             }
             catch { return null; }
         }
+
+        public static IStructural GetBase(this object obj)
+        {
+            IStructural baseClass = (IStructural)Activator.CreateInstance(obj.GetType().BaseType);
+
+            foreach (FieldInfo f in baseClass.GetType().GetFields())
+                f.SetValue(baseClass, f.GetValue(obj));
+
+            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
+                p.SetValue(baseClass, p.GetValue(obj));
+
+            return baseClass;
+        }
+
         #endregion
     }
 
-    
+
 }

@@ -35,6 +35,11 @@ namespace SpeckleGSA
             return counter[keywordGSA]++;
         }
 
+        public static int ResolveIndex(string keywordGSA)
+        {
+            return ResolveIndex(keywordGSA, string.Empty);
+        }
+
         public static int ResolveIndex(string keywordGSA, IStructural obj)
         {
             return ResolveIndex(keywordGSA, obj.StructuralID);
@@ -43,7 +48,7 @@ namespace SpeckleGSA
         public static int ResolveIndex(string keywordGSA, string structuralID)
         {
             // If no ID set, return next one but do not store.
-            if (structuralID == null)
+            if (structuralID == null || structuralID == string.Empty)
                 return NextIndex(keywordGSA);
 
             string key = keywordGSA + ":" + structuralID;
