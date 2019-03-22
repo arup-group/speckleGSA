@@ -79,6 +79,7 @@
     <Compile Include="GSAObjects\GSAMaterial.cs" />
     <Compile Include="GSAObjects\GSANode.cs" />
     <Compile Include="StaticClasses\HelperFunctions.cs" />
+    <Compile Include="StaticClasses\Indexer.cs" />
     <Compile Include="StaticClasses\Settings.cs" />
     <Compile Include="SpeckleInterface\SpeckleGSAReceiver.cs" />
     <Compile Include="SpeckleInterface\SpeckleGSASender.cs" />
@@ -103,6 +104,10 @@
     <ProjectReference Include="..\SpeckleCore\SpeckleCore\SpeckleCore.csproj">
       <Project>{cfe27d3d-8a1a-43f9-9387-8fd9e119e174}</Project>
       <Name>SpeckleCore</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SpeckleStructures\SpeckleCoreGeometry\SpeckleCoreGeometryClasses\SpeckleCoreGeometryClasses.csproj">
+      <Project>{ad40ce88-276b-45bf-9736-7180730e7281}</Project>
+      <Name>SpeckleCoreGeometryClasses</Name>
     </ProjectReference>
     <ProjectReference Include="..\SpeckleStructures\SpeckleStructuresClasses\SpeckleStructuresClasses.csproj">
       <Project>{081db7cc-206c-47e2-a57d-df7c4d2d4b13}</Project>

@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpecklePopup", "SpeckleCore
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleStructuresClasses", "SpeckleStructures\SpeckleStructuresClasses\SpeckleStructuresClasses.csproj", "{081DB7CC-206C-47E2-A57D-DF7C4D2D4B13}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleCoreGeometryClasses", "SpeckleStructures\SpeckleCoreGeometry\SpeckleCoreGeometryClasses\SpeckleCoreGeometryClasses.csproj", "{AD40CE88-276B-45BF-9736-7180730E7281}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -87,6 +89,18 @@ Global
 		{081DB7CC-206C-47E2-A57D-DF7C4D2D4B13}.Release|Any CPU.Build.0 = Release|Any CPU
 		{081DB7CC-206C-47E2-A57D-DF7C4D2D4B13}.Release|x64.ActiveCfg = Release|Any CPU
 		{081DB7CC-206C-47E2-A57D-DF7C4D2D4B13}.Release|x64.Build.0 = Release|Any CPU
+		{AD40CE88-276B-45BF-9736-7180730E7281}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AD40CE88-276B-45BF-9736-7180730E7281}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AD40CE88-276B-45BF-9736-7180730E7281}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{AD40CE88-276B-45BF-9736-7180730E7281}.Debug|x64.Build.0 = Debug|Any CPU
+		{AD40CE88-276B-45BF-9736-7180730E7281}.DebugRevit|Any CPU.ActiveCfg = Debug|Any CPU
+		{AD40CE88-276B-45BF-9736-7180730E7281}.DebugRevit|Any CPU.Build.0 = Debug|Any CPU
+		{AD40CE88-276B-45BF-9736-7180730E7281}.DebugRevit|x64.ActiveCfg = Debug|Any CPU
+		{AD40CE88-276B-45BF-9736-7180730E7281}.DebugRevit|x64.Build.0 = Debug|Any CPU
+		{AD40CE88-276B-45BF-9736-7180730E7281}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AD40CE88-276B-45BF-9736-7180730E7281}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AD40CE88-276B-45BF-9736-7180730E7281}.Release|x64.ActiveCfg = Release|Any CPU
+		{AD40CE88-276B-45BF-9736-7180730E7281}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -97,6 +111,7 @@ Global
 		{CFE27D3D-8A1A-43F9-9387-8FD9E119E174} = {CB9D65DC-D75D-44CB-B297-6E7C3298B744}
 		{D65594C8-EA2E-46CA-A756-B1634EDC3AE3} = {CB9D65DC-D75D-44CB-B297-6E7C3298B744}
 		{081DB7CC-206C-47E2-A57D-DF7C4D2D4B13} = {CB9D65DC-D75D-44CB-B297-6E7C3298B744}
+		{AD40CE88-276B-45BF-9736-7180730E7281} = {CB9D65DC-D75D-44CB-B297-6E7C3298B744}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E77BC609-6569-4F74-9DA0-A15172F583B2}
