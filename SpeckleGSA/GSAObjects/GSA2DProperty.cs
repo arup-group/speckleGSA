@@ -17,57 +17,34 @@ namespace SpeckleGSA
 
         public string GWACommand { get; set; }
         public List<string> SubGWACommand { get; set; }
-
-        #region Contructors and Converters
-        public GSA2DProperty()
-        {
-            GWACommand = "";
-            SubGWACommand = new List<string>();
-            IsAxisLocal = false;
-        }
-
-        public GSA2DProperty(Structural2DProperty baseClass)
-        {
-            GWACommand = "";
-            SubGWACommand = new List<string>();
-            IsAxisLocal = false;
-
-            foreach (FieldInfo f in baseClass.GetType().GetFields())
-                f.SetValue(this, f.GetValue(baseClass));
-
-            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
-                p.SetValue(this, p.GetValue(baseClass));
-        }
-        #endregion
-
-        #region GSA Functions
-        public static bool GetObjects(Dictionary<Type, List<object>> dict)
+        
+        #region Sending Functions
+        public static bool GetObjects(Dictionary<Type, List<IGSAObject>> dict)
         {
             if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
-                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<object>();
+                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<IGSAObject>();
 
-            List<object> props = new List<object>();
+            List<GSA2DProperty> props = new List<GSA2DProperty>();
+            List<GSAMaterial> mats = dict[typeof(GSAMaterial)].Cast<GSAMaterial>().ToList();
 
-            string[] lines = GSA.GetGWAGetCommands("GET_ALL,PROP_2D");
-            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL,PROP_2D");
+            string[] lines = GSA.GetGWAGetCommands("GET_ALL,PROP_SEC");
+            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL,PROP_SEC");
 
             // Remove deleted lines
-            dict[typeof(GSA2DProperty)].RemoveAll(l => deletedLines.Contains(((IGSAObject)l).GWACommand));
-            foreach (KeyValuePair<Type, List<object>> kvp in dict)
-                kvp.Value.RemoveAll(l => ((IGSAObject)l).SubGWACommand.Any(x => deletedLines.Contains(x)));
+            dict[typeof(GSA2DProperty)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
+            foreach (KeyValuePair<Type, List<IGSAObject>> kvp in dict)
+                kvp.Value.RemoveAll(l => l.SubGWACommand.Any(x => deletedLines.Contains(x)));
 
             // Filter only new lines
-            string[] prevLines = dict[typeof(GSA2DProperty)].Select(l => ((GSA2DProperty)l).GWACommand).ToArray();
+            string[] prevLines = dict[typeof(GSA2DProperty)].Select(l => l.GWACommand).ToArray();
             string[] newLines = lines.Where(l => !prevLines.Contains(l)).ToArray();
-            
+
             foreach (string p in newLines)
             {
-                GSA2DProperty prop = new GSA2DProperty();
-                prop.ParseGWACommand(p, dict);
-
+                GSA2DProperty prop = ParseGWACommand(p, mats);
                 props.Add(prop);
             }
-            
+
             dict[typeof(GSA2DProperty)].AddRange(props);
 
             if (props.Count() > 0 || deletedLines.Length > 0) return true;
@@ -75,100 +52,82 @@ namespace SpeckleGSA
             return false;
         }
 
-        public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
+        public static GSA2DProperty ParseGWACommand(string command, List<GSAMaterial> materials)
         {
-            if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType)) return;
+            GSA2DProperty ret = new Structural2DProperty() as GSA2DProperty;
 
-            List<StructuralObject> props = dict[typeof(GSA2DProperty)];
-            
-            double counter = 1;
-            foreach (StructuralObject p in props)
-            {
-                if (GSARefCounters.RefObject(p) != 0)
-                {
-                    p.Reference = 0;
-                    GSARefCounters.RefObject(p);
-                }
-
-                GSA.RunGWACommand((p as GSA2DProperty).GetGWACommand(dict));
-                Status.ChangeStatus("Writing 2D properties", counter++ / props.Count() * 100);
-            }
-        }
-
-        public void ParseGWACommand(string command, Dictionary<Type, List<object>> dict = null)
-        {
-            GWACommand = command;
+            ret.GWACommand = command;
 
             string[] pieces = command.ListSplit(",");
+
             int counter = 1; // Skip identifier
-            Reference = Convert.ToInt32(pieces[counter++]);
-            Name = pieces[counter++].Trim(new char[] { '"' });
+            ret.StructuralID = pieces[counter++];
+            ret.Name = pieces[counter++].Trim(new char[] { '"' });
             counter++; // Color
             counter++; // Type
-            IsAxisLocal = pieces[counter++] == "LOCAL"; // Axis
+            ret.IsAxisLocal = pieces[counter++] == "LOCAL"; // Axis
             counter++; // Analysis material
-
             string materialType = pieces[counter++];
-            string materialTypeEnum;
+            StructuralMaterialType materialTypeEnum = StructuralMaterialType.Generic;
             if (materialType == "STEEL")
-                materialTypeEnum = StructuralMaterialType.STEEL;
+                materialTypeEnum = StructuralMaterialType.Steel;
             else if (materialType == "CONCRETE")
-                materialTypeEnum = StructuralMaterialType.CONCRETE;
-            else
-                materialTypeEnum = StructuralMaterialType.GENERIC;
+                materialTypeEnum = StructuralMaterialType.Concrete;
             int materialGrade = Convert.ToInt32(pieces[counter++]);
 
-            if (dict.ContainsKey(typeof(GSAMaterial)))
+            if (materials != null)
             {
-                List<object> materials = dict[typeof(GSAMaterial)];
-                GSAMaterial matchingMaterial = materials.Cast<GSAMaterial>().Where(m => m.LocalReference == materialGrade & m.Type == materialTypeEnum).FirstOrDefault();
-                Material = matchingMaterial == null ? 1 : matchingMaterial.Reference;
+                GSAMaterial matchingMaterial = materials.Where(m => m.LocalReference == materialGrade & m.MaterialType == materialTypeEnum).FirstOrDefault();
+                ret.MaterialRef = matchingMaterial == null ? null : matchingMaterial.StructuralID;
                 if (matchingMaterial != null)
-                    SubGWACommand.Add(matchingMaterial.GWACommand);
+                    ret.SubGWACommand.Add(matchingMaterial.GWACommand);
             }
             else
-                Material = 1;
+                ret.MaterialRef = null;
 
-            counter++; // Design property
-            Thickness = Convert.ToDouble(pieces[counter++]);
-
+            counter++; // Analysis material
+            ret.Thickness = Convert.ToDouble(pieces[counter++]);
             // Ignore the rest
+
+            return ret;
+        }
+        #endregion
+
+        #region Receiving Functions
+        public static void SetObjects(Dictionary<Type, List<IStructural>> dict)
+        {
+            if (!dict.ContainsKey(typeof(Structural2DProperty))) return;
+
+            foreach (IStructural obj in dict[typeof(Structural2DProperty)])
+            {
+                Set(obj as Structural2DProperty);
+            }
         }
 
-        public string GetGWACommand(Dictionary<Type, List<StructuralObject>> dict = null)
+        public static void Set(Structural2DProperty prop)
         {
+            if (prop == null)
+                return;
+
+            string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+
+            int index = Indexer.ResolveIndex(keyword, prop);
+            int materialRef = Indexer.ResolveIndex(typeof(GSAMaterial).GetGSAKeyword(), prop.MaterialRef);
+
             List<string> ls = new List<string>();
 
             ls.Add("SET");
-            ls.Add((string)this.GetAttribute("GSAKeyword"));
-            ls.Add(Reference.ToString());
-            ls.Add(Name);
+            ls.Add(keyword);
+            ls.Add(index.ToString());
+            ls.Add(prop.Name);
             ls.Add("NO_RGB");
             ls.Add("SHELL");
             ls.Add("GLOBAL");
             ls.Add("0"); // Analysis material
-
-            if (dict.ContainsKey(typeof(GSAMaterial)))
-            {
-                GSAMaterial matchingMaterial = dict[typeof(GSAMaterial)].Cast<GSAMaterial>().Where(m => m.Reference == Material).FirstOrDefault();
-                if (matchingMaterial != null)
-                {
-                    if (matchingMaterial.Type == StructuralMaterialType.STEEL)
-                        ls.Add("STEEL");
-                    else if (matchingMaterial.Type == StructuralMaterialType.CONCRETE)
-                        ls.Add("CONCRETE");
-                    else
-                        ls.Add("GENERAL");
-                }
-                else
-                    ls.Add("");
-            }
-            else
-                ls.Add("");
-
-            ls.Add(Material.ToString());
+            ls.Add(GetMaterialType(materialRef));
+            ls.Add(materialRef.ToString());
             ls.Add("1"); // Design
-            ls.Add(Thickness.ToString());
+            ls.Add(prop.Thickness.ToString());
             ls.Add("CENTROID"); // Reference point
             ls.Add("0"); // Ref_z
             ls.Add("0"); // Mass
@@ -178,7 +137,19 @@ namespace SpeckleGSA
             ls.Add("100%"); // Weight modifier
             ls.Add("NO_ENV"); // Environmental data
 
-            return string.Join(",", ls);
+            GSA.RunGWACommand(string.Join(",", ls));
+        }
+
+        public static string GetMaterialType(int materialRef)
+        {
+            // Steel
+            if ((string)GSA.RunGWACommand("GET,MAT_STEEL.3" + materialRef.ToString()) != string.Empty) return "STEEL";
+
+            // Concrete
+            if ((string)GSA.RunGWACommand("GET,MAT_CONCRETE.16" + materialRef.ToString()) != string.Empty) return "CONCRETE";
+
+            // Default
+            return "GENERAL";
         }
         #endregion
     }

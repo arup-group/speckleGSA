@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using Interop.Gsa_10_0;
 using SpeckleStructuresClasses;
+using SpeckleCore;
+using SpeckleCoreGeometryClasses;
 using System.Reflection;
 
 namespace SpeckleGSA
@@ -15,53 +17,34 @@ namespace SpeckleGSA
     {
         public string GWACommand { get; set; }
         public List<string> SubGWACommand { get; set; }
-
-        #region Contructors and Converters
-        public GSA1DProperty()
-        {
-            GWACommand = "";
-            SubGWACommand = new List<string>();
-        }
-
-        public GSA1DProperty(Structural1DProperty baseClass)
-        {
-            GWACommand = "";
-            SubGWACommand = new List<string>();
-            foreach (FieldInfo f in baseClass.GetType().GetFields())
-                f.SetValue(this, f.GetValue(baseClass));
-
-            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
-                p.SetValue(this, p.GetValue(baseClass));
-        }
-        #endregion
-
-        #region GSA Functions
-        public static bool GetObjects(Dictionary<Type, List<object>> dict)
+        
+        #region Sending Functions
+        public static bool GetObjects(Dictionary<Type, List<IGSAObject>> dict)
         {
             if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
-                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<object>();
-            
-            List<object> props = new List<object>();
+                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<IGSAObject>();
+
+            List<GSA1DProperty> props = new List<GSA1DProperty>();
+            List<GSAMaterial> mats = dict[typeof(GSAMaterial)].Cast<GSAMaterial>().ToList();
 
             string[] lines = GSA.GetGWAGetCommands("GET_ALL,PROP_SEC");
             string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL,PROP_SEC");
 
             // Remove deleted lines
-            dict[typeof(GSA1DProperty)].RemoveAll(l => deletedLines.Contains(((IGSAObject)l).GWACommand));
-            foreach (KeyValuePair<Type, List<object>> kvp in dict)
-                kvp.Value.RemoveAll(l => ((IGSAObject)l).SubGWACommand.Any(x => deletedLines.Contains(x)));
+            dict[typeof(GSA1DProperty)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
+            foreach (KeyValuePair<Type, List<IGSAObject>> kvp in dict)
+                kvp.Value.RemoveAll(l => l.SubGWACommand.Any(x => deletedLines.Contains(x)));
 
             // Filter only new lines
-            string[] prevLines = dict[typeof(GSA1DProperty)].Select(l => ((GSA1DProperty)l).GWACommand).ToArray();
+            string[] prevLines = dict[typeof(GSA1DProperty)].Select(l => l.GWACommand).ToArray();
             string[] newLines = lines.Where(l => !prevLines.Contains(l)).ToArray();
-            
+
             foreach (string p in newLines)
             {
-                GSA1DProperty prop = new GSA1DProperty();
-                prop.ParseGWACommand(p, dict);
+                GSA1DProperty prop = ParseGWACommand(p, mats);
                 props.Add(prop);
             }
-            
+
             dict[typeof(GSA1DProperty)].AddRange(props);
 
             if (props.Count() > 0 || deletedLines.Length > 0) return true;
@@ -69,118 +52,115 @@ namespace SpeckleGSA
             return false;
         }
 
-        public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
+        public static GSA1DProperty ParseGWACommand(string command, List<GSAMaterial> materials)
         {
-            if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType)) return;
+            GSA1DProperty ret = new Structural1DProperty() as GSA1DProperty;
 
-            List<StructuralObject> props = dict[typeof(GSA1DProperty)];
-            
-            double counter = 1;
-            foreach (StructuralObject p in props)
-            {
-                if (GSARefCounters.RefObject(p) != 0)
-                {
-                    p.Reference = 0;
-                    GSARefCounters.RefObject(p);
-                }
-
-                GSA.RunGWACommand((p as GSA1DProperty).GetGWACommand(dict));
-                Status.ChangeStatus("Writing 1D properties", counter++ / props.Count() * 100);
-            }
-        }
-
-        public void ParseGWACommand(string command, Dictionary<Type, List<object>> dict = null)
-        {
-            GWACommand = command;
+            ret.GWACommand = command;
 
             string[] pieces = command.ListSplit(",");
-            int counter = 1; // Skip identifier
-            Reference = Convert.ToInt32(pieces[counter++]);
-            Name = pieces[counter++].Trim(new char[] { '"' });
-            counter++; // Color
 
+            int counter = 1; // Skip identifier
+            ret.StructuralID = pieces[counter++];
+            ret.Name = pieces[counter++].Trim(new char[] { '"' });
+            counter++; // Color
             string materialType = pieces[counter++];
-            string materialTypeEnum;
+            StructuralMaterialType materialTypeEnum = StructuralMaterialType.Generic;
             if (materialType == "STEEL")
-                materialTypeEnum = StructuralMaterialType.STEEL;
+                materialTypeEnum = StructuralMaterialType.Steel;
             else if (materialType == "CONCRETE")
-                materialTypeEnum = StructuralMaterialType.CONCRETE;
-            else
-                materialTypeEnum = StructuralMaterialType.GENERIC;
+                materialTypeEnum = StructuralMaterialType.Concrete;
             int materialGrade = Convert.ToInt32(pieces[counter++]);
 
-            if (dict.ContainsKey(typeof(GSAMaterial)))
+            if (materials != null)
             {
-                List<object> materials = dict[typeof(GSAMaterial)];
-                GSAMaterial matchingMaterial = materials.Cast<GSAMaterial>().Where(m => m.LocalReference == materialGrade & m.Type == materialTypeEnum).FirstOrDefault();
-                Material = matchingMaterial == null ? 0 : matchingMaterial.Reference;
+                GSAMaterial matchingMaterial = materials.Where(m => m.LocalReference == materialGrade & m.MaterialType == materialTypeEnum).FirstOrDefault();
+                ret.MaterialRef = matchingMaterial == null ? null : matchingMaterial.StructuralID;
                 if (matchingMaterial != null)
-                    SubGWACommand.Add(matchingMaterial.GWACommand);
+                    ret.SubGWACommand.Add(matchingMaterial.GWACommand);
             }
             else
-                Material = 0;
+                ret.MaterialRef = null;
 
             counter++; // Analysis material
-            SetDesc(pieces[counter++]);
+            ret = SetDesc(ret, pieces[counter++]);
             counter++; // Cost
+            
+            return ret;
+        }
+        #endregion
+
+        #region Receiving Functions
+        public static void SetObjects(Dictionary<Type, List<IStructural>> dict)
+        {
+            if (!dict.ContainsKey(typeof(Structural1DProperty))) return;
+
+            foreach (IStructural obj in dict[typeof(Structural1DProperty)])
+            {
+                Set(obj as Structural1DProperty);
+            }
         }
 
-        public string GetGWACommand(Dictionary<Type, List<StructuralObject>> dict = null)
+        public static void Set(Structural1DProperty prop)
         {
+            if (prop == null)
+                return;
+
+            if (prop.Profile == null)
+                return;
+
+            string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+
+            int index = Indexer.ResolveIndex(keyword, prop);
+            int materialRef = Indexer.ResolveIndex(typeof(GSAMaterial).GetGSAKeyword(), prop.MaterialRef);
+
             List<string> ls = new List<string>();
 
             ls.Add("SET");
-            ls.Add((string)this.GetAttribute("GSAKeyword"));
-            ls.Add(Reference.ToString());
-            ls.Add(Name);
+            ls.Add(keyword);
+            ls.Add(index.ToString());
+            ls.Add(prop.Name);
             ls.Add("NO_RGB");
-
-            if (dict.ContainsKey(typeof(GSAMaterial)))
-            {
-                GSAMaterial matchingMaterial = dict[typeof(GSAMaterial)].Cast<GSAMaterial>().Where(m => m.Reference == Material).FirstOrDefault();
-                if (matchingMaterial != null)
-                {
-                    if (matchingMaterial.Type == StructuralMaterialType.STEEL)
-                        ls.Add("STEEL");
-                    else if (matchingMaterial.Type == StructuralMaterialType.CONCRETE)
-                        ls.Add("CONCRETE");
-                    else
-                        ls.Add("UNDEF");
-                }
-                else
-                    ls.Add("UNDEF");
-            }
-            else
-                ls.Add("UNDEF");
-            ls.Add(Material.ToString());
+            ls.Add(GetMaterialType(materialRef));
+            ls.Add(materialRef.ToString());
             ls.Add("0"); // Analysis material
-            ls.Add(GetGeometryDesc());
+            ls.Add(GetGSADesc(prop));
             ls.Add("0"); // Cost
 
-            return string.Join(",", ls);
+            GSA.RunGWACommand(string.Join(",", ls));
+        }
+
+        public static string GetMaterialType(int materialRef)
+        {
+            // Steel
+            if ((string)GSA.RunGWACommand("GET,MAT_STEEL.3" + materialRef.ToString()) != string.Empty) return "STEEL";
+
+            // Concrete
+            if ((string)GSA.RunGWACommand("GET,MAT_CONCRETE.16" + materialRef.ToString()) != string.Empty) return "CONCRETE";
+
+            // Default
+            return "UNDEF";
         }
         #endregion
 
         #region Helper Functions
-        public void SetDesc(string desc)
+        public static GSA1DProperty SetDesc(GSA1DProperty prop, string desc)
         {
             string[] pieces = desc.ListSplit("%");
 
             switch (pieces[0])
             {
                 case "STD":
-                    SetStandardDesc(desc);
-                    return;
+                    return SetStandardDesc(prop, desc);
                 case "GEO":
-                    SetGeometryDesc(desc);
-                    return;
+                    return SetStandardDesc(prop, desc);
                 default:
-                    SetStandardDesc("STD%C%100");
-                    return;
+                    Status.AddError("Unsupported profile type " + pieces[0] + ".");
+                    return prop;
             }
         }
 
-        public void SetStandardDesc(string desc)
+        public static GSA1DProperty SetStandardDesc(GSA1DProperty prop, string desc)
         {
             string[] pieces = desc.ListSplit("%");
 
@@ -192,13 +172,13 @@ namespace SpeckleGSA
                 // Rectangle
                 double height = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
                 double width = Convert.ToDouble(pieces[3]).ConvertUnit(unit, GSA.Units);
-                Coordinates = new Coordinates(new double[] {
+                prop.Profile = new SpecklePolyline(new double[] {
                     width /2, height/2 , 0,
                     -width/2, height/2 , 0,
                     -width/2, -height/2 , 0,
                     width/2, -height/2 , 0});
-                Shape = Structural1DPropertyShape.RECTANGULAR;
-                Hollow = false;
+                prop.Shape = Structural1DPropertyShape.Rectangular;
+                prop.Hollow = false;
             }
             else if (pieces[1] == "RHS")
             {
@@ -207,46 +187,42 @@ namespace SpeckleGSA
                 double width = Convert.ToDouble(pieces[3]).ConvertUnit(unit, GSA.Units);
                 double t1 = Convert.ToDouble(pieces[4]).ConvertUnit(unit, GSA.Units);
                 double t2 = Convert.ToDouble(pieces[5]).ConvertUnit(unit, GSA.Units);
-                Coordinates = new Coordinates(new double[] {
+                prop.Profile = new SpecklePolyline(new double[] {
                     width /2, height/2 , 0,
                     -width/2, height/2 , 0,
                     -width/2, -height/2 , 0,
                     width/2, -height/2 , 0});
-                Shape = Structural1DPropertyShape.RECTANGULAR;
-                Hollow = true;
-                Thickness = (t1 + t2) / 2; // TODO: Takes average thickness
+                prop.Shape = Structural1DPropertyShape.Rectangular;
+                prop.Hollow = true;
+                prop.Thickness = (t1 + t2) / 2; // TODO: Takes average thickness
             }
             else if (pieces[1] == "C")
             {
                 // Circle
                 double diameter = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
-                List<double> coor = new List<double>();
-                for (int i = 0; i < 360; i += 10)
-                {
-                    coor.Add(diameter / 2 * Math.Cos(i.ToRadians()));
-                    coor.Add(diameter / 2 * Math.Sin(i.ToRadians()));
-                    coor.Add(0);
-                }
-                Coordinates = new Coordinates(coor.ToArray());
-                Shape = Structural1DPropertyShape.CIRCULAR;
-                Hollow = false;
+                prop.Profile = new SpeckleCircle(
+                    new SpecklePlane(new SpecklePoint(0, 0, 0),
+                        new SpeckleVector(0, 0, 1),
+                        new SpeckleVector(1, 0, 0),
+                        new SpeckleVector(0, 1, 0)),
+                    diameter / 2);
+                prop.Shape = Structural1DPropertyShape.Circular;
+                prop.Hollow = false;
             }
             else if (pieces[1] == "CHS")
             {
                 // Hollow Circle
                 double diameter = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
                 double t = Convert.ToDouble(pieces[3]).ConvertUnit(unit, GSA.Units);
-                List<double> coor = new List<double>();
-                for (int i = 0; i < 360; i += 10)
-                {
-                    coor.Add(diameter / 2 * Math.Cos(i.ToRadians()));
-                    coor.Add(diameter / 2 * Math.Sin(i.ToRadians()));
-                    coor.Add(0);
-                }
-                Coordinates = new Coordinates(coor.ToArray());
-                Shape = Structural1DPropertyShape.CIRCULAR;
-                Hollow = true;
-                Thickness = t;
+                prop.Profile = new SpeckleCircle(
+                    new SpecklePlane(new SpecklePoint(0, 0, 0),
+                        new SpeckleVector(0, 0, 1),
+                        new SpeckleVector(1, 0, 0),
+                        new SpeckleVector(0, 1, 0)),
+                    diameter / 2);
+                prop.Shape = Structural1DPropertyShape.Circular;
+                prop.Hollow = true;
+                prop.Thickness = t;
             }
             else if (pieces[1] == "I")
             {
@@ -256,7 +232,7 @@ namespace SpeckleGSA
                 double webThickness = Convert.ToDouble(pieces[4]).ConvertUnit(unit, GSA.Units);
                 double flangeThickness = Convert.ToDouble(pieces[5]).ConvertUnit(unit, GSA.Units);
 
-                Coordinates = new Coordinates(new double[] {
+                prop.Profile = new SpecklePolyline(new double[] {
                     webThickness/2, depth/2 - flangeThickness, 0,
                     width/2, depth/2 - flangeThickness, 0,
                     width/2, depth/2, 0,
@@ -269,8 +245,8 @@ namespace SpeckleGSA
                     width/2, -depth/2, 0,
                     width/2, -(depth/2 - flangeThickness), 0,
                     webThickness/2, -(depth/2 - flangeThickness), 0});
-                Shape = Structural1DPropertyShape.I;
-                Hollow = false;
+                prop.Shape = Structural1DPropertyShape.I;
+                prop.Hollow = false;
             }
             else if (pieces[1] == "T")
             {
@@ -280,7 +256,7 @@ namespace SpeckleGSA
                 double webThickness = Convert.ToDouble(pieces[4]).ConvertUnit(unit, GSA.Units);
                 double flangeThickness = Convert.ToDouble(pieces[5]).ConvertUnit(unit, GSA.Units);
 
-                Coordinates = new Coordinates(new double[] {
+                prop.Profile = new SpecklePolyline(new double[] {
                     webThickness/2, - flangeThickness, 0,
                     width/2, - flangeThickness, 0,
                     width/2, 0, 0,
@@ -289,8 +265,8 @@ namespace SpeckleGSA
                     -webThickness/2, - flangeThickness, 0,
                     -webThickness/2, -depth, 0,
                     webThickness/2, -depth, 0});
-                Shape = Structural1DPropertyShape.T;
-                Hollow = false;
+                prop.Shape = Structural1DPropertyShape.T;
+                prop.Hollow = false;
             }
             else if (pieces[1] == "CH")
             {
@@ -300,7 +276,7 @@ namespace SpeckleGSA
                 double webThickness = Convert.ToDouble(pieces[4]).ConvertUnit(unit, GSA.Units);
                 double flangeThickness = Convert.ToDouble(pieces[5]).ConvertUnit(unit, GSA.Units);
 
-                Coordinates = new Coordinates(new double[] {
+                prop.Profile = new SpecklePolyline(new double[] {
                     webThickness, depth/2 - flangeThickness, 0,
                     width, depth/2 - flangeThickness, 0,
                     width, depth/2, 0,
@@ -309,8 +285,8 @@ namespace SpeckleGSA
                     width, -depth/2, 0,
                     width, -(depth/2 - flangeThickness), 0,
                     webThickness, -(depth/2 - flangeThickness), 0});
-                Shape = Structural1DPropertyShape.GENERIC;
-                Hollow = false;
+                prop.Shape = Structural1DPropertyShape.Generic;
+                prop.Hollow = false;
             }
             else if (pieces[1] == "A")
             {
@@ -320,15 +296,15 @@ namespace SpeckleGSA
                 double webThickness = Convert.ToDouble(pieces[4]).ConvertUnit(unit, GSA.Units);
                 double flangeThickness = Convert.ToDouble(pieces[5]).ConvertUnit(unit, GSA.Units);
 
-                Coordinates = new Coordinates(new double[] {
+                prop.Profile = new SpecklePolyline(new double[] {
                     0, 0, 0,
                     width, 0, 0,
                     width, flangeThickness, 0,
                     webThickness, flangeThickness, 0,
                     webThickness, depth, 0,
                     0, depth, 0});
-                Shape = Structural1DPropertyShape.GENERIC;
-                Hollow = false;
+                prop.Shape = Structural1DPropertyShape.Generic;
+                prop.Hollow = false;
             }
             else if (pieces[1] == "TR")
             {
@@ -336,13 +312,13 @@ namespace SpeckleGSA
                 double depth = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
                 double topWidth = Convert.ToDouble(pieces[3]).ConvertUnit(unit, GSA.Units);
                 double bottomWidth = Convert.ToDouble(pieces[4]).ConvertUnit(unit, GSA.Units);
-                Coordinates = new Coordinates(new double[] {
+                prop.Profile = new SpecklePolyline(new double[] {
                     topWidth /2, depth/2 , 0,
                     -topWidth/2, depth/2 , 0,
                     -bottomWidth/2, -depth/2 , 0,
                     bottomWidth/2, -depth/2 , 0});
-                Shape = Structural1DPropertyShape.GENERIC;
-                Hollow = false;
+                prop.Shape = Structural1DPropertyShape.Generic;
+                prop.Hollow = false;
             }
             else if (pieces[1] == "E")
             {
@@ -364,27 +340,20 @@ namespace SpeckleGSA
                     coor.Add(radius * Math.Sin(i.ToRadians()));
                     coor.Add(0);
                 }
-                Coordinates = new Coordinates(coor.ToArray());
-                Shape = Structural1DPropertyShape.GENERIC;
-                Hollow = false;
+                prop.Profile = new SpecklePolyline(coor.ToArray());
+                prop.Shape = Structural1DPropertyShape.Generic;
+                prop.Hollow = false;
             }
             else
             {
                 // TODO: IMPLEMENT ALL SECTIONS
-                Status.AddError("Section " + Name + " of type " + pieces[1] + " is unsupported.");
-                Coordinates = new Coordinates(new double[]
-                {
-                    0, 0, 0,
-                    0, 0, 0,
-                    0, 0, 0,
-                    0, 0, 0,
-                });
-                Shape = Structural1DPropertyShape.GENERIC;
-                Hollow = false;
+                Status.AddError("Section " + prop.Name + " of type " + pieces[1] + " is unsupported.");
             }
+
+            return prop;
         }
 
-        public void SetGeometryDesc(string desc)
+        public static GSA1DProperty SetGeometryDesc(GSA1DProperty prop, string desc)
         {
             string[] pieces = desc.ListSplit("%");
 
@@ -406,131 +375,120 @@ namespace SpeckleGSA
                     coor.Add(0);
                 }
 
-                Coordinates = new Coordinates(coor.ToArray());
-                Shape = Structural1DPropertyShape.GENERIC;
-                Hollow = false;
+                prop.Profile = new SpecklePolyline(coor.ToArray());
+                prop.Shape = Structural1DPropertyShape.Generic;
+                prop.Hollow = false;
+                return prop;
             }
             else
             {
                 // TODO: IMPLEMENT ALL SECTIONS
-                Status.AddError("Section " + Name + " of type " + pieces[1] + " is unsupported.");
-                Coordinates = new Coordinates(new double[]
-                {
-                    0, 0, 0,
-                    0, 0, 0,
-                    0, 0, 0,
-                    0, 0, 0,
-                });
-                Shape = Structural1DPropertyShape.GENERIC;
-                Hollow = false;
+                Status.AddError("Section " + prop.Name + " of type " + pieces[1] + " is unsupported.");
+                return prop;
             }
         }
 
-        public string GetGeometryDesc()
+        public static string GetGSADesc(Structural1DProperty prop)
         {
-            if (Coordinates.Count() == 0) return "";
-
-            if (Shape == Structural1DPropertyShape.CIRCULAR)
+            if (prop.Profile == null)
             {
-                if (Hollow)
-                {
-                    if (GSA.Units == "mm")
-                        return "STD%CHS%" + (Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()).ToString() + "%" + Thickness.ToString();
-                    else
-                        return "STD%CHS(" + GSA.Units + ")%" + (Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()).ToString() + "%" + Thickness.ToString();
-                }
-                else
-                {
-                    if (GSA.Units == "mm")
-                        return "STD%C%" + (Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()).ToString();
-                    else
-                        return "STD%C(" + GSA.Units + ")%" + (Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()).ToString();
-                }
+                Status.AddError("Invalid profile for " + prop.Name);
+                return "";
             }
-            else if (Shape == Structural1DPropertyShape.RECTANGULAR)
+
+            if (prop.Profile is SpeckleCircle)
             {
-                if (Hollow)
-                {
-                    if (GSA.Units == "mm")
-                        return "STD%RHS%" + (Coordinates.Values.Select(v => v.Y).Max() - Coordinates.Values.Select(v => v.Y).Min()).ToString() + "%" + (Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()).ToString() + "%" + Thickness.ToString();
-                    else
-                        return "STD%RHS(" + GSA.Units + ")%" + (Coordinates.Values.Select(v => v.Y).Max() - Coordinates.Values.Select(v => v.Y).Min()).ToString() + "%" + (Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()).ToString() + "%" + Thickness.ToString();
-                }
+                if (prop.Shape != Structural1DPropertyShape.Circular)
+                    Status.AddError("Inconsistent profile and shape for " + prop.Name + ". Profile used.");
+
+                SpeckleCircle profile = prop.Profile as SpeckleCircle;
+
+                if (prop.Hollow)
+                    return "STD%CHS(" + GSA.Units + ")%" + (profile.Radius * 2).ToString() + "%" + prop.Thickness.ToString();
                 else
-                {
-                    if (GSA.Units == "mm")
-                        return "STD%R%" + (Coordinates.Values.Select(v => v.Y).Max() - Coordinates.Values.Select(v => v.Y).Min()).ToString() + "%" + (Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()).ToString();
-                    else
-                        return "STD%R(" + GSA.Units + ")%" + (Coordinates.Values.Select(v => v.Y).Max() - Coordinates.Values.Select(v => v.Y).Min()).ToString() + "%" + (Coordinates.Values.Select(v => v.X).Max() - Coordinates.Values.Select(v => v.X).Min()).ToString();
-                }
+                    return "STD%C(" + GSA.Units + ")%" + (profile.Radius * 2).ToString();
             }
-            else if (Shape == Structural1DPropertyShape.I)
+
+            if (prop.Profile is SpecklePolyline)
             {
-                List<double> xCoor = Coordinates.Values.Select(v => v.X).Distinct().ToList();
-                List<double> yCoor = Coordinates.Values.Select(v => v.Y).Distinct().ToList();
-
-                xCoor.Sort();
-                yCoor.Sort();
-
-                if (xCoor.Count() == 4 && yCoor.Count() == 4)
+                List<double> X = (prop.Profile as SpecklePolyline).Value.Where((x, i) => i % 3 == 0).ToList();
+                List<double> Y = (prop.Profile as SpecklePolyline).Value.Where((x, i) => i % 3 == 1).ToList();
+                if (prop.Shape == Structural1DPropertyShape.Circular)
                 {
-                    double width = xCoor.Max() - xCoor.Min();
-                    double depth = yCoor.Max() - yCoor.Min();
-                    double T = yCoor[3] - yCoor[2];
-                    double t = xCoor[2] - xCoor[1];
-
-                    if (GSA.Units == "mm")
-                        return "STD%I%" + depth.ToString() + "%" + width.ToString() + "%" + T.ToString() + "%" + t.ToString();
+                    if (prop.Hollow)
+                        return "STD%CHS(" + GSA.Units + ")%" + (X.Max() - X.Min()).ToString() + "%" + prop.Thickness.ToString();
                     else
+                        return "STD%C(" + GSA.Units + ")%" + (X.Max() - X.Min()).ToString();
+                }
+                else if (prop.Shape == Structural1DPropertyShape.Rectangular)
+                {
+                    if (prop.Hollow)
+                        return "STD%RHS(" + GSA.Units + ")%" + (Y.Max() - Y.Min()).ToString() + "%" + (X.Max() - X.Min()).ToString() + "%" + prop.Thickness.ToString();
+                    else
+                        return "STD%R(" + GSA.Units + ")%" + (Y.Max() - Y.Min()).ToString() + "%" + (X.Max() - X.Min()).ToString();
+                }
+                else if (prop.Shape == Structural1DPropertyShape.I)
+                {
+                    X.Sort();
+                    Y.Sort();
+
+                    if (X.Count() == 4 && Y.Count() == 4)
+                    {
+                        double width = X.Max() - X.Min();
+                        double depth = Y.Max() - Y.Min();
+                        double T = Y[3] - Y[2];
+                        double t = X[2] - X[1];
+                        
                         return "STD%I(" + GSA.Units + ")%" + depth.ToString() + "%" + width.ToString() + "%" + T.ToString() + "%" + t.ToString();
+                    }
                 }
-            }
-            else if (Shape == Structural1DPropertyShape.T)
-            {
-                List<double> xCoor = Coordinates.Values.Select(v => v.X).Distinct().ToList();
-                List<double> yCoor = Coordinates.Values.Select(v => v.Y).Distinct().ToList();
+                else if (prop.Shape == Structural1DPropertyShape.T)
+                {
+                    X.Sort();
+                    Y.Sort();
 
-                xCoor.Sort();
-                yCoor.Sort();
-
-                if (xCoor.Count() == 4 && yCoor.Count() == 3)
-                { 
-                    double width = xCoor.Max() - xCoor.Min();
-                    double depth = yCoor.Max() - yCoor.Min();
-                    double T = yCoor[2] - yCoor[1];
-                    double t = xCoor[2] - xCoor[1];
-
-                    if (GSA.Units == "mm")
-                        return "STD%T%" + depth.ToString() + "%" + width.ToString() + "%" + T.ToString() + "%" + t.ToString();
-                    else
+                    if (X.Count() == 4 && Y.Count() == 3)
+                    {
+                        double width = X.Max() - X.Min();
+                        double depth = Y.Max() - Y.Min();
+                        double T = Y[2] - Y[1];
+                        double t = X[2] - X[1];
+                        
                         return "STD%T(" + GSA.Units + ")%" + depth.ToString() + "%" + width.ToString() + "%" + T.ToString() + "%" + t.ToString();
+                    }
                 }
+                else if(prop.Shape == Structural1DPropertyShape.Generic)
+                {
+                }
+                else
+                {
+                    Status.AddError("Unrecognized section " + prop.Name + " added as perimeter desc.");
+                }
+
+                if (X.Count() < 3 || Y.Count() < 3) return "";
+
+                List<string> ls = new List<string>();
+
+                ls.Add("GEO");
+                if (GSA.Units == "mm")
+                    ls.Add("P");
+                else
+                    ls.Add("P(" + GSA.Units + ")");
+
+                for (int i = 0; i < X.Count(); i++)
+                {
+                    string point = i == 0 ? "M" : "L";
+
+                    point += "(" + X[i].ToString() + "|" + Y[i].ToString() + ")";
+
+                    ls.Add(point);
+                }
+
+                return string.Join("%", ls);
             }
-            else
-            {
-                Status.AddError("Section " + Name + " added as perimeter desc.");
-            }
 
-            if (Coordinates.Count() < 3) return "";
-
-            List<string> ls = new List<string>();
-
-            ls.Add("GEO");
-            if (GSA.Units == "mm")
-                ls.Add("P");
-            else
-                ls.Add("P(" + GSA.Units + ")");
-
-            for (int i = 0; i < Coordinates.Count(); i++)
-            {
-                string point = i == 0 ? "M" : "L";
-
-                point += "(" + Coordinates.Values[i].X.ToString() + "|" + Coordinates.Values[i].Y.ToString() + ")";
-
-                ls.Add(point);
-            }
-
-            return string.Join("%", ls);
+            Status.AddError("Invalid profile for " + prop.Name);
+            return "";
         }
         #endregion
     }
