@@ -12,144 +12,84 @@ namespace SpeckleGSA
     [GSAObject("EL.3", "elements", true, false, new Type[] { typeof(GSANode) }, new Type[] { typeof(GSA1DProperty) })]
     public class GSA1DElement : Structural1DElement, IGSAObject
     {
-        public int PolylineReference;
-
         public string GWACommand { get; set; }
         public List<string> SubGWACommand { get; set; }
-
-        #region Contructors and Converters
-        public GSA1DElement()
-        {
-            GWACommand = "";
-            SubGWACommand = new List<string>();
-            PolylineReference = 0;
-        }
         
-        public GSA1DElement(Structural1DElement baseClass)
-        {
-            GWACommand = "";
-            SubGWACommand = new List<string>();
-            PolylineReference = 0;
-
-            foreach (FieldInfo f in baseClass.GetType().GetFields())
-                f.SetValue(this, f.GetValue(baseClass));
-
-            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
-                p.SetValue(this, p.GetValue(baseClass));
-        }
-        #endregion
-
-        #region GSA Functions
-        public static bool GetObjects(Dictionary<Type, List<object>> dict)
+        #region Sending Functions
+        public static bool GetObjects(Dictionary<Type, List<IGSAObject>> dict)
         {
             if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
-                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<object>();
+                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<IGSAObject>();
 
-            if (!GSA.TargetAnalysisLayer) return false;
-
-            List<object> e1Ds = new List<object>();
+            List<GSA1DElement> elements = new List<GSA1DElement>();
+            List<GSANode> nodes = dict[typeof(GSANode)].Cast<GSANode>().ToList();
 
             string[] lines = GSA.GetGWAGetCommands("GET_ALL,EL");
             string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL,EL");
 
             // Remove deleted lines
-            dict[typeof(GSA1DElement)].RemoveAll(l => deletedLines.Contains(((IGSAObject)l).GWACommand));
-            foreach(KeyValuePair<Type, List<object>> kvp in dict)
-                kvp.Value.RemoveAll(l => ((IGSAObject)l).SubGWACommand.Any(x => deletedLines.Contains(x)));
+            dict[typeof(GSA1DElement)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
+            foreach (KeyValuePair<Type, List<IGSAObject>> kvp in dict)
+                kvp.Value.RemoveAll(l => l.SubGWACommand.Any(x => deletedLines.Contains(x)));
 
             // Filter only new lines
-            string[] prevLines = dict[typeof(GSA1DElement)].Select(l => ((GSA1DElement)l).GWACommand).ToArray();
+            string[] prevLines = dict[typeof(GSA1DElement)].Select(l => l.GWACommand).ToArray();
             string[] newLines = lines.Where(l => !prevLines.Contains(l)).ToArray();
 
-            List<object> nodes = dict[typeof(GSANode)];
-            
             foreach (string p in newLines)
             {
                 string[] pPieces = p.ListSplit(",");
                 if (pPieces[4].ParseElementNumNodes() == 2)
                 {
-                    GSA1DElement e1D = new GSA1DElement();
-                    e1D.ParseGWACommand(p, dict);
-                    e1Ds.Add(e1D);
+                    GSA1DElement element = ParseGWACommand(p, nodes);
+                    elements.Add(element);
                 }
             }
 
-            dict[typeof(GSA1DElement)].AddRange(e1Ds);
+            dict[typeof(GSA1DElement)].AddRange(elements);
 
-            if (e1Ds.Count() > 0 || deletedLines.Length > 0) return true;
+            if (elements.Count() > 0 || deletedLines.Length > 0) return true;
 
             return false;
         }
 
-        public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
+        public static GSA1DElement ParseGWACommand(string command, List<GSANode> nodes)
         {
-            if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
-                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<StructuralObject>();
+            GSA1DElement ret = new Structural1DElement() as GSA1DElement;
 
-            List<StructuralObject> e1Ds = dict[typeof(GSA1DElement)];
-
-            double counter = 1;
-            foreach (StructuralObject e in e1Ds)
-            {
-                int currRef = e.Reference;
-                if (GSARefCounters.RefObject(e) != 0)
-                {
-                    e.Reference = 0;
-                    GSARefCounters.RefObject(e);
-                    if (dict.ContainsKey(typeof(GSA1DLoad)))
-                    {
-                        foreach (StructuralObject o in dict[typeof(GSA1DLoad)])
-                        {
-                            if ((o as GSA1DLoad).Elements.Contains(currRef))
-                            {
-                                (o as GSA1DLoad).Elements.Remove(currRef);
-                                (o as GSA1DLoad).Elements.Add(e.Reference);
-                            }
-                        }
-                    }
-                }
-
-                GSA.RunGWACommand((e as GSA1DElement).GetGWACommand());
-
-                Status.ChangeStatus("Writing 1D elements", counter++ / e1Ds.Count() * 100);
-            }
-        }
-
-        public void ParseGWACommand(string command, Dictionary<Type, List<object>> dict = null)
-        {
-            GWACommand = command;
+            ret.GWACommand = command;
 
             string[] pieces = command.ListSplit(",");
 
             int counter = 1; // Skip identifier
-            Reference = Convert.ToInt32(pieces[counter++]);
-            Name = pieces[counter++].Trim(new char[] { '"' });
+            ret.StructuralID = pieces[counter++];
+            ret.Name = pieces[counter++].Trim(new char[] { '"' });
             counter++; // Colour
             counter++; // Type
-            Property = Convert.ToInt32(pieces[counter++]);
+            ret.PropertyRef = pieces[counter++];
             counter++; // Group
 
-            Coordinates = new Coordinates();
+            ret.Value = new List<double>();
             for (int i = 0; i < 2; i++)
             {
-                int key = Convert.ToInt32(pieces[counter++]);
-                GSANode node = dict[typeof(GSANode)].Cast<GSANode>().Where(n => n.Reference == key).FirstOrDefault();
-                Coordinates.Add(node.Coordinates);
-                SubGWACommand.Add(node.GWACommand);
+                string key = pieces[counter++];
+                GSANode node = nodes.Where(n => n.StructuralID == key).FirstOrDefault();
+                ret.Value.AddRange(node.Value);
+                ret.SubGWACommand.Add(node.GWACommand);
             }
 
-            int orientationNodeRef = Convert.ToInt32(pieces[counter++]);
+            string orientationNodeRef = pieces[counter++];
             double rotationAngle = Convert.ToDouble(pieces[counter++]);
 
-            if (orientationNodeRef != 0)
+            if (orientationNodeRef != "0")
             {
-                GSANode node = dict[typeof(GSANode)].Cast<GSANode>().Where(n => n.Reference == orientationNodeRef).FirstOrDefault();
-                Axis = HelperFunctions.Parse1DAxis(Coordinates.ToArray(),
-                    rotationAngle, node.Coordinates.ToArray());
-                SubGWACommand.Add(node.GWACommand);
+                GSANode node = nodes.Where(n => n.StructuralID == orientationNodeRef).FirstOrDefault();
+                ret.ZAxis = HelperFunctions.Parse1DAxis(ret.Value.ToArray(),
+                    rotationAngle, node.Value.ToArray()).Normal as StructuralVectorThree;
+                ret.SubGWACommand.Add(node.GWACommand);
             }
             else
-                Axis = HelperFunctions.Parse1DAxis(Coordinates.ToArray(), rotationAngle);
+                ret.ZAxis = HelperFunctions.Parse1DAxis(ret.Value.ToArray(), rotationAngle).Normal as StructuralVectorThree;
 
 
             if (pieces[counter++] != "NO_RLS")
@@ -157,122 +97,157 @@ namespace SpeckleGSA
                 string start = pieces[counter++];
                 string end = pieces[counter++];
 
-                EndCondition1.X = ParseEndRelease(start[0], pieces, ref counter);
-                EndCondition1.Y = ParseEndRelease(start[1], pieces, ref counter);
-                EndCondition1.Z = ParseEndRelease(start[2], pieces, ref counter);
-                EndCondition1.XX = ParseEndRelease(start[3], pieces, ref counter);
-                EndCondition1.YY = ParseEndRelease(start[4], pieces, ref counter);
-                EndCondition1.ZZ = ParseEndRelease(start[5], pieces, ref counter);
-                EndCondition2.X = ParseEndRelease(end[0], pieces, ref counter);
-                EndCondition2.Y = ParseEndRelease(end[1], pieces, ref counter);
-                EndCondition2.Z = ParseEndRelease(end[2], pieces, ref counter);
-                EndCondition2.XX = ParseEndRelease(end[3], pieces, ref counter);
-                EndCondition2.YY = ParseEndRelease(end[4], pieces, ref counter);
-                EndCondition2.ZZ = ParseEndRelease(end[5], pieces, ref counter);
+                ret.EndRelease = new List<StructuralVectorBoolSix>();
+                ret.EndRelease.Add(new StructuralVectorBoolSix(new bool[6]));
+                ret.EndRelease.Add(new StructuralVectorBoolSix(new bool[6]));
+
+                ret.EndRelease[0].Value[0] = ParseEndRelease(start[0], pieces, ref counter);
+                ret.EndRelease[0].Value[1] = ParseEndRelease(start[1], pieces, ref counter);
+                ret.EndRelease[0].Value[2] = ParseEndRelease(start[2], pieces, ref counter);
+                ret.EndRelease[0].Value[3] = ParseEndRelease(start[3], pieces, ref counter);
+                ret.EndRelease[0].Value[4] = ParseEndRelease(start[4], pieces, ref counter);
+                ret.EndRelease[0].Value[5] = ParseEndRelease(start[5], pieces, ref counter);
+
+                ret.EndRelease[1].Value[0] = ParseEndRelease(start[0], pieces, ref counter);
+                ret.EndRelease[1].Value[1] = ParseEndRelease(start[1], pieces, ref counter);
+                ret.EndRelease[1].Value[2] = ParseEndRelease(start[2], pieces, ref counter);
+                ret.EndRelease[1].Value[3] = ParseEndRelease(start[3], pieces, ref counter);
+                ret.EndRelease[1].Value[4] = ParseEndRelease(start[4], pieces, ref counter);
+                ret.EndRelease[1].Value[5] = ParseEndRelease(start[5], pieces, ref counter);
             }
 
-            Offset1.X = Convert.ToDouble(pieces[counter++]);
-            Offset2.X = Convert.ToDouble(pieces[counter++]);
+            ret.Offset = new List<StructuralVectorThree>();
+            ret.Offset.Add(new StructuralVectorThree(new double[3]));
+            ret.Offset.Add(new StructuralVectorThree(new double[3]));
 
-            Offset1.Y = Convert.ToDouble(pieces[counter++]);
-            Offset2.Y = Offset1.Y;
+            ret.Offset[0].Value[0] = Convert.ToDouble(pieces[counter++]);
+            ret.Offset[1].Value[0] = Convert.ToDouble(pieces[counter++]);
 
-            Offset1.Z = Convert.ToDouble(pieces[counter++]);
-            Offset2.Z = Offset1.Z;
+            ret.Offset[0].Value[1] = Convert.ToDouble(pieces[counter++]);
+            ret.Offset[1].Value[1] = ret.Offset[0].Value[1];
+
+            ret.Offset[0].Value[2] = Convert.ToDouble(pieces[counter++]);
+            ret.Offset[1].Value[2] = ret.Offset[0].Value[2];
 
             //counter++; // Action // TODO: EL.4 SUPPORT
             counter++; // Dummy
+
+            return ret;
+        }
+        #endregion
+
+        #region Receiving Functions
+        public static void SetObjects(Dictionary<Type, List<IStructural>> dict)
+        {
+            if (!dict.ContainsKey(typeof(Structural1DElement))) return;
+
+            foreach (IStructural obj in dict[typeof(Structural1DElement)])
+            {
+                Set(obj as Structural1DElement);
+            }
         }
 
-        public string GetGWACommand(Dictionary<Type, List<StructuralObject>> dict = null)
+        public static void Set(Structural1DElement element)
         {
+            if (element == null)
+                return;
+
+            string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+
+            int index = Indexer.ResolveIndex(keyword, element);
+            int propRef = Indexer.ResolveIndex(typeof(GSA1DProperty).GetGSAKeyword(), element.PropertyRef);
+
             List<string> ls = new List<string>();
 
             ls.Add("SET");
-            ls.Add((string)this.GetAttribute("GSAKeyword"));
-            ls.Add(Reference.ToString());
-            ls.Add(Name);
+            ls.Add(keyword);
+            ls.Add(index.ToString());
+            ls.Add(element.Name);
             ls.Add("NO_RGB");
             ls.Add("BEAM"); // Type
-            ls.Add(Property.ToString());
+            ls.Add(propRef.ToString());
             ls.Add("0"); // Group
-            foreach (ThreeVectorDouble coor in Coordinates.Values)
-                ls.Add(GSA.NodeAt(coor.X, coor.Y, coor.Z).ToString());
-
+            for (int i = 0; i < element.Value.Count(); i += 3)
+                ls.Add(GSA.NodeAt(element.Value[i], element.Value[i+1], element.Value[i+2]).ToString());
             ls.Add("0"); // Orientation Node
-            ls.Add(HelperFunctions.Get1DAngle(Axis).ToString());
-            
-            if (EndCondition1 != new SixVectorBool() || EndCondition2 != new SixVectorBool())
+            ls.Add(HelperFunctions.Get1DAngle(element.Value.ToArray(), element.ZAxis).ToString());
+
+            try
             {
-                ls.Add("RLS");
+                List<string> subLs = new List<string>();
+                if (element.EndRelease[1].Value.Any(x => x) || element.EndRelease[2].Value.Any(x => x))
+                {
+                    subLs.Add("RLS");
 
-                string end1 = "";
+                    string end1 = "";
 
-                end1 += EndCondition1.X ? "F" : "R";
-                end1 += EndCondition1.Y ? "F" : "R";
-                end1 += EndCondition1.Z ? "F" : "R";
-                end1 += EndCondition1.XX ? "F" : "R";
-                end1 += EndCondition1.YY ? "F" : "R";
-                end1 += EndCondition1.ZZ ? "F" : "R";
+                    end1 += element.EndRelease[1].Value[0] ? "R" : "F";
+                    end1 += element.EndRelease[1].Value[1] ? "R" : "F";
+                    end1 += element.EndRelease[1].Value[2] ? "R" : "F";
+                    end1 += element.EndRelease[1].Value[3] ? "R" : "F";
+                    end1 += element.EndRelease[1].Value[4] ? "R" : "F";
+                    end1 += element.EndRelease[1].Value[5] ? "R" : "F";
 
-                ls.Add(end1);
+                    subLs.Add(end1);
 
-                string end2 = "";
+                    string end2 = "";
 
-                end2 += EndCondition2.X ? "F" : "R";
-                end2 += EndCondition2.Y ? "F" : "R";
-                end2 += EndCondition2.Z ? "F" : "R";
-                end2 += EndCondition2.XX ? "F" : "R";
-                end2 += EndCondition2.YY ? "F" : "R";
-                end2 += EndCondition2.ZZ ? "F" : "R";
+                    end1 += element.EndRelease[2].Value[0] ? "R" : "F";
+                    end1 += element.EndRelease[2].Value[1] ? "R" : "F";
+                    end1 += element.EndRelease[2].Value[2] ? "R" : "F";
+                    end1 += element.EndRelease[2].Value[3] ? "R" : "F";
+                    end1 += element.EndRelease[2].Value[4] ? "R" : "F";
+                    end1 += element.EndRelease[2].Value[5] ? "R" : "F";
 
-                ls.Add(end2);
+                    subLs.Add(end2);
 
+                    ls.AddRange(subLs);
+                }
+                else
+                    ls.Add("NO_RLS");
             }
-            else
-                ls.Add("NO_RLS");
+            catch { ls.Add("NO_RLS"); }
 
-            ls.Add(Offset1.X.ToString()); // Offset x-start
-            ls.Add(Offset2.X.ToString()); // Offset x-end
+            try
+            {
+                List<string> subLs = new List<string>();
+                subLs.Add(element.Offset[0].Value[0].ToString()); // Offset x-start
+                subLs.Add(element.Offset[1].Value[0].ToString()); // Offset x-end
 
-            ls.Add(Offset1.Y.ToString());
-            ls.Add(Offset1.Z.ToString());
+                subLs.Add(element.Offset[0].Value[1].ToString());
+                subLs.Add(element.Offset[0].Value[2].ToString());
+
+                ls.AddRange(subLs);
+            }
+            catch
+            {
+                ls.Add("0");
+                ls.Add("0");
+                ls.Add("0");
+                ls.Add("0");
+            }
 
             //ls.Add("NORMAL"); // Action // TODO: EL.4 SUPPORT
             ls.Add(""); // Dummy
 
-            return string.Join(",", ls);
+            GSA.RunGWACommand(string.Join(",", ls));
         }
         #endregion
 
         #region Helper Functions
-        public List<StructuralObject> GetChildren()
-        {
-            List<StructuralObject> children = new List<StructuralObject>();
-
-            for (int i = 0; i < Coordinates.Count(); i++)
-            {
-                GSANode n = new GSANode();
-                n.Coordinates = new Coordinates(Coordinates.Values[i].ToArray());
-                children.Add(n);
-            }
-
-            return children;
-        }
-
-        private bool ParseEndRelease(char code, string[] pieces, ref int counter)
+        private static bool ParseEndRelease(char code, string[] pieces, ref int counter)
         {
             switch (code)
             {
                 case 'F':
-                    return true;
-                case 'R':
                     return false;
+                case 'R':
+                    return true;
                 default:
                     // TODO
                     Status.AddError("Element end stiffness not supported. Only releases.");
                     counter++;
-                    return false;
+                    return true;
             }
         }
         #endregion
