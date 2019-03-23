@@ -465,6 +465,20 @@ namespace SpeckleGSA
             Color col = Color.FromKnownColor((KnownColor)Enum.Parse(typeof(KnownColor), colStr));
             return col.R + col.G * 256 + col.B * 256 * 256;
         }
+
+        public static int ToSpeckleColor(this int color)
+        {
+            return Color.FromArgb(255,
+                           (int)color % 256,
+                           ((int)color / 256) % 256,
+                           ((int)color / 256 / 256) % 256).ToArgb();
+        }
+
+        public static int ToHexColor(this int color)
+        {
+            Color col = Color.FromArgb(color);
+            return col.R + col.G * 256 + col.B * 256 * 256;
+        }
         #endregion
 
         #region Axis
