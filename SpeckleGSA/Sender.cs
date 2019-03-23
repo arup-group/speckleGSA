@@ -40,14 +40,14 @@ namespace SpeckleGSA
             // Initialize object read priority list
             IEnumerable<Type> objTypes = typeof(GSA)
                 .Assembly.GetTypes()
-                .Where(t => t.IsSubclassOf(typeof(StructuralObject)) && !t.IsAbstract);
+                .Where(t => t.IsSubclassOf(typeof(IStructural)) && !t.IsAbstract);
 
             Status.ChangeStatus("Preparing to read GSA Objects");
 
             foreach (Type t in objTypes)
             {
                 if (t.GetMethod("GetObjects",
-                    new Type[] { typeof(Dictionary<Type, List<object>>) }) == null)
+                    new Type[] { typeof(Dictionary<Type, List<IStructural>>) }) == null)
                     continue;
 
                 if (t.GetAttribute("Stream") == null) continue;
@@ -150,7 +150,7 @@ namespace SpeckleGSA
             }
 
             // Convert objects to base class
-            Dictionary<Type, List<StructuralObject>> convertedBucket = new Dictionary<Type, List<StructuralObject>>();
+            Dictionary<Type, List<IStructural>> convertedBucket = new Dictionary<Type, List<IStructural>>();
             foreach (KeyValuePair<Type, List<object>> kvp in SenderObjectCache)
             {
                 if ((kvp.Key == typeof(GSANode)) && Settings.SendOnlyMeaningfulNodes && SenderObjectCache.ContainsKey(typeof(GSANode)))
@@ -158,15 +158,15 @@ namespace SpeckleGSA
                     // Remove unimportant nodes
                     convertedBucket[kvp.Key] = kvp.Value
                         .Where(n => (n as GSANode).ForceSend ||
-                        !(n as GSANode).Restraint.Equals(new SixVectorBool()) ||
-                        !(n as GSANode).Stiffness.Equals(new SixVectorDouble()) ||
+                        (n as GSANode).Restraint.Value.Any(x => x) ||
+                        (n as GSANode).Stiffness.Value.Any(x => x == 0) ||
                         (n as GSANode).Mass > 0)
-                        .Select(x => x.GetBase()).Cast<StructuralObject>().ToList();
+                        .Select(x => x.GetBase()).Cast<IStructural>().ToList();
                 }
                 else
                 {
                     convertedBucket[kvp.Key] = kvp.Value.Select(
-                        x => x.GetBase()).Cast<StructuralObject>().ToList();
+                        x => x.GetBase()).Cast<IStructural>().ToList();
                 }
             }
 
@@ -175,7 +175,7 @@ namespace SpeckleGSA
 
             Status.ChangeStatus("Preparing stream buckets");
 
-            foreach (KeyValuePair<Type, List<StructuralObject>> kvp in convertedBucket)
+            foreach (KeyValuePair<Type, List<IStructural>> kvp in convertedBucket)
             {
                 string stream;
 

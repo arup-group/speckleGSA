@@ -90,7 +90,7 @@ namespace SpeckleGSA
                 counter++; // Move to name field of basic MAT definition
             }
             else
-                ret.MaterialType = StructuralMaterialType.GENERIC;
+                ret.MaterialType = StructuralMaterialType.Generic;
 
             ret.Grade = pieces[counter++].Trim(new char[] { '"' }); // TODO: Using name as grade
 

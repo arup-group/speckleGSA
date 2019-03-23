@@ -41,11 +41,11 @@ namespace SpeckleGSA
             myReceiver.OnWsMessage += OnWsMessage;
         }
         
-        public List<object> GetGSAObjects()
+        public List<SpeckleObject> GetStructuralObjects()
         {
             UpdateGlobal();
 
-            return Converter.Deserialise(myReceiver.Stream.Objects);
+            return myReceiver.Stream.Objects;
         }
 
         public void OnWsMessage( object source, SpeckleEventArgs e)

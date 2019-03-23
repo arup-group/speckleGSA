@@ -93,7 +93,7 @@ namespace SpeckleGSA
         {
             return structuralID.Select(s => ResolveIndex(keywordGSA, s, type)).ToList();
         }
-
+        
         public static void ReserveIndices(string keywordGSA, List<int> refs)
         {
             if (!indexUsed.ContainsKey(keywordGSA))
