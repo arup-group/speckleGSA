@@ -35,23 +35,38 @@ namespace SpeckleGSA
             return counter[keywordGSA]++;
         }
 
-        public static int ResolveIndex(string keywordGSA)
+        public static int ResolveIndex(Type type)
         {
-            return ResolveIndex(keywordGSA, string.Empty);
+            return ResolveIndex(type.GetGSAKeyword(), string.Empty, type.Name);
         }
 
-        public static int ResolveIndex(string keywordGSA, IStructural obj)
+        public static int ResolveIndex(Type type, IStructural obj)
         {
-            return ResolveIndex(keywordGSA, obj.StructuralID);
+            return ResolveIndex(type.GetGSAKeyword(), obj.StructuralID, type.Name);
         }
 
-        public static int ResolveIndex(string keywordGSA, string structuralID)
+        public static int ResolveIndex(Type type, string structuralID)
+        {
+            return ResolveIndex(type.GetGSAKeyword(), structuralID, type.Name);
+        }
+
+        public static int ResolveIndex(string keywordGSA, string type = "")
+        {
+            return ResolveIndex(keywordGSA, string.Empty, type);
+        }
+
+        public static int ResolveIndex(string keywordGSA, IStructural obj, string type = "")
+        {
+            return ResolveIndex(keywordGSA, obj.StructuralID, type);
+        }
+
+        public static int ResolveIndex(string keywordGSA, string structuralID, string type = "")
         {
             // If no ID set, return next one but do not store.
             if (structuralID == null || structuralID == string.Empty)
                 return NextIndex(keywordGSA);
 
-            string key = keywordGSA + ":" + structuralID;
+            string key = keywordGSA + ":" + type + ":" + structuralID;
 
             if (!indexMap.ContainsKey(key))
                 indexMap[key] = NextIndex(keywordGSA);
@@ -59,14 +74,24 @@ namespace SpeckleGSA
             return indexMap[key];
         }
 
-        public static List<int> ResolveIndices(string keywordGSA, List<IStructural> objects)
+        public static List<int> ResolveIndices(Type type, List<IStructural> objects)
         {
-            return objects.Select(o => ResolveIndex(keywordGSA, o)).ToList();
+            return objects.Select(o => ResolveIndex(type, o)).ToList();
         }
 
-        public static List<int> ResolveIndices(string keywordGSA, List<string> structuralID)
+        public static List<int> ResolveIndices(Type type, List<string> structuralID)
         {
-            return structuralID.Select(s => ResolveIndex(keywordGSA, s)).ToList();
+            return structuralID.Select(s => ResolveIndex(type, s)).ToList();
+        }
+
+        public static List<int> ResolveIndices(string keywordGSA, List<IStructural> objects, string type = "")
+        {
+            return objects.Select(o => ResolveIndex(keywordGSA, o, type)).ToList();
+        }
+
+        public static List<int> ResolveIndices(string keywordGSA, List<string> structuralID, string type = "")
+        {
+            return structuralID.Select(s => ResolveIndex(keywordGSA, s, type)).ToList();
         }
 
         public static void ReserveIndices(string keywordGSA, List<int> refs)
