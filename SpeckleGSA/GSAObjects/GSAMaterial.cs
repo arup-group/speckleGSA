@@ -118,7 +118,7 @@ namespace SpeckleGSA
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
 
-            int index = Indexer.ResolveIndex(keyword, mat);
+            int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType, mat);
 
             // TODO: This function barely works.
             List<string> ls = new List<string>();

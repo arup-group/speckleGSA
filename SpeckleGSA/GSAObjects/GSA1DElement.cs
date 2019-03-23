@@ -24,8 +24,10 @@ namespace SpeckleGSA
             List<GSA1DElement> elements = new List<GSA1DElement>();
             List<GSANode> nodes = dict[typeof(GSANode)].Cast<GSANode>().ToList();
 
-            string[] lines = GSA.GetGWAGetCommands("GET_ALL,EL");
-            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL,EL");
+            string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+
+            string[] lines = GSA.GetGWAGetCommands("GET_ALL," + keyword);
+            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL," + keyword);
 
             // Remove deleted lines
             dict[typeof(GSA1DElement)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
@@ -147,15 +149,15 @@ namespace SpeckleGSA
             }
         }
 
-        public static void Set(Structural1DElement element)
+        public static void Set(Structural1DElement element, int group = 0)
         {
             if (element == null)
                 return;
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
 
-            int index = Indexer.ResolveIndex(keyword, element);
-            int propRef = Indexer.ResolveIndex(typeof(GSA1DProperty).GetGSAKeyword(), element.PropertyRef);
+            int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType, element);
+            int propRef = Indexer.ResolveIndex(typeof(GSA1DProperty), element.PropertyRef);
 
             List<string> ls = new List<string>();
 
@@ -166,7 +168,7 @@ namespace SpeckleGSA
             ls.Add("NO_RGB");
             ls.Add("BEAM"); // Type
             ls.Add(propRef.ToString());
-            ls.Add("0"); // Group
+            ls.Add(group.ToString());
             for (int i = 0; i < element.Value.Count(); i += 3)
                 ls.Add(GSA.NodeAt(element.Value[i], element.Value[i+1], element.Value[i+2]).ToString());
             ls.Add("0"); // Orientation Node
@@ -175,11 +177,22 @@ namespace SpeckleGSA
             try
             {
                 List<string> subLs = new List<string>();
-                if (element.EndRelease[1].Value.Any(x => x) || element.EndRelease[2].Value.Any(x => x))
+                if (element.EndRelease[0].Value.Any(x => x) || element.EndRelease[1].Value.Any(x => x))
                 {
                     subLs.Add("RLS");
 
                     string end1 = "";
+
+                    end1 += element.EndRelease[0].Value[0] ? "R" : "F";
+                    end1 += element.EndRelease[0].Value[1] ? "R" : "F";
+                    end1 += element.EndRelease[0].Value[2] ? "R" : "F";
+                    end1 += element.EndRelease[0].Value[3] ? "R" : "F";
+                    end1 += element.EndRelease[0].Value[4] ? "R" : "F";
+                    end1 += element.EndRelease[0].Value[5] ? "R" : "F";
+
+                    subLs.Add(end1);
+
+                    string end2 = "";
 
                     end1 += element.EndRelease[1].Value[0] ? "R" : "F";
                     end1 += element.EndRelease[1].Value[1] ? "R" : "F";
@@ -187,17 +200,6 @@ namespace SpeckleGSA
                     end1 += element.EndRelease[1].Value[3] ? "R" : "F";
                     end1 += element.EndRelease[1].Value[4] ? "R" : "F";
                     end1 += element.EndRelease[1].Value[5] ? "R" : "F";
-
-                    subLs.Add(end1);
-
-                    string end2 = "";
-
-                    end1 += element.EndRelease[2].Value[0] ? "R" : "F";
-                    end1 += element.EndRelease[2].Value[1] ? "R" : "F";
-                    end1 += element.EndRelease[2].Value[2] ? "R" : "F";
-                    end1 += element.EndRelease[2].Value[3] ? "R" : "F";
-                    end1 += element.EndRelease[2].Value[4] ? "R" : "F";
-                    end1 += element.EndRelease[2].Value[5] ? "R" : "F";
 
                     subLs.Add(end2);
 

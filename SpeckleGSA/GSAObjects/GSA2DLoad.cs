@@ -29,8 +29,10 @@ namespace SpeckleGSA
             List<GSA2DElement> elements = GSA.TargetAnalysisLayer ? dict[typeof(GSA2DElement)].Cast<GSA2DElement>().ToList() : new List<GSA2DElement>();
             List<GSA2DMember> members = GSA.TargetDesignLayer ? dict[typeof(GSA2DMember)].Cast<GSA2DMember>().ToList() : new List<GSA2DMember>();
 
-            string[] lines = GSA.GetGWAGetCommands("GET_ALL,LOAD_2D_FACE");
-            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL,LOAD_2D_FACE");
+            string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+
+            string[] lines = GSA.GetGWAGetCommands("GET_ALL," + keyword);
+            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL," + keyword);
 
             // Remove deleted lines
             dict[typeof(GSA2DLoad)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
@@ -225,10 +227,17 @@ namespace SpeckleGSA
 
             int index = Indexer.ResolveIndex(keyword, load);
             List<int> elementRefs;
+            List<int> groupRefs;
             if (GSA.TargetAnalysisLayer)
+            { 
                 elementRefs = Indexer.ResolveIndices(typeof(GSA2DElement).GetGSAKeyword(), load.ElementRefs);
+                groupRefs = Indexer.ResolveIndices(typeof(GSA2DElementMesh).GetGSAKeyword(), load.ElementRefs);
+            }
             else
-                elementRefs = Indexer.ResolveIndices(typeof(GSA2DMember).GetGSAKeyword(), load.ElementRefs);
+            {
+                elementRefs = new List<int>();
+                groupRefs = Indexer.ResolveIndices(typeof(GSA2DMember).GetGSAKeyword(), load.ElementRefs);
+            }
             int loadCaseRef = Indexer.ResolveIndex(typeof(GSALoadCase).GetGSAKeyword(), load.LoadCaseRef);
 
             string[] direction = new string[3] { "X", "Y", "Z" };
@@ -244,10 +253,11 @@ namespace SpeckleGSA
                 ls.Add(keyword);
                 ls.Add(load.Name == null || load.Name == "" ? " " : load.Name);
                 // TODO: This is a hack.
-                if (GSA.TargetAnalysisLayer)
-                    ls.Add(string.Join(" ", elementRefs));
-                else if (GSA.TargetDesignLayer)
-                    ls.Add(string.Join(" ", elementRefs.Select(x => "G" + x)));
+                ls.Add(string.Join(
+                    " ",
+                    elementRefs.Cast<string>()
+                        .Concat(elementRefs.Cast<string>().Select(x => "G" + x))
+                ));
                 ls.Add(loadCaseRef.ToString());
                 ls.Add("GLOBAL"); // Axis
                 ls.Add("CONS"); // Type

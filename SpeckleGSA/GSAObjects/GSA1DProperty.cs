@@ -27,8 +27,10 @@ namespace SpeckleGSA
             List<GSA1DProperty> props = new List<GSA1DProperty>();
             List<GSAMaterial> mats = dict[typeof(GSAMaterial)].Cast<GSAMaterial>().ToList();
 
-            string[] lines = GSA.GetGWAGetCommands("GET_ALL,PROP_SEC");
-            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL,PROP_SEC");
+            string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+
+            string[] lines = GSA.GetGWAGetCommands("GET_ALL," + keyword);
+            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL," + keyword);
 
             // Remove deleted lines
             dict[typeof(GSA1DProperty)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
@@ -111,8 +113,8 @@ namespace SpeckleGSA
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
 
-            int index = Indexer.ResolveIndex(keyword, prop);
-            int materialRef = Indexer.ResolveIndex(typeof(GSAMaterial).GetGSAKeyword(), prop.MaterialRef);
+            int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType, prop);
+            int materialRef = Indexer.ResolveIndex(typeof(GSAMaterial), prop.MaterialRef);
 
             List<string> ls = new List<string>();
 

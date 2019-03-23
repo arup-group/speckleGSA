@@ -28,8 +28,10 @@ namespace SpeckleGSA
 
             List<GSANode> nodes = dict[typeof(GSANode)].Cast<GSANode>().ToList();
 
-            string[] lines = GSA.GetGWAGetCommands("GET_ALL,LOAD_NODE");
-            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL,LOAD_NODE");
+            string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+
+            string[] lines = GSA.GetGWAGetCommands("GET_ALL," + keyword);
+            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL," + keyword);
 
             // Remove deleted lines
             dict[typeof(GSA0DLoad)].RemoveAll(l => deletedLines.Contains(l.GWACommand));

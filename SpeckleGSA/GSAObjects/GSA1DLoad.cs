@@ -28,9 +28,11 @@ namespace SpeckleGSA
             List<GSA1DLoad> loads = new List<GSA1DLoad>();
             List<GSA1DElement> elements = GSA.TargetAnalysisLayer ? dict[typeof(GSA1DElement)].Cast<GSA1DElement>().ToList() : new List<GSA1DElement>();
             List<GSA1DMember> members = GSA.TargetDesignLayer ? dict[typeof(GSA1DMember)].Cast<GSA1DMember>().ToList() : new List<GSA1DMember>();
-            
-            string[] lines = GSA.GetGWAGetCommands("GET_ALL,LOAD_BEAM");
-            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL,LOAD_BEAM");
+
+            string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+
+            string[] lines = GSA.GetGWAGetCommands("GET_ALL," + keyword);
+            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL," + keyword);
 
             // Remove deleted lines
             dict[typeof(GSA1DLoad)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
@@ -305,11 +307,19 @@ namespace SpeckleGSA
 
             int index = Indexer.ResolveIndex(keyword, load);
             List<int> elementRefs;
+            List<int> groupRefs;
             if (GSA.TargetAnalysisLayer)
-                elementRefs = Indexer.ResolveIndices(typeof(GSA1DElement).GetGSAKeyword(), load.ElementRefs);
+            { 
+                elementRefs = Indexer.ResolveIndices(typeof(GSA1DElement), load.ElementRefs);
+                groupRefs = Indexer.ResolveIndices(typeof(GSA1DElementPolyline), load.ElementRefs);
+            }
             else
-                elementRefs = Indexer.ResolveIndices(typeof(GSA1DMember).GetGSAKeyword(), load.ElementRefs);
-            int loadCaseRef = Indexer.ResolveIndex(typeof(GSALoadCase).GetGSAKeyword(), load.LoadCaseRef);
+            {
+                elementRefs = new List<int>();
+                groupRefs = Indexer.ResolveIndices(typeof(GSA1DMember), load.ElementRefs);
+                groupRefs.AddRange(Indexer.ResolveIndices(typeof(GSA1DElementPolyline), load.ElementRefs));
+            }
+            int loadCaseRef = Indexer.ResolveIndex(typeof(GSALoadCase), load.LoadCaseRef);
 
             string[] direction = new string[6] { "X", "Y", "Z", "X", "Y", "Z" };
 
@@ -324,10 +334,11 @@ namespace SpeckleGSA
                 ls.Add("LOAD_BEAM_UDL"); // TODO: Only writes to UDL load
                 ls.Add(load.Name == null || load.Name == "" ? " " : load.Name);
                 // TODO: This is a hack.
-                if (GSA.TargetAnalysisLayer)
-                    ls.Add(string.Join(" ", elementRefs));
-                else if (GSA.TargetDesignLayer)
-                    ls.Add(string.Join(" ", elementRefs.Select(x => "G" + x)));
+                ls.Add(string.Join(
+                    " ",
+                    elementRefs.Cast<string>()
+                        .Concat(elementRefs.Cast<string>().Select(x => "G" + x))
+                ));
                 ls.Add(loadCaseRef.ToString());
                 ls.Add("GLOBAL"); // Axis
                 ls.Add("NO"); // Projected

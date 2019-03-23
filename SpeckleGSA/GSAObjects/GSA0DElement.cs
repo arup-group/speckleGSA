@@ -22,9 +22,11 @@ namespace SpeckleGSA
 
             List<GSANode> nodes = gsaObjects[typeof(GSANode)].Cast<GSANode>().ToList();
 
+            string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+
             // Read lines here
-            string[] lines = GSA.GetGWAGetCommands("GET_ALL,EL");
-            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL,EL");
+            string[] lines = GSA.GetGWAGetCommands("GET_ALL," + keyword);
+            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL," + keyword);
 
             // Filter only new lines
             string[] prevLines = gsaObjects[typeof(GSANode)].SelectMany(l => l.SubGWACommand).ToArray();
@@ -121,8 +123,8 @@ namespace SpeckleGSA
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
 
-            int index = Indexer.ResolveIndex(keyword);
-            int nodeRef = Indexer.ResolveIndex(typeof(GSANode).GetGSAKeyword(), node);
+            int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType);
+            int nodeRef = Indexer.ResolveIndex(typeof(GSANode), node);
 
             List<string> ls = new List<string>();
 

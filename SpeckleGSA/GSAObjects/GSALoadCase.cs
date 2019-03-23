@@ -22,8 +22,10 @@ namespace SpeckleGSA
 
             List<GSALoadCase> loadCases = new List<GSALoadCase>();
 
-            string[] lines = GSA.GetGWAGetCommands("GET_ALL,LOAD_TITLE");
-            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL,LOAD_TITLE");
+            string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+
+            string[] lines = GSA.GetGWAGetCommands("GET_ALL," + keyword);
+            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL," + keyword);
 
             // Remove deleted lines
             dict[typeof(GSALoadCase)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
@@ -110,7 +112,7 @@ namespace SpeckleGSA
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
 
-            int index = Indexer.ResolveIndex(keyword, loadCase);
+            int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType, loadCase);
 
             List<string> ls = new List<string>();
 
