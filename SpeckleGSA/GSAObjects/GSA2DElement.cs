@@ -11,7 +11,7 @@ using SpeckleStructuresClasses;
 namespace SpeckleGSA
 {
     [GSAObject("EL.3", "elements", true, false, new Type[] { typeof(GSANode), typeof(GSA2DProperty) }, new Type[] { typeof(GSA2DElementMesh) })]
-    public class GSA2DElement : Structural2DElement, IGSAObject
+    public class GSA2DElement : Structural2DElementMesh, IGSAObject
     {
         public int MeshReference;
 
