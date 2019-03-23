@@ -103,9 +103,9 @@ namespace SpeckleGSA
         #region Receiving Functions
         public static void SetObjects(Dictionary<Type, List<IStructural>> dict)
         {
-            if (!dict.ContainsKey(typeof(StructuralLoadCase))) return;
+            if (!dict.ContainsKey(typeof(StructuralMaterial))) return;
 
-            foreach (IStructural obj in dict[typeof(StructuralLoadCase)])
+            foreach (IStructural obj in dict[typeof(StructuralMaterial)])
             {
                 Set(obj as StructuralMaterial);
             }
