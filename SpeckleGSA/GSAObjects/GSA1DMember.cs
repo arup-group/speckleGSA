@@ -14,202 +14,167 @@ namespace SpeckleGSA
     public class GSA1DMember : Structural1DElement, IGSAObject
     {
         public int Group;
-        public int PolylineReference;
 
         public string GWACommand { get; set; }
         public List<string> SubGWACommand { get; set; }
-
-        #region Contructors and Converters
-        public GSA1DMember()
-        {
-            GWACommand = "";
-            SubGWACommand = new List<string>();
-            Group = 0;
-            PolylineReference = 0;
-        }
-
-        public GSA1DMember(Structural1DElement baseClass)
-        {
-            GWACommand = "";
-            SubGWACommand = new List<string>();
-            Group = 0;
-            PolylineReference = 0;
-
-            foreach (FieldInfo f in baseClass.GetType().GetFields())
-                f.SetValue(this, f.GetValue(baseClass));
-
-            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
-                p.SetValue(this, p.GetValue(baseClass));
-        }
-        #endregion
-
-        #region GSA Functions
-        public static bool GetObjects(Dictionary<Type, List<object>> dict)
+        
+        #region Sending Functions
+        public static bool GetObjects(Dictionary<Type, List<IGSAObject>> dict)
         {
             if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
-                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<object>();
+                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<IGSAObject>();
 
-            if (!GSA.TargetDesignLayer) return false;
+            List<GSA1DMember> members = new List<GSA1DMember>();
+            List<GSANode> nodes = dict[typeof(GSANode)].Cast<GSANode>().ToList();
 
-            List<object> m1Ds = new List<object>();
+            string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
 
-            string[] lines = GSA.GetGWAGetCommands("GET_ALL,MEMB");
-            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL,MEMB");
+            string[] lines = GSA.GetGWAGetCommands("GET_ALL," + keyword);
+            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL," + keyword);
 
             // Remove deleted lines
-            dict[typeof(GSA1DMember)].RemoveAll(l => deletedLines.Contains(((IGSAObject)l).GWACommand));
-            foreach (KeyValuePair<Type, List<object>> kvp in dict)
-                kvp.Value.RemoveAll(l => ((IGSAObject)l).SubGWACommand.Any(x => deletedLines.Contains(x)));
+            dict[typeof(GSA1DMember)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
+            foreach (KeyValuePair<Type, List<IGSAObject>> kvp in dict)
+                kvp.Value.RemoveAll(l => l.SubGWACommand.Any(x => deletedLines.Contains(x)));
 
             // Filter only new lines
-            string[] prevLines = dict[typeof(GSA1DMember)].Select(l => ((GSA1DMember)l).GWACommand).ToArray();
+            string[] prevLines = dict[typeof(GSA1DMember)].Select(l => l.GWACommand).ToArray();
             string[] newLines = lines.Where(l => !prevLines.Contains(l)).ToArray();
-            
+
             foreach (string p in newLines)
             {
                 string[] pPieces = p.ListSplit(",");
                 if (pPieces[4].MemberIs1D())
                 {
-                    GSA1DMember m1D = new GSA1DMember();
-                    m1D.ParseGWACommand(p, dict);
-                    m1Ds.Add(m1D);
+                    GSA1DMember member = ParseGWACommand(p, nodes);
+                    members.Add(member);
                 }
             }
 
-            dict[typeof(GSA1DMember)].AddRange(m1Ds);
+            dict[typeof(GSA1DMember)].AddRange(members);
 
-
-            if (m1Ds.Count() > 0 || deletedLines.Length > 0) return true;
+            if (members.Count() > 0 || deletedLines.Length > 0) return true;
 
             return false;
         }
 
-        public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
+        public static GSA1DMember ParseGWACommand(string command, List<GSANode> nodes)
         {
-            if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType)) return;
+            GSA1DMember ret = new Structural1DElement() as GSA1DMember;
 
-            List<StructuralObject> m1Ds = dict[typeof(GSA1DMember)];
-
-            double counter = 1;
-            foreach (StructuralObject m in m1Ds)
-            {
-                int currRef = m.Reference;
-                if (GSARefCounters.RefObject(m) != 0)
-                {
-                    m.Reference = 0;
-                    GSARefCounters.RefObject(m);
-                    if (dict.ContainsKey(typeof(GSA1DLoad)))
-                    {
-                        foreach (StructuralObject o in dict[typeof(GSA1DLoad)])
-                        {
-                            if ((o as GSA1DLoad).Elements.Contains(currRef))
-                            {
-                                (o as GSA1DLoad).Elements.Remove(currRef);
-                                (o as GSA1DLoad).Elements.Add(m.Reference);
-                            }
-                        }
-                    }
-                }
-
-                GSA.RunGWACommand((m as GSA1DMember).GetGWACommand());
-
-                Status.ChangeStatus("Writing 1D members", counter++ / m1Ds.Count() * 100);
-            }
-        }
-
-        public void ParseGWACommand(string command, Dictionary<Type, List<object>> dict = null)
-        {
-            GWACommand = command;
-
+            ret.GWACommand = command;
+            
             string[] pieces = command.ListSplit(",");
 
             int counter = 1; // Skip identifier
-            Reference = Convert.ToInt32(pieces[counter++]);
-            Name = pieces[counter++].Trim(new char[] { '"' });
+            ret.StructuralID = pieces[counter++];
+            ret.Name = pieces[counter++].Trim(new char[] { '"' });
             counter++; // Color
 
             string type = pieces[counter++];
             if (type == "BEAM")
-                Type = Structural1DElementType.BEAM;
+                ret.ElementType = Structural1DElementType.Beam;
             else if (type == "COLUMN")
-                Type = Structural1DElementType.COLUMN;
+                ret.ElementType = Structural1DElementType.Column;
             else if (type == "CANTILEVER")
-                Type = Structural1DElementType.CANTILEVER;
+                ret.ElementType = Structural1DElementType.Cantilever;
             else
-                Type = Structural1DElementType.GENERIC;
-            
-            Property = Convert.ToInt32(pieces[counter++]);
-            Group = Convert.ToInt32(pieces[counter++]); // Keep group for load targetting
+                ret.ElementType = Structural1DElementType.Generic;
 
-            List<double> coordinates = new List<double>();
+            ret.PropertyRef = pieces[counter++];
+            ret.Group = Convert.ToInt32(pieces[counter++]); // Keep group for load targetting
+
+            ret.Value = new List<double>();
             string[] nodeRefs = pieces[counter++].ListSplit(" ");
             for (int i = 0; i < nodeRefs.Length; i++)
             {
-                GSANode node = dict[typeof(GSANode)].Cast<GSANode>().Where(n => n.Reference == Convert.ToInt32(nodeRefs[i])).FirstOrDefault();
-                coordinates.AddRange(node.Coordinates.ToArray());
-                SubGWACommand.Add(node.GWACommand);
+                GSANode node = nodes.Where(n => n.StructuralID == nodeRefs[i]).FirstOrDefault();
+                ret.Value.AddRange(node.Value);
+                ret.SubGWACommand.Add(node.GWACommand);
             }
 
-            Coordinates = new Coordinates(coordinates.ToArray());
-            
-            int orientationNodeRef = Convert.ToInt32(pieces[counter++]);
+            string orientationNodeRef = pieces[counter++];
             double rotationAngle = Convert.ToDouble(pieces[counter++]);
 
-            if (orientationNodeRef != 0)
+            if (orientationNodeRef != "0")
             {
-                GSANode node = dict[typeof(GSANode)].Cast<GSANode>().Where(n => n.Reference == orientationNodeRef).FirstOrDefault();
-                Axis = HelperFunctions.Parse1DAxis(Coordinates.ToArray(),
-                    rotationAngle, node.Coordinates.ToArray());
-                SubGWACommand.Add(node.GWACommand);
+                GSANode node = nodes.Where(n => n.StructuralID == orientationNodeRef).FirstOrDefault();
+                ret.ZAxis = HelperFunctions.Parse1DAxis(ret.Value.ToArray(),
+                    rotationAngle, node.Value.ToArray()).Normal as StructuralVectorThree;
+                ret.SubGWACommand.Add(node.GWACommand);
             }
             else
-                Axis = HelperFunctions.Parse1DAxis(Coordinates.ToArray(), rotationAngle);
+                ret.ZAxis = HelperFunctions.Parse1DAxis(ret.Value.ToArray(), rotationAngle).Normal as StructuralVectorThree;
 
             counter += 9; //Skip to end conditions
 
-            EndCondition1 = ParseEndCondition(Convert.ToInt32(pieces[counter++]));
-            EndCondition2 = ParseEndCondition(Convert.ToInt32(pieces[counter++]));
+            ret.EndRelease = new List<StructuralVectorBoolSix>();
+            ret.EndRelease.Add(ParseEndReleases(Convert.ToInt32(pieces[counter++])));
+            ret.EndRelease.Add(ParseEndReleases(Convert.ToInt32(pieces[counter++])));
 
             // Skip to offsets at fifth to last
             counter = pieces.Length - 5;
-            Offset1.X = Convert.ToDouble(pieces[counter++]);
-            Offset2.X = Convert.ToDouble(pieces[counter++]);
+            ret.Offset = new List<StructuralVectorThree>();
+            ret.Offset.Add(new StructuralVectorThree(new double[3]));
+            ret.Offset.Add(new StructuralVectorThree(new double[3]));
 
-            Offset1.Y = Convert.ToDouble(pieces[counter++]);
-            Offset2.Y = Offset1.Y;
+            ret.Offset[0].Value[0] = Convert.ToDouble(pieces[counter++]);
+            ret.Offset[1].Value[0] = Convert.ToDouble(pieces[counter++]);
 
-            Offset1.Z = Convert.ToDouble(pieces[counter++]);
-            Offset2.Z = Offset1.Z;
+            ret.Offset[0].Value[1] = Convert.ToDouble(pieces[counter++]);
+            ret.Offset[1].Value[1] = ret.Offset[0].Value[1];
+
+            ret.Offset[0].Value[2] = Convert.ToDouble(pieces[counter++]);
+            ret.Offset[1].Value[2] = ret.Offset[0].Value[2];
+
+            return ret;
+        }
+        #endregion
+
+        #region Receiving Functions
+        public static void SetObjects(Dictionary<Type, List<IStructural>> dict)
+        {
+            if (!dict.ContainsKey(typeof(Structural1DElement))) return;
+
+            foreach (IStructural obj in dict[typeof(Structural1DElement)])
+            {
+                Set(obj as Structural1DElement);
+            }
         }
 
-        public string GetGWACommand(Dictionary<Type, List<StructuralObject>> dict = null)
+        public static void Set(Structural1DElement member, int group = 0)
         {
+            if (member == null)
+                return;
+
+            string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+
+            int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType, member);
+            int propRef = Indexer.ResolveIndex(typeof(GSA1DProperty), member.PropertyRef);
+
             List<string> ls = new List<string>();
 
             ls.Add("SET");
-            ls.Add((string)this.GetAttribute("GSAKeyword"));
-            ls.Add(Reference.ToString());
-            ls.Add(Name);
+            ls.Add(keyword);
+            ls.Add(index.ToString());
+            ls.Add(member.Name);
             ls.Add("NO_RGB");
-            if (Type == Structural1DElementType.BEAM)
+            if (member.ElementType == Structural1DElementType.Beam)
                 ls.Add("BEAM");
-            else if (Type == Structural1DElementType.COLUMN)
+            else if (member.ElementType == Structural1DElementType.Column)
                 ls.Add("COLUMN");
-            else if (Type == Structural1DElementType.CANTILEVER)
+            else if (member.ElementType == Structural1DElementType.Cantilever)
                 ls.Add("CANTILEVER");
             else
                 ls.Add("1D_GENERIC");
-            ls.Add(Property.ToString());
-            if (PolylineReference == 0)
-                ls.Add(Reference.ToString());
-            else
-                ls.Add(PolylineReference.ToString());  // TODO: This allows for targeting of elements from members group
+            ls.Add(propRef.ToString());
+            ls.Add(group != 0 ? group.ToString() : index.ToString()); // TODO: This allows for targeting of elements from members group
             string topo = "";
-            foreach (ThreeVectorDouble coor in Coordinates.Values)
-                topo += GSA.NodeAt(coor.X, coor.Y, coor.Z).ToString() + " ";
+            for (int i = 0; i < member.Value.Count(); i += 3)
+                topo += GSA.NodeAt(member.Value[i], member.Value[i + 1], member.Value[i + 2]).ToString() + " ";
             ls.Add(topo);
             ls.Add("0"); // Orientation node
-            ls.Add(HelperFunctions.Get1DAngle(Axis).ToString());
+            ls.Add(HelperFunctions.Get1DAngle(member.Value.ToArray(), member.ZAxis).ToString());
             ls.Add("1"); // Target mesh size
             ls.Add("MESH"); // TODO: What is this?
             ls.Add("BEAM"); // Element type
@@ -220,79 +185,89 @@ namespace SpeckleGSA
             ls.Add("0"); // TODO: What is this?
             ls.Add("ACTIVE"); // Dummy
 
-            if (EndCondition1.Equals(ParseEndCondition(1)))
-                ls.Add("1");
-            else if (EndCondition1.Equals(ParseEndCondition(2)))
-                ls.Add("2");
-            else if (EndCondition1.Equals(ParseEndCondition(3)))
-                ls.Add("3");
-            else
-                ls.Add("2");
+            try
+            { 
+                if (member.EndRelease[0].Equals(ParseEndReleases(1)))
+                    ls.Add("1");
+                else if (member.EndRelease[0].Equals(ParseEndReleases(2)))
+                    ls.Add("2");
+                else if (member.EndRelease[0].Equals(ParseEndReleases(3)))
+                    ls.Add("3");
+                else
+                    ls.Add("2");
+            }
+            catch { ls.Add("2"); }
 
-            if (EndCondition2.Equals(ParseEndCondition(1)))
-                ls.Add("1");
-            else if (EndCondition2.Equals(ParseEndCondition(2)))
-                ls.Add("2");
-            else if (EndCondition2.Equals(ParseEndCondition(3)))
-                ls.Add("3");
-            else
-                ls.Add("2");
+            try
+            {
+                if (member.EndRelease[1].Equals(ParseEndReleases(1)))
+                    ls.Add("1");
+                else if (member.EndRelease[1].Equals(ParseEndReleases(2)))
+                    ls.Add("2");
+                else if (member.EndRelease[1].Equals(ParseEndReleases(3)))
+                    ls.Add("3");
+                else
+                    ls.Add("2");
+            }
+            catch { ls.Add("2"); }
 
             ls.Add("AUTOMATIC"); // Effective length option
             ls.Add("0"); // Pool
             ls.Add("0"); // Height
             ls.Add("MAN"); // Auto offset 1
             ls.Add("MAN"); // Auto offset 2
-            ls.Add(Offset1.X.ToString()); // Offset x 1
-            ls.Add(Offset2.X.ToString()); // Offset x 2
-            ls.Add(Offset1.Y.ToString()); // Offset y
-            ls.Add(Offset1.Z.ToString()); // Offset z
+
+            try
+            {
+                List<string> subLs = new List<string>();
+                subLs.Add(member.Offset[0].Value[0].ToString()); // Offset x-start
+                subLs.Add(member.Offset[1].Value[0].ToString()); // Offset x-end
+
+                subLs.Add(member.Offset[0].Value[1].ToString());
+                subLs.Add(member.Offset[0].Value[2].ToString());
+
+                ls.AddRange(subLs);
+            }
+            catch
+            {
+                ls.Add("0");
+                ls.Add("0");
+                ls.Add("0");
+                ls.Add("0");
+            }
             ls.Add("ALL"); // Exposure
 
-            return string.Join(",", ls);
+
+            GSA.RunGWACommand(string.Join(",", ls));
         }
         #endregion
 
         #region Helper Functions
-        public List<StructuralObject> GetChildren()
-        {
-            List<StructuralObject> children = new List<StructuralObject>();
-
-            for (int i = 0; i < Coordinates.Count(); i++)
-            {
-                GSANode n = new GSANode();
-                n.Coordinates = new Coordinates(Coordinates.Values[i].ToArray());
-                children.Add(n);
-            }
-
-            return children;
-        }
-
-        public SixVectorBool ParseEndCondition(int option)
+        public static StructuralVectorBoolSix ParseEndReleases(int option)
         {
             switch(option)
             {
                 case 1:
                     // Pinned
-                    return new SixVectorBool(true, true, true, true, false, false);
+                    return new StructuralVectorBoolSix(false, false, false, false, true, true);
                 case 2:
                     // Fixed
-                    return new SixVectorBool(true, true, true, true, true, true);
+                    return new StructuralVectorBoolSix(false, false, false, false, false, false);
                 case 3:
                     // Free
-                    return new SixVectorBool(false, false, false, false, false, false);
+                    return new StructuralVectorBoolSix(true, true, true, true, true, true);
                 case 4:
                     // Full rotational
-                    return new SixVectorBool(true, true, true, true, true, true);
+                    return new StructuralVectorBoolSix(false, false, false, false, false, false);
                 case 5:
                     // Partial rotational
-                    return new SixVectorBool(true, true, true, true, false, false);
+                    return new StructuralVectorBoolSix(false, false, false, false, true, true);
                 case 6:
                     // Top flange lateral
-                    return new SixVectorBool(true, true, true, true, true, true);
+                    return new StructuralVectorBoolSix(false, false, false, false, false, false);
                 default:
                     // Pinned
-                    return new SixVectorBool(true, true, true, true, false, false);
+                    return new StructuralVectorBoolSix(false, false, false, false, true, true);
             }
         }
         #endregion
