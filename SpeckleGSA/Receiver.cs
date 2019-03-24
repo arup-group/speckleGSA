@@ -46,7 +46,7 @@ namespace SpeckleGSA
             // Initialize object write priority list
             IEnumerable<Type> objTypes = typeof(GSA)
                 .Assembly.GetTypes()
-                .Where(t => (t is IStructural) && !t.IsAbstract);
+                .Where(t => t.IsSubclassOf(typeof(SpeckleObject)) && !t.IsAbstract);
 
             foreach (Type t in objTypes)
             {

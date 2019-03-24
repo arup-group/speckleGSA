@@ -15,9 +15,9 @@ namespace SpeckleGSA
     {
         public int Axis; // Store this temporarily to generate other loads
 
-        public string GWACommand { get; set; }
-        public List<string> SubGWACommand { get; set; }
-        
+        public string GWACommand { get; set; } = "";
+        public List<string> SubGWACommand { get; set; } = new List<string>();
+
         #region Sending Functions
         public static bool GetObjects(Dictionary<Type, List<IGSAObject>> dict)
         {
@@ -75,7 +75,7 @@ namespace SpeckleGSA
                         match.NodeRefs.Add(nRef);
                     else
                     {
-                        load.NodeRefs.Add(nRef);
+                        load.NodeRefs = new List<string>() { nRef };
                         loadSubList.Add(load);
                     }
                 }
@@ -92,7 +92,7 @@ namespace SpeckleGSA
 
         public static GSA0DLoad ParseGWACommand(string command, List<GSANode> nodes)
         {
-            GSA0DLoad ret = new Structural0DLoad() as GSA0DLoad;
+            GSA0DLoad ret = new GSA0DLoad();
 
             ret.GWACommand = command;
 

@@ -14,9 +14,9 @@ namespace SpeckleGSA
     [GSAObject("MEMB.7", "elements", true, true, new Type[] { typeof(GSA1DElement) }, new Type[] { })]
     public class GSA1DElementPolyline : Structural1DElementPolyline, IGSAObject
     {
-        public string GWACommand { get; set; }
-        public List<string> SubGWACommand { get; set; }
-        
+        public string GWACommand { get; set; } = "";
+        public List<string> SubGWACommand { get; set; } = new List<string>();
+
         #region Receiving Functions
         public static void SetObjects(Dictionary<Type, List<IStructural>> dict)
         {

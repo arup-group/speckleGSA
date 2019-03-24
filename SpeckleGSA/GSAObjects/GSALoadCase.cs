@@ -11,9 +11,9 @@ namespace SpeckleGSA
     [GSAObject("LOAD_TITLE.2", "loads", true, true, new Type[] { }, new Type[] { })]
     public class GSALoadCase : StructuralLoadCase, IGSAObject
     {
-        public string GWACommand { get; set; }
-        public List<string> SubGWACommand { get; set; }
-        
+        public string GWACommand { get; set; } = "";
+        public List<string> SubGWACommand { get; set; } = new List<string>();
+
         #region Sending Functions
         public static bool GetObjects(Dictionary<Type, List<IGSAObject>> dict)
         {
@@ -51,7 +51,7 @@ namespace SpeckleGSA
 
         public static GSALoadCase ParseGWACommand(string command)
         {
-            GSALoadCase ret = new StructuralLoadCase() as GSALoadCase;
+            GSALoadCase ret = new GSALoadCase();
 
             ret.GWACommand = command;
             

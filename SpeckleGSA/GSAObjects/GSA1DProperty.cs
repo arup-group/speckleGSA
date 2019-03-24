@@ -15,9 +15,9 @@ namespace SpeckleGSA
     [GSAObject("PROP_SEC.3", "properties", true, true, new Type[] { typeof(GSAMaterial) }, new Type[] { typeof(GSAMaterial) })]
     public class GSA1DProperty : Structural1DProperty, IGSAObject
     {
-        public string GWACommand { get; set; }
-        public List<string> SubGWACommand { get; set; }
-        
+        public string GWACommand { get; set; } = "";
+        public List<string> SubGWACommand { get; set; } = new List<string>();
+
         #region Sending Functions
         public static bool GetObjects(Dictionary<Type, List<IGSAObject>> dict)
         {
@@ -56,7 +56,7 @@ namespace SpeckleGSA
 
         public static GSA1DProperty ParseGWACommand(string command, List<GSAMaterial> materials)
         {
-            GSA1DProperty ret = new Structural1DProperty() as GSA1DProperty;
+            GSA1DProperty ret = new GSA1DProperty();
 
             ret.GWACommand = command;
 

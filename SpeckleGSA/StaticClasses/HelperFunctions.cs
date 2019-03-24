@@ -466,8 +466,11 @@ namespace SpeckleGSA
             return col.R + col.G * 256 + col.B * 256 * 256;
         }
 
-        public static int ToSpeckleColor(this int color)
+        public static int? ToSpeckleColor(this int? color)
         {
+            if (color == null)
+                return null;
+            
             return Color.FromArgb(255,
                            (int)color % 256,
                            ((int)color / 256) % 256,
@@ -944,7 +947,10 @@ namespace SpeckleGSA
                 f.SetValue(baseClass, f.GetValue(obj));
 
             foreach (PropertyInfo p in baseClass.GetType().GetProperties())
-                p.SetValue(baseClass, p.GetValue(obj));
+                if (p.CanWrite)
+                    p.SetValue(baseClass, p.GetValue(obj));
+
+            (baseClass as SpeckleObject).GenerateHash();
 
             return baseClass;
         }

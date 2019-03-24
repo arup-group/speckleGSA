@@ -15,9 +15,9 @@ namespace SpeckleGSA
     {
         public bool IsAxisLocal;
 
-        public string GWACommand { get; set; }
-        public List<string> SubGWACommand { get; set; }
-        
+        public string GWACommand { get; set; } = "";
+        public List<string> SubGWACommand { get; set; } = new List<string>();
+
         #region Sending Functions
         public static bool GetObjects(Dictionary<Type, List<IGSAObject>> dict)
         {
@@ -56,7 +56,7 @@ namespace SpeckleGSA
 
         public static GSA2DProperty ParseGWACommand(string command, List<GSAMaterial> materials)
         {
-            GSA2DProperty ret = new Structural2DProperty() as GSA2DProperty;
+            GSA2DProperty ret = new GSA2DProperty();
 
             ret.GWACommand = command;
 

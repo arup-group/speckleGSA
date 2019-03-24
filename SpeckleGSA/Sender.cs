@@ -1,4 +1,5 @@
-﻿using SpeckleStructuresClasses;
+﻿using SpeckleCore;
+using SpeckleStructuresClasses;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -11,7 +12,7 @@ namespace SpeckleGSA
     public class Sender
     {
         public Dictionary<string, SpeckleGSASender> Senders;
-        public Dictionary<Type, List<object>> SenderObjectCache;
+        public Dictionary<Type, List<IGSAObject>> SenderObjectCache;
 
         public Dictionary<Type, List<Type>> TypePrerequisites;
 
@@ -20,7 +21,7 @@ namespace SpeckleGSA
         public Sender()
         {
             Senders = new Dictionary<string, SpeckleGSASender>();
-            SenderObjectCache = new Dictionary<Type, List<object>>();
+            SenderObjectCache = new Dictionary<Type, List<IGSAObject>>();
             TypePrerequisites = new Dictionary<Type, List<Type>>();
             IsInit = false;
         }
@@ -40,14 +41,14 @@ namespace SpeckleGSA
             // Initialize object read priority list
             IEnumerable<Type> objTypes = typeof(GSA)
                 .Assembly.GetTypes()
-                .Where(t => t.IsSubclassOf(typeof(IStructural)) && !t.IsAbstract);
+                .Where(t => t.IsSubclassOf(typeof(SpeckleObject)) && !t.IsAbstract);
 
             Status.ChangeStatus("Preparing to read GSA Objects");
 
             foreach (Type t in objTypes)
             {
                 if (t.GetMethod("GetObjects",
-                    new Type[] { typeof(Dictionary<Type, List<IStructural>>) }) == null)
+                    new Type[] { typeof(Dictionary<Type, List<IGSAObject>>) }) == null)
                     continue;
 
                 if (t.GetAttribute("Stream") == null) continue;
@@ -133,7 +134,7 @@ namespace SpeckleGSA
                     //Status.ChangeStatus("Reading " + t.Name);
 
                     bool result = (bool)t.GetMethod("GetObjects",
-                        new Type[] { typeof(Dictionary<Type, List<object>>) })
+                        new Type[] { typeof(Dictionary<Type, List<IGSAObject>>) })
                         .Invoke(null, new object[] { SenderObjectCache });
 
                     if (result)
@@ -151,16 +152,16 @@ namespace SpeckleGSA
 
             // Convert objects to base class
             Dictionary<Type, List<IStructural>> convertedBucket = new Dictionary<Type, List<IStructural>>();
-            foreach (KeyValuePair<Type, List<object>> kvp in SenderObjectCache)
+            foreach (KeyValuePair<Type, List<IGSAObject>> kvp in SenderObjectCache)
             {
                 if ((kvp.Key == typeof(GSANode)) && Settings.SendOnlyMeaningfulNodes && SenderObjectCache.ContainsKey(typeof(GSANode)))
                 {
                     // Remove unimportant nodes
-                    convertedBucket[kvp.Key] = kvp.Value
-                        .Where(n => (n as GSANode).ForceSend ||
-                        (n as GSANode).Restraint.Value.Any(x => x) ||
-                        (n as GSANode).Stiffness.Value.Any(x => x == 0) ||
-                        (n as GSANode).Mass > 0)
+                    convertedBucket[kvp.Key] = kvp.Value.Cast<GSANode>()
+                        .Where(n => n.ForceSend ||
+                        (n.Restraint != null && n.Restraint.Value.Any(x => x)) ||
+                        (n.Restraint != null && n.Stiffness.Value.Any(x => x == 0)) ||
+                        n.Mass > 0)
                         .Select(x => x.GetBase()).Cast<IStructural>().ToList();
                 }
                 else

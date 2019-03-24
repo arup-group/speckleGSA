@@ -13,9 +13,9 @@ namespace SpeckleGSA
     [GSAObject("EL.3", "elements", true, false, new Type[] { typeof(GSANode), typeof(GSA2DProperty) }, new Type[] { typeof(GSA2DElementMesh) })]
     public class GSA2DElement : Structural2DElementMesh, IGSAObject
     {
-        public string GWACommand { get; set; }
-        public List<string> SubGWACommand { get; set; }
-        
+        public string GWACommand { get; set; } = "";
+        public List<string> SubGWACommand { get; set; } = new List<string>();
+
         #region Sending Functions
         public static bool GetObjects(Dictionary<Type, List<IGSAObject>> dict)
         {
@@ -43,7 +43,7 @@ namespace SpeckleGSA
             foreach (string p in newLines)
             {
                 string[] pPieces = p.ListSplit(",");
-                if (pPieces[4].ParseElementNumNodes() == 2)
+                if (pPieces[4].ParseElementNumNodes() == 3 | pPieces[4].ParseElementNumNodes() == 4)
                 {
                     GSA2DElement element = ParseGWACommand(p, nodes, props);
                     elements.Add(element);
@@ -59,7 +59,7 @@ namespace SpeckleGSA
 
         public static GSA2DElement ParseGWACommand(string command, List<GSANode> nodes, List<GSA2DProperty> props)
         {
-            GSA2DElement ret = new Structural2DElementMesh() as GSA2DElement;
+            GSA2DElement ret = new GSA2DElement();
 
             ret.GWACommand = command;
 
@@ -69,9 +69,13 @@ namespace SpeckleGSA
             ret.StructuralID = pieces[counter++];
             ret.Name = pieces[counter++].Trim(new char[] { '"' });
             var color = pieces[counter++].ParseGSAColor();
+
             string type = pieces[counter++];
             if (color != null)
-                ret.Colors = Enumerable.Repeat(color.Value, type.ParseElementNumNodes()).ToList();
+                ret.Colors = Enumerable.Repeat(color.ToSpeckleColor().Value, type.ParseElementNumNodes()).ToList();
+            else
+                ret.Colors = new List<int>();
+
             ret.ElementType = Structural2DElementType.Generic;
             ret.PropertyRef = pieces[counter++];
             counter++; // Group
@@ -94,7 +98,8 @@ namespace SpeckleGSA
             ret.Axis = HelperFunctions.Parse2DAxis(ret.Vertices.ToArray(),
                 Convert.ToDouble(pieces[counter++]),
                 prop == null ? false : (prop as GSA2DProperty).IsAxisLocal);
-            ret.SubGWACommand.Add(prop.GWACommand);
+            if (prop != null)
+                ret.SubGWACommand.Add(prop.GWACommand);
 
             if (pieces[counter++] != "NO_RLS")
             {

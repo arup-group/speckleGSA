@@ -15,9 +15,9 @@ namespace SpeckleGSA
     {
         public int Group;
 
-        public string GWACommand { get; set; }
-        public List<string> SubGWACommand { get; set; }
-        
+        public string GWACommand { get; set; } = "";
+        public List<string> SubGWACommand { get; set; } = new List<string>();
+
         #region Sending Functions
         public static bool GetObjects(Dictionary<Type, List<IGSAObject>> dict)
         {
@@ -60,7 +60,7 @@ namespace SpeckleGSA
 
         public static GSA1DMember ParseGWACommand(string command, List<GSANode> nodes)
         {
-            GSA1DMember ret = new Structural1DElement() as GSA1DMember;
+            GSA1DMember ret = new GSA1DMember();
 
             ret.GWACommand = command;
             

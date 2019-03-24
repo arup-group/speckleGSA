@@ -12,9 +12,9 @@ namespace SpeckleGSA
     [GSAObject("EL.3", "elements", true, false, new Type[] { typeof(GSANode) }, new Type[] { typeof(GSA1DProperty) })]
     public class GSA1DElement : Structural1DElement, IGSAObject
     {
-        public string GWACommand { get; set; }
-        public List<string> SubGWACommand { get; set; }
-        
+        public string GWACommand { get; set; } = "";
+        public List<string> SubGWACommand { get; set; } = new List<string>();
+
         #region Sending Functions
         public static bool GetObjects(Dictionary<Type, List<IGSAObject>> dict)
         {
@@ -57,7 +57,7 @@ namespace SpeckleGSA
 
         public static GSA1DElement ParseGWACommand(string command, List<GSANode> nodes)
         {
-            GSA1DElement ret = new Structural1DElement() as GSA1DElement;
+            GSA1DElement ret = new GSA1DElement();
 
             ret.GWACommand = command;
 

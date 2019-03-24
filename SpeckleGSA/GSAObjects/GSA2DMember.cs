@@ -15,9 +15,9 @@ namespace SpeckleGSA
     {
         public int Group;
 
-        public string GWACommand { get; set; }
-        public List<string> SubGWACommand { get; set; }
-        
+        public string GWACommand { get; set; } = "";
+        public List<string> SubGWACommand { get; set; } = new List<string>();
+
         #region Sending Functions
         public static bool GetObjects(Dictionary<Type, List<IGSAObject>> dict)
         {
@@ -45,7 +45,7 @@ namespace SpeckleGSA
             foreach (string p in newLines)
             {
                 string[] pPieces = p.ListSplit(",");
-                if (pPieces[4].MemberIs1D())
+                if (pPieces[4].MemberIs2D())
                 {
                     GSA2DMember member = ParseGWACommand(p, nodes, props);
                     members.Add(member);
@@ -61,7 +61,7 @@ namespace SpeckleGSA
 
         public static GSA2DMember ParseGWACommand(string command, List<GSANode> nodes, List<GSA2DProperty> props)
         {
-            GSA2DMember ret = new Structural2DElementMesh() as GSA2DMember;
+            GSA2DMember ret = new GSA2DMember();
 
             ret.GWACommand = command;
 
@@ -92,10 +92,14 @@ namespace SpeckleGSA
                 ret.SubGWACommand.Add(node.GWACommand);
             }
 
-            ret = new Structural2DElementMesh(
+            Structural2DElementMesh temp = new Structural2DElementMesh(
                 coordinates.ToArray(),
-                color == null ? 0 : color.Value.ToSpeckleColor(),
-                ret.ElementType, ret.PropertyRef, null, 0) as GSA2DMember;
+                color.ToSpeckleColor(),
+                ret.ElementType, ret.PropertyRef, null, 0);
+
+            ret.Vertices = temp.Vertices;
+            ret.Faces = temp.Faces;
+            ret.Colors = temp.Colors;
             
             counter++; // Orientation node
             
@@ -103,7 +107,8 @@ namespace SpeckleGSA
             ret.Axis = HelperFunctions.Parse2DAxis(coordinates.ToArray(),
                 Convert.ToDouble(pieces[counter++]),
                 prop == null ? false : (prop as GSA2DProperty).IsAxisLocal);
-            ret.SubGWACommand.Add(prop.GWACommand);
+            if (prop != null)
+                ret.SubGWACommand.Add(prop.GWACommand);
 
             // Skip to offsets at second to last
             counter = pieces.Length - 2;
