@@ -150,14 +150,19 @@ namespace SpeckleGSA
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
 
             int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType, member);
-            int propRef = Indexer.ResolveIndex(typeof(GSA1DProperty), member.PropertyRef);
+            int propRef = 0;
+            try
+            {
+                propRef = Indexer.LookupIndex(typeof(GSA1DProperty), member.PropertyRef).Value;
+            }
+            catch { }
 
             List<string> ls = new List<string>();
 
             ls.Add("SET");
             ls.Add(keyword);
             ls.Add(index.ToString());
-            ls.Add(member.Name);
+            ls.Add(member.Name == null || member.Name == "" ? " " : member.Name);
             ls.Add("NO_RGB");
             if (member.ElementType == Structural1DElementType.Beam)
                 ls.Add("BEAM");
@@ -174,7 +179,11 @@ namespace SpeckleGSA
                 topo += GSA.NodeAt(member.Value[i], member.Value[i + 1], member.Value[i + 2]).ToString() + " ";
             ls.Add(topo);
             ls.Add("0"); // Orientation node
-            ls.Add(HelperFunctions.Get1DAngle(member.Value.ToArray(), member.ZAxis).ToString());
+            try
+            { 
+                ls.Add(HelperFunctions.Get1DAngle(member.Value.ToArray(), member.ZAxis).ToString());
+            }
+            catch { ls.Add("0"); }
             ls.Add("1"); // Target mesh size
             ls.Add("MESH"); // TODO: What is this?
             ls.Add("BEAM"); // Element type

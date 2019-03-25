@@ -10,7 +10,7 @@ using System.Reflection;
 
 namespace SpeckleGSA
 {
-    [GSAObject("MEMB.7", "elements", false, true, new Type[] { typeof(GSANode), typeof(GSA2DProperty) }, new Type[] { typeof(GSA2DElementMesh) })]
+    [GSAObject("MEMB.7", "elements", false, true, new Type[] { typeof(GSANode), typeof(GSA2DProperty) }, new Type[] { typeof(GSA2DProperty) })]
     public class GSA2DMember : Structural2DElementMesh, IGSAObject
     {
         public int Group;
@@ -137,15 +137,20 @@ namespace SpeckleGSA
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
 
             int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType, mesh);
-            int propRef = Indexer.ResolveIndex(typeof(GSA2DProperty), mesh.PropertyRef);
+            int propRef = 0;
+            try
+            {
+                propRef = Indexer.LookupIndex(typeof(GSA2DProperty), mesh.PropertyRef).Value;
+            }
+            catch { }
 
             List<string> ls = new List<string>();
 
             ls.Add("SET");
             ls.Add(keyword);
             ls.Add(index.ToString());
-            ls.Add(mesh.Name);
-            ls.Add(mesh.Colors == null ? "NO_RGB" : mesh.Colors[0].ToHexColor().ToString());
+            ls.Add(mesh.Name == null || mesh.Name == "" ? " " : mesh.Name);
+            ls.Add(mesh.Colors == null || mesh.Colors.Count() < 1 ? "NO_RGB" : mesh.Colors[0].ToHexColor().ToString());
             if (mesh.ElementType == Structural2DElementType.Slab)
                 ls.Add("SLAB");
             else if (mesh.ElementType == Structural2DElementType.Wall)
@@ -165,7 +170,11 @@ namespace SpeckleGSA
                 }
             ls.Add(topo);
             ls.Add("0"); // Orientation node
-            ls.Add(HelperFunctions.Get2DAngle(coor.ToArray(), mesh.Axis).ToString());
+            try
+            { 
+                ls.Add(HelperFunctions.Get2DAngle(coor.ToArray(), mesh.Axis).ToString());
+            }
+            catch { ls.Add("0"); }
             ls.Add("1"); // Target mesh size
             ls.Add("MESH"); // TODO: What is this?
             ls.Add("LINEAR"); // Element type

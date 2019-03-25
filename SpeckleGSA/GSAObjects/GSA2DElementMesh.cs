@@ -11,7 +11,7 @@ using SpeckleStructuresClasses;
 namespace SpeckleGSA
 {
     // Keyword set as MEMB to not clash with grouping of members
-    [GSAObject("MEMB.7", "elements", true, false, new Type[] { typeof(GSA2DElement) }, new Type[] { })]
+    [GSAObject("MEMB.7", "elements", true, false, new Type[] { typeof(GSA2DElement) }, new Type[] { typeof(GSA2DProperty) })]
     public class GSA2DElementMesh : Structural2DElementMesh, IGSAObject
     {
         public string GWACommand { get; set; } = "";

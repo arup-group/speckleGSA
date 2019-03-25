@@ -129,7 +129,7 @@ namespace SpeckleGSA
                 ls.Add("MAT_STEEL.3");
                 ls.Add(index.ToString());
                 ls.Add("MAT.8");
-                ls.Add(mat.Grade);
+                ls.Add(mat.Grade == null || mat.Grade == "" ? " " : mat.Grade);
                 ls.Add("YES"); // Unlocked
                 ls.Add("200000000000"); // E
                 ls.Add("0.3"); // nu
@@ -177,7 +177,7 @@ namespace SpeckleGSA
                 ls.Add("MAT_CONCRETE.16");
                 ls.Add(index.ToString());
                 ls.Add("MAT.8");
-                ls.Add(mat.Grade);
+                ls.Add(mat.Grade == null || mat.Grade == "" ? " " : mat.Grade);
                 ls.Add("YES"); // Unlocked
                 ls.Add("28000000000"); // E
                 ls.Add("0.2"); // nu

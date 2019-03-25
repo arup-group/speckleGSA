@@ -114,14 +114,19 @@ namespace SpeckleGSA
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
 
             int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType, prop);
-            int materialRef = Indexer.ResolveIndex(typeof(GSAMaterial), prop.MaterialRef);
+            int materialRef = 0;
+            try
+            {
+                materialRef = Indexer.LookupIndex(typeof(GSAMaterial), prop.MaterialRef).Value;
+            }
+            catch { }
 
             List<string> ls = new List<string>();
 
             ls.Add("SET");
             ls.Add(keyword);
             ls.Add(index.ToString());
-            ls.Add(prop.Name);
+            ls.Add(prop.Name == null || prop.Name == "" ? " " : prop.Name);
             ls.Add("NO_RGB");
             ls.Add("SHELL");
             ls.Add("GLOBAL");
@@ -145,13 +150,13 @@ namespace SpeckleGSA
         public static string GetMaterialType(int materialRef)
         {
             // Steel
-            if ((string)GSA.RunGWACommand("GET,MAT_STEEL.3" + materialRef.ToString()) != string.Empty) return "STEEL";
+            if ((string)GSA.RunGWACommand("GET,MAT_STEEL.3," + materialRef.ToString()) != string.Empty) return "STEEL";
 
             // Concrete
-            if ((string)GSA.RunGWACommand("GET,MAT_CONCRETE.16" + materialRef.ToString()) != string.Empty) return "CONCRETE";
+            if ((string)GSA.RunGWACommand("GET,MAT_CONCRETE.16," + materialRef.ToString()) != string.Empty) return "CONCRETE";
 
             // Default
-            return "GENERAL";
+            return "GENERIC";
         }
         #endregion
     }

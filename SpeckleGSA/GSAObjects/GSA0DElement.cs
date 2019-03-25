@@ -124,14 +124,19 @@ namespace SpeckleGSA
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
 
             int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType);
-            int nodeRef = Indexer.ResolveIndex(typeof(GSANode), node);
+            int nodeRef;
+            try
+            { 
+                nodeRef = Indexer.LookupIndex(typeof(GSANode), node).Value;
+            }
+            catch { return; }
 
             List<string> ls = new List<string>();
 
             ls.Add("SET");
             ls.Add(keyword);
             ls.Add(index.ToString());
-            ls.Add(""); // Name
+            ls.Add(node.Name == null || node.Name == "" ? " " : node.Name);
             ls.Add("NO_RGB");
             ls.Add("MASS");
             ls.Add(SetMassProp(node.Mass).ToString()); // Property

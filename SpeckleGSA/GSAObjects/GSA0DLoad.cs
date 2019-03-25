@@ -169,9 +169,14 @@ namespace SpeckleGSA
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
 
             int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType, load);
-            List<int> nodeRefs = Indexer.ResolveIndices(typeof(GSANode), load.NodeRefs);
-            int loadCaseRef = Indexer.ResolveIndex(typeof(GSALoadCase), load.LoadCaseRef);
-            
+            List<int> nodeRefs = Indexer.LookupIndices(typeof(GSANode), load.NodeRefs).Where(x => x.HasValue).Select(x => x.Value).ToList();
+            int loadCaseRef = 0;
+            try
+            {
+                loadCaseRef = Indexer.LookupIndex(typeof(GSALoadCase), load.LoadCaseRef).Value;
+            }
+            catch { }
+
             string[] direction = new string[6] { "X", "Y", "Z", "X", "Y", "Z" };
 
             for (int i = 0; i < load.Loading.Value.Count(); i++)

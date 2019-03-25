@@ -164,34 +164,26 @@ namespace SpeckleGSA
 
                     try
                     {
-                        if (obj is IEnumerable)
+                        if (obj is IList)
                         {
                             foreach (SpeckleObject o in obj as IList)
                             {
                                 o.Scale(scaleFactor);
-
-                                Type castType = TypeCastPriority.Where(t => t.Key.IsSubclassOf(o.GetType())).First().Key;
-
-                                if (castType == null) continue;
-
-                                if (!newObjects.ContainsKey(castType))
-                                    newObjects[castType] = new List<IStructural>() { (IStructural)Activator.CreateInstance(castType, o) };
+                                
+                                if (!newObjects.ContainsKey(o.GetType()))
+                                    newObjects[o.GetType()] = new List<IStructural>() { (IStructural)o };
                                 else
-                                    (newObjects[castType] as List<IStructural>).Add((IStructural)Activator.CreateInstance(castType, o));
+                                    (newObjects[o.GetType()] as List<IStructural>).Add((IStructural)o);
                             }
                         }
                         else
                         {
                             (obj as SpeckleObject).Scale(scaleFactor);
 
-                            Type castType = TypeCastPriority.Where(t => t.Key.IsSubclassOf(obj.GetType())).First().Key;
-
-                            if (castType == null) continue;
-
-                            if (!newObjects.ContainsKey(castType))
-                                newObjects[castType] = new List<IStructural>() { (IStructural)Activator.CreateInstance(castType, obj) };
+                            if (!newObjects.ContainsKey(obj.GetType()))
+                                newObjects[obj.GetType()] = new List<IStructural>() { (IStructural)obj };
                             else
-                                (newObjects[castType] as List<IStructural>).Add((IStructural)Activator.CreateInstance(castType, obj));
+                                (newObjects[obj.GetType()] as List<IStructural>).Add((IStructural)obj);
                         }
                     }
                     catch (Exception ex)
@@ -205,6 +197,7 @@ namespace SpeckleGSA
             Indexer.ResetToBaseline();
 
             // Write objects
+            Status.ChangeStatus("Writing objects");
             List<Type> currentBatch = new List<Type>();
             List<Type> traversedTypes = new List<Type>();
 
@@ -217,7 +210,7 @@ namespace SpeckleGSA
                 {
                     //Status.ChangeStatus("Writing " + t.Name);
 
-                    t.GetMethod("WriteObjects",
+                    t.GetMethod("SetObjects",
                         new Type[] { typeof(Dictionary<Type, List<IStructural>>) })
                         .Invoke(null, new object[] { newObjects });
 

@@ -93,9 +93,75 @@ namespace SpeckleGSA
         {
             return structuralID.Select(s => ResolveIndex(keywordGSA, s, type)).ToList();
         }
-        
+
+        public static int? LookupIndex(Type type, IStructural obj)
+        {
+            return LookupIndex(type.GetGSAKeyword(), obj.StructuralID, type.Name);
+        }
+
+        public static int? LookupIndex(Type type, string structuralID)
+        {
+            return LookupIndex(type.GetGSAKeyword(), structuralID, type.Name);
+        }
+
+        public static int? LookupIndex(string keywordGSA, IStructural obj, string type = "")
+        {
+            return LookupIndex(keywordGSA, obj.StructuralID, type);
+        }
+
+        public static int? LookupIndex(string keywordGSA, string structuralID, string type = "")
+        {
+            if (structuralID == null || structuralID == string.Empty)
+                return null;
+
+            string key = keywordGSA + ":" + type + ":" + structuralID;
+
+            if (!indexMap.ContainsKey(key))
+                return null;
+
+            return indexMap[key];
+        }
+
+        public static List<int?> LookupIndices(Type type, List<IStructural> objects)
+        {
+            return objects.Select(o => LookupIndex(type, o)).ToList();
+        }
+
+        public static List<int?> LookupIndices(Type type, List<string> structuralID)
+        {
+            return structuralID.Select(s => LookupIndex(type, s)).ToList();
+        }
+
+        public static List<int?> LookupIndices(string keywordGSA, List<IStructural> objects, string type = "")
+        {
+            return objects.Select(o => LookupIndex(keywordGSA, o, type)).ToList();
+        }
+
+        public static List<int?> LookupIndices(string keywordGSA, List<string> structuralID, string type = "")
+        {
+            return structuralID.Select(s => LookupIndex(keywordGSA, s, type)).ToList();
+        }
+
         public static void ReserveIndices(string keywordGSA, List<int> refs)
         {
+            if (!indexUsed.ContainsKey(keywordGSA))
+                indexUsed[keywordGSA] = refs;
+            else
+                indexUsed[keywordGSA].AddRange(refs);
+
+            indexUsed[keywordGSA] = indexUsed[keywordGSA].Distinct().ToList();
+        }
+
+        public static void ReserveIndices(Type type, List<int> refs, List<string> structuralIDs)
+        {
+            string keywordGSA = type.GetGSAKeyword();
+
+            for (int i = 0; i < structuralIDs.Count(); i++)
+            {
+                string key = keywordGSA + ":" + type.Name + ":" + structuralIDs[i];
+                indexMap[key] = refs[i];
+            }
+
             if (!indexUsed.ContainsKey(keywordGSA))
                 indexUsed[keywordGSA] = refs;
             else

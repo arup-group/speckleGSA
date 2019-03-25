@@ -230,15 +230,20 @@ namespace SpeckleGSA
             List<int> groupRefs;
             if (GSA.TargetAnalysisLayer)
             { 
-                elementRefs = Indexer.ResolveIndices(typeof(GSA2DElement).GetGSAKeyword(), load.ElementRefs);
-                groupRefs = Indexer.ResolveIndices(typeof(GSA2DElementMesh).GetGSAKeyword(), load.ElementRefs);
+                elementRefs = Indexer.LookupIndices(typeof(GSA2DElement), load.ElementRefs).Where(x => x.HasValue).Select(x => x.Value).ToList();
+                groupRefs = Indexer.LookupIndices(typeof(GSA2DElementMesh), load.ElementRefs).Where(x => x.HasValue).Select(x => x.Value).ToList();
             }
             else
             {
                 elementRefs = new List<int>();
-                groupRefs = Indexer.ResolveIndices(typeof(GSA2DMember).GetGSAKeyword(), load.ElementRefs);
+                groupRefs = Indexer.LookupIndices(typeof(GSA2DMember), load.ElementRefs).Where(x => x.HasValue).Select(x => x.Value).ToList();
             }
-            int loadCaseRef = Indexer.ResolveIndex(typeof(GSALoadCase).GetGSAKeyword(), load.LoadCaseRef);
+            int loadCaseRef = 0;
+            try
+            {
+                loadCaseRef = Indexer.LookupIndex(typeof(GSALoadCase), load.LoadCaseRef).Value;
+            }
+            catch { }
 
             string[] direction = new string[3] { "X", "Y", "Z" };
 
@@ -255,8 +260,8 @@ namespace SpeckleGSA
                 // TODO: This is a hack.
                 ls.Add(string.Join(
                     " ",
-                    elementRefs.Cast<string>()
-                        .Concat(elementRefs.Cast<string>().Select(x => "G" + x))
+                    elementRefs.Select(x => x.ToString())
+                        .Concat(groupRefs.Select(x => "G" + x.ToString()))
                 ));
                 ls.Add(loadCaseRef.ToString());
                 ls.Add("GLOBAL"); // Axis

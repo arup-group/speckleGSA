@@ -10,7 +10,7 @@ using SpeckleStructuresClasses;
 
 namespace SpeckleGSA
 {
-    [GSAObject("EL.3", "elements", true, false, new Type[] { typeof(GSANode), typeof(GSA2DProperty) }, new Type[] { typeof(GSA2DElementMesh) })]
+    [GSAObject("EL.3", "elements", true, false, new Type[] { typeof(GSANode), typeof(GSA2DProperty) }, new Type[] { typeof(GSA2DProperty) })]
     public class GSA2DElement : Structural2DElementMesh, IGSAObject
     {
         public string GWACommand { get; set; } = "";
@@ -137,16 +137,20 @@ namespace SpeckleGSA
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
 
             int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType, mesh);
-            int propRef = Indexer.ResolveIndex(typeof(GSA2DProperty), mesh.PropertyRef);
-
+            int propRef = 0;
+            try
+            {
+                propRef = Indexer.LookupIndex(typeof(GSA2DProperty), mesh.PropertyRef).Value;
+            }
+            catch { }
 
             List<string> ls = new List<string>();
 
             ls.Add("SET");
             ls.Add(keyword);
             ls.Add(index.ToString());
-            ls.Add(mesh.Name);
-            ls.Add(mesh.Colors == null ? "NO_RGB" : mesh.Colors[0].ToHexColor().ToString());
+            ls.Add(mesh.Name == null || mesh.Name == "" ? " " : mesh.Name);
+            ls.Add(mesh.Colors == null || mesh.Colors.Count() < 1 ? "NO_RGB" : mesh.Colors[0].ToHexColor().ToString());
             ls.Add(mesh.Vertices.Count() / 3 == 3 ? "TRI3" : "QUAD4");
             ls.Add(propRef.ToString());
             ls.Add(group.ToString()); // Group
@@ -158,7 +162,11 @@ namespace SpeckleGSA
                 ls.Add(GSA.NodeAt(mesh.Vertices[mesh.Faces[i] * 3], mesh.Vertices[mesh.Faces[i] * 3 + 1], mesh.Vertices[mesh.Faces[i] * 3 + 2]).ToString());
             }
             ls.Add("0"); //Orientation node
-            ls.Add(HelperFunctions.Get2DAngle(coor.ToArray(), mesh.Axis).ToString());
+            try
+            { 
+                ls.Add(HelperFunctions.Get2DAngle(coor.ToArray(), mesh.Axis).ToString());
+            }
+            catch { ls.Add("0"); }
             ls.Add("NO_RLS");
 
             ls.Add("0"); // Offset x-start

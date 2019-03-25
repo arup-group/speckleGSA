@@ -45,7 +45,7 @@ namespace SpeckleGSA
         {
             UpdateGlobal();
 
-            return myReceiver.Stream.Objects;
+            return Converter.Deserialise(myReceiver.Stream.Objects).Cast<SpeckleObject>().ToList();
         }
 
         public void OnWsMessage( object source, SpeckleEventArgs e)

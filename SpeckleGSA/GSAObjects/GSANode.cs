@@ -129,14 +129,15 @@ namespace SpeckleGSA
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
 
-            int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType, node);
+            int index = GSA.NodeAt(node.Value[0], node.Value[1], node.Value[2], node.StructuralID);
+            //int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType, node);
 
             List<string> ls = new List<string>();
 
             ls.Add("SET");
             ls.Add(keyword);
             ls.Add(index.ToString());
-            ls.Add(node.Name);
+            ls.Add(node.Name == null || node.Name == "" ? " " : node.Name);
             ls.Add("NO_RGB");
             ls.Add(string.Join(",", node.Value.ToArray()));
 
@@ -146,33 +147,52 @@ namespace SpeckleGSA
 
             ls.Add("NO_GRID");
 
-            ls.Add(SetAxis(node.Axis).ToString());
+            try
+            { 
+                ls.Add(SetAxis(node.Axis).ToString());
+            } catch { ls.Add("0"); }
 
-            if (!node.Restraint.Value.Any(x =>x))
-                ls.Add("NO_REST");
-            else
+            try
             {
-                ls.Add("REST");
-                ls.Add(node.Restraint.Value[0] ? "1" : "0");
-                ls.Add(node.Restraint.Value[1] ? "1" : "0");
-                ls.Add(node.Restraint.Value[2] ? "1" : "0");
-                ls.Add(node.Restraint.Value[3] ? "1" : "0");
-                ls.Add(node.Restraint.Value[4] ? "1" : "0");
-                ls.Add(node.Restraint.Value[5] ? "1" : "0");
-            }
+                List<string> subLs = new List<string>();
 
-            if (!node.Stiffness.Value.Any(x => x == 0))
-                ls.Add("NO_STIFF");
-            else
+                if (node.Restraint == null || !node.Restraint.Value.Any(x =>x))
+                    subLs.Add("NO_REST");
+                else
+                {
+                    subLs.Add("REST");
+                    subLs.Add(node.Restraint.Value[0] ? "1" : "0");
+                    subLs.Add(node.Restraint.Value[1] ? "1" : "0");
+                    subLs.Add(node.Restraint.Value[2] ? "1" : "0");
+                    subLs.Add(node.Restraint.Value[3] ? "1" : "0");
+                    subLs.Add(node.Restraint.Value[4] ? "1" : "0");
+                    subLs.Add(node.Restraint.Value[5] ? "1" : "0");
+                }
+
+                ls.AddRange(subLs);
+
+            } catch { ls.Add("NO_REST"); }
+
+            try
             {
-                ls.Add("STIFF");
-                ls.Add(node.Stiffness.Value[0].ToString());
-                ls.Add(node.Stiffness.Value[1].ToString());
-                ls.Add(node.Stiffness.Value[2].ToString());
-                ls.Add(node.Stiffness.Value[3].ToString());
-                ls.Add(node.Stiffness.Value[4].ToString());
-                ls.Add(node.Stiffness.Value[5].ToString());
+                List<string> subLs = new List<string>();
+
+                if (node.Stiffness == null || !node.Stiffness.Value.Any(x => x == 0))
+                    subLs.Add("NO_STIFF");
+                else
+                {
+                    subLs.Add("STIFF");
+                    subLs.Add(node.Stiffness.Value[0].ToString());
+                    subLs.Add(node.Stiffness.Value[1].ToString());
+                    subLs.Add(node.Stiffness.Value[2].ToString());
+                    subLs.Add(node.Stiffness.Value[3].ToString());
+                    subLs.Add(node.Stiffness.Value[4].ToString());
+                    subLs.Add(node.Stiffness.Value[5].ToString());
+                }
+
+                ls.AddRange(subLs);
             }
+            catch { ls.Add("NO_STIFF"); }
 
             ls.Add("NO_MESH");
 

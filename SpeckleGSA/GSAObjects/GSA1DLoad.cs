@@ -10,7 +10,7 @@ using System.Reflection;
 
 namespace SpeckleGSA
 {
-    [GSAObject("LOAD_BEAM", "loads", true, true, new Type[] { typeof(GSA1DElement), typeof(GSA1DMember) }, new Type[] { typeof(GSA1DElement), typeof(GSA1DMember) })]
+    [GSAObject("LOAD_BEAM", "loads", true, true, new Type[] { typeof(GSA1DElement), typeof(GSA1DMember) }, new Type[] { typeof(GSA1DElement), typeof(GSA1DMember), typeof(GSA1DElementPolyline) })]
     public class GSA1DLoad : Structural1DLoad, IGSAObject
     {
         public int Axis;
@@ -310,16 +310,21 @@ namespace SpeckleGSA
             List<int> groupRefs;
             if (GSA.TargetAnalysisLayer)
             { 
-                elementRefs = Indexer.ResolveIndices(typeof(GSA1DElement), load.ElementRefs);
-                groupRefs = Indexer.ResolveIndices(typeof(GSA1DElementPolyline), load.ElementRefs);
+                elementRefs = Indexer.LookupIndices(typeof(GSA1DElement), load.ElementRefs).Where(x => x.HasValue).Select(x => x.Value).ToList();
+                groupRefs = Indexer.LookupIndices(typeof(GSA1DElementPolyline), load.ElementRefs).Where(x => x.HasValue).Select(x => x.Value).ToList();
             }
             else
             {
                 elementRefs = new List<int>();
-                groupRefs = Indexer.ResolveIndices(typeof(GSA1DMember), load.ElementRefs);
-                groupRefs.AddRange(Indexer.ResolveIndices(typeof(GSA1DElementPolyline), load.ElementRefs));
+                groupRefs = Indexer.LookupIndices(typeof(GSA1DMember), load.ElementRefs).Where(x => x.HasValue).Select(x => x.Value).ToList();
+                groupRefs.AddRange(Indexer.LookupIndices(typeof(GSA1DElementPolyline), load.ElementRefs).Where(x => x.HasValue).Select(x => x.Value).ToList());
             }
-            int loadCaseRef = Indexer.ResolveIndex(typeof(GSALoadCase), load.LoadCaseRef);
+            int loadCaseRef = 0;
+            try
+            {
+                loadCaseRef = Indexer.LookupIndex(typeof(GSALoadCase), load.LoadCaseRef).Value;
+            }
+            catch { }
 
             string[] direction = new string[6] { "X", "Y", "Z", "X", "Y", "Z" };
 
@@ -336,8 +341,8 @@ namespace SpeckleGSA
                 // TODO: This is a hack.
                 ls.Add(string.Join(
                     " ",
-                    elementRefs.Cast<string>()
-                        .Concat(elementRefs.Cast<string>().Select(x => "G" + x))
+                    elementRefs.Select(x => x.ToString())
+                        .Concat(groupRefs.Select(x => "G" + x.ToString()))
                 ));
                 ls.Add(loadCaseRef.ToString());
                 ls.Add("GLOBAL"); // Axis

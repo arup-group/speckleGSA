@@ -157,14 +157,19 @@ namespace SpeckleGSA
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
 
             int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType, element);
-            int propRef = Indexer.ResolveIndex(typeof(GSA1DProperty), element.PropertyRef);
+            int propRef = 0;
+            try
+            {
+                propRef = Indexer.LookupIndex(typeof(GSA1DProperty), element.PropertyRef).Value;
+            }
+            catch { }
 
             List<string> ls = new List<string>();
 
             ls.Add("SET");
             ls.Add(keyword);
             ls.Add(index.ToString());
-            ls.Add(element.Name);
+            ls.Add(element.Name == null || element.Name == "" ? " " : element.Name);
             ls.Add("NO_RGB");
             ls.Add("BEAM"); // Type
             ls.Add(propRef.ToString());
@@ -172,8 +177,10 @@ namespace SpeckleGSA
             for (int i = 0; i < element.Value.Count(); i += 3)
                 ls.Add(GSA.NodeAt(element.Value[i], element.Value[i+1], element.Value[i+2]).ToString());
             ls.Add("0"); // Orientation Node
-            ls.Add(HelperFunctions.Get1DAngle(element.Value.ToArray(), element.ZAxis).ToString());
-
+            try
+            { 
+                ls.Add(HelperFunctions.Get1DAngle(element.Value.ToArray(), element.ZAxis).ToString());
+            } catch { ls.Add("0"); }
             try
             {
                 List<string> subLs = new List<string>();

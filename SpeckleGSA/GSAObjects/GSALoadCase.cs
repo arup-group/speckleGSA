@@ -119,7 +119,7 @@ namespace SpeckleGSA
             ls.Add("SET");
             ls.Add(keyword);
             ls.Add(index.ToString());
-            ls.Add(loadCase.Name); // Name
+            ls.Add(loadCase.Name == null || loadCase.Name == "" ? " " : loadCase.Name);
             switch(loadCase.CaseType)
             {
                 case StructuralLoadCaseType.Dead:
