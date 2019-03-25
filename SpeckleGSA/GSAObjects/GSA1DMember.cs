@@ -225,6 +225,7 @@ namespace SpeckleGSA
             ls.Add("0"); // Height
             ls.Add("MAN"); // Auto offset 1
             ls.Add("MAN"); // Auto offset 2
+            ls.Add("NO"); // Internal auto offset
 
             try
             {

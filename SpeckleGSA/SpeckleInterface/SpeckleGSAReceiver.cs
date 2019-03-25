@@ -45,7 +45,10 @@ namespace SpeckleGSA
         {
             UpdateGlobal();
 
-            return Converter.Deserialise(myReceiver.Stream.Objects).Cast<SpeckleObject>().ToList();
+            List<SpeckleObject> structuralObjects = myReceiver.Stream.Objects.Where(o => o is IStructural).ToList();
+            structuralObjects.AddRange(Converter.Deserialise(myReceiver.Stream.Objects.Where(o => !(o is IStructural))).Cast<SpeckleObject>());
+
+            return structuralObjects;
         }
 
         public void OnWsMessage( object source, SpeckleEventArgs e)

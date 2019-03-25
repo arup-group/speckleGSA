@@ -184,6 +184,7 @@ namespace SpeckleGSA
             ls.Add("0"); // Time 3
             ls.Add("0"); // TODO: What is this?
             ls.Add("ACTIVE"); // Dummy
+            ls.Add("NO"); // Internal auto offset
             ls.Add(mesh.Offset.ToString()); // Offset z
             ls.Add("ALL"); // Exposure
 
