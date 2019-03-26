@@ -351,7 +351,7 @@ namespace SpeckleGSA
                 Indexer.ReserveIndices(typeof(GSANode).GetGSAKeyword(), new List<int>() { idx });
 
             // Add artificial cache
-            string cacheKey = "SET," + typeof(GSANode).GetGSAKeyword() + "," + idx.ToString();
+            string cacheKey = "SET," + typeof(GSANode).GetGSAKeyword() + "," + idx.ToString() + ",";
             if (!GSASetCache.ContainsKey(cacheKey))
                 GSASetCache[cacheKey] = 0;
 

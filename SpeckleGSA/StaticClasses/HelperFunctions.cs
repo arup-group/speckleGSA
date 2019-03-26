@@ -487,7 +487,7 @@ namespace SpeckleGSA
         #region Axis
         public static StructuralAxis ToAxis(double[] coor, StructuralVectorThree zAxis)
         {
-            Vector3D axisX = new Vector3D(coor[5] - coor[0], coor[4] - coor[1], coor[3] - coor[2]);
+            Vector3D axisX = new Vector3D(coor[3] - coor[0], coor[4] - coor[1], coor[5] - coor[2]);
             Vector3D axisZ = new Vector3D(zAxis.Value[0], zAxis.Value[1], zAxis.Value[2]);
             Vector3D axisY = Vector3D.CrossProduct(axisZ, axisX);
 
