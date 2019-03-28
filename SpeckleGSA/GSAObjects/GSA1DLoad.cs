@@ -305,7 +305,6 @@ namespace SpeckleGSA
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
 
-            int index = Indexer.ResolveIndex(keyword, load);
             List<int> elementRefs;
             List<int> groupRefs;
             if (GSA.TargetAnalysisLayer)
@@ -333,6 +332,8 @@ namespace SpeckleGSA
                 List<string> ls = new List<string>();
 
                 if (load.Loading.Value[i] == 0) continue;
+
+                int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType);
 
                 ls.Add("SET_AT");
                 ls.Add(index.ToString());

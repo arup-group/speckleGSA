@@ -167,8 +167,7 @@ namespace SpeckleGSA
                 return;
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
-
-            int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType, load);
+            
             List<int> nodeRefs = Indexer.LookupIndices(typeof(GSANode), load.NodeRefs).Where(x => x.HasValue).Select(x => x.Value).ToList();
             int loadCaseRef = 0;
             try
@@ -184,6 +183,8 @@ namespace SpeckleGSA
                 List<string> ls = new List<string>();
 
                 if (load.Loading.Value[i] == 0) continue;
+
+                int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType);
 
                 ls.Add("SET_AT");
                 ls.Add(index.ToString());
