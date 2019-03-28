@@ -168,22 +168,23 @@ namespace SpeckleGSA
                         {
                             foreach (SpeckleObject o in obj as IList)
                             {
-                                o.Scale(scaleFactor);
+                                SpeckleObject copy = o.CreateSpeckleCopy();
                                 
-                                if (!newObjects.ContainsKey(o.GetType()))
-                                    newObjects[o.GetType()] = new List<IStructural>() { (IStructural)o };
+                                if (!newObjects.ContainsKey(copy.GetType()))
+                                    newObjects[copy.GetType()] = new List<IStructural>() { (IStructural)copy };
                                 else
-                                    (newObjects[o.GetType()] as List<IStructural>).Add((IStructural)o);
+                                    (newObjects[copy.GetType()] as List<IStructural>).Add((IStructural)copy);
                             }
                         }
                         else
                         {
-                            (obj as SpeckleObject).Scale(scaleFactor);
+                            SpeckleObject copy = (obj as SpeckleObject).CreateSpeckleCopy();
+                            copy.Scale(scaleFactor);
 
-                            if (!newObjects.ContainsKey(obj.GetType()))
-                                newObjects[obj.GetType()] = new List<IStructural>() { (IStructural)obj };
+                            if (!newObjects.ContainsKey(copy.GetType()))
+                                newObjects[copy.GetType()] = new List<IStructural>() { (IStructural)copy };
                             else
-                                (newObjects[obj.GetType()] as List<IStructural>).Add((IStructural)obj);
+                                (newObjects[copy.GetType()] as List<IStructural>).Add((IStructural)copy);
                         }
                     }
                     catch (Exception ex)
