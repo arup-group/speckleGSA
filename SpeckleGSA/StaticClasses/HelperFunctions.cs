@@ -955,6 +955,19 @@ namespace SpeckleGSA
             return baseClass;
         }
 
+        public static SpeckleObject CreateSpeckleCopy(this SpeckleObject inputObject)
+        {
+            SpeckleObject ret = (SpeckleObject)Activator.CreateInstance(inputObject.GetType());
+
+            foreach (FieldInfo f in inputObject.GetType().GetFields())
+                f.SetValue(ret, f.GetValue(inputObject));
+
+            foreach (PropertyInfo p in inputObject.GetType().GetProperties().Where(p => p.CanWrite))
+                if (p.Name != "_id")
+                    p.SetValue(ret, p.GetValue(inputObject));
+
+            return ret;
+        }
         #endregion
     }
 
