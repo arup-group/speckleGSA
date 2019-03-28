@@ -63,7 +63,7 @@ namespace SpeckleGSA
             string[] pieces = command.ListSplit(",");
 
             int counter = 1; // Skip identifier
-            ret.StructuralID = pieces[counter++];
+            ret.StructuralId = pieces[counter++];
             ret.Name = pieces[counter++].Trim(new char[] { '"' });
             counter++; // Color
             counter++; // Type
@@ -80,7 +80,7 @@ namespace SpeckleGSA
             if (materials != null)
             {
                 GSAMaterial matchingMaterial = materials.Where(m => m.LocalReference == materialGrade & m.MaterialType == materialTypeEnum).FirstOrDefault();
-                ret.MaterialRef = matchingMaterial == null ? null : matchingMaterial.StructuralID;
+                ret.MaterialRef = matchingMaterial == null ? null : matchingMaterial.StructuralId;
                 if (matchingMaterial != null)
                     ret.SubGWACommand.Add(matchingMaterial.GWACommand);
             }

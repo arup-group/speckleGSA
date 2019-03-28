@@ -56,7 +56,7 @@ namespace SpeckleGSA
             for (int i = 0; i < pieces.Count(); i++)
             {
                 GSAMaterial mat = ParseGWACommand(pieces[i]);
-                mat.StructuralID = (i + 1).ToString(); // Offset references
+                mat.StructuralId = (i + 1).ToString(); // Offset references
                 materials.Add(mat);
             }
 

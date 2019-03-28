@@ -51,7 +51,7 @@ namespace SpeckleGSA
                 GSA0DLoad initLoad = ParseGWACommand(p, nodes);
 
                 // Raise node flag to make sure it gets sent
-                foreach (GSANode n in nodes.Where(n => initLoad.NodeRefs.Contains(n.StructuralID)))
+                foreach (GSANode n in nodes.Where(n => initLoad.NodeRefs.Contains(n.StructuralId)))
                     n.ForceSend = true;
 
                 // Create load for each node applied
@@ -64,7 +64,7 @@ namespace SpeckleGSA
                     load.LoadCaseRef = initLoad.LoadCaseRef;
 
                     // Transform load to defined axis
-                    GSANode node = nodes.Where(n => (n.StructuralID == nRef)).First();
+                    GSANode node = nodes.Where(n => (n.StructuralId == nRef)).First();
                     StructuralAxis loadAxis = HelperFunctions.Parse0DAxis(initLoad.Axis, node.Value.ToArray());
                     load.Loading = initLoad.Loading;
                     load.Loading.TransformOntoAxis(loadAxis);
@@ -106,9 +106,9 @@ namespace SpeckleGSA
             if (nodes != null)
             {
                 List<GSANode> targetNodes = nodes
-                    .Where(n => targetNodeRefs.Contains(Convert.ToInt32(n.StructuralID))).ToList();
+                    .Where(n => targetNodeRefs.Contains(Convert.ToInt32(n.StructuralId))).ToList();
 
-                ret.NodeRefs = nodes.Select(n => n.StructuralID).ToList();
+                ret.NodeRefs = nodes.Select(n => n.StructuralId).ToList();
                 ret.SubGWACommand.AddRange(nodes.Select(n => n.GWACommand));
             }
 

@@ -42,7 +42,7 @@ namespace SpeckleGSA
 
         public static int ResolveIndex(Type type, IStructural obj)
         {
-            return ResolveIndex(type.GetGSAKeyword(), obj.StructuralID, type.Name);
+            return ResolveIndex(type.GetGSAKeyword(), obj.StructuralId, type.Name);
         }
 
         public static int ResolveIndex(Type type, string structuralID)
@@ -57,7 +57,7 @@ namespace SpeckleGSA
 
         public static int ResolveIndex(string keywordGSA, IStructural obj, string type = "")
         {
-            return ResolveIndex(keywordGSA, obj.StructuralID, type);
+            return ResolveIndex(keywordGSA, obj.StructuralId, type);
         }
 
         public static int ResolveIndex(string keywordGSA, string structuralID, string type = "")
@@ -96,7 +96,7 @@ namespace SpeckleGSA
 
         public static int? LookupIndex(Type type, IStructural obj)
         {
-            return LookupIndex(type.GetGSAKeyword(), obj.StructuralID, type.Name);
+            return LookupIndex(type.GetGSAKeyword(), obj.StructuralId, type.Name);
         }
 
         public static int? LookupIndex(Type type, string structuralID)
@@ -106,7 +106,7 @@ namespace SpeckleGSA
 
         public static int? LookupIndex(string keywordGSA, IStructural obj, string type = "")
         {
-            return LookupIndex(keywordGSA, obj.StructuralID, type);
+            return LookupIndex(keywordGSA, obj.StructuralId, type);
         }
 
         public static int? LookupIndex(string keywordGSA, string structuralID, string type = "")

@@ -66,7 +66,7 @@ namespace SpeckleGSA
             string[] pieces = command.ListSplit(",");
 
             int counter = 1; // Skip identifier
-            ret.StructuralID = pieces[counter++];
+            ret.StructuralId = pieces[counter++];
             ret.Name = pieces[counter++].Trim(new char[] { '"' });
             var color = pieces[counter++].ParseGSAColor();
 
@@ -86,7 +86,7 @@ namespace SpeckleGSA
             for (int i = 0; i < type.ParseElementNumNodes(); i++)
             {
                 string key = pieces[counter++];
-                GSANode node = nodes.Where(n => n.StructuralID == key).FirstOrDefault();
+                GSANode node = nodes.Where(n => n.StructuralId == key).FirstOrDefault();
                 ret.Vertices.AddRange(node.Value);
                 ret.Faces.Add(i);
                 ret.SubGWACommand.Add(node.GWACommand);
@@ -94,7 +94,7 @@ namespace SpeckleGSA
 
             counter++; // Orientation node
 
-            GSA2DProperty prop = props.Where(p => p.StructuralID == ret.PropertyRef).FirstOrDefault();
+            GSA2DProperty prop = props.Where(p => p.StructuralId == ret.PropertyRef).FirstOrDefault();
             ret.Axis = HelperFunctions.Parse2DAxis(ret.Vertices.ToArray(),
                 Convert.ToDouble(pieces[counter++]),
                 prop == null ? false : (prop as GSA2DProperty).IsAxisLocal);

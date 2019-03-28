@@ -63,7 +63,7 @@ namespace SpeckleGSA
                         load.LoadCaseRef = initLoad.LoadCaseRef;
 
                         // Transform load to defined axis
-                        GSA1DElement elem = elements.Where(e => e.StructuralID == nRef).First();
+                        GSA1DElement elem = elements.Where(e => e.StructuralId == nRef).First();
                         StructuralAxis loadAxis = load.Axis == 0 ? new StructuralAxis(
                             new StructuralVectorThree(new double[] { 1, 0, 0 }),
                             new StructuralVectorThree(new double[] { 0, 1, 0 }),
@@ -114,7 +114,7 @@ namespace SpeckleGSA
                         load.LoadCaseRef = initLoad.LoadCaseRef;
 
                         // Transform load to defined axis
-                        GSA1DMember memb = members.Where(e => e.StructuralID == nRef).First();
+                        GSA1DMember memb = members.Where(e => e.StructuralId == nRef).First();
                         StructuralAxis loadAxis = load.Axis == 0 ? new StructuralAxis(
                             new StructuralVectorThree(new double[] { 1, 0, 0 }),
                             new StructuralVectorThree(new double[] { 0, 1, 0 }),
@@ -183,9 +183,9 @@ namespace SpeckleGSA
 
                 if (elements != null)
                 {
-                    List<GSA1DElement> elems = elements.Where(n => targetElements.Contains(Convert.ToInt32(n.StructuralID))).ToList();
+                    List<GSA1DElement> elems = elements.Where(n => targetElements.Contains(Convert.ToInt32(n.StructuralId))).ToList();
 
-                    ret.ElementRefs = elems.Select(n => n.StructuralID).ToList();
+                    ret.ElementRefs = elems.Select(n => n.StructuralId).ToList();
                     ret.SubGWACommand.AddRange(elems.Select(n => n.GWACommand));
                 }
             }
@@ -197,7 +197,7 @@ namespace SpeckleGSA
                 {
                     List<GSA1DMember> membs = members.Where(m => targetGroups.Contains(m.Group)).ToList();
 
-                    ret.ElementRefs = membs.Select(m => m.StructuralID).ToList();
+                    ret.ElementRefs = membs.Select(m => m.StructuralId).ToList();
                     ret.SubGWACommand.AddRange(membs.Select(n => n.GWACommand));
                 }
             }

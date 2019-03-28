@@ -59,7 +59,7 @@ namespace SpeckleGSA
             string[] pieces = command.ListSplit(",");
 
             int counter = 1; // Skip identifier
-            ret.StructuralID = pieces[counter++];
+            ret.StructuralId = pieces[counter++];
             ret.Name = pieces[counter++].Trim(new char[] { '"' });
             counter++; // Color
             ret.Value = new List<double>();
@@ -129,7 +129,7 @@ namespace SpeckleGSA
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
 
-            int index = GSA.NodeAt(node.Value[0], node.Value[1], node.Value[2], node.StructuralID);
+            int index = GSA.NodeAt(node.Value[0], node.Value[1], node.Value[2], node.StructuralId);
             //int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType, node);
 
             List<string> ls = new List<string>();

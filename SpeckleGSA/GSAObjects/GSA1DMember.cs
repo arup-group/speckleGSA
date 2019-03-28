@@ -67,7 +67,7 @@ namespace SpeckleGSA
             string[] pieces = command.ListSplit(",");
 
             int counter = 1; // Skip identifier
-            ret.StructuralID = pieces[counter++];
+            ret.StructuralId = pieces[counter++];
             ret.Name = pieces[counter++].Trim(new char[] { '"' });
             counter++; // Color
 
@@ -88,7 +88,7 @@ namespace SpeckleGSA
             string[] nodeRefs = pieces[counter++].ListSplit(" ");
             for (int i = 0; i < nodeRefs.Length; i++)
             {
-                GSANode node = nodes.Where(n => n.StructuralID == nodeRefs[i]).FirstOrDefault();
+                GSANode node = nodes.Where(n => n.StructuralId == nodeRefs[i]).FirstOrDefault();
                 ret.Value.AddRange(node.Value);
                 ret.SubGWACommand.Add(node.GWACommand);
             }
@@ -98,7 +98,7 @@ namespace SpeckleGSA
 
             if (orientationNodeRef != "0")
             {
-                GSANode node = nodes.Where(n => n.StructuralID == orientationNodeRef).FirstOrDefault();
+                GSANode node = nodes.Where(n => n.StructuralId == orientationNodeRef).FirstOrDefault();
                 ret.ZAxis = HelperFunctions.Parse1DAxis(ret.Value.ToArray(),
                     rotationAngle, node.Value.ToArray()).Normal as StructuralVectorThree;
                 ret.SubGWACommand.Add(node.GWACommand);

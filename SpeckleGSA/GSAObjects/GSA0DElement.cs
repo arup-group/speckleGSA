@@ -42,7 +42,7 @@ namespace SpeckleGSA
                     GSA0DElement massNode = Get(p);
 
                     nodes
-                        .Where(n => n.StructuralID == massNode.StructuralID).First()
+                        .Where(n => n.StructuralId == massNode.StructuralId).First()
                         .Mass = 0;
 
                     changed = true;
@@ -57,11 +57,11 @@ namespace SpeckleGSA
                     GSA0DElement massNode = Get(p);
 
                     nodes
-                        .Where(n => n.StructuralID == massNode.StructuralID).First()
+                        .Where(n => n.StructuralId == massNode.StructuralId).First()
                         .Mass = massNode.Mass;
 
                     nodes.Cast<GSANode>()
-                        .Where(n => n.StructuralID == massNode.StructuralID).First()
+                        .Where(n => n.StructuralId == massNode.StructuralId).First()
                         .SubGWACommand.Add(p);
 
                     changed = true;
@@ -87,7 +87,7 @@ namespace SpeckleGSA
             counter++; // Type
             ret.Mass = GetGSAMass(Convert.ToInt32(pieces[counter++]));
             counter++; // group
-            ret.StructuralID = pieces[counter++];
+            ret.StructuralId = pieces[counter++];
             // Rest is unimportant for 0D element
             
             return ret;

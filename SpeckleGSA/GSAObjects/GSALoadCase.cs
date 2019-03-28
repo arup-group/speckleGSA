@@ -59,7 +59,7 @@ namespace SpeckleGSA
 
             int counter = 1; // Skip identifier
 
-            ret.StructuralID = pieces[counter++];
+            ret.StructuralId = pieces[counter++];
             ret.Name = pieces[counter++];
 
             string type = pieces[counter++];
