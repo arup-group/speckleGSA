@@ -3,7 +3,7 @@ before_script:
   - git submodule update --init --recursive
 
 build:
-  variable:
+  variables:
     VERSION: '0'
   stage: build
   script:
@@ -11,9 +11,8 @@ build:
   - msbuild /t:restore
   - msbuild /property:Configuration=Release
   - $env:VERSION = (Get-Item $env:CI_PROJECT_DIR\SpeckleGSAUI\bin\Release\SpeckleGSA.dll).VersionInfo.FileVersion
-  - 7z a SpeckleGSA-$projVersion.zip "$env:CI_PROJECT_DIR\SpeckleGSAUI\bin\Release\*"
   artifacts:
     name: "SpeckleGSA-${VERSION}"
     paths:
-    - "${CI_PROJECT_DIR}\SpeckleGSAUI\bin\Release\*"
+    - ${CI_PROJECT_DIR}\SpeckleGSAUI\bin\Release\*
     expire_in: 6 mos 
