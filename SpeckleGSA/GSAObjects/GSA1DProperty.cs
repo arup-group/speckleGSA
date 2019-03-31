@@ -436,30 +436,36 @@ namespace SpeckleGSA
                 }
                 else if (prop.Shape == Structural1DPropertyShape.I)
                 {
-                    X.Sort();
-                    Y.Sort();
+                    List<double> xDist = X.Distinct().ToList();
+                    List<double> yDist = Y.Distinct().ToList();
 
-                    if (X.Count() == 4 && Y.Count() == 4)
+                    xDist.Sort();
+                    yDist.Sort();
+
+                    if (xDist.Count() == 4 && yDist.Count() == 4)
                     {
-                        double width = X.Max() - X.Min();
-                        double depth = Y.Max() - Y.Min();
-                        double T = Y[3] - Y[2];
-                        double t = X[2] - X[1];
+                        double width = xDist.Max() - xDist.Min();
+                        double depth = yDist.Max() - yDist.Min();
+                        double T = yDist[3] - yDist[2];
+                        double t = xDist[2] - xDist[1];
                         
                         return "STD%I(" + GSA.Units + ")%" + depth.ToString() + "%" + width.ToString() + "%" + T.ToString() + "%" + t.ToString();
                     }
                 }
                 else if (prop.Shape == Structural1DPropertyShape.T)
                 {
-                    X.Sort();
-                    Y.Sort();
+                    List<double> xDist = X.Distinct().ToList();
+                    List<double> yDist = Y.Distinct().ToList();
 
-                    if (X.Count() == 4 && Y.Count() == 3)
+                    xDist.Sort();
+                    yDist.Sort();
+
+                    if (xDist.Count() == 4 && yDist.Count() == 3)
                     {
-                        double width = X.Max() - X.Min();
-                        double depth = Y.Max() - Y.Min();
-                        double T = Y[2] - Y[1];
-                        double t = X[2] - X[1];
+                        double width = xDist.Max() - xDist.Min();
+                        double depth = yDist.Max() - yDist.Min();
+                        double T = yDist[2] - yDist[1];
+                        double t = xDist[2] - xDist[1];
                         
                         return "STD%T(" + GSA.Units + ")%" + depth.ToString() + "%" + width.ToString() + "%" + T.ToString() + "%" + t.ToString();
                     }
