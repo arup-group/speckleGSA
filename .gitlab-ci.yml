@@ -4,15 +4,16 @@ before_script:
 
 build:
   variables:
-    VERSION: '0'
+    VERSION: $('0')
   stage: build
   script:
   - nuget restore
   - msbuild /t:restore
   - msbuild /property:Configuration=Release
-  - $env:VERSION = (Get-Item $env:CI_PROJECT_DIR\SpeckleGSAUI\bin\Release\SpeckleGSA.dll).VersionInfo.FileVersion
+  - $env:VERSION += (Get-Item $env:CI_PROJECT_DIR\SpeckleGSAUI\bin\Release\SpeckleGSA.dll).VersionInfo.FileVersion
+  - 7z a SpeckleGSA-$env:VERSION.zip "$env:CI_PROJECT_DIR\SpeckleGSAUI\bin\Release\*"
   artifacts:
     name: "SpeckleGSA-${VERSION}"
     paths:
-    - "/SpeckleGSAUI/bin/Release/*"
+    - "${CI_PROJECT_DIR}/*.zip"
     expire_in: 6 mos 
