@@ -114,7 +114,7 @@ namespace SpeckleGSA
             Receivers.Clear();
 
             string key = emailAddress + "&" + serverAddress.Replace(':', '&');
-            string res = (string)RunGWACommand("GET,SID");
+            string res = (string)RunGWACommand("GET,SID", false);
 
             if (res == "")
                 return;
@@ -129,20 +129,20 @@ namespace SpeckleGSA
 
             if (senderList != null)
             {
-                string[] senders = senderList[1].ListSplit("&");
+                string[] senders = senderList[1].Split(new char[] { '&' }, StringSplitOptions.RemoveEmptyEntries);
 
                 for (int i = 0; i < senders.Length; i+=2)
                     Senders[senders[i]] = senders[i+1];
             }
 
             if (receiverList != null)
-                Receivers = receiverList[1].ListSplit("&").ToList();
+                Receivers = receiverList[1].Split(new char[] { '&' }, StringSplitOptions.RemoveEmptyEntries).ToList();
         }
 
         public static void SetSpeckleClients(string emailAddress, string serverAddress)
         {
             string key = emailAddress + "&" + serverAddress.Replace(':', '&');
-            string res = (string)RunGWACommand("GET,SID");
+            string res = (string)RunGWACommand("GET,SID", false);
 
             List<string[]> sids = Regex.Matches(res, @"(?<={).*?(?=})").Cast<Match>()
                     .Select(m => m.Value.Split(new char[] { ':' }))
@@ -165,7 +165,7 @@ namespace SpeckleGSA
             foreach (string[] s in sids)
                 sidRecord += "{" + s[0] + ":" + s[1] + "}";
 
-            RunGWACommand("SET,SID," + sidRecord);
+            RunGWACommand("SET,SID," + sidRecord, false);
         }
         #endregion
 
@@ -235,7 +235,7 @@ namespace SpeckleGSA
 
             if (cache)
             {
-                if (command.Contains("GET") & !command.Contains("HIGHEST"))
+                if (command.StartsWith("GET") & !command.StartsWith("HIGHEST"))
                 {
                     if (!GSAGetCache.ContainsKey(command))
                     {
@@ -264,7 +264,7 @@ namespace SpeckleGSA
                     return GSAGetCache[command];
                 }
 
-                if (command.Contains("SET"))
+                if (command.StartsWith("SET"))
                 {
                     if (PreviousGSASetCache.ContainsKey(command))
                         GSASetCache[command] = PreviousGSASetCache[command];
@@ -281,7 +281,7 @@ namespace SpeckleGSA
 
         public static void BlankDepreciatedGWASetCommands()
         {
-            List<string> prevSets = PreviousGSASetCache.Keys.Where(l => l.Contains("SET")).ToList();
+            List<string> prevSets = PreviousGSASetCache.Keys.Where(l => l.StartsWith("SET")).ToList();
 
             for (int i = 0; i < prevSets.Count(); i++)
             {

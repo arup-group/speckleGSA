@@ -142,6 +142,7 @@ namespace SpeckleGSAUI
         {
             SenderTab.IsEnabled = false;
             ReceiverTab.IsEnabled = false;
+            Status.ChangeStatus("Opening New File");
             Task.Run(() => GSA.NewFile(EmailAddress, RestApi)).ContinueWith(
                 delegate
                 {
@@ -154,11 +155,12 @@ namespace SpeckleGSAUI
                                 UpdateClientLists();
                                 SenderTab.IsEnabled = true;
                                 ReceiverTab.IsEnabled = true;
+                                Status.ChangeStatus("Ready", 0);
                             }
                             ));
                     }
                     catch
-                    { Status.ChangeStatus("Failed to send"); }
+                    { Status.ChangeStatus("Failed to create file", 0); }
                 });
         }
 
@@ -169,6 +171,7 @@ namespace SpeckleGSAUI
             {
                 SenderTab.IsEnabled = false;
                 ReceiverTab.IsEnabled = false;
+                Status.ChangeStatus("Opening File");
                 Task.Run(() => GSA.OpenFile(openFileDialog.FileName, EmailAddress, RestApi)).ContinueWith(
                     delegate
                     {
@@ -181,11 +184,12 @@ namespace SpeckleGSAUI
                                     UpdateClientLists();
                                     SenderTab.IsEnabled = true;
                                     ReceiverTab.IsEnabled = true;
+                                    Status.ChangeStatus("Ready", 0);
                                 }
                                 ));
                         }
                         catch
-                        { Status.ChangeStatus("Failed to send"); }
+                        { Status.ChangeStatus("Failed to open file", 0); }
                     });
             }
         }
@@ -340,6 +344,7 @@ namespace SpeckleGSAUI
                 }
                 ReceiverLayerToggle.IsEnabled = false;
                 ReceiverContinuousToggle.IsEnabled = false;
+                ReceiverControlPanel.IsEnabled = false;
 
                 GSA.GetSpeckleClients(EmailAddress, RestApi);
                 gsaReceiver = new Receiver();
@@ -355,13 +360,7 @@ namespace SpeckleGSAUI
                                 DispatcherPriority.Background,
                                 new Action(() =>
                                 {
-                                    gsaReceiver.Dispose();
-                                    status = UIStatus.IDLE;
-                                    ReceiveButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
-                                    ReceiveButtonPath.Fill = Brushes.LightGray;
-
-                                    ReceiverLayerToggle.IsEnabled = true;
-                                    ReceiverContinuousToggle.IsEnabled = true;
+                                    ReceiveStream(sender, e);
                                 })
                             );
                         });
@@ -381,6 +380,16 @@ namespace SpeckleGSAUI
 
                 ReceiverLayerToggle.IsEnabled = true;
                 ReceiverContinuousToggle.IsEnabled = true;
+                ReceiverControlPanel.IsEnabled = true;
+
+                MessageBoxResult result = MessageBox.Show("Bake received objects permanently? ", "SpeckleGSA", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (result != MessageBoxResult.Yes)
+                {
+                    GSA.BlankDepreciatedGWASetCommands();
+                    GSA.ClearCache();
+                    GSA.BlankDepreciatedGWASetCommands();
+                    GSA.UpdateViews();
+                }
             }
         }
         #endregion

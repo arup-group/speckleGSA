@@ -100,12 +100,14 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <Grid Grid.Row="0" Background="Transparent">
-                            <Viewbox Width="48" Height="48" MouseDown="SendStream" Margin="25">
-                                <Canvas Width="24" Height="24">
-                                    <Path x:Name="SendButtonPath"
+                            <Button Style="{StaticResource TransparentButton}" Click="SendStream" Width="48" Height="48" Margin="25" Background="Transparent" BorderThickness="0">
+                                <Viewbox>
+                                    <Canvas Width="24" Height="24">
+                                        <Path x:Name="SendButtonPath"
                                               Fill="#0080FF" />
-                                </Canvas>
-                            </Viewbox>
+                                    </Canvas>
+                                </Viewbox>
+                            </Button>
                         </Grid>
                         <StackPanel Grid.Row="1" HorizontalAlignment="Right" Orientation="Horizontal">
                             <ToggleButton
@@ -164,12 +166,14 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <Grid Grid.Row="0" Background="Transparent">
-                            <Viewbox Width="48" Height="48" MouseDown="ReceiveStream" Margin="25">
-                                <Canvas Width="24" Height="24">
-                                    <Path x:Name="ReceiveButtonPath"
+                            <Button Style="{StaticResource TransparentButton}" Click="ReceiveStream" Width="48" Height="48" Margin="25" Background="Transparent" BorderThickness="0">
+                                <Viewbox>
+                                    <Canvas Width="24" Height="24">
+                                        <Path x:Name="ReceiveButtonPath"
                                               Fill="#0080FF" />
-                                </Canvas>
-                            </Viewbox>
+                                    </Canvas>
+                                </Viewbox>
+                            </Button>
                         </Grid>
                         <StackPanel Grid.Row="1" HorizontalAlignment="Right" Orientation="Horizontal">
                             <ToggleButton
@@ -185,7 +189,7 @@
                                 Content="Streaming Method:"
                                 Style="{StaticResource ContinuousSingleToggle}"/>
                         </StackPanel>
-                        <DockPanel Grid.Row="3" LastChildFill="True">
+                        <DockPanel Grid.Row="3" LastChildFill="True" x:Name="ReceiverControlPanel">
                             <Button DockPanel.Dock="Right" Click="ClearReceiver" Content="Clear All"  Margin="5" Padding="5" MinWidth="100"/>
                             <Button DockPanel.Dock="Right" Click="PasteClipboardReceiver" Content="Paste Clipboard"  Margin="5" Padding="5"  MinWidth="100"/>
                             <Rectangle DockPanel.Dock="Right" VerticalAlignment="Stretch" Width="1" Margin="2" Stroke="DarkGray" />

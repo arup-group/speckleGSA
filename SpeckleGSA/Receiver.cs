@@ -146,8 +146,14 @@ namespace SpeckleGSA
             // Read objects
             Status.ChangeStatus("Receiving stream");
             foreach (KeyValuePair<string, SpeckleGSAReceiver> kvp in Receivers)
-                convertedObjects[kvp.Key] = Receivers[kvp.Key].GetStructuralObjects();
-            
+            {
+                try
+                { 
+                    convertedObjects[kvp.Key] = Receivers[kvp.Key].GetStructuralObjects();
+                }
+                catch { Status.AddError("Unable to get stream " + kvp.Key); }
+            }
+
             // Populate new item dictionary
             Status.ChangeStatus("Bucketing objects");
 
