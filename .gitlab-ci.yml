@@ -14,5 +14,5 @@ build:
   artifacts:
     name: "SpeckleGSA-${VERSION}"
     paths:
-    - ${CI_PROJECT_DIR}\SpeckleGSAUI\bin\Release\*
+    - "/SpeckleGSAUI/bin/Release/*"
     expire_in: 6 mos 
