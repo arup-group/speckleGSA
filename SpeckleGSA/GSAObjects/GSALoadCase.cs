@@ -11,55 +11,35 @@ namespace SpeckleGSA
     [GSAObject("LOAD_TITLE.2", "loads", true, true, new Type[] { }, new Type[] { })]
     public class GSALoadCase : StructuralLoadCase, IGSAObject
     {
-        public string GWACommand { get; set; }
-        public List<string> SubGWACommand { get; set; }
+        public string GWACommand { get; set; } = "";
+        public List<string> SubGWACommand { get; set; } = new List<string>();
 
-        #region Contructors and Converters
-        public GSALoadCase()
-        {
-            GWACommand = "";
-            SubGWACommand = new List<string>();
-        }
-
-        public GSALoadCase(StructuralLoadCase baseClass)
-        {
-            GWACommand = "";
-            SubGWACommand = new List<string>();
-
-            foreach (FieldInfo f in baseClass.GetType().GetFields())
-                f.SetValue(this, f.GetValue(baseClass));
-
-            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
-                p.SetValue(this, p.GetValue(baseClass));
-        }
-        #endregion
-
-        #region GSA Functions
-        public static bool GetObjects(Dictionary<Type, List<object>> dict)
+        #region Sending Functions
+        public static bool GetObjects(Dictionary<Type, List<IGSAObject>> dict)
         {
             if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
-                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<object>();
+                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<IGSAObject>();
 
-            List<object> loadCases = new List<object>();
+            List<GSALoadCase> loadCases = new List<GSALoadCase>();
 
-            string[] lines = GSA.GetGWAGetCommands("GET_ALL,LOAD_TITLE");
-            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL,LOAD_TITLE");
+            string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+
+            string[] lines = GSA.GetGWAGetCommands("GET_ALL," + keyword);
+            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL," + keyword);
 
             // Remove deleted lines
-            dict[typeof(GSALoadCase)].RemoveAll(l => deletedLines.Contains(((IGSAObject)l).GWACommand));
-            foreach (KeyValuePair<Type, List<object>> kvp in dict)
-                kvp.Value.RemoveAll(l => ((IGSAObject)l).SubGWACommand.Any(x => deletedLines.Contains(x)));
+            dict[typeof(GSALoadCase)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
+            foreach (KeyValuePair<Type, List<IGSAObject>> kvp in dict)
+                kvp.Value.RemoveAll(l => l.SubGWACommand.Any(x => deletedLines.Contains(x)));
 
             // Filter only new lines
-            string[] prevLines = dict[typeof(GSALoadCase)].Select(l => ((GSALoadCase)l).GWACommand).ToArray();
+            string[] prevLines = dict[typeof(GSALoadCase)].Select(l => l.GWACommand).ToArray();
             string[] newLines = lines.Where(l => !prevLines.Contains(l)).ToArray();
-            
+
             foreach (string p in newLines)
             {
-                GSALoadCase lc = new GSALoadCase();
-                lc.ParseGWACommand(p, dict);
-
-                loadCases.Add(lc);
+                GSALoadCase loadCase = ParseGWACommand(p);
+                loadCases.Add(loadCase);
             }
 
             dict[typeof(GSALoadCase)].AddRange(loadCases);
@@ -69,86 +49,107 @@ namespace SpeckleGSA
             return false;
         }
 
-        public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
+        public static GSALoadCase ParseGWACommand(string command)
         {
-            if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType)) return;
+            GSALoadCase ret = new GSALoadCase();
 
-            List<StructuralObject> loadCases = dict[typeof(GSALoadCase)];
-
-            foreach (StructuralObject lc in loadCases)
-                GSA.RunGWACommand(((GSALoadCase)lc).GetGWACommand());
-        }
-
-        public void ParseGWACommand(string command, Dictionary<Type, List<object>> dict = null)
-        {
-            GWACommand = command;
-
+            ret.GWACommand = command;
+            
             string[] pieces = command.ListSplit(",");
 
             int counter = 1; // Skip identifier
 
-            Reference = Convert.ToInt32(pieces[counter++]);
-            Name = pieces[counter++];
+            ret.StructuralId = pieces[counter++];
+            ret.Name = pieces[counter++];
 
             string type = pieces[counter++];
-            switch(type)
+            switch (type)
             {
                 case "DEAD":
-                    Type = StructuralLoadCaseType.DEAD;
+                    ret.CaseType = StructuralLoadCaseType.Dead;
                     break;
                 case "LC_VAR_IMP":
-                    Type = StructuralLoadCaseType.LIVE;
+                    ret.CaseType = StructuralLoadCaseType.Live;
                     break;
                 case "WIND":
-                    Type = StructuralLoadCaseType.WIND;
+                    ret.CaseType = StructuralLoadCaseType.Wind;
                     break;
                 case "SNOW":
-                    Type = StructuralLoadCaseType.SNOW;
+                    ret.CaseType = StructuralLoadCaseType.Snow;
                     break;
                 case "SEISMIC":
-                    Type = StructuralLoadCaseType.EARTHQUAKE;
+                    ret.CaseType = StructuralLoadCaseType.Earthquake;
                     break;
                 case "LC_PERM_SOIL":
-                    Type = StructuralLoadCaseType.SOIL;
+                    ret.CaseType = StructuralLoadCaseType.Soil;
                     break;
                 default:
-                    Type = StructuralLoadCaseType.GENERIC;
+                    ret.CaseType = StructuralLoadCaseType.Generic;
                     break;
             }
 
             // Rest is unimportant
 
-            return;
+            return ret;
+        }
+        #endregion
+
+        #region Receiving Functions
+        public static void SetObjects(Dictionary<Type, List<IStructural>> dict)
+        {
+            if (!dict.ContainsKey(typeof(StructuralLoadCase))) return;
+
+            foreach (IStructural obj in dict[typeof(StructuralLoadCase)])
+            {
+                Set(obj as StructuralLoadCase);
+            }
         }
 
-        public string GetGWACommand(Dictionary<Type, List<StructuralObject>> dict = null)
+        public static void Set(StructuralLoadCase loadCase)
         {
+            if (loadCase == null)
+                return;
+
+            string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+
+            int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType, loadCase);
+
             List<string> ls = new List<string>();
 
             ls.Add("SET");
-            ls.Add((string)this.GetAttribute("GSAKeyword"));
-            ls.Add(Reference.ToString());
-            ls.Add(Name); // Name
-            if (Type == StructuralLoadCaseType.DEAD)
-                ls.Add("DEAD");
-            else if (Type == StructuralLoadCaseType.LIVE)
-                ls.Add("LC_VAR_IMP");
-            else if (Type == StructuralLoadCaseType.WIND)
-                ls.Add("WIND");
-            else if (Type == StructuralLoadCaseType.SNOW)
-                ls.Add("SNOW");
-            else if (Type == StructuralLoadCaseType.EARTHQUAKE)
-                ls.Add("SEISMIC");
-            else if (Type == StructuralLoadCaseType.SOIL)
-                ls.Add("LC_PERM_SOIL");
-            else
-                ls.Add("UNDEF");
+            ls.Add(keyword);
+            ls.Add(index.ToString());
+            ls.Add(loadCase.Name == null || loadCase.Name == "" ? " " : loadCase.Name);
+            switch(loadCase.CaseType)
+            {
+                case StructuralLoadCaseType.Dead:
+                    ls.Add("DEAD");
+                    break;
+                case StructuralLoadCaseType.Live:
+                    ls.Add("LC_VAR_IMP");
+                    break;
+                case StructuralLoadCaseType.Wind:
+                    ls.Add("WIND");
+                    break;
+                case StructuralLoadCaseType.Snow:
+                    ls.Add("SNOW");
+                    break;
+                case StructuralLoadCaseType.Earthquake:
+                    ls.Add("SEISMIC");
+                    break;
+                case StructuralLoadCaseType.Soil:
+                    ls.Add("LC_PERM_SOIL");
+                    break;
+                default:
+                    ls.Add("UNDEF");
+                    break;
+            }
             ls.Add("1"); // Source
             ls.Add("~"); // Category
             ls.Add("NONE"); // Direction
             ls.Add("INC_BOTH"); // Include
-
-            return string.Join(",", ls);
+            
+            GSA.RunGWACommand(string.Join(",", ls));
         }
         #endregion
     }

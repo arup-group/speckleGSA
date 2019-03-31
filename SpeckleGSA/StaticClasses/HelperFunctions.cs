@@ -11,6 +11,7 @@ using SpeckleCore;
 using System.Reflection;
 using System.Collections;
 using SpeckleStructuresClasses;
+using SpeckleCoreGeometryClasses;
 
 namespace SpeckleGSA
 {
@@ -464,13 +465,43 @@ namespace SpeckleGSA
             Color col = Color.FromKnownColor((KnownColor)Enum.Parse(typeof(KnownColor), colStr));
             return col.R + col.G * 256 + col.B * 256 * 256;
         }
+
+        public static int? ToSpeckleColor(this int? color)
+        {
+            if (color == null)
+                return null;
+            
+            return Color.FromArgb(255,
+                           (int)color % 256,
+                           ((int)color / 256) % 256,
+                           ((int)color / 256 / 256) % 256).ToArgb();
+        }
+
+        public static int ToHexColor(this int color)
+        {
+            Color col = Color.FromArgb(color);
+            return col.R + col.G * 256 + col.B * 256 * 256;
+        }
         #endregion
 
         #region Axis
-        public static Axis Parse0DAxis(int axis, double[] evalAtCoor = null)
+        public static StructuralAxis ToAxis(double[] coor, StructuralVectorThree zAxis)
         {
-            Axis returnAxis = new Axis();
+            Vector3D axisX = new Vector3D(coor[3] - coor[0], coor[4] - coor[1], coor[5] - coor[2]);
+            Vector3D axisZ = new Vector3D(zAxis.Value[0], zAxis.Value[1], zAxis.Value[2]);
+            Vector3D axisY = Vector3D.CrossProduct(axisZ, axisX);
 
+            StructuralAxis axis = new StructuralAxis(
+                new StructuralVectorThree(new double[] { axisX.X, axisX.Y, axisX.Z }),
+                new StructuralVectorThree(new double[] { axisY.X, axisY.Y, axisY.Z }),
+                new StructuralVectorThree(new double[] { axisZ.X, axisZ.Y, axisZ.Z })
+            );
+            axis.Normalize();
+            return axis;
+        }
+
+        public static StructuralAxis Parse0DAxis(int axis, double[] evalAtCoor = null)
+        {
             Vector3D x;
             Vector3D y;
             Vector3D z;
@@ -479,28 +510,32 @@ namespace SpeckleGSA
             {
                 case 0:
                     // Global
-                    returnAxis.SetAxis(new double[3] { 1, 0, 0 },
-                        new double[3] { 0, 1, 0 },
-                        new double[3] { 0, 0, 1 });
-                    return returnAxis;
+                    return new StructuralAxis(
+                        new StructuralVectorThree(new double[] { 1, 0, 0 }),
+                        new StructuralVectorThree(new double[] { 0, 1, 0 }),
+                        new StructuralVectorThree(new double[] { 0, 0, 1 })
+                    );
                 case -11:
                     // X elevation
-                    returnAxis.SetAxis(new double[3] { 0, -1, 0 },
-                        new double[3] { 0, 0, 1 },
-                        new double[3] { -1, 0, 0 });
-                    return returnAxis;
+                    return new StructuralAxis(
+                        new StructuralVectorThree(new double[] { 0, -1, 0 }),
+                        new StructuralVectorThree(new double[] { 0, 0, 1 }),
+                        new StructuralVectorThree(new double[] { -1, 0, 0 })
+                    );
                 case -12:
                     // Y elevation
-                    returnAxis.SetAxis(new double[3] { 1, 0, 0 },
-                        new double[3] { 0, 0, 1 },
-                        new double[3] { 0, -1, 0 });
-                    return returnAxis;
+                    return new StructuralAxis(
+                        new StructuralVectorThree(new double[] { 1, 0, 0 }),
+                        new StructuralVectorThree(new double[] { 0, 0, 1 }),
+                        new StructuralVectorThree(new double[] { 0, -1, 0 })
+                    );
                 case -14:
                     // Vertical
-                    returnAxis.SetAxis(new double[3] { 0, 0, 1 },
-                        new double[3] { 1, 0, 0 },
-                        new double[3] { 0, 1, 0 });
-                    return returnAxis;
+                    return new StructuralAxis(
+                        new StructuralVectorThree(new double[] { 0, 0, 1 }),
+                        new StructuralVectorThree(new double[] { 1, 0, 0 }),
+                        new StructuralVectorThree(new double[] { 0, 1, 0 })
+                    );
                 case -13:
                     // Global cylindrical
                     x = new Vector3D(evalAtCoor[0], evalAtCoor[1], 0);
@@ -508,17 +543,21 @@ namespace SpeckleGSA
                     z = new Vector3D(0, 0, 1);
                     y = Vector3D.CrossProduct(z, x);
 
-                    returnAxis.SetAxis(x, y, z);
-                    return returnAxis;
+                    return new StructuralAxis(
+                        new StructuralVectorThree(new double[] { x.X, x.Y, x.Z }),
+                        new StructuralVectorThree(new double[] { y.X, y.Y, y.Z }),
+                        new StructuralVectorThree(new double[] { z.X, z.Y, z.Z })
+                    );
                 default:
                     string res = (string)GSA.RunGWACommand("GET,AXIS," + axis.ToString());
                     string[] pieces = res.Split(new char[] { ',' });
                     if (pieces.Length < 13)
                     {
-                        returnAxis.SetAxis(new double[3] { 1, 0, 0 },
-                            new double[3] { 0, 1, 0 },
-                            new double[3] { 0, 0, 1 });
-                        return returnAxis;
+                        return new StructuralAxis(
+                            new StructuralVectorThree(new double[] { 1, 0, 0 }),
+                            new StructuralVectorThree(new double[] { 0, 1, 0 }),
+                            new StructuralVectorThree(new double[] { 0, 0, 1 })
+                        );
                     }
                     Vector3D origin = new Vector3D(Convert.ToDouble(pieces[4]), Convert.ToDouble(pieces[5]), Convert.ToDouble(pieces[6]));
 
@@ -546,8 +585,11 @@ namespace SpeckleGSA
                     switch (pieces[3])
                     {
                         case "CART":
-                            returnAxis.SetAxis(X, Y, Z);
-                            return returnAxis;
+                            return new StructuralAxis(
+                                new StructuralVectorThree(new double[] { X.X, X.Y, X.Z }),
+                                new StructuralVectorThree(new double[] { Y.X, Y.Y, Y.Z }),
+                                new StructuralVectorThree(new double[] { Z.X, Z.Y, Z.Z })
+                            );
                         case "CYL":
                             x = new Vector3D(pos.X, pos.Y, 0);
                             x.Normalize();
@@ -555,8 +597,11 @@ namespace SpeckleGSA
                             y = Vector3D.CrossProduct(Z, x);
                             y.Normalize();
 
-                            returnAxis.SetAxis(x, y, z);
-                            return returnAxis;
+                            return new StructuralAxis(
+                                new StructuralVectorThree(new double[] { x.X, x.Y, x.Z }),
+                                new StructuralVectorThree(new double[] { y.X, y.Y, y.Z }),
+                                new StructuralVectorThree(new double[] { z.X, z.Y, z.Z })
+                            );
                         case "SPH":
                             x = pos;
                             x.Normalize();
@@ -565,23 +610,23 @@ namespace SpeckleGSA
                             y = Vector3D.CrossProduct(z, x);
                             z.Normalize();
 
-                            returnAxis.SetAxis(x, y, z);
-                            return returnAxis;
+                            return new StructuralAxis(
+                                new StructuralVectorThree(new double[] { x.X, x.Y, x.Z }),
+                                new StructuralVectorThree(new double[] { y.X, y.Y, y.Z }),
+                                new StructuralVectorThree(new double[] { z.X, z.Y, z.Z })
+                            );
                         default:
-                            returnAxis.SetAxis(new double[3] { 1, 0, 0 },
-                                new double[3] { 0, 1, 0 },
-                                new double[3] { 0, 0, 1 });
-                            return returnAxis;
+                            return new StructuralAxis(
+                                new StructuralVectorThree(new double[] { 1, 0, 0 }),
+                                new StructuralVectorThree(new double[] { 0, 1, 0 }),
+                                new StructuralVectorThree(new double[] { 0, 0, 1 })
+                            );
                     }
             }
         }
 
-        public static Axis Parse1DAxis(double[] coor, double rotationAngle = 0, double[] orientationNode = null)
+        public static StructuralAxis Parse1DAxis(double[] coor, double rotationAngle = 0, double[] orientationNode = null)
         {
-            Axis returnAxis = new Axis();
-
-            Dictionary<string, object> axisVectors = new Dictionary<string, object>();
-
             Vector3D x;
             Vector3D y;
             Vector3D z;
@@ -621,15 +666,15 @@ namespace SpeckleGSA
             y = Vector3D.Multiply(y, rotMat);
             z = Vector3D.Multiply(z, rotMat);
 
-            returnAxis.SetAxis(x, y, z);
-
-            return returnAxis;
+            return new StructuralAxis(
+                new StructuralVectorThree(new double[] { x.X, x.Y, x.Z }),
+                new StructuralVectorThree(new double[] { y.X, y.Y, y.Z }),
+                new StructuralVectorThree(new double[] { z.X, z.Y, z.Z })
+            );
         }
 
-        public static Axis Parse2DAxis(double[] coor, double rotationAngle = 0, bool isLocalAxis = false)
+        public static StructuralAxis Parse2DAxis(double[] coor, double rotationAngle = 0, bool isLocalAxis = false)
         {
-            Axis returnAxis = new Axis();
-            
             Vector3D x;
             Vector3D y;
             Vector3D z;
@@ -693,43 +738,58 @@ namespace SpeckleGSA
             Matrix3D rotMat = HelperFunctions.RotationMatrix(z, rotationAngle * (Math.PI / 180));
             x = Vector3D.Multiply(x, rotMat);
             y = Vector3D.Multiply(y, rotMat);
-
-            returnAxis.SetAxis(x, y, z);
-
-            return returnAxis;
+            
+            return new StructuralAxis(
+                new StructuralVectorThree(new double[] { x.X, x.Y, x.Z }),
+                new StructuralVectorThree(new double[] { y.X, y.Y, y.Z }),
+                new StructuralVectorThree(new double[] { z.X, z.Y, z.Z })
+            );
         }
 
-        public static double Get1DAngle(Axis axis)
+        public static double Get1DAngle(double[] coor, StructuralVectorThree zAxis)
         {
-            if (axis.X.X == 0 & axis.X.Y == 0)
+            return Get1DAngle(ToAxis(coor, zAxis));
+        }
+
+        public static double Get1DAngle(StructuralAxis axis)
+        {
+            Vector3D axisX = new Vector3D(axis.Xdir.Value[0], axis.Xdir.Value[1], axis.Xdir.Value[2]);
+            Vector3D axisY = new Vector3D(axis.Ydir.Value[0], axis.Ydir.Value[1], axis.Ydir.Value[2]);
+            Vector3D axisZ = new Vector3D(axis.Normal.Value[0], axis.Normal.Value[1], axis.Normal.Value[2]);
+
+            if (axisX.X == 0 & axisX.Y == 0)
             {
                 // Column
                 Vector3D Yglobal = new Vector3D(0, 1, 0);
 
-                double angle = Math.Acos(Vector3D.DotProduct(Yglobal, axis.Y) / (Yglobal.Length * axis.Y.Length)).ToDegrees();
+                double angle = Math.Acos(Vector3D.DotProduct(Yglobal, axisY) / (Yglobal.Length * axisY.Length)).ToDegrees();
                 if (double.IsNaN(angle)) return 0;
 
-                Vector3D signVector = Vector3D.CrossProduct(Yglobal, axis.Y);
-                double sign = Vector3D.DotProduct(signVector, axis.X);
+                Vector3D signVector = Vector3D.CrossProduct(Yglobal, axisY);
+                double sign = Vector3D.DotProduct(signVector, axisX);
 
                 return sign >= 0 ? angle : -angle;
             }
             else
             {
                 Vector3D Zglobal = new Vector3D(0, 0, 1);
-                Vector3D Y0 = Vector3D.CrossProduct(Zglobal, axis.X);
-                double angle = Math.Acos(Vector3D.DotProduct(Y0, axis.Y) / (Y0.Length * axis.Y.Length)).ToDegrees();
+                Vector3D Y0 = Vector3D.CrossProduct(Zglobal, axisX);
+                double angle = Math.Acos(Vector3D.DotProduct(Y0, axisY) / (Y0.Length * axisY.Length)).ToDegrees();
                 if (double.IsNaN(angle)) angle = 0;
 
-                Vector3D signVector = Vector3D.CrossProduct(Y0, axis.Y);
-                double sign = Vector3D.DotProduct(signVector, axis.X);
+                Vector3D signVector = Vector3D.CrossProduct(Y0, axisY);
+                double sign = Vector3D.DotProduct(signVector, axisX);
 
                 return sign >= 0 ? angle : 360 - angle;
             }
         }
 
-        public static double Get2DAngle(double[] coor, Axis axis)
+        public static double Get2DAngle(double[] coor, StructuralAxis axis)
         {
+            Vector3D axisX = new Vector3D(axis.Xdir.Value[0], axis.Xdir.Value[1], axis.Xdir.Value[2]);
+            Vector3D axisY = new Vector3D(axis.Ydir.Value[0], axis.Ydir.Value[1], axis.Ydir.Value[2]);
+            Vector3D axisZ = new Vector3D(axis.Normal.Value[0], axis.Normal.Value[1], axis.Normal.Value[2]);
+
             Vector3D x0;
             Vector3D z0;
 
@@ -753,11 +813,11 @@ namespace SpeckleGSA
             x0.Normalize();
 
             // Find angle
-            double angle = Math.Acos(Vector3D.DotProduct(x0, axis.X) / (x0.Length * axis.X.Length)).ToDegrees();
+            double angle = Math.Acos(Vector3D.DotProduct(x0, axisX) / (x0.Length * axisX.Length)).ToDegrees();
             if (double.IsNaN(angle)) return 0;
 
-            Vector3D signVector = Vector3D.CrossProduct(x0, axis.X);
-            double sign = Vector3D.DotProduct(signVector, axis.Z);
+            Vector3D signVector = Vector3D.CrossProduct(x0, axisX);
+            double sign = Vector3D.DotProduct(signVector, axisZ);
 
             return sign >= 0 ? angle : -angle;
         }
@@ -856,17 +916,9 @@ namespace SpeckleGSA
         #endregion
 
         #region Miscellanious
-        public static StructuralObject GetBase(this object obj)
+        public static string GetGSAKeyword(this object t)
         {
-            StructuralObject baseClass = (StructuralObject)Activator.CreateInstance(obj.GetType().BaseType);
-
-            foreach (FieldInfo f in baseClass.GetType().GetFields())
-                f.SetValue(baseClass, f.GetValue(obj));
-
-            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
-                p.SetValue(baseClass, p.GetValue(obj));
-
-            return baseClass;
+            return (string)t.GetAttribute("GSAKeyword");
         }
 
         public static object GetAttribute(this object t, string attribute)
@@ -886,105 +938,38 @@ namespace SpeckleGSA
             }
             catch { return null; }
         }
+
+        public static IStructural GetBase(this object obj)
+        {
+            IStructural baseClass = (IStructural)Activator.CreateInstance(obj.GetType().BaseType);
+
+            foreach (FieldInfo f in baseClass.GetType().GetFields())
+                f.SetValue(baseClass, f.GetValue(obj));
+
+            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
+                if (p.CanWrite)
+                    p.SetValue(baseClass, p.GetValue(obj));
+
+            (baseClass as SpeckleObject).GenerateHash();
+
+            return baseClass;
+        }
+
+        public static SpeckleObject CreateSpeckleCopy(this SpeckleObject inputObject)
+        {
+            SpeckleObject ret = (SpeckleObject)Activator.CreateInstance(inputObject.GetType());
+
+            foreach (FieldInfo f in inputObject.GetType().GetFields())
+                f.SetValue(ret, f.GetValue(inputObject));
+
+            foreach (PropertyInfo p in inputObject.GetType().GetProperties().Where(p => p.CanWrite))
+                if (p.Name != "_id")
+                    p.SetValue(ret, p.GetValue(inputObject));
+
+            return ret;
+        }
         #endregion
     }
 
-    public static class GSARefCounters
-    {
-        private static Dictionary<string, int> counter = new Dictionary<string, int>();
-        private static Dictionary<string, List<int>> refsUsed = new Dictionary<string, List<int>>();
-        private static Dictionary<string, List<int>> baseLine = new Dictionary<string, List<int>>();
 
-        public static int TotalObjects
-        {
-            get
-            {
-                int total = 0;
-
-                foreach (KeyValuePair<string, List<int>> kvp in refsUsed)
-                    total += kvp.Value.Count();
-
-                return total;
-            }
-        }
-
-        public static void Clear()
-        {
-            counter.Clear();
-            refsUsed.Clear();
-            baseLine.Clear();
-        }
-
-        public static void SetBaseline()
-        {
-            baseLine.Clear();
-            foreach (KeyValuePair<string, List<int>> kvp in refsUsed)
-            {
-                baseLine[kvp.Key] = new List<int>(kvp.Value);
-            }
-        }
-
-        public static void ResetToBaseline()
-        {
-            refsUsed.Clear();
-            foreach (KeyValuePair<string, List<int>> kvp in baseLine)
-            {
-                refsUsed[kvp.Key] = new List<int>(kvp.Value);
-            }
-        }
-
-        public static bool InBaseline(string key, int index)
-        {
-            if (baseLine.ContainsKey(key))
-                if (baseLine[key].Contains(index))
-                    return true;
-            
-            return false;
-
-        }
-
-        public static int RefObject(string key)
-        {
-            if (!counter.ContainsKey(key))
-                counter[key] = 1;
-
-            if (refsUsed.ContainsKey(key))
-                while (refsUsed[key].Contains(counter[key]))
-                    counter[key]++;
-
-            return counter[key]++;
-        }
-
-        public static int RefObject(StructuralObject obj)
-        {
-            // Returns 0 if success else 1
-            try
-            {
-                string key = (string)obj.GetAttribute("GSAKeyword");
-
-                if (obj.Reference == 0)
-                    obj.Reference = RefObject(key);
-                else
-                {
-                    if (refsUsed.ContainsKey(key))
-                        if (refsUsed[key].Contains(obj.Reference))
-                            return 1;
-                }
-
-                AddObjRefs(key, new List<int>() { obj.Reference });
-                return 0;
-            }
-            catch { throw new Exception("Unable to reference object type " + obj.GetType().Name); }
-        }
-
-        public static void AddObjRefs(string key, List<int> refs)
-        {
-            if (!refsUsed.ContainsKey(key))
-                refsUsed[key] = refs;
-            else
-                refsUsed[key].AddRange(refs);
-
-            refsUsed[key] = refsUsed[key].Distinct().ToList();
-        }
-    }
 }

@@ -1,0 +1,17 @@
+before_script:
+  - git submodule sync --recursive
+  - git submodule update --init --recursive
+
+build:
+  stage: build
+  script:
+  - nuget restore
+  - msbuild /t:restore
+  - msbuild /property:Configuration=Release
+  - $version += (Get-Item $env:CI_PROJECT_DIR\SpeckleGSAUI\bin\Release\SpeckleGSA.dll).VersionInfo.FileVersion
+  - 7z a SpeckleGSA-$version.zip "$env:CI_PROJECT_DIR\SpeckleGSAUI\bin\Release\*"
+  artifacts:
+    name: "SpeckleGSA"
+    paths:
+    - "${CI_PROJECT_DIR}/*.zip"
+    expire_in: 6 mos 

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SpeckleStructuresClasses;
+using SpeckleCore;
 
 namespace SpeckleGSA
 {
@@ -45,12 +46,12 @@ namespace SpeckleGSA
             // Initialize object write priority list
             IEnumerable<Type> objTypes = typeof(GSA)
                 .Assembly.GetTypes()
-                .Where(t => t.IsSubclassOf(typeof(StructuralObject)) && !t.IsAbstract);
+                .Where(t => t.IsSubclassOf(typeof(SpeckleObject)) && !t.IsAbstract);
 
             foreach (Type t in objTypes)
             {
-                if (t.GetMethod("WriteObjects",
-                    new Type[] { typeof(Dictionary<Type, List<StructuralObject>>) }) == null)
+                if (t.GetMethod("SetObjects",
+                    new Type[] { typeof(Dictionary<Type, List<IStructural>>) }) == null)
                     continue;
 
                 if (t.GetAttribute("AnalysisLayer") != null)
@@ -85,7 +86,7 @@ namespace SpeckleGSA
             TypeCastPriority.Sort((x, y) => x.Value.Count().CompareTo(y.Value.Count()));
 
             // Add existing GSA file objects to counters
-            GSARefCounters.Clear();
+            Indexer.Clear();
             foreach (KeyValuePair<Type, List<Type>> kvp in TypePrerequisites)
             {
                 Status.ChangeStatus("Clearing " + kvp.Key.Name);
@@ -98,7 +99,7 @@ namespace SpeckleGSA
 
                     if (highestRecord > 0)
                     {
-                        GSARefCounters.AddObjRefs(keyword, Enumerable.Range(1, highestRecord).ToList());
+                        Indexer.ReserveIndices(keyword, Enumerable.Range(1, highestRecord).ToList());
                         //GSA.RunGWACommand("DELETE," + kvp.Key.GetAttribute("GSAKeyword") + ",1," + highestRecord.ToString());
                     }
                     else
@@ -109,7 +110,7 @@ namespace SpeckleGSA
                 }
                 catch { }
             }
-            GSARefCounters.SetBaseline();
+            Indexer.SetBaseline();
 
             // Create receivers
             Status.ChangeStatus("Accessing stream");
@@ -140,20 +141,19 @@ namespace SpeckleGSA
             GSA.ClearCache();
             GSA.UpdateUnits();
 
-            Dictionary<string, List<object>> convertedObjects = new Dictionary<string, List<object>>();
-            List<string> newObjectIDs = new List<string>();
+            Dictionary<string, List<SpeckleObject>> convertedObjects = new Dictionary<string, List<SpeckleObject>>();
 
             // Read objects
             Status.ChangeStatus("Receiving stream");
             foreach (KeyValuePair<string, SpeckleGSAReceiver> kvp in Receivers)
-                convertedObjects[kvp.Key] = Receivers[kvp.Key].GetGSAObjects();
+                convertedObjects[kvp.Key] = Receivers[kvp.Key].GetStructuralObjects();
             
             // Populate new item dictionary
             Status.ChangeStatus("Bucketing objects");
 
-            Dictionary<Type, List<StructuralObject>> newObjects = new Dictionary<Type, List<StructuralObject>>();
+            Dictionary<Type, List<IStructural>> newObjects = new Dictionary<Type, List<IStructural>>();
 
-            foreach (KeyValuePair<string, List<object>> kvp in convertedObjects)
+            foreach (KeyValuePair<string, List<SpeckleObject>> kvp in convertedObjects)
             {
                 double scaleFactor = (1.0).ConvertUnit(Receivers[kvp.Key].Units.ShortUnitName(), GSA.Units);
 
@@ -164,34 +164,27 @@ namespace SpeckleGSA
 
                     try
                     {
-                        if (obj is IEnumerable)
+                        if (obj is IList)
                         {
-                            foreach (StructuralObject o in obj as IList)
+                            foreach (SpeckleObject o in obj as IList)
                             {
-                                o.Scale(scaleFactor);
-
-                                Type castType = TypeCastPriority.Where(t => t.Key.IsSubclassOf(o.GetType())).First().Key;
-
-                                if (castType == null) continue;
-
-                                if (!newObjects.ContainsKey(castType))
-                                    newObjects[castType] = new List<StructuralObject>() { (StructuralObject)Activator.CreateInstance(castType, o) };
+                                SpeckleObject copy = o.CreateSpeckleCopy();
+                                
+                                if (!newObjects.ContainsKey(copy.GetType()))
+                                    newObjects[copy.GetType()] = new List<IStructural>() { (IStructural)copy };
                                 else
-                                    (newObjects[castType] as List<StructuralObject>).Add((StructuralObject)Activator.CreateInstance(castType, o));
+                                    (newObjects[copy.GetType()] as List<IStructural>).Add((IStructural)copy);
                             }
                         }
                         else
                         {
-                            (obj as StructuralObject).Scale(scaleFactor);
+                            SpeckleObject copy = (obj as SpeckleObject).CreateSpeckleCopy();
+                            copy.Scale(scaleFactor);
 
-                            Type castType = TypeCastPriority.Where(t => t.Key.IsSubclassOf(obj.GetType())).First().Key;
-
-                            if (castType == null) continue;
-
-                            if (!newObjects.ContainsKey(castType))
-                                newObjects[castType] = new List<StructuralObject>() { (StructuralObject)Activator.CreateInstance(castType, obj) };
+                            if (!newObjects.ContainsKey(copy.GetType()))
+                                newObjects[copy.GetType()] = new List<IStructural>() { (IStructural)copy };
                             else
-                                (newObjects[castType] as List<StructuralObject>).Add((StructuralObject)Activator.CreateInstance(castType, obj));
+                                (newObjects[copy.GetType()] as List<IStructural>).Add((IStructural)copy);
                         }
                     }
                     catch (Exception ex)
@@ -202,17 +195,10 @@ namespace SpeckleGSA
             }
 
             // Set up counter
-            GSARefCounters.ResetToBaseline();
-            //GSARefCounters.Clear();
-
-            //foreach (KeyValuePair<Type, List<StructuralObject>> kvp in newObjects)
-            //{
-            //    // Reserve reference
-            //    GSARefCounters.AddObjRefs((string)kvp.Key.GetAttribute("GSAKeyword"),
-            //        (kvp.Value as IList).Cast<StructuralObject>().Select(o => o.Reference).ToList());
-            //}
+            Indexer.ResetToBaseline();
 
             // Write objects
+            Status.ChangeStatus("Writing objects");
             List<Type> currentBatch = new List<Type>();
             List<Type> traversedTypes = new List<Type>();
 
@@ -225,8 +211,8 @@ namespace SpeckleGSA
                 {
                     //Status.ChangeStatus("Writing " + t.Name);
 
-                    t.GetMethod("WriteObjects",
-                        new Type[] { typeof(Dictionary<Type, List<StructuralObject>>) })
+                    t.GetMethod("SetObjects",
+                        new Type[] { typeof(Dictionary<Type, List<IStructural>>) })
                         .Invoke(null, new object[] { newObjects });
 
                     traversedTypes.Add(t);

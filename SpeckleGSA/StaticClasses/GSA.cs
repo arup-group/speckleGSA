@@ -107,6 +107,7 @@ namespace SpeckleGSA
 
         public static void GetSpeckleClients(string emailAddress, string serverAddress)
         {
+            // TODO: Move to SID
             Senders.Clear();
             Receivers.Clear();
 
@@ -144,6 +145,7 @@ namespace SpeckleGSA
 
         public static void SetSpeckleClients(string emailAddress, string serverAddress)
         {
+            // TODO: Move to SID
             string res = (string)RunGWACommand("GET_ALL,LIST",false);
 
             int senderListReference = 1;
@@ -253,7 +255,7 @@ namespace SpeckleGSA
             for (int i = 0; i < prevSets.Count(); i++)
             {
                 string[] split = prevSets[i].ListSplit(",");
-                prevSets[i] = split[1] + "," + split[2];
+                prevSets[i] = split[1] + "," + split[2] + "," ;
 
             }
 
@@ -266,13 +268,13 @@ namespace SpeckleGSA
                 if (split[1].IsDigits())
                 {
                     // Uses SET
-                    if (!GSARefCounters.InBaseline(split[0], Convert.ToInt32(split[1])))
+                    if (!Indexer.InBaseline(split[0], Convert.ToInt32(split[1])))
                         RunGWACommand("BLANK," + split[0] + "," + split[1], false);
                 }
                 else
                 {
                     // Uses SET_AT
-                    if (!GSARefCounters.InBaseline(split[1], Convert.ToInt32(split[0])))
+                    if (!Indexer.InBaseline(split[1], Convert.ToInt32(split[0])))
                         RunGWACommand("BLANK," + split[1] + "," + split[0], false);
                 }
             }
@@ -339,16 +341,19 @@ namespace SpeckleGSA
             Units = ((string)RunGWACommand("GET,UNIT_DATA.1,LENGTH", false)).ListSplit(",")[2];
         }
 
-        public static int NodeAt(double x, double y, double z)
+        public static int NodeAt(double x, double y, double z, string structuralID = null)
         {
             int idx = GSAObject.Gen_NodeAt(x, y, z, Settings.CoincidentNodeAllowance);
-
-            // Add to ref counters
-            GSARefCounters.AddObjRefs("NODE.2", new List<int>() { idx });
+            
+            if (structuralID != null)
+                Indexer.ReserveIndices(typeof(GSANode), new List<int>() { idx }, new List<string>() { structuralID });
+            else
+                Indexer.ReserveIndices(typeof(GSANode).GetGSAKeyword(), new List<int>() { idx });
 
             // Add artificial cache
-            if (!GSASetCache.ContainsKey("SET,NODE.2," + idx.ToString()))
-                GSASetCache["SET,NODE.2," + idx.ToString()] = 0;
+            string cacheKey = "SET," + typeof(GSANode).GetGSAKeyword() + "," + idx.ToString() + ",";
+            if (!GSASetCache.ContainsKey(cacheKey))
+                GSASetCache[cacheKey] = 0;
 
             return idx;
         }

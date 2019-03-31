@@ -15,42 +15,20 @@ namespace SpeckleGSA
         // Need local reference since materials can have same reference if different types
         public int LocalReference;
 
-        public string GWACommand { get; set; }
-        public List<string> SubGWACommand { get; set; }
-
-        #region Contructors and Converters
-        public GSAMaterial()
-        {
-            GWACommand = "";
-            SubGWACommand = new List<string>();
-            LocalReference = 0;
-        }
-
-        public GSAMaterial(StructuralMaterial baseClass)
-        {
-            GWACommand = "";
-            SubGWACommand = new List<string>();
-            LocalReference = 0;
-
-            foreach (FieldInfo f in baseClass.GetType().GetFields())
-                f.SetValue(this, f.GetValue(baseClass));
-
-            foreach (PropertyInfo p in baseClass.GetType().GetProperties())
-                p.SetValue(this, p.GetValue(baseClass));
-        }
-        #endregion
-
-        #region GSA Functions
-        public static bool GetObjects(Dictionary<Type, List<object>> dict)
+        public string GWACommand { get; set; } = "";
+        public List<string> SubGWACommand { get; set; } = new List<string>();
+        
+        #region Sending Functions
+        public static bool GetObjects(Dictionary<Type, List<IGSAObject>> dict)
         {
             if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType))
-                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<object>();
+                dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<IGSAObject>();
+
+            List<GSAMaterial> materials = new List<GSAMaterial>();
 
             // TODO: Only supports steel and concrete
             string[] materialIdentifier = new string[]
                 { "MAT_STEEL.3", "MAT_CONCRETE.16" };
-
-            List<object> materials = new List<object>();
 
             List<string> pieces = new List<string>();
             bool deleted = false;
@@ -63,9 +41,9 @@ namespace SpeckleGSA
                     deleted = true;
 
                 // Remove deleted lines
-                dict[typeof(GSAMaterial)].RemoveAll(l => deletedLines.Contains(((IGSAObject)l).GWACommand));
-                foreach (KeyValuePair<Type, List<object>> kvp in dict)
-                    kvp.Value.RemoveAll(l => ((IGSAObject)l).SubGWACommand.Any(x => deletedLines.Contains(x)));
+                dict[typeof(GSAMaterial)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
+                foreach (KeyValuePair<Type, List<IGSAObject>> kvp in dict)
+                    kvp.Value.RemoveAll(l => l.SubGWACommand.Any(x => deletedLines.Contains(x)));
 
                 // Filter only new lines
                 string[] prevLines = dict[typeof(GSAMaterial)].Select(l => ((GSAMaterial)l).GWACommand).ToArray();
@@ -74,12 +52,11 @@ namespace SpeckleGSA
                 pieces.AddRange(newLines);
             }
             pieces = pieces.Distinct().ToList();
-            
+
             for (int i = 0; i < pieces.Count(); i++)
             {
-                GSAMaterial mat = new GSAMaterial();
-                mat.ParseGWACommand(pieces[i], dict);
-                mat.Reference = i + 1; // Offset references
+                GSAMaterial mat = ParseGWACommand(pieces[i]);
+                mat.StructuralId = (i + 1).ToString(); // Offset references
                 materials.Add(mat);
             }
 
@@ -90,66 +67,69 @@ namespace SpeckleGSA
             return false;
         }
 
-        public static void WriteObjects(Dictionary<Type, List<StructuralObject>> dict)
+        public static GSAMaterial ParseGWACommand(string command)
         {
-            if (!dict.ContainsKey(MethodBase.GetCurrentMethod().DeclaringType)) return;
+            GSAMaterial ret = new GSAMaterial();
 
-            List<StructuralObject> materials = dict[typeof(GSAMaterial)];
-
-            double counter = 1;
-            foreach (StructuralObject m in materials)
-            {
-                if (GSARefCounters.RefObject(m) != 0)
-                {
-                    m.Reference = 0;
-                    GSARefCounters.RefObject(m);
-                }
-
-                GSA.RunGWACommand((m as GSAMaterial).GetGWACommand());
-                Status.ChangeStatus("Writing materials", counter++ / materials.Count() * 100);
-            }
-        }
-
-        public void ParseGWACommand(string command, Dictionary<Type, List<object>> dict = null)
-        {
-            GWACommand = command;
+            ret.GWACommand = command;
 
             string[] pieces = command.ListSplit(",");
 
             int counter = 0;
             string identifier = pieces[counter++];
-            LocalReference = Convert.ToInt32(pieces[counter++]);
+            ret.LocalReference = Convert.ToInt32(pieces[counter++]);
 
             if (identifier.Contains("STEEL"))
             {
-                Type = StructuralMaterialType.STEEL;
+                ret.MaterialType = StructuralMaterialType.Steel;
                 counter++; // Move to name field of basic MAT definition
             }
             else if (identifier.Contains("CONCRETE"))
             {
-                Type = StructuralMaterialType.CONCRETE;
+                ret.MaterialType = StructuralMaterialType.Concrete;
                 counter++; // Move to name field of basic MAT definition
             }
             else
-                Type = StructuralMaterialType.GENERIC;
+                ret.MaterialType = StructuralMaterialType.Generic;
 
-            Grade = pieces[counter++].Trim(new char[] { '"' }); // TODO: Using name as grade
+            ret.Grade = pieces[counter++].Trim(new char[] { '"' }); // TODO: Using name as grade
 
-            // TODO: Skip all other properties for now
+            // Rest is unimportant
+
+            return ret;
+        }
+        #endregion
+
+        #region Receiving Functions
+        public static void SetObjects(Dictionary<Type, List<IStructural>> dict)
+        {
+            if (!dict.ContainsKey(typeof(StructuralMaterial))) return;
+
+            foreach (IStructural obj in dict[typeof(StructuralMaterial)])
+            {
+                Set(obj as StructuralMaterial);
+            }
         }
 
-        public string GetGWACommand(Dictionary<Type, List<StructuralObject>> dict = null)
+        public static void Set(StructuralMaterial mat)
         {
+            if (mat == null)
+                return;
+
+            string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+
+            int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType, mat);
+
             // TODO: This function barely works.
             List<string> ls = new List<string>();
 
             ls.Add("SET");
-            if (Type == StructuralMaterialType.STEEL)
+            if (mat.MaterialType == StructuralMaterialType.Steel)
             {
                 ls.Add("MAT_STEEL.3");
-                ls.Add(Reference.ToString());
+                ls.Add(index.ToString());
                 ls.Add("MAT.8");
-                ls.Add(Grade);
+                ls.Add(mat.Grade == null || mat.Grade == "" ? " " : mat.Grade);
                 ls.Add("YES"); // Unlocked
                 ls.Add("200000000000"); // E
                 ls.Add("0.3"); // nu
@@ -195,9 +175,9 @@ namespace SpeckleGSA
             else // if (Type == StructuralMaterialType.CONCRETE) // TODO: Default to concrete
             {
                 ls.Add("MAT_CONCRETE.16");
-                ls.Add(Reference.ToString());
+                ls.Add(index.ToString());
                 ls.Add("MAT.8");
-                ls.Add(Grade);
+                ls.Add(mat.Grade == null || mat.Grade == "" ? " " : mat.Grade);
                 ls.Add("YES"); // Unlocked
                 ls.Add("28000000000"); // E
                 ls.Add("0.2"); // nu
@@ -265,7 +245,7 @@ namespace SpeckleGSA
                 ls.Add("0"); // TODO: What is this?
             }
             
-            return string.Join(",", ls);
+            GSA.RunGWACommand(string.Join(",", ls));
         }
         #endregion
     }
