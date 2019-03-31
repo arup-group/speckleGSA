@@ -51,6 +51,7 @@ namespace SpeckleGSA
             Status.AddMessage("Linked to GSA.");
         }
 
+        #region File Operations
         public static void NewFile(string emailAddress, string serverAddress)
         {
             if (!IsInit)
@@ -104,92 +105,71 @@ namespace SpeckleGSA
             Senders.Clear();
             Receivers.Clear();
         }
+        #endregion
 
+        #region Speckle Client
         public static void GetSpeckleClients(string emailAddress, string serverAddress)
         {
-            // TODO: Move to SID
             Senders.Clear();
             Receivers.Clear();
 
-            string res = (string)RunGWACommand("GET_ALL,LIST",false);
+            string key = emailAddress + "&" + serverAddress.Replace(':', '&');
+            string res = (string)RunGWACommand("GET,SID");
 
             if (res == "")
                 return;
 
-            string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
-
-            string senderList = pieces.Where(s => s.Contains("SpeckleSenders:" + emailAddress + ":" + serverAddress)).FirstOrDefault();
-            string receiverList = pieces.Where(s => s.Contains("SpeckleReceivers:" + emailAddress + ":" + serverAddress)).FirstOrDefault();
-
-            if (senderList != null)
-            {
-                string[] pPieces = senderList.ListSplit(",");
-
-                List<string[]> senders = Regex.Matches(pPieces[2], @"(?<={).*?(?=})").Cast<Match>()
+            List<string[]> sids = Regex.Matches(res, @"(?<={).*?(?=})").Cast<Match>()
                     .Select(m => m.Value.Split(new char[] { ':' }))
                     .Where(s => s.Length == 2)
                     .ToList();
 
-                foreach (string[] sender in senders)
-                    Senders[sender[0]] = sender[1];
+            string[] senderList = sids.Where(s => s[0] == "SpeckleSender&" + key).FirstOrDefault();
+            string[] receiverList = sids.Where(s => s[0] == "SpeckleReceiver&" + key).FirstOrDefault();
+
+            if (senderList != null)
+            {
+                string[] senders = senderList[1].ListSplit("&");
+
+                for (int i = 0; i < senders.Length; i+=2)
+                    Senders[senders[i]] = senders[i+1];
             }
 
             if (receiverList != null)
-            {
-                string[] pPieces = receiverList.ListSplit(",");
-                Receivers = Regex.Matches(pPieces[2], @"(?<={).*?(?=})").Cast<Match>()
-                    .Select(m => m.Value)
-                    .ToList();
-            }
+                Receivers = receiverList[1].ListSplit("&").ToList();
         }
 
         public static void SetSpeckleClients(string emailAddress, string serverAddress)
         {
-            // TODO: Move to SID
-            string res = (string)RunGWACommand("GET_ALL,LIST",false);
+            string key = emailAddress + "&" + serverAddress.Replace(':', '&');
+            string res = (string)RunGWACommand("GET,SID");
 
-            int senderListReference = 1;
-            int receiverListReference = 2;
+            List<string[]> sids = Regex.Matches(res, @"(?<={).*?(?=})").Cast<Match>()
+                    .Select(m => m.Value.Split(new char[] { ':' }))
+                    .Where(s => s.Length == 2)
+                    .ToList();
 
-            if (res != "")
-            { 
-                string[] pieces = res.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+            sids.RemoveAll(S => S[0] == "SpeckleSender&" + key || S[0] == "SpeckleReceiver&" + key);
 
-                string senderList = pieces.Where(s => s.Contains("SpeckleSenders:" + emailAddress + ":" + serverAddress)).FirstOrDefault();
-                if (senderList == null)
-                    senderListReference = (int)GSA.RunGWACommand("HIGHEST,LIST",false) + 1;
-                else
-                {
-                    string[] pPieces = senderList.ListSplit(",");
-                    senderListReference = Convert.ToInt32(pPieces[1]);
-                }
-
-                string receiverList = pieces.Where(s => s.Contains("SpeckleReceivers:" + emailAddress + ":" + serverAddress)).FirstOrDefault();
-                if (receiverList == null)
-                    receiverListReference = (int)GSA.RunGWACommand("HIGHEST,LIST", false) + 2;
-                else
-                {
-                    string[] pPieces = receiverList.ListSplit(",");
-                    receiverListReference = Convert.ToInt32(pPieces[1]);
-                }
+            List<string> senderList = new List<string>();
+            foreach (KeyValuePair<string, string> kvp in Senders)
+            {
+                senderList.Add(kvp.Key);
+                senderList.Add(kvp.Value);
             }
 
-            string senders = string.Join(" ", Senders.Select(kvp => '{' + kvp.Key + ":" + kvp.Value + '}'));
-            RunGWACommand("SET,LIST," + senderListReference.ToString() + ",SpeckleSenders:" + emailAddress + ":" + serverAddress + " " + senders +",UNDEF, ", false);
-            
-            string receivers = string.Join(" ", Receivers.Select(r => '{' + r + '}'));
-            RunGWACommand("SET,LIST," + receiverListReference.ToString() + ",SpeckleReceivers:" + emailAddress + ":" + serverAddress + " " + receivers + ",UNDEF, ", false);
+            sids.Add(new string[] { "SpeckleSender&" + key, string.Join("&", senderList) });
+            sids.Add(new string[] { "SpeckleReceiver&" + key, string.Join("&", Receivers) });
+
+            string sidRecord = "";
+            foreach (string[] s in sids)
+                sidRecord += "{" + s[0] + ":" + s[1] + "}";
+
+            RunGWACommand("SET,SID," + sidRecord);
         }
+        #endregion
 
-        public static string Title()
-        {
-            string res = (string)RunGWACommand("GET,TITLE");
-
-            string[] pieces = res.ListSplit(",");
-
-            return pieces[1];
-        }
-        
+        #region GWA Command
         public static string[] GetGWAGetCommands(string command)
         {
             if (!command.Contains("GET"))
@@ -247,38 +227,6 @@ namespace SpeckleGSA
             else
                 return new string[0];
         }
-        
-        public static void BlankDepreciatedGWASetCommands()
-        {
-            List<string> prevSets = PreviousGSASetCache.Keys.Where(l => l.Contains("SET")).ToList();
-
-            for (int i = 0; i < prevSets.Count(); i++)
-            {
-                string[] split = prevSets[i].ListSplit(",");
-                prevSets[i] = split[1] + "," + split[2] + "," ;
-
-            }
-
-            prevSets = prevSets.Where(l => !GSASetCache.Keys.Any(x => x.Contains(l))).ToList();
-            
-            foreach(string p in prevSets)
-            {
-                string[] split = p.ListSplit(",");
-                
-                if (split[1].IsDigits())
-                {
-                    // Uses SET
-                    if (!Indexer.InBaseline(split[0], Convert.ToInt32(split[1])))
-                        RunGWACommand("BLANK," + split[0] + "," + split[1], false);
-                }
-                else
-                {
-                    // Uses SET_AT
-                    if (!Indexer.InBaseline(split[1], Convert.ToInt32(split[0])))
-                        RunGWACommand("BLANK," + split[1] + "," + split[0], false);
-                }
-            }
-        }
 
         public static object RunGWACommand(string command, bool cache = true)
         {
@@ -330,7 +278,75 @@ namespace SpeckleGSA
 
             return GSAObject.GwaCommand(command);
         }
-        
+
+        public static void BlankDepreciatedGWASetCommands()
+        {
+            List<string> prevSets = PreviousGSASetCache.Keys.Where(l => l.Contains("SET")).ToList();
+
+            for (int i = 0; i < prevSets.Count(); i++)
+            {
+                string[] split = prevSets[i].ListSplit(",");
+                prevSets[i] = split[1] + "," + split[2] + ",";
+
+            }
+
+            prevSets = prevSets.Where(l => !GSASetCache.Keys.Any(x => x.Contains(l))).ToList();
+
+            foreach (string p in prevSets)
+            {
+                string[] split = p.ListSplit(",");
+
+                if (split[1].IsDigits())
+                {
+                    // Uses SET
+                    if (!Indexer.InBaseline(split[0], Convert.ToInt32(split[1])))
+                        RunGWACommand("BLANK," + split[0] + "," + split[1], false);
+                }
+                else
+                {
+                    // Uses SET_AT
+                    if (!Indexer.InBaseline(split[1], Convert.ToInt32(split[0])))
+                        RunGWACommand("BLANK," + split[1] + "," + split[0], false);
+                }
+            }
+        }
+        #endregion
+
+        #region Operations
+        public static string Title()
+        {
+            string res = (string)RunGWACommand("GET,TITLE");
+
+            string[] pieces = res.ListSplit(",");
+
+            return pieces[1];
+        }
+
+        public static Dictionary<string, object> GetBaseProperties()
+        {
+            Dictionary<string, object> baseProps = new Dictionary<string, object>();
+
+            baseProps["units"] = Units.LongUnitName();
+
+            string[] tolerances = ((string)RunGWACommand("GET,TOL")).ListSplit(",");
+
+            List<double> lengthTolerances = new List<double>() {
+                Convert.ToDouble(tolerances[3]), // edge
+                Convert.ToDouble(tolerances[5]), // leg_length
+                Convert.ToDouble(tolerances[7])  // memb_cl_dist
+            };
+
+            List<double> angleTolerances = new List<double>(){
+                Convert.ToDouble(tolerances[4]), // angle
+                Convert.ToDouble(tolerances[6]), // meemb_orient
+            };
+
+            baseProps["tolerance"] = lengthTolerances.Max().ConvertUnit("m", Units);
+            baseProps["angleTolerance"] = angleTolerances.Max().ToRadians();
+
+            return baseProps;
+        }
+
         public static void UpdateViews()
         {
             GSAObject.UpdateViews();
@@ -357,32 +373,9 @@ namespace SpeckleGSA
 
             return idx;
         }
-        
-        public static Dictionary<string, object> GetBaseProperties()
-        {
-            Dictionary<string, object> baseProps = new Dictionary<string, object>();
-            
-            baseProps["units"] = Units.LongUnitName();
+        #endregion
 
-            string[] tolerances = ((string)RunGWACommand("GET,TOL")).ListSplit(",");
-
-            List<double> lengthTolerances = new List<double>() {
-                Convert.ToDouble(tolerances[3]), // edge
-                Convert.ToDouble(tolerances[5]), // leg_length
-                Convert.ToDouble(tolerances[7])  // memb_cl_dist
-            };
-
-            List<double> angleTolerances = new List<double>(){
-                Convert.ToDouble(tolerances[4]), // angle
-                Convert.ToDouble(tolerances[6]), // meemb_orient
-            };
-
-            baseProps["tolerance"] = lengthTolerances.Max().ConvertUnit("m", Units);
-            baseProps["angleTolerance"] = angleTolerances.Max().ToRadians();
-
-            return baseProps;
-        }
-
+        #region Cache
         public static void ClearCache()
         {
             PreviousGSAGetCache = new Dictionary<string, object>(GSAGetCache);
@@ -398,5 +391,6 @@ namespace SpeckleGSA
             PreviousGSASetCache.Clear();
             GSASetCache.Clear();
         }
+        #endregion
     }
 }
