@@ -1,0 +1,15 @@
+stages:
+  - build
+
+build:
+  variables:
+  stage: build
+  script:
+  - git submodule update --recursive --init
+  - nuget restore
+  - msbuild /property:Configuration=Release
+  - 7z a SpeckleGSA.zip "$env:CI_PROJECT_DIR\SpeckleGSAUI\bin\Release\*\"
+  artifacts:
+    paths:
+    - SpeckleGSA.zip
+    expire_in: 6 mos 
