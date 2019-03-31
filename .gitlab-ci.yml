@@ -6,9 +6,11 @@ build:
   stage: build
   script:
   - nuget restore
+  - msbuild /t:restore
   - msbuild /property:Configuration=Release
-  - 7z a SpeckleGSA.zip "$env:CI_PROJECT_DIR\SpeckleGSAUI\bin\Release\*\"
+  - $projVersion = (Get-Item $env:CI_PROJECT_DIR\SpeckleGSAUI\bin\Release\SpeckleGSA.dll).VersionInfo.FileVersion
+  - 7z a SpeckleGSA-$projVersion.zip "$env:CI_PROJECT_DIR\SpeckleGSAUI\bin\Release\*"
   artifacts:
     paths:
-    - SpeckleGSA.zip
+    - SpeckleGSA-$projVersion.zip
     expire_in: 6 mos 
