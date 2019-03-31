@@ -12,5 +12,5 @@ build:
   - 7z a SpeckleGSA-$projVersion.zip "$env:CI_PROJECT_DIR\SpeckleGSAUI\bin\Release\*"
   artifacts:
     paths:
-    - SpeckleGSA-$projVersion.zip
+    - "*.zip"
     expire_in: 6 mos 
