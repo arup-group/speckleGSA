@@ -12,6 +12,8 @@ using System.Reflection;
 using System.Collections;
 using SpeckleStructuresClasses;
 using SpeckleCoreGeometryClasses;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace SpeckleGSA
 {
@@ -957,16 +959,25 @@ namespace SpeckleGSA
 
         public static SpeckleObject CreateSpeckleCopy(this SpeckleObject inputObject)
         {
-            SpeckleObject ret = (SpeckleObject)Activator.CreateInstance(inputObject.GetType());
+            using (MemoryStream stream = new MemoryStream())
+            {
+                if (inputObject.GetType().IsSerializable)
+                {
+                    BinaryFormatter formatter = new BinaryFormatter();
 
-            foreach (FieldInfo f in inputObject.GetType().GetFields())
-                f.SetValue(ret, f.GetValue(inputObject));
+                    formatter.Serialize(stream, inputObject);
 
-            foreach (PropertyInfo p in inputObject.GetType().GetProperties().Where(p => p.CanWrite))
-                if (p.Name != "_id")
-                    p.SetValue(ret, p.GetValue(inputObject));
+                    stream.Position = 0;
 
-            return ret;
+                    SpeckleObject val = (SpeckleObject)formatter.Deserialize(stream);
+                    val._id = "";
+
+                    return val;
+                }
+
+                return null;
+
+            }
         }
         #endregion
     }
