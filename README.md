@@ -1,5 +1,5 @@
 # SpeckleGSA
-![specklegsa-demo](https://gitlab.arup.com/tor_digital/SpeckleGSA/raw/3bbd7b153b3754226fcb0277c5b77788903b0be4/readme/demo.gif)
+![specklegsa-demo](https://gitlab.arup.com/tor_digital/SpeckleGSA/raw/ed1d344153290f2c8fcefff2f093d9ca1281d782/readme/demo.gif)
 
 SpeckleGSA is currently under development.
 
