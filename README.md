@@ -1,10 +1,9 @@
 # SpeckleGSA
-
-<img src="https://gitlab.arup.com/tor_digital/SpeckleGSA/raw/3bbd7b153b3754226fcb0277c5b77788903b0be4/readme/ICON.png" alt="specklegsa-logo" height="100">
+![specklegsa-demo](https://gitlab.arup.com/tor_digital/SpeckleGSA/raw/3bbd7b153b3754226fcb0277c5b77788903b0be4/readme/demo.gif)
 
 SpeckleGSA is currently under development.
 
-Requires GSA 10 beta.
+Requires GSA 10 beta build 30.
 
 ## Contents
 
@@ -17,38 +16,30 @@ Requires GSA 10 beta.
 
 ## Installation
 
-SpeckleGSA is not currently packaged for distribution. To build SpeckleGSA yourself, see [Building SpeckleGSA](#building-specklegsa).
+SpeckleGSA is bundled as part of the Speckle Structural Suite. Download the latest version [here](https://gitlab.arup.com/tor_digital/specklestructuralsuite-installer/-/jobs/artifacts/master/raw/SpeckleStructuralSuite.exe?job=build).
 
 ## Usage
-
-![specklegsa-demo](https://gitlab.arup.com/tor_digital/SpeckleGSA/raw/3bbd7b153b3754226fcb0277c5b77788903b0be4/readme/demo.gif)
-
 SpeckleGSA implements key components of a Speckle client in it's tab interface:
 - Server:
     - Allows users to login to a SpeckleServer
-- Stream List:
-    - Populates a table with the streams associated with the user's account
-- Stream Operation:
-    - Perform operations to modify streams
-    - **IMPORTANT:** Functionality for most of these are yet to be implemented or are not currently working as intended
+- GSA:
+    - Create or open a GSA file
 - Sender:
-    - Sends model to SpeckleServer
-    - Allows for sending of either the analysis or design layer of GSA
+    - Sends model to a SpeckleServer
 - Receiver:
     - Receive stream(s) from a SpeckleServer
-    - Allows for writing to either the analysis or design layer of GSA
 - Settings
 
 ## Bugs and Feature Requests
 
-SpeckleGSA is still currently under (rapid) development which can cause many quick changes to occur. If there are any major bugs, please submit a new [issue](https://gitlab.arup.com/tor_digital/SpeckleGSA/issues).
+SpeckleGSA is still currently under development which can cause many quick changes to occur. If there are any major bugs, please submit a new [issue](https://gitlab.arup.com/tor_digital/SpeckleGSA/issues).
 
 ## Building SpeckleGSA
 
 ### Requirements
 
 - Visual Studio 2017
-- .NET Framework 4.5
+- .NET Framework 4.6.1
 
 ### Dev Notes
 
@@ -56,14 +47,16 @@ The SpeckleGSA repo is currently made up of the following projects:
 - SpeckleGSA: main project with receiver and sender and GSA class objects
 - SpeckleGSAUI: user interface
 - SpeckleStructures: submodule
-- SpeckleStructuresConverter: submodule
+- SpeckleCoreGeometry: submodule
 - SpeckleCore: submodule
 
 ### Building Process
 
+SpeckleGSA depends on SpeckleStructures being installed. Install SpeckleStructures using the Speckle Structural Suite installer [here](https://gitlab.arup.com/tor_digital/specklestructuralsuite-installer/-/jobs/artifacts/master/raw/SpeckleStructuralSuite.exe?job=build).
+
 - Clone/fork the repo
 - Restore all Nuget package missing on the solution
-- If SpeckleStructures hasn't been cloned, run `git submodule update --remote`
+- If submodules haven't been cloned, run `git submodule update --remote`
 - Set SpeckleGSAUI as start project and rebuild all
 
 ## About Speckle
