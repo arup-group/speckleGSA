@@ -160,7 +160,12 @@ namespace SpeckleGSA
                 case "STD":
                     return SetStandardDesc(prop, desc);
                 case "GEO":
-                    return SetStandardDesc(prop, desc);
+                    return SetGeometryDesc(prop, desc);
+                case "CAT":
+                    string transformed = GSA.TransformCategorySection(desc);
+                    if (transformed == null)
+                        return prop;
+                    return SetStandardDesc(prop, transformed);
                 default:
                     Status.AddError("Unsupported profile type " + pieces[0] + ".");
                     return prop;
@@ -174,7 +179,9 @@ namespace SpeckleGSA
             string unit = Regex.Match(pieces[1], @"(?<=()(.*)(?=))").Value;
             if (unit == "") unit = "mm";
 
-            if (pieces[1] == "R")
+            string type = pieces[1].Split(new char[] { '(' })[0];
+
+            if (type == "R")
             {
                 // Rectangle
                 double height = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
@@ -187,7 +194,7 @@ namespace SpeckleGSA
                 prop.Shape = Structural1DPropertyShape.Rectangular;
                 prop.Hollow = false;
             }
-            else if (pieces[1] == "RHS")
+            else if (type == "RHS")
             {
                 // Hollow Rectangle
                 double height = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
@@ -203,7 +210,7 @@ namespace SpeckleGSA
                 prop.Hollow = true;
                 prop.Thickness = (t1 + t2) / 2; // TODO: Takes average thickness
             }
-            else if (pieces[1] == "C")
+            else if (type == "C")
             {
                 // Circle
                 double diameter = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
@@ -216,7 +223,7 @@ namespace SpeckleGSA
                 prop.Shape = Structural1DPropertyShape.Circular;
                 prop.Hollow = false;
             }
-            else if (pieces[1] == "CHS")
+            else if (type == "CHS")
             {
                 // Hollow Circle
                 double diameter = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
@@ -231,7 +238,7 @@ namespace SpeckleGSA
                 prop.Hollow = true;
                 prop.Thickness = t;
             }
-            else if (pieces[1] == "I")
+            else if (type == "I")
             {
                 // I Section
                 double depth = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
@@ -255,7 +262,7 @@ namespace SpeckleGSA
                 prop.Shape = Structural1DPropertyShape.I;
                 prop.Hollow = false;
             }
-            else if (pieces[1] == "T")
+            else if (type == "T")
             {
                 // T Section
                 double depth = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
@@ -275,7 +282,7 @@ namespace SpeckleGSA
                 prop.Shape = Structural1DPropertyShape.T;
                 prop.Hollow = false;
             }
-            else if (pieces[1] == "CH")
+            else if (type == "CH")
             {
                 // Channel Section
                 double depth = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
@@ -295,7 +302,7 @@ namespace SpeckleGSA
                 prop.Shape = Structural1DPropertyShape.Generic;
                 prop.Hollow = false;
             }
-            else if (pieces[1] == "A")
+            else if (type == "A")
             {
                 // Angle Section
                 double depth = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
@@ -313,7 +320,7 @@ namespace SpeckleGSA
                 prop.Shape = Structural1DPropertyShape.Generic;
                 prop.Hollow = false;
             }
-            else if (pieces[1] == "TR")
+            else if (type == "TR")
             {
                 // Taper Section
                 double depth = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
@@ -327,7 +334,7 @@ namespace SpeckleGSA
                 prop.Shape = Structural1DPropertyShape.Generic;
                 prop.Hollow = false;
             }
-            else if (pieces[1] == "E")
+            else if (type == "E")
             {
                 // Ellipse Section
                 double depth = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
@@ -351,6 +358,31 @@ namespace SpeckleGSA
                 prop.Shape = Structural1DPropertyShape.Generic;
                 prop.Hollow = false;
             }
+            else if (type == "OVAL")
+            {
+                // Oval Section
+                double depth = Convert.ToDouble(pieces[2]).ConvertUnit(unit, GSA.Units);
+                double width = Convert.ToDouble(pieces[3]).ConvertUnit(unit, GSA.Units);
+                double thickness = Convert.ToDouble(pieces[4]).ConvertUnit(unit, GSA.Units);
+
+                List<double> coor = new List<double>();
+                for (int i = 0; i < 360; i += 10)
+                {
+                    double radius =
+                        depth * width / Math.Pow(
+                            Math.Pow(depth * Math.Cos(i.ToRadians()), 2)
+                            + Math.Pow(width * Math.Sin(i.ToRadians()), 2),
+                            1 / 2);
+
+                    coor.Add(radius * Math.Cos(i.ToRadians()));
+                    coor.Add(radius * Math.Sin(i.ToRadians()));
+                    coor.Add(0);
+                }
+                prop.Profile = new SpecklePolyline(coor.ToArray());
+                prop.Shape = Structural1DPropertyShape.Generic;
+                prop.Hollow = true;
+                prop.Thickness = thickness;
+            }
             else
             {
                 // TODO: IMPLEMENT ALL SECTIONS
@@ -367,7 +399,9 @@ namespace SpeckleGSA
             string unit = Regex.Match(pieces[1], @"(?<=()(.*?)(?=))").Value;
             if (unit == "") unit = "mm";
 
-            if (pieces[1] == "P")
+            string type = pieces[1].Split(new char[] { '(' })[0];
+
+            if (type == "P")
             {
                 // Perimeter Section
                 List<double> coor = new List<double>();
