@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Interop.Gsa_10_0;
+using SQLite;
 
 namespace SpeckleGSA
 {
@@ -28,6 +29,8 @@ namespace SpeckleGSA
         public static string Units { get; private set; }
         public static Dictionary<string, string> Senders { get; set; }
         public static List<string> Receivers { get; set; }
+
+        public static string DbPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.ProgramFiles) + @"\Oasys\GSA 10.0\sectlib.db3";
 
         public static void Init()
         {
@@ -373,6 +376,74 @@ namespace SpeckleGSA
 
             return idx;
         }
+        
+        public static string TransformCategorySection(string description)
+        {
+            string[] pieces = description.ListSplit("%");
+
+            try
+            { 
+                using (SQLiteConnection conn = new SQLiteConnection(DbPath, SQLiteOpenFlags.ReadOnly))
+                {
+                    string query_type = "SELECT TYPE_NUM" +
+                        " FROM Types" +
+                        " WHERE TYPE_ABR = ?";
+
+                    IEnumerable<GSASectionType> type = conn.Query<GSASectionType>(query_type, new object[] { pieces[1] });
+
+                    if (type.Count() == 0)
+                        return null;
+
+                    int typeNum = type.ToList()[0].TYPE_NUM;
+
+                    string query_sect = "SELECT SECT_SHAPE, SECT_DEPTH_DIAM, SECT_WIDTH, SECT_WEB_THICK, SECT_FLG_THICK" +
+                        " FROM Sect" +
+                        " WHERE SECT_TYPE_NUM = ?";
+
+                    IEnumerable<GSASection> sect = conn.Query<GSASection>(query_sect, new object[] { typeNum });
+
+                    if (sect.Count() == 0)
+                        return null;
+
+                    GSASection s = sect.ToList()[0];
+
+                    switch((HelperFunctions.GSACAtSectionType)s.SECT_SHAPE)
+                    {
+                        case HelperFunctions.GSACAtSectionType.I:
+                            return "STD%I(m)%" + s.SECT_DEPTH_DIAM + "%" + s.SECT_WIDTH + "%" + s.SECT_WEB_THICK + "%" + s.SECT_FLG_THICK;
+                        case HelperFunctions.GSACAtSectionType.CastellatedI:
+                            Status.AddError("Castillated sections not supported.");
+                            return null;
+                        case HelperFunctions.GSACAtSectionType.Channel:
+                            return "STD%CH(m)%" + s.SECT_DEPTH_DIAM + "%" + s.SECT_WIDTH + "%" + s.SECT_WEB_THICK + "%" + s.SECT_FLG_THICK;
+                        case HelperFunctions.GSACAtSectionType.T:
+                            return "STD%T(m)%" + s.SECT_DEPTH_DIAM + "%" + s.SECT_WIDTH + "%" + s.SECT_WEB_THICK + "%" + s.SECT_FLG_THICK;
+                        case HelperFunctions.GSACAtSectionType.Angles:
+                            return "STD%A(m)%" + s.SECT_DEPTH_DIAM + "%" + s.SECT_WIDTH + "%" + s.SECT_WEB_THICK + "%" + s.SECT_FLG_THICK;
+                        case HelperFunctions.GSACAtSectionType.DoubleAngles:
+                            Status.AddError("Double angle sections not supported.");
+                            return null;
+                        case HelperFunctions.GSACAtSectionType.CircularHollow:
+                            return "STD%CHS(m)%" + s.SECT_DEPTH_DIAM + "%" + s.SECT_WEB_THICK;
+                        case HelperFunctions.GSACAtSectionType.Circular:
+                            return "STD%C(m)%" + s.SECT_DEPTH_DIAM;
+                        case HelperFunctions.GSACAtSectionType.RectangularHollow:
+                            return "STD%RHS(m)%" + s.SECT_DEPTH_DIAM + "%" + s.SECT_WIDTH + "%" + s.SECT_WEB_THICK + "%" + s.SECT_FLG_THICK;
+                        case HelperFunctions.GSACAtSectionType.Rectangular:
+                            return "STD%R(m)%" + s.SECT_DEPTH_DIAM + "%" + s.SECT_WIDTH;
+                        case HelperFunctions.GSACAtSectionType.Oval:
+                            return "STD%OVAL(m)%" + s.SECT_DEPTH_DIAM + "%" + s.SECT_WIDTH + "%" + s.SECT_WEB_THICK;
+                        case HelperFunctions.GSACAtSectionType.TwoChannelsLaces:
+                            Status.AddError("Double channel sections not supported.");
+                            return null;
+                        default:
+                            Status.AddError("Unknown section type.");
+                            return null;
+                    }
+                }
+            }
+            catch { return null; }
+        }
         #endregion
 
         #region Cache
@@ -392,5 +463,19 @@ namespace SpeckleGSA
             GSASetCache.Clear();
         }
         #endregion
+    }
+
+    public class GSASection
+    {
+        public int SECT_SHAPE { get; set; }
+        public float SECT_DEPTH_DIAM { get; set; }
+        public float SECT_WIDTH { get; set; }
+        public float SECT_WEB_THICK { get; set; }
+        public float SECT_FLG_THICK { get; set; }
+    }
+
+    public class GSASectionType
+    {
+        public int TYPE_NUM { get; set; }
     }
 }

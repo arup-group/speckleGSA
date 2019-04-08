@@ -89,6 +89,22 @@ namespace SpeckleGSA
         }
         #endregion
 
+        public enum GSACAtSectionType
+        {
+            I = 1,
+            CastellatedI = 2,
+            Channel = 3,
+            T = 4,
+            Angles = 5,
+            DoubleAngles = 6,
+            CircularHollow = 7,
+            Circular = 8,
+            RectangularHollow = 9,
+            Rectangular = 10,
+            Oval = 1033,
+            TwoChannelsLaces = 1034
+        }
+
         #region Math
         public static double ToDegrees(this int radians)
         {
