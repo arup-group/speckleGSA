@@ -89,8 +89,12 @@ namespace SpeckleGSA
                 myReceiver.Stream = streamGetResult.Resource;
 
                 // Store stream data in local DB
-                LocalContext.AddOrUpdateStream(myReceiver.Stream, myReceiver.BaseUrl);
-
+                try
+                {
+                    LocalContext.AddOrUpdateStream(myReceiver.Stream, myReceiver.BaseUrl);
+                }
+                catch { }
+                
                 // Get cached objects
                 try
                 {
@@ -127,7 +131,11 @@ namespace SpeckleGSA
                 {
                     foreach (SpeckleObject obj in receivedObjects)
                     {
-                        LocalContext.AddCachedObject(obj, myReceiver.BaseUrl);
+                        try
+                        {
+                            LocalContext.AddCachedObject(obj, myReceiver.BaseUrl);
+                        }
+                        catch { }
                     }
                 });
 

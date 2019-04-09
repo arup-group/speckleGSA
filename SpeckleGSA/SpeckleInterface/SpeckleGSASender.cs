@@ -88,8 +88,12 @@ namespace SpeckleGSA
             //Status.AddMessage("Succesfully converted: " + bucketObjects.Count() + " objects.");
 
             // Prune objects with placeholders using local DB
-            LocalContext.PruneExistingObjects(bucketObjects, mySender.BaseUrl);
-            
+            try
+            {
+                LocalContext.PruneExistingObjects(bucketObjects, mySender.BaseUrl);
+            }
+            catch { }
+
             // Store IDs of objects to add to stream
             List<string> objectsInStream = new List<string>();
             
@@ -114,7 +118,13 @@ namespace SpeckleGSA
                         Task.Run(() =>
                         {
                             foreach (SpeckleObject obj in payload)
-                                LocalContext.AddSentObject(obj, mySender.BaseUrl);
+                            {
+                                try
+                                {
+                                    LocalContext.AddSentObject(obj, mySender.BaseUrl);
+                                }
+                                catch { }
+                            }
                         });
                     }
                     catch
