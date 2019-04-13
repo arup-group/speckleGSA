@@ -17,18 +17,15 @@ using System.Runtime.Serialization.Formatters.Binary;
 
 namespace SpeckleGSA
 {
+    /// <summary>
+    /// Static class containing helper functions used throughout SpeckleGSA
+    /// </summary>
     public static class HelperFunctions
     {
-        public const double EPS = 1e-16;
-
-        #region GSA Num Nodes and Type Parsers
-        public enum LineNumNodes
-        {
-            LINE = 2,
-            ARC_RADIUS = 3,
-            ARC_THIRD_PT = 3
-        };
-
+        #region Enums
+        /// <summary>
+        /// Number of nodes in each GSA element definition
+        /// </summary>
         public enum ElementNumNodes
         {
             BAR = 2,
@@ -56,39 +53,10 @@ namespace SpeckleGSA
             WEDGE15 = 15,
             WEDGE6 = 6
         };
-        
-        public static int ParseElementType(this string type)
-        {
-            return (int)((ElementType)Enum.Parse(typeof(ElementType), type));
-        }
 
-        public static int ParseLineNumNodes(this string type)
-        {
-            return (int)((LineNumNodes)Enum.Parse(typeof(LineNumNodes), type));
-        }
-
-        public static int ParseElementNumNodes(this string type)
-        {
-            return (int)((ElementNumNodes)Enum.Parse(typeof(ElementNumNodes), type));
-        }
-
-        public static bool MemberIs1D(this string type)
-        {
-            if (type == "1D_GENERIC" | type == "COLUMN" | type == "BEAM")
-                return true;
-            else
-                return false;
-        }
-
-        public static bool MemberIs2D(this string type)
-        {
-            if (type == "2D_GENERIC" | type == "SLAB" | type == "WALL")
-                return true;
-            else
-                return false;
-        }
-        #endregion
-
+        /// <summary>
+        /// GSA category section ID
+        /// </summary>
         public enum GSACAtSectionType
         {
             I = 1,
@@ -104,38 +72,66 @@ namespace SpeckleGSA
             Oval = 1033,
             TwoChannelsLaces = 1034
         }
-
+        #endregion
+        
         #region Math
+        /// <summary>
+        /// Convert radians to degrees.
+        /// </summary>
+        /// <param name="radians">Angle in radians</param>
+        /// <returns>Angle in degrees</returns>
         public static double ToDegrees(this int radians)
         {
             return ((double)radians).ToDegrees();
         }
 
+        /// <summary>
+        /// Convert radians to degrees.
+        /// </summary>
+        /// <param name="radians">Angle in radians</param>
+        /// <returns>Angle in degrees</returns>
         public static double ToDegrees(this double radians)
         {
             return radians * (180 / Math.PI);
         }
 
+        /// <summary>
+        /// Convert degrees to radians.
+        /// </summary>
+        /// <param name="degrees">Angle in degrees</param>
+        /// <returns>Angle in radians</returns>
         public static double ToRadians(this int degrees)
         {
             return ((double)degrees).ToRadians();
         }
 
+        /// <summary>
+        /// Convert degrees to radians.
+        /// </summary>
+        /// <param name="degrees">Angle in degrees</param>
+        /// <returns>Angle in radians</returns>
         public static double ToRadians(this double degrees)
         {
             return degrees * (Math.PI / 180);
         }
 
-        public static bool Threshold(double value1, double value2, double error = EPS)
+        /// <summary>
+        /// Calculates the mean of two numbers.
+        /// </summary>
+        /// <param name="n1">First number</param>
+        /// <param name="n2">Second number</param>
+        /// <returns>Mean</returns>
+        public static double mean(double n1, double n2)
         {
-            return Math.Abs(value1 - value2) <= error;
+            return (n1 + n2) * 0.5;
         }
 
-        public static double Median(double min, double max)
-        {
-            return ((max - min) * 0.5) + min;
-        }
-
+        /// <summary>
+        /// Generates a rotation matrix about a given Z unit vector.
+        /// </summary>
+        /// <param name="zUnitVector">Z unit vector</param>
+        /// <param name="angle">Angle of rotation in radians</param>
+        /// <returns>Rotation matrix</returns>
         public static Matrix3D RotationMatrix(Vector3D zUnitVector, double angle)
         {
             double cos = Math.Cos(angle);
@@ -161,297 +157,27 @@ namespace SpeckleGSA
                 0, 0, 0, 1
             );
         }
-
-        public static double[] Centroid (this double[] coor)
-        {
-            double[] centroid = new double[3];
-
-            int numNodes = 0;
-
-            for (int i = 0; i < coor.Length; i+=3)
-            {
-                centroid[0] = coor[i];
-                centroid[1] = coor[i+1];
-                centroid[2] = coor[i+2];
-                numNodes++;
-            }
-
-            centroid[0] /= numNodes;
-            centroid[1] /= numNodes;
-            centroid[2] /= numNodes;
-
-            return centroid;
-        }
         #endregion
-
-        #region Arc Helper Methods
-        //public static SpeckleArc ArcRadiustoSpeckleArc(double[] coor, double radius, bool greaterThanHalf = false)
-        //{
-        //    Point3D[] points = new Point3D[] {
-        //        new Point3D(coor[0], coor[1], coor[2]),
-        //        new Point3D(coor[3], coor[4], coor[5]),
-        //        new Point3D(coor[6], coor[7], coor[8])
-        //    };
-
-        //    Vector3D v1 = Point3D.Subtract(points[1], points[0]);
-        //    Vector3D v2 = Point3D.Subtract(points[2], points[0]);
-        //    Vector3D v3 = Vector3D.CrossProduct(v1, v2);
-
-        //    double theta = -Math.Acos(v1.Length / (2 * radius));
-
-        //    v1.Normalize();
-        //    v2.Normalize();
-        //    v3.Normalize();
-
-        //    Matrix3D originRotMat;
-        //    if (!greaterThanHalf)
-        //        originRotMat = HelperFunctions.RotationMatrix(v3, theta);
-        //    else
-        //        originRotMat = HelperFunctions.RotationMatrix(Vector3D.Multiply(-1, v3), theta);
-
-        //    Vector3D shiftToOrigin = Vector3D.Multiply(radius, Vector3D.Multiply(v1, originRotMat));
-
-        //    Point3D origin = Point3D.Add(points[0], shiftToOrigin);
-
-        //    Vector3D startVector = new Vector3D(
-        //        points[0].X - origin.X,
-        //        points[0].Y - origin.Y,
-        //        points[0].Z - origin.Z);
-
-        //    Vector3D endVector = new Vector3D(
-        //        points[1].X - origin.X,
-        //        points[1].Y - origin.Y,
-        //        points[1].Z - origin.Z);
-
-        //    if (v3.Z == 1)
-        //    {
-        //    }
-        //    else if (v3.Z == -1)
-        //    {
-        //        startVector = Vector3D.Multiply(-1, startVector);
-        //        endVector = Vector3D.Multiply(-1, endVector);
-
-
-        //        Matrix3D reverseRotation = HelperFunctions.RotationMatrix(new Vector3D(1, 0, 0), Math.PI);
-
-        //        startVector = Vector3D.Multiply(startVector, reverseRotation);
-        //        endVector = Vector3D.Multiply(endVector, reverseRotation);
-        //    }
-        //    else
-        //    {
-        //        Vector3D unitReverseRotationvector = Vector3D.CrossProduct(v3, new Vector3D(0, 0, 1));
-        //        unitReverseRotationvector.Normalize();
-
-        //        Matrix3D reverseRotation = HelperFunctions.RotationMatrix(unitReverseRotationvector, Vector3D.AngleBetween(v3, new Vector3D(0, 0, 1)).ToRadians());
-
-        //        startVector = Vector3D.Multiply(startVector, reverseRotation);
-        //        endVector = Vector3D.Multiply(endVector, reverseRotation);
-        //    }
-
-        //    double startAngle = Vector3D.AngleBetween(startVector, new Vector3D(1, 0, 0)).ToRadians();
-        //    if (startVector.Y < 0) startAngle = 2 * Math.PI - startAngle;
-
-        //    double endAngle = Vector3D.AngleBetween(endVector, new Vector3D(1, 0, 0)).ToRadians();
-        //    if (endVector.Y < 0) endAngle = 2 * Math.PI - endAngle;
-
-        //    double angle = endAngle - startAngle;
-        //    if (angle < 0) angle = 2 * Math.PI + angle;
-
-        //    if ((greaterThanHalf & angle < Math.PI) | (!greaterThanHalf & angle > Math.PI))
-        //    {
-        //        double temp = startAngle;
-        //        startAngle = endAngle;
-        //        endAngle = temp;
-        //        angle = 2 * Math.PI - angle;
-        //    }
-
-        //    Vector3D unitX = new Vector3D(1, 0, 0);
-        //    Vector3D unitY = new Vector3D(0, 1, 0);
-
-        //    Vector3D unitRotationvector = Vector3D.CrossProduct(new Vector3D(0, 0, 1), v3);
-        //    unitRotationvector.Normalize();
-        //    Matrix3D rotation = HelperFunctions.RotationMatrix(unitRotationvector, Vector3D.AngleBetween(v3, new Vector3D(0, 0, 1)).ToRadians());
-
-        //    unitX = Vector3D.Multiply(unitX, rotation);
-        //    unitY = Vector3D.Multiply(unitY, rotation);
-
-        //    SpecklePlane plane = new SpecklePlane(
-        //        new SpecklePoint(origin.X, origin.Y, origin.Z),
-        //        new SpeckleVector(v3.X, v3.Y, v3.Z),
-        //        new SpeckleVector(unitX.X, unitX.Y, unitX.Z),
-        //        new SpeckleVector(unitY.Y, unitY.Y, unitY.Z));
-
-        //    return new SpeckleArc(
-        //        plane,
-        //        radius,
-        //        startAngle,
-        //        endAngle,
-        //        angle);
-        //}
-
-        //public static SpeckleArc Arc3PointtoSpeckleArc(double[] coor)
-        //{
-        //    Point3D[] points = new Point3D[] {
-        //        new Point3D(coor[0], coor[1], coor[2]),
-        //        new Point3D(coor[3], coor[4], coor[5]),
-        //        new Point3D(coor[6], coor[7], coor[8])
-        //    };
-
-        //    Vector3D v1 = Point3D.Subtract(points[1], points[0]);
-        //    Vector3D v2 = Point3D.Subtract(points[2], points[1]);
-        //    Vector3D v3 = Point3D.Subtract(points[0], points[2]);
-
-        //    double a = v1.Length;
-        //    double b = v2.Length;
-        //    double c = v3.Length;
-        //    double halfPerimeter = (a + b + c) / 2;
-        //    double triArea = Math.Sqrt(halfPerimeter * (halfPerimeter - a) * (halfPerimeter - b) * (halfPerimeter - c));
-        //    double radius = a * b * c / (triArea * 4);
-
-        //    // Check if greater than half of a circle
-        //    Point3D midPoint = new Point3D(
-        //       (coor[0] + coor[3]) / 2,
-        //       (coor[1] + coor[4]) / 2,
-        //       (coor[2] + coor[5]) / 2);
-        //    Vector3D checkVector = Point3D.Subtract(points[2], midPoint);
-
-        //    return ArcRadiustoSpeckleArc(coor, radius, checkVector.Length > radius);
-        //}
-
-        //public static double[] SpeckleArctoArc3Point(SpeckleArc arc)
-        //{
-        //    Vector3D v3 = new Vector3D(
-        //        arc.Plane.Normal.Value[0],
-        //        arc.Plane.Normal.Value[1],
-        //        arc.Plane.Normal.Value[2]);
-
-        //    Vector3D origin = new Vector3D(
-        //        arc.Plane.Origin.Value[0],
-        //        arc.Plane.Origin.Value[1],
-        //        arc.Plane.Origin.Value[2]);
-
-        //    double radius = arc.Radius.Value;
-        //    double startAngle = arc.StartAngle.Value;
-        //    double endAngle = arc.EndAngle.Value;
-        //    double midAngle = startAngle < endAngle ?
-        //        (startAngle + endAngle) / 2 :
-        //        (startAngle + endAngle) / 2 + Math.PI;
-
-        //    Vector3D p1 = new Vector3D(radius * Math.Cos(startAngle), radius * Math.Sin(startAngle), 0);
-        //    Vector3D p2 = new Vector3D(radius * Math.Cos(endAngle), radius * Math.Sin(endAngle), 0);
-        //    Vector3D p3 = new Vector3D(radius * Math.Cos(midAngle), radius * Math.Sin(midAngle), 0);
-
-        //    if (v3.Z == 1)
-        //    {
-        //    }
-        //    else if (v3.Z == -1)
-        //    {
-        //        p1 = Vector3D.Multiply(-1, p1);
-        //        p2 = Vector3D.Multiply(-1, p2);
-        //        p3 = Vector3D.Multiply(-1, p3);
-
-        //        Matrix3D reverseRotation = HelperFunctions.RotationMatrix(new Vector3D(1, 0, 0), Math.PI);
-
-        //        p1 = Vector3D.Multiply(p1, reverseRotation);
-        //        p2 = Vector3D.Multiply(p2, reverseRotation);
-        //        p3 = Vector3D.Multiply(p3, reverseRotation);
-        //    }
-        //    else
-        //    {
-        //        Vector3D unitRotationvector = Vector3D.CrossProduct(new Vector3D(0, 0, 1), v3);
-        //        unitRotationvector.Normalize();
-        //        Matrix3D rotation = HelperFunctions.RotationMatrix(unitRotationvector, Vector3D.AngleBetween(v3, new Vector3D(0, 0, 1)).ToRadians());
-
-        //        p1 = Vector3D.Multiply(p1, rotation);
-        //        p2 = Vector3D.Multiply(p2, rotation);
-        //        p3 = Vector3D.Multiply(p3, rotation);
-        //    }
-
-        //    p1 = Vector3D.Add(p1, origin);
-        //    p2 = Vector3D.Add(p2, origin);
-        //    p3 = Vector3D.Add(p3, origin);
-
-        //    return new double[]
-        //    {
-        //        p1.X,p1.Y,p1.Z,
-        //        p2.X,p2.Y,p2.Z,
-        //        p3.X,p3.Y,p3.Z,
-        //    };
-        //}
-        #endregion
-
+        
         #region Lists
+        /// <summary>
+        /// Splits lists, keeping entities encapsulated by "" together.
+        /// </summary>
+        /// <param name="list">String to split</param>
+        /// <param name="delimiter">Delimiter</param>
+        /// <returns>Array of strings containing list entries</returns>
         public static string[] ListSplit(this string list, string delimiter)
         {
             return Regex.Split(list, delimiter + "(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
         }
-
-        public static int[] ParseGSAList(this string list, GsaEntity type)
-        {
-            if (list == null) return new int[0];
-
-            string[] pieces = list.ListSplit(" ");
-            pieces = pieces.Where(s => !string.IsNullOrEmpty(s)).ToArray();
-
-            List<int> items = new List<int>();
-            for (int i = 0; i < pieces.Length; i++)
-            {
-                if (pieces[i].IsDigits())
-                    items.Add(Convert.ToInt32(pieces[i]));
-                else if (pieces[i].Contains('"'))
-                    items.AddRange(pieces[i].ConvertNamedGSAList(type));
-                else if (pieces[i] == "to")
-                {
-                    int lowerRange = Convert.ToInt32(pieces[i - 1]);
-                    int upperRange = Convert.ToInt32(pieces[i + 1]);
-
-                    for (int j = lowerRange + 1; j <= upperRange; j++)
-                        items.Add(j);
-
-                    i++;
-                }
-                else
-                {
-                    try
-                    {
-                        int[] itemTemp = new int[0];
-                        GSA.GSAObject.EntitiesInList(pieces[i], type, out itemTemp);
-                        items.AddRange(itemTemp);
-                    }
-                    catch
-                    { }
-                }
-            }
-
-            return items.ToArray();
-        }
-
-        public static int[] ConvertNamedGSAList(this string list, GsaEntity type)
-        {
-            list = list.Trim(new char[] { '"' });
-
-            string res = (string)GSA.RunGWACommand("GET,LIST," + list);
-
-            string[] pieces = res.Split(new char[] { ',' });
-
-            return pieces[pieces.Length - 1].ParseGSAList(type);
-        }
-
-        public static int[] GetGroupsFromGSAList(this string list)
-        {
-            string[] pieces = list.ListSplit(" ");
-
-            List<int> groups = new List<int>();
-
-            foreach(string p in pieces)
-                if (p.Length > 0 && p[0] == 'G')
-                    groups.Add(Convert.ToInt32(p.Substring(1)));
-
-            return groups.ToArray();
-        }
         #endregion
 
         #region Color
+        /// <summary>
+        /// Converts GSA color description into hex color.
+        /// </summary>
+        /// <param name="str">GSA color description</param>
+        /// <returns>Hex color</returns>
         public static int? ParseGSAColor(this string str)
         {
             if (str.Contains("NO_RGB"))
@@ -484,7 +210,12 @@ namespace SpeckleGSA
             return col.R + col.G * 256 + col.B * 256 * 256;
         }
 
-        public static int? ToSpeckleColor(this int? color)
+        /// <summary>
+        /// Converts hex color to ARGB.
+        /// </summary>
+        /// <param name="str">Hex color</param>
+        /// <returns>ARGB color</returns>
+        public static int? HexToArgbColor(this int? color)
         {
             if (color == null)
                 return null;
@@ -495,7 +226,12 @@ namespace SpeckleGSA
                            ((int)color / 256 / 256) % 256).ToArgb();
         }
 
-        public static int ToHexColor(this int color)
+        /// <summary>
+        /// Converts ARGB to hex color
+        /// </summary>
+        /// <param name="str">ARGB color</param>
+        /// <returns>Hex color</returns>
+        public static int ArgbToHexColor(this int color)
         {
             Color col = Color.FromArgb(color);
             return col.R + col.G * 256 + col.B * 256 * 256;
@@ -503,7 +239,13 @@ namespace SpeckleGSA
         #endregion
 
         #region Axis
-        public static StructuralAxis ToAxis(double[] coor, StructuralVectorThree zAxis)
+        /// <summary>
+        /// Calculates the local axis of a 1D entity.
+        /// </summary>
+        /// <param name="coor">Entity coordinates</param>
+        /// <param name="zAxis">Z axis of the 1D entity</param>
+        /// <returns>Axis</returns>
+        public static StructuralAxis LocalAxisEntity1D(double[] coor, StructuralVectorThree zAxis)
         {
             Vector3D axisX = new Vector3D(coor[3] - coor[0], coor[4] - coor[1], coor[5] - coor[2]);
             Vector3D axisZ = new Vector3D(zAxis.Value[0], zAxis.Value[1], zAxis.Value[2]);
@@ -518,6 +260,12 @@ namespace SpeckleGSA
             return axis;
         }
 
+        /// <summary>
+        /// Calculates the local axis of a point from a GSA node axis.
+        /// </summary>
+        /// <param name="axis">ID of GSA node axis</param>
+        /// <param name="evalAtCoor">Coordinates to evaluate axis at</param>
+        /// <returns>Axis</returns>
         public static StructuralAxis Parse0DAxis(int axis, double[] evalAtCoor = null)
         {
             Vector3D x;
@@ -567,7 +315,7 @@ namespace SpeckleGSA
                         new StructuralVectorThree(new double[] { z.X, z.Y, z.Z })
                     );
                 default:
-                    string res = (string)GSA.RunGWACommand("GET,AXIS," + axis.ToString());
+                    string res = GSA.GetGWARecords("GET,AXIS," + axis.ToString()).FirstOrDefault();
                     string[] pieces = res.Split(new char[] { ',' });
                     if (pieces.Length < 13)
                     {
@@ -643,6 +391,13 @@ namespace SpeckleGSA
             }
         }
 
+        /// <summary>
+        /// Calculates the local axis of a 1D entity.
+        /// </summary>
+        /// <param name="coor">Entity coordinates</param>
+        /// <param name="rotationAngle">Angle of rotation from default axis</param>
+        /// <param name="orientationNode">Node to orient axis to</param>
+        /// <returns>Axis</returns>
         public static StructuralAxis Parse1DAxis(double[] coor, double rotationAngle = 0, double[] orientationNode = null)
         {
             Vector3D x;
@@ -691,6 +446,13 @@ namespace SpeckleGSA
             );
         }
 
+        /// <summary>
+        /// Calculates the local axis of a 2D entity.
+        /// </summary>
+        /// <param name="coor">Entity coordinates</param>
+        /// <param name="rotationAngle">Angle of rotation from default axis</param>
+        /// <param name="isLocalAxis">Is axis calculated from local coordinates?</param>
+        /// <returns>Axis</returns>
         public static StructuralAxis Parse2DAxis(double[] coor, double rotationAngle = 0, bool isLocalAxis = false)
         {
             Vector3D x;
@@ -764,11 +526,22 @@ namespace SpeckleGSA
             );
         }
 
+        /// <summary>
+        /// Calculates rotation angle of 1D entity to align with axis.
+        /// </summary>
+        /// <param name="coor">Entity coordinates</param>
+        /// <param name="zAxis">Z axis of entity</param>
+        /// <returns>Rotation angle</returns>
         public static double Get1DAngle(double[] coor, StructuralVectorThree zAxis)
         {
-            return Get1DAngle(ToAxis(coor, zAxis));
+            return Get1DAngle(LocalAxisEntity1D(coor, zAxis));
         }
 
+        /// <summary>
+        /// Calculates rotation angle of 1D entity to align with axis.
+        /// </summary>
+        /// <param name="axis">Axis of entity</param>
+        /// <returns>Rotation angle</returns>
         public static double Get1DAngle(StructuralAxis axis)
         {
             Vector3D axisX = new Vector3D(axis.Xdir.Value[0], axis.Xdir.Value[1], axis.Xdir.Value[2]);
@@ -802,6 +575,12 @@ namespace SpeckleGSA
             }
         }
 
+        /// <summary>
+        /// Calculates rotation angle of 2D entity to align with axis
+        /// </summary>
+        /// <param name="coor">Entity coordinates</param>
+        /// <param name="axis">Axis of entity</param>
+        /// <returns>Rotation angle</returns>
         public static double Get2DAngle(double[] coor, StructuralAxis axis)
         {
             Vector3D axisX = new Vector3D(axis.Xdir.Value[0], axis.Xdir.Value[1], axis.Xdir.Value[2]);
@@ -842,6 +621,13 @@ namespace SpeckleGSA
         #endregion
 
         #region Unit Conversion
+        /// <summary>
+        /// Converts value from one unit to another.
+        /// </summary>
+        /// <param name="value">Value to scale</param>
+        /// <param name="originalDimension">Original unit</param>
+        /// <param name="targetDimension">Target unit</param>
+        /// <returns></returns>
         public static double ConvertUnit(this double value, string originalDimension, string targetDimension)
         {
             if (originalDimension == targetDimension)
@@ -883,6 +669,11 @@ namespace SpeckleGSA
                 return value.ConvertUnit(originalDimension, "m").ConvertUnit("m", targetDimension);
         }
 
+        /// <summary>
+        /// Converts short unit name to long unit name
+        /// </summary>
+        /// <param name="unit">Short unit name</param>
+        /// <returns>Long unit name</returns>
         public static string LongUnitName(this string unit)
         {
             switch (unit)
@@ -902,6 +693,11 @@ namespace SpeckleGSA
             }
         }
 
+        /// <summary>
+        /// Converts long unit name to short unit name
+        /// </summary>
+        /// <param name="unit">Long unit name</param>
+        /// <returns>Short unit name</returns>
         public static string ShortUnitName(this string unit)
         {
             switch (unit)
@@ -923,6 +719,11 @@ namespace SpeckleGSA
         #endregion
 
         #region Comparison
+        /// <summary>
+        /// Checks if the string contains only digits.
+        /// </summary>
+        /// <param name="str">String</param>
+        /// <returns>True if string contails only digits</returns>
         public static bool IsDigits(this string str)
         {
             foreach (char c in str)
@@ -934,11 +735,22 @@ namespace SpeckleGSA
         #endregion
 
         #region Miscellanious
+        /// <summary>
+        /// Returns the GWA keyword from GSAObject objects or type.
+        /// </summary>
+        /// <param name="t">GSAObject objects or type</param>
+        /// <returns>GWA keyword</returns>
         public static string GetGSAKeyword(this object t)
         {
             return (string)t.GetAttribute("GSAKeyword");
         }
 
+        /// <summary>
+        /// Extract attribute from GSAObject objects or type.
+        /// </summary>
+        /// <param name="t">GSAObject objects or type</param>
+        /// <param name="attribute">Attribute to extract</param>
+        /// <returns>Attribute value</returns>
         public static object GetAttribute(this object t, string attribute)
         {
             try
@@ -957,6 +769,11 @@ namespace SpeckleGSA
             catch { return null; }
         }
 
+        /// <summary>
+        /// Returns a new instance of the object as its base type.
+        /// </summary>
+        /// <param name="obj">Object to copy</param>
+        /// <returns>Base object</returns>
         public static IStructural GetBase(this object obj)
         {
             IStructural baseClass = (IStructural)Activator.CreateInstance(obj.GetType().BaseType);
@@ -973,6 +790,11 @@ namespace SpeckleGSA
             return baseClass;
         }
 
+        /// <summary>
+        /// Creates a deep copy of a SpeckleObject.
+        /// </summary>
+        /// <param name="inputObject">SpeckleObject to copy</param>
+        /// <returns>Copy of the SpeckleObject</returns>
         public static SpeckleObject CreateSpeckleCopy(this SpeckleObject inputObject)
         {
             using (MemoryStream stream = new MemoryStream())
@@ -994,6 +816,42 @@ namespace SpeckleGSA
                 return null;
 
             }
+        }
+
+        /// <summary>
+        /// Returns number of nodes of the GSA element type
+        /// </summary>
+        /// <param name="type">GSA element type</param>
+        /// <returns>Number of nodes</returns>
+        public static int ParseElementNumNodes(this string type)
+        {
+            return (int)((ElementNumNodes)Enum.Parse(typeof(ElementNumNodes), type));
+        }
+
+        /// <summary>
+        /// Check if GSA member type is 1D
+        /// </summary>
+        /// <param name="type">GSA member type</param>
+        /// <returns>True if member is 1D</returns>
+        public static bool MemberIs1D(this string type)
+        {
+            if (type == "1D_GENERIC" | type == "COLUMN" | type == "BEAM")
+                return true;
+            else
+                return false;
+        }
+
+        /// <summary>
+        /// Check if GSA member type is 2D
+        /// </summary>
+        /// <param name="type">GSA member type</param>
+        /// <returns>True if member is 2D</returns>
+        public static bool MemberIs2D(this string type)
+        {
+            if (type == "2D_GENERIC" | type == "SLAB" | type == "WALL")
+                return true;
+            else
+                return false;
         }
         #endregion
     }

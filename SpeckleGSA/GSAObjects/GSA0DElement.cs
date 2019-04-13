@@ -25,8 +25,8 @@ namespace SpeckleGSA
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
 
             // Read lines here
-            string[] lines = GSA.GetGWAGetCommands("GET_ALL," + keyword);
-            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL," + keyword);
+            string[] lines = GSA.GetGWARecords("GET_ALL," + keyword);
+            string[] deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword);
 
             // Filter only new lines
             string[] prevLines = gsaObjects[typeof(GSANode)].SelectMany(l => l.SubGWACommand).ToArray();
@@ -95,7 +95,7 @@ namespace SpeckleGSA
 
         private static double GetGSAMass(int propertyRef)
         {
-            string res = (string)GSA.RunGWACommand("GET,PROP_MASS," + propertyRef.ToString());
+            string res = GSA.GetGWARecords("GET,PROP_MASS," + propertyRef.ToString()).FirstOrDefault();
             string[] pieces = res.ListSplit(",");
 
             return Convert.ToDouble(pieces[5]);

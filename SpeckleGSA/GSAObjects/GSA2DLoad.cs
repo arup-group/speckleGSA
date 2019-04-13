@@ -31,8 +31,8 @@ namespace SpeckleGSA
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
 
-            string[] lines = GSA.GetGWAGetCommands("GET_ALL," + keyword);
-            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL," + keyword);
+            string[] lines = GSA.GetGWARecords("GET_ALL," + keyword);
+            string[] deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword);
 
             // Remove deleted lines
             dict[typeof(GSA2DLoad)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
@@ -147,7 +147,7 @@ namespace SpeckleGSA
 
             if (GSA.TargetAnalysisLayer)
             {
-                int[] targetElements = pieces[counter++].ParseGSAList(GsaEntity.ELEMENT);
+                int[] targetElements = pieces[counter++].ConvertGSAList(GsaEntity.ELEMENT);
 
                 if (elements != null)
                 {

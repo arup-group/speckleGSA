@@ -54,16 +54,18 @@
                             CanUserSortColumns="False"
                             AutoGenerateColumns="False"
                             IsReadOnly="True"
-                            ItemsSource="{Binding StreamData}"
                             SelectionMode="Extended"
                             CopyingRowClipboardContent="CopyStreamList"
-                            GridLinesVisibility="None" Grid.ColumnSpan="2">
+                            RowHeaderWidth="0"
+                            GridLinesVisibility="None">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Name" Width="*" Binding="{Binding Item1}"/>
                                 <DataGridTextColumn Header="StreamID" Width="*" Binding="{Binding Item2}"/>
                             </DataGrid.Columns>
                             <DataGrid.ContextMenu>
                                 <ContextMenu>
+                                    <MenuItem Header="Copy streamId" Click="StreamList_CopyStreamID"/>
+                                    <Separator />
                                     <MenuItem Header="View stream" Click="StreamList_ViewStream"/>
                                     <MenuItem Header="View stream data" Click="StreamList_ViewStreamData"/>
                                     <MenuItem Header="View object data" Click="StreamList_ViewObjectData"/>
@@ -132,6 +134,7 @@
                             IsReadOnly="True"
                             SelectionMode="Extended"
                             CopyingRowClipboardContent="CopyStreamList"
+                            RowHeaderWidth="0"
                             GridLinesVisibility="None">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Name" Width="*" Binding="{Binding Item1}"/>
@@ -139,6 +142,8 @@
                             </DataGrid.Columns>
                             <DataGrid.ContextMenu>
                                 <ContextMenu>
+                                    <MenuItem Header="Copy streamId" Click="SenderStreams_CopyStreamID"/>
+                                    <Separator />
                                     <MenuItem Header="View stream" Click="SenderStreams_ViewStream"/>
                                     <MenuItem Header="View stream data" Click="SenderStreams_ViewStreamData"/>
                                     <MenuItem Header="View object data" Click="SenderStreams_ViewObjectData"/>
@@ -207,16 +212,19 @@
                             IsReadOnly="True"
                             SelectionMode="Extended"
                             CopyingRowClipboardContent="CopyStreamList"
+                            RowHeaderWidth="0"
                             GridLinesVisibility="None" Grid.ColumnSpan="2">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="StreamID" Width="*" Binding="{Binding}"/>
                             </DataGrid.Columns>
                             <DataGrid.ContextMenu>
                                 <ContextMenu>
+                                    <MenuItem Header="Copy streamId" Click="ReceiverStreams_CopyStreamID"/>
+                                    <MenuItem Header="Remove stream" Click="ReceiverStreams_RemoveStream"/>
+                                    <Separator />
                                     <MenuItem Header="View stream" Click="ReceiverStreams_ViewStream"/>
                                     <MenuItem Header="View stream data" Click="ReceiverStreams_ViewStreamData"/>
                                     <MenuItem Header="View object data" Click="ReceiverStreams_ViewObjectData"/>
-                                    <MenuItem Header="Remove stream" Click="ReceiverStreams_RemoveStream"/>
                                 </ContextMenu>
                             </DataGrid.ContextMenu>
                             <DataGrid.CellStyle>

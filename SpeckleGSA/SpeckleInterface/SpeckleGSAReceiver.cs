@@ -9,14 +9,17 @@ using SpeckleStructuresClasses;
 
 namespace SpeckleGSA
 {
+    /// <summary>
+    /// Receive objects from a stream.
+    /// </summary>
     public class SpeckleGSAReceiver
     {
         const int MAX_OBJ_REQUEST_COUNT = 20;
 
         private SpeckleApiClient myReceiver;
 
-        private string apiToken { get; set; }
-        private string serverAddress { get; set; }
+        private string apiToken;
+        private string serverAddress;
 
         public event EventHandler<EventArgs> UpdateGlobalTrigger;
 
@@ -24,6 +27,11 @@ namespace SpeckleGSA
         public string StreamName { get => myReceiver == null ? null : myReceiver.Stream.Name; }
         public string Units { get => myReceiver == null ? null : myReceiver.Stream.BaseProperties["units"]; }
 
+        /// <summary>
+        /// Create SpeckleGSAReceiver object.
+        /// </summary>
+        /// <param name="serverAddress">Server address</param>
+        /// <param name="apiToken">API token</param>
         public SpeckleGSAReceiver(string serverAddress, string apiToken)
         {
             this.apiToken = apiToken;
@@ -34,6 +42,11 @@ namespace SpeckleGSA
             LocalContext.Init();
         }
 
+        /// <summary>
+        /// Initializes receiver.
+        /// </summary>
+        /// <param name="streamID">Stream ID of stream</param>
+        /// <returns>Task</returns>
         public async Task InitializeReceiver(string streamID)
         {
             await myReceiver.IntializeReceiver(streamID, "GSA", "GSA", "none", apiToken);
@@ -41,6 +54,10 @@ namespace SpeckleGSA
             myReceiver.OnWsMessage += OnWsMessage;
         }
         
+        /// <summary>
+        /// Return a list of SpeckleObjects from the stream.
+        /// </summary>
+        /// <returns>List of SpeckleObjects</returns>
         public List<SpeckleObject> GetStructuralObjects()
         {
             UpdateGlobal();
@@ -51,6 +68,11 @@ namespace SpeckleGSA
             return structuralObjects;
         }
 
+        /// <summary>
+        /// Handles web-socket messages.
+        /// </summary>
+        /// <param name="source">Source</param>
+        /// <param name="e">Event argument</param>
         public void OnWsMessage( object source, SpeckleEventArgs e)
         {
             if (e == null) return;
@@ -69,12 +91,18 @@ namespace SpeckleGSA
             }
         }
 
+        /// <summary>
+        /// Update stream children.
+        /// </summary>
         public void UpdateChildren()
         {
             var result = myReceiver.StreamGetAsync(myReceiver.StreamId, "fields=children").Result;
             myReceiver.Stream.Children = result.Resource.Children;
         }
 
+        /// <summary>
+        /// Force client to update to stream.
+        /// </summary>
         public void UpdateGlobal()
         {
             // Try to get stream
@@ -143,6 +171,9 @@ namespace SpeckleGSA
             }
         }
 
+        /// <summary>
+        /// Dispose the receiver.
+        /// </summary>
         public void Dispose()
         {
             myReceiver.Dispose(true);

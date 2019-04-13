@@ -6,14 +6,40 @@ using System.Threading.Tasks;
 
 namespace SpeckleGSA
 {
+    /// <summary>
+    /// Attribute containing read and write information for the object.
+    /// </summary>
     [AttributeUsage(AttributeTargets.Class)]
     public class GSAObject : Attribute
     {
+        /// <summary>
+        /// GSA Keyword
+        /// </summary>
         private string gsaKeyword;
+
+        /// <summary>
+        /// Stream name, if sending to seperate streams
+        /// </summary>
         private string stream;
+
+        /// <summary>
+        /// Is the object is on the analysis layer?
+        /// </summary>
         private bool analysisLayer;
+
+        /// <summary>
+        /// Is the object is on the design layer?
+        /// </summary>
         private bool designLayer;
+        
+        /// <summary>
+        /// Types which should be read before reading this types.
+        /// </summary>
         private Type[] readPrerequisite;
+
+        /// <summary>
+        /// Types which should be written before writing this types.
+        /// </summary>
         private Type[] writePrerequisite;
 
         public GSAObject(string gsaKeyword, string stream, bool analysisLayer, bool designLayer, Type[] readPrerequisite, Type[] writePrerequisite)
@@ -57,14 +83,23 @@ namespace SpeckleGSA
         }
     }
 
+    /// <summary>
+    /// Interface for GSA object classes.
+    /// </summary>
     public interface IGSAObject
     {
+        /// <summary>
+        /// Associated GWA command.
+        /// </summary>
         string GWACommand
         {
             get;
             set;
         }
 
+        /// <summary>
+        /// List of GWA records used to read the object.
+        /// </summary>
         List<string> SubGWACommand
         {
             get;

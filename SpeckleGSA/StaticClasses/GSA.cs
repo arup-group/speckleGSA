@@ -11,6 +11,9 @@ using SQLite;
 
 namespace SpeckleGSA
 {
+    /// <summary>
+    /// Static class which interfaces with GSA
+    /// </summary>
     public static class GSA
     {
         public static ComAuto GSAObject;
@@ -27,7 +30,7 @@ namespace SpeckleGSA
         private static Dictionary<string, object> GSASetCache;
 
         public static string Units { get; private set; }
-        public static Dictionary<string, string> Senders { get; set; }
+        public static Dictionary<string, string>    Senders { get; set; }
         public static List<string> Receivers { get; set; }
 
         public static string DbPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.ProgramFiles) + @"\Oasys\GSA 10.0\sectlib.db3";
@@ -36,11 +39,9 @@ namespace SpeckleGSA
         {
             if (IsInit)
                 return;
-
-            //GSAObject = new ComAuto();
             
             TargetAnalysisLayer = false;
-            TargetDesignLayer = true; // TODO
+            TargetDesignLayer = true;
 
             PreviousGSAGetCache = new Dictionary<string, object>();
             GSAGetCache = new Dictionary<string, object>();
@@ -55,6 +56,11 @@ namespace SpeckleGSA
         }
 
         #region File Operations
+        /// <summary>
+        /// Creates a new GSA file. Email address and server address is needed for logging purposes.
+        /// </summary>
+        /// <param name="emailAddress">User email address</param>
+        /// <param name="serverAddress">Speckle server address</param>
         public static void NewFile(string emailAddress, string serverAddress)
         {
             if (!IsInit)
@@ -75,6 +81,12 @@ namespace SpeckleGSA
             Status.AddMessage("Created new file.");
         }
 
+        /// <summary>
+        /// Opens an existing GSA file. Email address and server address is needed for logging purposes.
+        /// </summary>
+        /// <param name="path">Absolute path to GSA file</param>
+        /// <param name="emailAddress">User email address</param>
+        /// <param name="serverAddress">Speckle server address</param>
         public static void OpenFile(string path, string emailAddress, string serverAddress)
         {
             if (!IsInit)
@@ -95,6 +107,9 @@ namespace SpeckleGSA
             Status.AddMessage("Opened new file.");
         }
 
+        /// <summary>
+        /// Close GSA file.
+        /// </summary>
         public static void Close()
         {
             if (!IsInit) return;
@@ -111,6 +126,11 @@ namespace SpeckleGSA
         #endregion
 
         #region Speckle Client
+        /// <summary>
+        /// Extracts sender and receiver streams associated with the account.
+        /// </summary>
+        /// <param name="emailAddress">User email address</param>
+        /// <param name="serverAddress">Speckle server address</param>
         public static void GetSpeckleClients(string emailAddress, string serverAddress)
         {
             Senders.Clear();
@@ -142,6 +162,11 @@ namespace SpeckleGSA
                 Receivers = receiverList[1].Split(new char[] { '&' }, StringSplitOptions.RemoveEmptyEntries).ToList();
         }
 
+        /// <summary>
+        /// Writes sender and receiver streams associated with the account.
+        /// </summary>
+        /// <param name="emailAddress">User email address</param>
+        /// <param name="serverAddress">Speckle server address</param>
         public static void SetSpeckleClients(string emailAddress, string serverAddress)
         {
             string key = emailAddress + "&" + serverAddress.Replace(':', '&');
@@ -173,9 +198,14 @@ namespace SpeckleGSA
         #endregion
 
         #region GWA Command
-        public static string[] GetGWAGetCommands(string command)
+        /// <summary>
+        /// Returns a list of GWA records with the index of the record prepended.
+        /// </summary>
+        /// <param name="command">GET GWA command</param>
+        /// <returns>Array of GWA records</returns>
+        public static string[] GetGWARecords(string command)
         {
-            if (!command.Contains("GET"))
+            if (!command.StartsWith("GET"))
                 throw new Exception("GetGWAGetCommands() only takes in GET commands");
 
             object result = RunGWACommand(command);
@@ -183,9 +213,14 @@ namespace SpeckleGSA
             return newPieces;
         }
 
-        public static string[] GetNewGWAGetCommands(string command)
+        /// <summary>
+        /// Returns a list of new GWA records with the index of the record prepended.
+        /// </summary>
+        /// <param name="command">GET GWA command</param>
+        /// <returns>Array of GWA records</returns>
+        public static string[] GetNewGWARecords(string command)
         {
-            if (!command.Contains("GET"))
+            if (!command.StartsWith("GET"))
                 throw new Exception("GetNewGWAGetCommands() only takes in GET commands");
 
             object result = RunGWACommand(command);
@@ -208,7 +243,12 @@ namespace SpeckleGSA
             }
         }
 
-        public static string[] GetDeletedGWAGetCommands(string command)
+        /// <summary>
+        /// Returns a list of deleted GWA records with the index of the record prepended.
+        /// </summary>
+        /// <param name="command">GET GWA command</param>
+        /// <returns>Array of GWA records</returns>
+        public static string[] GetDeletedGWARecords(string command)
         {
             if (!command.Contains("GET"))
                 throw new Exception("GetDeletedGWAGetCommands() only takes in GET commands");
@@ -231,6 +271,12 @@ namespace SpeckleGSA
                 return new string[0];
         }
 
+        /// <summary>
+        /// Runs a GWA command with the option to cache GET and SET commands.
+        /// </summary>
+        /// <param name="command">GWA command</param>
+        /// <param name="cache">Use cache</param>
+        /// <returns>GWA command return object</returns>
         public static object RunGWACommand(string command, bool cache = true)
         {
             if (!IsInit)
@@ -238,11 +284,11 @@ namespace SpeckleGSA
 
             if (cache)
             {
-                if (command.StartsWith("GET") & !command.StartsWith("HIGHEST"))
+                if (command.StartsWith("GET"))
                 {
                     if (!GSAGetCache.ContainsKey(command))
                     {
-                        if (command.Contains("GET_ALL,MEMB"))
+                        if (command.StartsWith("GET_ALL,MEMB"))
                         {
                             // TODO: Member GET_ALL work around
                             int[] memberRefs = new int[0];
@@ -282,6 +328,9 @@ namespace SpeckleGSA
             return GSAObject.GwaCommand(command);
         }
 
+        /// <summary>
+        /// BLANKS all SET GWA records which are in the previous cache, but not the current cache.
+        /// </summary>
         public static void BlankDepreciatedGWASetCommands()
         {
             List<string> prevSets = PreviousGSASetCache.Keys.Where(l => l.StartsWith("SET")).ToList();
@@ -309,29 +358,41 @@ namespace SpeckleGSA
                 {
                     // Uses SET_AT
                     if (!Indexer.InBaseline(split[1], Convert.ToInt32(split[0])))
+                    { 
                         RunGWACommand("BLANK," + split[1] + "," + split[0], false);
+                        // TODO: Need to DELETE instead of BLANK, but also shift the cache indices
+                    }
                 }
             }
         }
         #endregion
 
-        #region Operations
+        #region Document Properties
+        /// <summary>
+        /// Extract the title of the GSA model.
+        /// </summary>
+        /// <returns>GSA model title</returns>
         public static string Title()
         {
-            string res = (string)RunGWACommand("GET,TITLE");
+            string res = GetGWARecords("GET,TITLE").FirstOrDefault();
 
             string[] pieces = res.ListSplit(",");
 
             return pieces[1];
         }
 
+        /// <summary>
+        /// Extracts the base properties of the Speckle stream.
+        /// </summary>
+        /// <returns>Base property dictionary</returns>
         public static Dictionary<string, object> GetBaseProperties()
         {
             Dictionary<string, object> baseProps = new Dictionary<string, object>();
 
             baseProps["units"] = Units.LongUnitName();
+            // TODO: Add other units
 
-            string[] tolerances = ((string)RunGWACommand("GET,TOL")).ListSplit(",");
+            string[] tolerances = GetGWARecords("GET,TOL").FirstOrDefault().ListSplit(",");
 
             List<double> lengthTolerances = new List<double>() {
                 Convert.ToDouble(tolerances[3]), // edge
@@ -350,33 +411,31 @@ namespace SpeckleGSA
             return baseProps;
         }
 
+        /// <summary>
+        /// Updates the GSA unit stored in SpeckleGSA.
+        /// </summary>
+        public static void UpdateUnits()
+        {
+            Units = GetGWARecords("GET,UNIT_DATA.1,LENGTH").FirstOrDefault().ListSplit(",")[2];
+        }
+        #endregion
+
+        #region Views
+        /// <summary>
+        /// Update GSA viewer. This should be called at the end of changes.
+        /// </summary>
         public static void UpdateViews()
         {
             GSAObject.UpdateViews();
         }
+        #endregion
 
-        public static void UpdateUnits()
-        {
-            Units = ((string)RunGWACommand("GET,UNIT_DATA.1,LENGTH", false)).ListSplit(",")[2];
-        }
-
-        public static int NodeAt(double x, double y, double z, string structuralID = null)
-        {
-            int idx = GSAObject.Gen_NodeAt(x, y, z, Settings.CoincidentNodeAllowance);
-            
-            if (structuralID != null)
-                Indexer.ReserveIndices(typeof(GSANode), new List<int>() { idx }, new List<string>() { structuralID });
-            else
-                Indexer.ReserveIndices(typeof(GSANode).GetGSAKeyword(), new List<int>() { idx });
-
-            // Add artificial cache
-            string cacheKey = "SET," + typeof(GSANode).GetGSAKeyword() + "," + idx.ToString() + ",";
-            if (!GSASetCache.ContainsKey(cacheKey))
-                GSASetCache[cacheKey] = 0;
-
-            return idx;
-        }
-        
+        #region Sections
+        /// <summary>
+        /// Transforms a GSA category section description into a generic section description.
+        /// </summary>
+        /// <param name="description"></param>
+        /// <returns>Generic section description</returns>
         public static string TransformCategorySection(string description)
         {
             string[] pieces = description.ListSplit("%");
@@ -446,7 +505,120 @@ namespace SpeckleGSA
         }
         #endregion
 
+        #region Nodes
+        /// <summary>
+        /// Create new node at the coordinate. If a node already exists, no new nodes are created. Updates Indexer with the index.
+        /// </summary>
+        /// <param name="x">X coordinate of the node</param>
+        /// <param name="y">Y coordinate of the node</param>
+        /// <param name="z">Z coordinate of the node</param>
+        /// <param name="structuralID">Structural ID of the node</param>
+        /// <returns>Node index</returns>
+        public static int NodeAt(double x, double y, double z, string structuralID = null)
+        {
+            int idx = GSAObject.Gen_NodeAt(x, y, z, Settings.CoincidentNodeAllowance);
+
+            if (structuralID != null)
+                Indexer.ReserveIndicesAndMap(typeof(GSANode), new List<int>() { idx }, new List<string>() { structuralID });
+            else
+                Indexer.ReserveIndices(typeof(GSANode), new List<int>() { idx });
+
+            // Add artificial cache
+            string cacheKey = "SET," + typeof(GSANode).GetGSAKeyword() + "," + idx.ToString() + ",";
+            if (!GSASetCache.ContainsKey(cacheKey))
+                GSASetCache[cacheKey] = 0;
+
+            return idx;
+        }
+        #endregion
+
+        #region List
+        /// <summary>
+        /// Converts a GSA list to a list of indices.
+        /// </summary>
+        /// <param name="list">GSA list</param>
+        /// <param name="type">GSA entity type</param>
+        /// <returns></returns>
+        public static int[] ConvertGSAList(this string list, GsaEntity type)
+        {
+            if (list == null) return new int[0];
+
+            string[] pieces = list.ListSplit(" ");
+            pieces = pieces.Where(s => !string.IsNullOrEmpty(s)).ToArray();
+
+            List<int> items = new List<int>();
+            for (int i = 0; i < pieces.Length; i++)
+            {
+                if (pieces[i].IsDigits())
+                    items.Add(Convert.ToInt32(pieces[i]));
+                else if (pieces[i].Contains('"'))
+                    items.AddRange(pieces[i].ConvertNamedGSAList(type));
+                else if (pieces[i] == "to")
+                {
+                    int lowerRange = Convert.ToInt32(pieces[i - 1]);
+                    int upperRange = Convert.ToInt32(pieces[i + 1]);
+
+                    for (int j = lowerRange + 1; j <= upperRange; j++)
+                        items.Add(j);
+
+                    i++;
+                }
+                else
+                {
+                    try
+                    {
+                        int[] itemTemp = new int[0];
+                        GSA.GSAObject.EntitiesInList(pieces[i], type, out itemTemp);
+                        items.AddRange(itemTemp);
+                    }
+                    catch
+                    { }
+                }
+            }
+
+            return items.ToArray();
+        }
+
+        /// <summary>
+        /// Converts a named GSA list to a list of indices.
+        /// </summary>
+        /// <param name="list">GSA list</param>
+        /// <param name="type">GSA entity type</param>
+        /// <returns></returns>
+        public static int[] ConvertNamedGSAList(this string list, GsaEntity type)
+        {
+            list = list.Trim(new char[] { '"' });
+
+            string res = GSA.GetGWARecords("GET,LIST," + list).FirstOrDefault();
+
+            string[] pieces = res.Split(new char[] { ',' });
+
+            return pieces[pieces.Length - 1].ConvertGSAList(type);
+        }
+
+        /// <summary>
+        /// Extracts and return the group indicies in the list.
+        /// </summary>
+        /// <param name="list">List</param>
+        /// <returns>Array of group indices</returns>
+        public static int[] GetGroupsFromGSAList(this string list)
+        {
+            string[] pieces = list.ListSplit(" ");
+
+            List<int> groups = new List<int>();
+
+            foreach (string p in pieces)
+                if (p.Length > 0 && p[0] == 'G')
+                    groups.Add(Convert.ToInt32(p.Substring(1)));
+
+            return groups.ToArray();
+        }
+        #endregion
+
         #region Cache
+        /// <summary>
+        /// Move current cache into previous cache.
+        /// </summary>
         public static void ClearCache()
         {
             PreviousGSAGetCache = new Dictionary<string, object>(GSAGetCache);
@@ -455,6 +627,9 @@ namespace SpeckleGSA
             GSASetCache.Clear();
         }
 
+        /// <summary>
+        /// Clear current and previous cache.
+        /// </summary>
         public static void FullClearCache()
         {
             PreviousGSAGetCache.Clear();
@@ -462,9 +637,21 @@ namespace SpeckleGSA
             PreviousGSASetCache.Clear();
             GSASetCache.Clear();
         }
+
+        /// <summary>
+        /// Blanks all records within the current and previous cache.
+        /// </summary>
+        public static void DeleteSpeckleObjects()
+        {
+            GSA.BlankDepreciatedGWASetCommands();
+            GSA.ClearCache();
+            GSA.BlankDepreciatedGWASetCommands();
+            GSA.UpdateViews();
+        }
         #endregion
     }
 
+    #region GSA Category Section Helper Classes
     public class GSASection
     {
         public int SECT_SHAPE { get; set; }
@@ -478,4 +665,5 @@ namespace SpeckleGSA
     {
         public int TYPE_NUM { get; set; }
     }
+    #endregion
 }

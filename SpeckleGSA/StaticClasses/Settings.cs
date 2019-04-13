@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace SpeckleGSA
 {
+    /// <summary>
+    /// Static class to store settings.
+    /// </summary>
     public class Settings
     {
         public static bool SendOnlyMeaningfulNodes = true;

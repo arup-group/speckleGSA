@@ -9,23 +9,36 @@ using System.Threading.Tasks;
 
 namespace SpeckleGSA
 {
+    /// <summary>
+    /// Responsible for reading and sending GSA models.
+    /// </summary>
     public class Sender
     {
         public Dictionary<string, SpeckleGSASender> Senders;
         public Dictionary<Type, List<IGSAObject>> SenderObjectCache;
-
         public Dictionary<Type, List<Type>> TypePrerequisites;
 
         public bool IsInit;
+        public bool IsBusy;
 
+        /// <summary>
+        /// Creates Sender object.
+        /// </summary>
         public Sender()
         {
             Senders = new Dictionary<string, SpeckleGSASender>();
             SenderObjectCache = new Dictionary<Type, List<IGSAObject>>();
             TypePrerequisites = new Dictionary<Type, List<Type>>();
             IsInit = false;
+            IsBusy = false;
         }
 
+        /// <summary>
+        /// Initializes sender.
+        /// </summary>
+        /// <param name="restApi">Server address</param>
+        /// <param name="apiToken">API token of account</param>
+        /// <returns>Task</returns>
         public async Task Initialize(string restApi, string apiToken)
         {
             if (IsInit) return;
@@ -112,10 +125,15 @@ namespace SpeckleGSA
             IsInit = true;
         }
 
+        /// <summary>
+        /// Trigger to update stream.
+        /// </summary>
         public void Trigger()
         {
+            if (IsBusy) return;
             if (!IsInit) return;
 
+            IsBusy = true;
             GSA.ClearCache();
             GSA.UpdateUnits();
 
@@ -207,7 +225,17 @@ namespace SpeckleGSA
                 Senders[kvp.Key].SendGSAObjects(kvp.Value);
             }
 
+            IsBusy = false;
             Status.ChangeStatus("Finished sending", 100);
+        }
+
+        /// <summary>
+        /// Dispose receiver.
+        /// </summary>
+        public void Dispose()
+        {
+            foreach (KeyValuePair<string, string> kvp in GSA.Senders)
+                Senders[kvp.Key].Dispose();
         }
     }
 }

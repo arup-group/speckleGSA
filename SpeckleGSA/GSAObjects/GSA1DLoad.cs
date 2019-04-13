@@ -31,8 +31,8 @@ namespace SpeckleGSA
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
 
-            string[] lines = GSA.GetGWAGetCommands("GET_ALL," + keyword);
-            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL," + keyword);
+            string[] lines = GSA.GetGWARecords("GET_ALL," + keyword);
+            string[] deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword);
 
             // Remove deleted lines
             dict[typeof(GSA1DLoad)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
@@ -68,7 +68,7 @@ namespace SpeckleGSA
                             new StructuralVectorThree(new double[] { 1, 0, 0 }),
                             new StructuralVectorThree(new double[] { 0, 1, 0 }),
                             new StructuralVectorThree(new double[] { 0, 0, 1 })) :
-                            HelperFunctions.ToAxis(elem.Value.ToArray(), elem.ZAxis); // Assumes if not global, local
+                            HelperFunctions.LocalAxisEntity1D(elem.Value.ToArray(), elem.ZAxis); // Assumes if not global, local
                         load.Loading = initLoad.Loading;
                         load.Loading.TransformOntoAxis(loadAxis);
 
@@ -119,7 +119,7 @@ namespace SpeckleGSA
                             new StructuralVectorThree(new double[] { 1, 0, 0 }),
                             new StructuralVectorThree(new double[] { 0, 1, 0 }),
                             new StructuralVectorThree(new double[] { 0, 0, 1 })) :
-                            HelperFunctions.ToAxis(memb.Value.ToArray(), memb.ZAxis); // Assumes if not global, local
+                            HelperFunctions.LocalAxisEntity1D(memb.Value.ToArray(), memb.ZAxis); // Assumes if not global, local
                         load.Loading = initLoad.Loading;
                         load.Loading.TransformOntoAxis(loadAxis);
 
@@ -179,7 +179,7 @@ namespace SpeckleGSA
 
             if (GSA.TargetAnalysisLayer)
             {
-                int[] targetElements = pieces[counter++].ParseGSAList(GsaEntity.ELEMENT);
+                int[] targetElements = pieces[counter++].ConvertGSAList(GsaEntity.ELEMENT);
 
                 if (elements != null)
                 {

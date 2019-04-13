@@ -30,8 +30,8 @@ namespace SpeckleGSA
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
 
-            string[] lines = GSA.GetGWAGetCommands("GET_ALL," + keyword);
-            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL," + keyword);
+            string[] lines = GSA.GetGWARecords("GET_ALL," + keyword);
+            string[] deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword);
 
             // Remove deleted lines
             dict[typeof(GSA2DMember)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
@@ -94,7 +94,7 @@ namespace SpeckleGSA
 
             Structural2DElementMesh temp = new Structural2DElementMesh(
                 coordinates.ToArray(),
-                color.ToSpeckleColor(),
+                color.HexToArgbColor(),
                 ret.ElementType, ret.PropertyRef, null, 0);
 
             ret.Vertices = temp.Vertices;
@@ -150,7 +150,7 @@ namespace SpeckleGSA
             ls.Add(keyword);
             ls.Add(index.ToString());
             ls.Add(mesh.Name == null || mesh.Name == "" ? " " : mesh.Name);
-            ls.Add(mesh.Colors == null || mesh.Colors.Count() < 1 ? "NO_RGB" : mesh.Colors[0].ToHexColor().ToString());
+            ls.Add(mesh.Colors == null || mesh.Colors.Count() < 1 ? "NO_RGB" : mesh.Colors[0].ArgbToHexColor().ToString());
             if (mesh.ElementType == Structural2DElementType.Slab)
                 ls.Add("SLAB");
             else if (mesh.ElementType == Structural2DElementType.Wall)
