@@ -28,8 +28,8 @@ namespace SpeckleGSA
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
 
-            string[] lines = GSA.GetGWAGetCommands("GET_ALL," + keyword);
-            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL," + keyword);
+            string[] lines = GSA.GetGWARecords("GET_ALL," + keyword);
+            string[] deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword);
 
             // Remove deleted lines
             dict[typeof(GSA2DElement)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
@@ -72,7 +72,7 @@ namespace SpeckleGSA
 
             string type = pieces[counter++];
             if (color != null)
-                ret.Colors = Enumerable.Repeat(color.ToSpeckleColor().Value, type.ParseElementNumNodes()).ToList();
+                ret.Colors = Enumerable.Repeat(color.HexToArgbColor().Value, type.ParseElementNumNodes()).ToList();
             else
                 ret.Colors = new List<int>();
 
@@ -150,7 +150,7 @@ namespace SpeckleGSA
             ls.Add(keyword);
             ls.Add(index.ToString());
             ls.Add(mesh.Name == null || mesh.Name == "" ? " " : mesh.Name);
-            ls.Add(mesh.Colors == null || mesh.Colors.Count() < 1 ? "NO_RGB" : mesh.Colors[0].ToHexColor().ToString());
+            ls.Add(mesh.Colors == null || mesh.Colors.Count() < 1 ? "NO_RGB" : mesh.Colors[0].ArgbToHexColor().ToString());
             ls.Add(mesh.Vertices.Count() / 3 == 3 ? "TRI3" : "QUAD4");
             ls.Add(propRef.ToString());
             ls.Add(group.ToString()); // Group
@@ -188,7 +188,7 @@ namespace SpeckleGSA
             double zMaterialOffset = 0;
             double materialThickness = 0;
 
-            string res = (string)GSA.RunGWACommand("GET,PROP_2D," + propIndex.ToString());
+            string res = GSA.GetGWARecords("GET,PROP_2D," + propIndex.ToString()).FirstOrDefault();
 
             if (res == null || res == "")
                 return insertionPointOffset;

@@ -29,8 +29,8 @@ namespace SpeckleGSA
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
 
-            string[] lines = GSA.GetGWAGetCommands("GET_ALL," + keyword);
-            string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL," + keyword);
+            string[] lines = GSA.GetGWARecords("GET_ALL," + keyword);
+            string[] deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword);
 
             // Remove deleted lines
             dict[typeof(GSA2DProperty)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
@@ -150,10 +150,10 @@ namespace SpeckleGSA
         public static string GetMaterialType(int materialRef)
         {
             // Steel
-            if ((string)GSA.RunGWACommand("GET,MAT_STEEL.3," + materialRef.ToString()) != string.Empty) return "STEEL";
+            if (GSA.GetGWARecords("GET,MAT_STEEL.3," + materialRef.ToString()).FirstOrDefault() != null) return "STEEL";
 
             // Concrete
-            if ((string)GSA.RunGWACommand("GET,MAT_CONCRETE.16," + materialRef.ToString()) != string.Empty) return "CONCRETE";
+            if (GSA.GetGWARecords("GET,MAT_CONCRETE.16," + materialRef.ToString()).FirstOrDefault() != null) return "CONCRETE";
 
             // Default
             return "GENERIC";

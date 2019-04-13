@@ -12,6 +12,9 @@ using SpeckleStructuresClasses;
 
 namespace SpeckleGSA
 {
+    /// <summary>
+    /// Packages and sends objects as a stream.
+    /// </summary>
     public class SpeckleGSASender
     {
         const double MAX_BUCKET_SIZE = 5e5;
@@ -20,8 +23,13 @@ namespace SpeckleGSA
         public string StreamID { get; private set; }
 
         private SpeckleApiClient mySender;
-        private string apiToken { get; set; }
+        private string apiToken;
 
+        /// <summary>
+        /// Create SpeckleGSASender object.
+        /// </summary>
+        /// <param name="serverAddress">Server address</param>
+        /// <param name="apiToken">API token</param>
         public SpeckleGSASender(string serverAddress, string apiToken)
         {
             this.apiToken = apiToken;
@@ -34,6 +42,12 @@ namespace SpeckleGSA
             LocalContext.Init();
         }
 
+        /// <summary>
+        /// Initializes sender.
+        /// </summary>
+        /// <param name="streamID">Stream ID of stream. If no stream ID is given, a new stream is created.</param>
+        /// <param name="streamName">Stream name</param>
+        /// <returns>Task</returns>
         public async Task InitializeSender(string streamID = null, string streamName = "")
         {
             await mySender.IntializeSender(apiToken, "GSA", "GSA", "none");
@@ -51,11 +65,19 @@ namespace SpeckleGSA
             }
         }
         
+        /// <summary>
+        /// Update stream name.
+        /// </summary>
+        /// <param name="streamName">Stream name</param>
         public void UpdateName(string streamName)
         {
             this.StreamName = streamName;
         }
 
+        /// <summary>
+        /// Send objects to stream.
+        /// </summary>
+        /// <param name="payloadObjects">Dictionary of lists of objects indexed by layer name</param>
         public void SendGSAObjects(Dictionary<string, List<object>> payloadObjects)
         {
             // Convert and set up layers
@@ -164,6 +186,11 @@ namespace SpeckleGSA
             }
         }
 
+        /// <summary>
+        /// Create payloads.
+        /// </summary>
+        /// <param name="bucketObjects">List of SpeckleObjects to seperate into payloads</param>
+        /// <returns>List of list of SpeckleObjects seperated into payloads</returns>
         public List<List<SpeckleObject>> CreatePayloads(List<SpeckleObject> bucketObjects)
         {
             // Seperate objects into sizable payloads
@@ -196,6 +223,9 @@ namespace SpeckleGSA
             return objectUpdatePayloads;
         }
 
+        /// <summary>
+        /// Dispose the sender.
+        /// </summary>
         public void Dispose()
         {
             mySender.Dispose(true);

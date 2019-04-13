@@ -9,28 +9,35 @@ using SpeckleCore;
 
 namespace SpeckleGSA
 {
+    /// <summary>
+    /// Responsible for reading and writing Speckle streams.
+    /// </summary>
     public class Receiver
     {
         public Dictionary<string, SpeckleGSAReceiver> Receivers;
-        public Dictionary<Type, List<object>> ReceiverObjectCache;
-        public List<string> ReceiverIDCache;
-
         public Dictionary<Type, List<Type>> TypePrerequisites;
         public List<KeyValuePair<Type, List<Type>>> TypeCastPriority;
 
         public bool IsInit;
         public bool IsBusy;
-
+        
+        /// <summary>
+        /// Creates Receiver object.
+        /// </summary>
         public Receiver()
         {
             Receivers = new Dictionary<string, SpeckleGSAReceiver>();
-            ReceiverObjectCache = new Dictionary<Type, List<object>>();
-            ReceiverIDCache = new List<string>();
             TypePrerequisites = new Dictionary<Type, List<Type>>();
             TypeCastPriority = new List<KeyValuePair<Type, List<Type>>>();
             IsInit = false;
         }
 
+        /// <summary>
+        /// Initializes receiver.
+        /// </summary>
+        /// <param name="restApi">Server address</param>
+        /// <param name="apiToken">API token of account</param>
+        /// <returns>Task</returns>
         public async Task Initialize(string restApi, string apiToken)
         {
             if (IsInit) return;
@@ -93,20 +100,12 @@ namespace SpeckleGSA
 
                 try
                 {
-                    string keyword = (string)kvp.Key.GetAttribute("GSAKeyword");
+                    string keyword = kvp.Key.GetGSAKeyword();
 
                     int highestRecord = (int)GSA.RunGWACommand("HIGHEST," + keyword);
 
                     if (highestRecord > 0)
-                    {
-                        Indexer.ReserveIndices(keyword, Enumerable.Range(1, highestRecord).ToList());
-                        //GSA.RunGWACommand("DELETE," + kvp.Key.GetAttribute("GSAKeyword") + ",1," + highestRecord.ToString());
-                    }
-                    else
-                    {
-                        // TODO: Causes GSA to crash sometimes
-                        //GSA.RunGWACommand("DELETE," + kvp.Key.GetAttribute("GSAKeyword"));
-                    }
+                        Indexer.ReserveIndices(kvp.Key, Enumerable.Range(1, highestRecord).ToList());
                 }
                 catch { }
             }
@@ -132,6 +131,9 @@ namespace SpeckleGSA
             IsInit = true;
         }
 
+        /// <summary>
+        /// Trigger to update stream. Is called automatically when update-global ws message is received on stream.
+        /// </summary>
         public void Trigger(object sender, EventArgs e)
         {
             if (IsBusy) return;
@@ -232,10 +234,16 @@ namespace SpeckleGSA
             Status.ChangeStatus("Finished receiving", 100);
         }
         
+        /// <summary>
+        /// Dispose receiver.
+        /// </summary>
         public void Dispose()
         {
             foreach (string streamID in GSA.Receivers)
+            { 
                 Receivers[streamID].UpdateGlobalTrigger -= Trigger;
+                Receivers[streamID].Dispose();
+            }
         }
     }
 }

@@ -34,8 +34,8 @@ namespace SpeckleGSA
             bool deleted = false;
             foreach (string id in materialIdentifier)
             {
-                string[] lines = GSA.GetGWAGetCommands("GET_ALL," + id);
-                string[] deletedLines = GSA.GetDeletedGWAGetCommands("GET_ALL," + id);
+                string[] lines = GSA.GetGWARecords("GET_ALL," + id);
+                string[] deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + id);
 
                 if (deletedLines.Length > 0)
                     deleted = true;

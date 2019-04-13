@@ -32,8 +32,8 @@ namespace SpeckleGSAUI
         const string PAUSE_BUTTON = "M15,16H13V8H15M11,16H9V8H11M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z";
 
         public ObservableCollection<string> Messages { get; set; }
-        public ObservableCollection<Tuple<string, string>> StreamData { get; set; }
 
+        private UIStatus status;
         enum UIStatus
         {
             SENDING, RECEIVING, IDLE, BUSY
@@ -42,11 +42,12 @@ namespace SpeckleGSAUI
         public string EmailAddress;
         public string RestApi;
         public string ApiToken;
+
         public Sender gsaSender;
         public Receiver gsaReceiver;
 
         public Timer triggerTimer;
-        private UIStatus status;
+
         private int previousTabIndex;
 
         public MainWindow()
@@ -56,7 +57,6 @@ namespace SpeckleGSAUI
             DataContext = this;
             
             Messages = new ObservableCollection<string>();
-            StreamData = new ObservableCollection<Tuple<string, string>>();
             
             gsaSender = new Sender();
             gsaReceiver = new Receiver();
@@ -83,13 +83,19 @@ namespace SpeckleGSAUI
         }
 
         #region Speckle Operations
+        /// <summary>
+        /// Login to a SpeckleServer
+        /// </summary>
         private void Login(object sender, RoutedEventArgs e)
         {
             SpecklePopup.MainWindow p = new SpecklePopup.MainWindow(false, true);
+
             this.IsEnabled = false;
             Brush oldBackground = this.Background;
             this.Background = new SolidColorBrush(Color.FromArgb(255,81,140,255));
+
             p.ShowDialog();
+
             this.IsEnabled = true;
             this.Background = oldBackground;
 
@@ -109,6 +115,9 @@ namespace SpeckleGSAUI
                 Status.AddError("Failed to log in");
         }
 
+        /// <summary>
+        /// Receive all streams in the account.
+        /// </summary>
         private void UpdateStreamList(object sender, RoutedEventArgs e)
         {
             if (RestApi == null && ApiToken == null)
@@ -117,7 +126,7 @@ namespace SpeckleGSAUI
                 return;
             }
 
-            Task.Run(() => StreamManager.GetStreams(RestApi, ApiToken)).ContinueWith(res =>
+            Task.Run(() => SpeckleStreamManager.GetStreams(RestApi, ApiToken)).ContinueWith(res =>
             {
                 Application.Current.Dispatcher.BeginInvoke(
                     DispatcherPriority.Background,
@@ -127,9 +136,9 @@ namespace SpeckleGSAUI
                         if (streams != null)
                         {
                             streams.Reverse();
-                            StreamData.Clear();
+                            StreamList.Items.Clear();
                             foreach (Tuple<string, string> t in streams)
-                                StreamData.Add(t);
+                                StreamList.Items.Add(t);
                         }
                     }
                     ));
@@ -138,6 +147,9 @@ namespace SpeckleGSAUI
         #endregion
 
         #region GSA
+        /// <summary>
+        /// Create new GSA file.
+        /// </summary>
         private void NewGSAFile(object sender, RoutedEventArgs e)
         {
             SenderTab.IsEnabled = false;
@@ -164,6 +176,9 @@ namespace SpeckleGSAUI
                 });
         }
 
+        /// <summary>
+        /// Open a GSA file.
+        /// </summary>
         private void OpenGSAFile(object sender, RoutedEventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
@@ -196,6 +211,9 @@ namespace SpeckleGSAUI
         #endregion
 
         #region Sender
+        /// <summary>
+        /// Start and stop sending.
+        /// </summary>
         private async void SendStream(object sender, RoutedEventArgs e)
         {
             if (RestApi == null && ApiToken == null)
@@ -262,6 +280,7 @@ namespace SpeckleGSAUI
             }
             else if (status == UIStatus.SENDING)
             {
+                gsaSender.Dispose();
                 status = UIStatus.IDLE;
                 SendButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
                 SendButtonPath.Fill = Brushes.LightGray;
@@ -271,6 +290,9 @@ namespace SpeckleGSAUI
             }
         }
 
+        /// <summary>
+        /// Trigger event for sending stream.
+        /// </summary>
         private void SenderTimerTrigger(Object source, ElapsedEventArgs e)
         {
             gsaSender.Trigger();
@@ -286,6 +308,9 @@ namespace SpeckleGSAUI
         #endregion
 
         #region Receiver
+        /// <summary>
+        /// Add a new receiver.
+        /// </summary>
         private void AddReceiver(object sender, RoutedEventArgs e)
         {
             if (ReceiverTextbox.Text != "")
@@ -298,6 +323,9 @@ namespace SpeckleGSAUI
             }
         }
 
+        /// <summary>
+        /// Add receivers from clipboard.
+        /// </summary>
         private void PasteClipboardReceiver(object sender, RoutedEventArgs e)
         {
             string[] paste = Clipboard.GetText(TextDataFormat.Text).Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
@@ -309,6 +337,9 @@ namespace SpeckleGSAUI
             UpdateClientLists();
         }
 
+        /// <summary>
+        /// Clear all receivers.
+        /// </summary>
         private void ClearReceiver(object sender, RoutedEventArgs e)
         {
             GSA.Receivers.Clear();
@@ -317,6 +348,9 @@ namespace SpeckleGSAUI
             UpdateClientLists();
         }
         
+        /// <summary>
+        /// Start and stop receiving.
+        /// </summary>
         private async void ReceiveStream(object sender, RoutedEventArgs e)
         {
             if (RestApi == null && ApiToken == null)
@@ -384,17 +418,15 @@ namespace SpeckleGSAUI
 
                 MessageBoxResult result = MessageBox.Show("Bake received objects permanently? ", "SpeckleGSA", MessageBoxButton.YesNo, MessageBoxImage.Question);
                 if (result != MessageBoxResult.Yes)
-                {
-                    GSA.BlankDepreciatedGWASetCommands();
-                    GSA.ClearCache();
-                    GSA.BlankDepreciatedGWASetCommands();
-                    GSA.UpdateViews();
-                }
+                    GSA.DeleteSpeckleObjects();
             }
         }
         #endregion
 
         #region Log
+        /// <summary>
+        /// Message handler.
+        /// </summary>
         private void AddMessage(object sender, MessageEventArgs e)
         {
             Application.Current.Dispatcher.BeginInvoke(
@@ -408,6 +440,9 @@ namespace SpeckleGSAUI
             );
         }
 
+        /// <summary>
+        /// Error message handler.
+        /// </summary>
         private void AddError(object sender, MessageEventArgs e)
         {
             Application.Current.Dispatcher.BeginInvoke(
@@ -421,6 +456,9 @@ namespace SpeckleGSAUI
             );
         }
 
+        /// <summary>
+        /// Change status handler.
+        /// </summary>
         private void ChangeStatus(object sender, StatusEventArgs e)
         {
             Application.Current.Dispatcher.BeginInvoke(
@@ -445,6 +483,9 @@ namespace SpeckleGSAUI
         #endregion
 
         #region UI
+        /// <summary>
+        /// Control UI tab changes.
+        /// </summary>
         private void ChangeTab(object sender, SelectionChangedEventArgs e)
         {
             if (e.OriginalSource == UITabControl)
@@ -472,6 +513,9 @@ namespace SpeckleGSAUI
             }
         }
 
+        /// <summary>
+        /// Update data grids with stream IDs from GSA file.
+        /// </summary>
         private void UpdateClientLists()
         {
             SenderStreams.Items.Clear();
@@ -486,12 +530,18 @@ namespace SpeckleGSAUI
                     ReceiverStreams.Items.Add(receiver);
         }
 
+        /// <summary>
+        /// Copy selected stream ID
+        /// </summary>
         private void CopyStreamList(object sender, DataGridRowClipboardEventArgs e)
         {
             if (e.ClipboardRowContent.Count() > 1)
                 e.ClipboardRowContent.RemoveAt(0);
         }
 
+        /// <summary>
+        /// Update stream in Settings.cs
+        /// </summary>
         private void UpdateSettings(object sender, RoutedEventArgs e)
         {
             try
@@ -514,6 +564,16 @@ namespace SpeckleGSAUI
             }
             catch
             { }
+        }
+
+        private void StreamList_CopyStreamID(object sender, RoutedEventArgs e)
+        {
+            var cell = StreamList.CurrentCell.Item;
+
+            if (cell.GetType() == typeof(Tuple<string, string>))
+            {
+                Clipboard.SetText((cell as Tuple<string, string>).Item2);
+            }
         }
 
         private void StreamList_ViewStream(object sender, RoutedEventArgs e)
@@ -547,6 +607,16 @@ namespace SpeckleGSAUI
             {
                 string streamID = (cell as Tuple<string, string>).Item2;
                 System.Diagnostics.Process.Start(RestApi + @"/streams/" + streamID + @"/objects?omit=displayValue,base64");
+            }
+        }
+
+        private void SenderStreams_CopyStreamID(object sender, RoutedEventArgs e)
+        {
+            var cell = SenderStreams.CurrentCell.Item;
+
+            if (cell.GetType() == typeof(Tuple<string, string>))
+            {
+                Clipboard.SetText((cell as Tuple<string, string>).Item2);
             }
         }
 
@@ -597,8 +667,8 @@ namespace SpeckleGSAUI
             if (cell.GetType() == typeof(Tuple<string, string>))
             {
                 string streamID = (cell as Tuple<string, string>).Item2;
-                
-                Task.Run(() => StreamManager.CloneStream(RestApi, ApiToken, streamID)).ContinueWith(res =>
+
+                Task.Run(() => SpeckleStreamManager.CloneStream(RestApi, ApiToken, streamID)).ContinueWith(res =>
                 {
                     Application.Current.Dispatcher.BeginInvoke(
                         DispatcherPriority.Background,
@@ -612,6 +682,16 @@ namespace SpeckleGSAUI
                         }
                         ));
                 });
+            }
+        }
+
+        private void ReceiverStreams_CopyStreamID(object sender, RoutedEventArgs e)
+        {
+            var cell = ReceiverStreams.CurrentCell.Item;
+
+            if (cell.GetType() == typeof(Tuple<string, string>))
+            {
+                Clipboard.SetText((cell as Tuple<string, string>).Item2);
             }
         }
 
