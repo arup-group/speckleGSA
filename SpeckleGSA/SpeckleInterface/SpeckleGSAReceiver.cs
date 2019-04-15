@@ -62,8 +62,9 @@ namespace SpeckleGSA
         {
             UpdateGlobal();
 
-            List<SpeckleObject> structuralObjects = myReceiver.Stream.Objects.Where(o => o is IStructural).ToList();
-            structuralObjects.AddRange(Converter.Deserialise(myReceiver.Stream.Objects.Where(o => !(o is IStructural))).Cast<SpeckleObject>());
+            List<SpeckleObject> structuralObjects = myReceiver.Stream.Objects.Select(o => ConvertToStructural(o)).Where(o => o != null).ToList();
+            //List<SpeckleObject> structuralObjects = myReceiver.Stream.Objects.Where(o => o is IStructural).ToList();
+            //structuralObjects.AddRange(Converter.Deserialise(myReceiver.Stream.Objects.Where(o => !(o is IStructural))).Cast<SpeckleObject>());
 
             return structuralObjects;
         }
@@ -169,6 +170,59 @@ namespace SpeckleGSA
 
                 Status.AddMessage("Received " + myReceiver.Stream.Name + " stream with " + myReceiver.Stream.Objects.Count() + " objects.");
             }
+        }
+
+        /// <summary>
+        /// Convert SpeckleObject to Structural objects. Returns null if unable to do so.
+        /// </summary>
+        /// <param name="inputObject">SpeckleObject to convert</param>
+        /// <returns>Structural object</returns>
+        public SpeckleObject ConvertToStructural(SpeckleObject inputObject)
+        {
+            if (typeof(IStructural).IsAssignableFrom(inputObject.GetType()))
+                return inputObject;
+
+            List<string> pieces = inputObject.Type.Split(new char[] { '/' }).ToList();
+
+            while (pieces.Count() > 0)
+            {
+                string subType = string.Join("/", pieces);
+                try
+                {
+                    Type candidateType = null;
+                    foreach (Type t in SpeckleInitializer.GetTypes())
+                    {
+                        if (t.Assembly.FullName == typeof(IStructural).Assembly.FullName)
+                        { 
+                            SpeckleObject convertedObject = (SpeckleObject)Activator.CreateInstance(t);
+                            if (convertedObject.Type.Contains(subType))
+                            {
+                                candidateType = t;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (candidateType != null)
+                    {
+                        SpeckleObject convertedObject = (SpeckleObject)Activator.CreateInstance(candidateType);
+
+                        foreach (PropertyInfo p in convertedObject.GetType().GetProperties().Where(p => p.CanWrite))
+                        {
+                            PropertyInfo inputProperty = inputObject.GetType().GetProperty(p.Name);
+                            if (inputProperty != null)
+                                p.SetValue(convertedObject, inputProperty.GetValue(inputObject));
+                        }
+                        convertedObject.GenerateHash();
+
+                        return convertedObject;
+                    }
+                }
+                catch { }
+
+                pieces.RemoveAt(pieces.Count() - 1);
+            }
+            return null;
         }
 
         /// <summary>

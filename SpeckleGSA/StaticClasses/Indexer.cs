@@ -37,7 +37,7 @@ namespace SpeckleGSA
         private static int NextIndex(string keywordGSA)
         {
             if (!counter.ContainsKey(keywordGSA))
-                counter[keywordGSA] = 0;
+                counter[keywordGSA] = 1;
 
             if (indexUsed.ContainsKey(keywordGSA))
                 while (indexUsed[keywordGSA].Contains(counter[keywordGSA]))
