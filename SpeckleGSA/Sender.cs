@@ -165,6 +165,7 @@ namespace SpeckleGSA
             if (!changeDetected)
             {
                 Status.ChangeStatus("Finished sending", 100);
+                IsBusy = false;
                 return;
             }
 
