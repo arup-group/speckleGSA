@@ -47,8 +47,12 @@ namespace SpeckleGSA
                 string[] pPieces = p.ListSplit(",");
                 if (pPieces[4].MemberIs2D())
                 {
-                    GSA2DMember member = ParseGWACommand(p, nodes, props);
-                    members.Add(member);
+                    // Check if dummy
+                    if (pPieces[pPieces.Length - 4] == "ACTIVE")
+                    {
+                        GSA2DMember member = ParseGWACommand(p, nodes, props);
+                        members.Add(member);
+                    }
                 }
             }
 
