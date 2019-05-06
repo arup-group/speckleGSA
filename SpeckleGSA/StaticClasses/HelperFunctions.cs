@@ -854,6 +854,12 @@ namespace SpeckleGSA
                 return false;
         }
 
+        /// <summary>
+        /// Seperates the load description into tuples of the case/task/combo identifier and their factors.
+        /// </summary>
+        /// <param name="list">Load description.</param>
+        /// <param name="currentMultiplier">Factor to multiply the entire list by.</param>
+        /// <returns></returns>
         public static List<Tuple<string, double>> ParseLoadDescription(string list, double currentMultiplier = 1)
         {
             List<Tuple<string, double>> ret = new List<Tuple<string, double>>();
@@ -900,6 +906,29 @@ namespace SpeckleGSA
                 }
                 else if (currChar == '-')
                     negative = !negative;
+                else if (currChar == 't' )
+                {
+                    if (list[++pos] == 'o')
+                    {
+                        Tuple<string, double> prevDesc = ret.Last();
+
+                        string type = prevDesc.Item1[0].ToString();
+                        int start = Convert.ToInt32(prevDesc.Item1.Substring(1)) + 1;
+
+                        string endDesc = "";
+
+                        pos++;
+                        pos++;
+                        while (pos < list.Count() && list[pos] >= '0' && list[pos] <= '9')
+                            endDesc += list[pos++].ToString();
+                        pos--;
+
+                        int end = Convert.ToInt32(endDesc);
+
+                        for (int i = start; i <= end; i++)
+                            ret.Add(new Tuple<string, double>(type + i.ToString(), prevDesc.Item2));
+                    }
+                }
                 else if (currChar == '(')
                 {
                     double actualFactor = multiplier == 0 ? 1 : multiplier;
