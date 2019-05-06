@@ -176,7 +176,7 @@ namespace SpeckleGSA
         {
             string[] pieces = desc.ListSplit("%");
 
-            string unit = Regex.Match(pieces[1], @"(?<=()(.*)(?=))").Value;
+            string unit = Regex.Match(pieces[1], @"(?<=\()(.+)(?=\))").Value;
             if (unit == "") unit = "mm";
 
             string type = pieces[1].Split(new char[] { '(' })[0];
