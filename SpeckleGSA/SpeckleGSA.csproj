@@ -61,6 +61,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="GSAObjects\GSA2DVoid.cs" />
+    <Compile Include="GSAObjects\GSALoadTask.cs" />
     <Compile Include="GSAObjects\GSAObject.cs" />
     <Compile Include="GSAObjects\GSALoadCase.cs" />
     <Compile Include="GSAObjects\GSA1DLoad.cs" />

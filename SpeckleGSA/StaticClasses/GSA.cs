@@ -304,6 +304,22 @@ namespace SpeckleGSA
 
                             GSAGetCache[command] = string.Join("\n", result);
                         }
+                        else if (command.StartsWith("GET_ALL,ANAL"))
+                        {
+                            // TODO: Anal GET_ALL work around
+                            int highestRef = (int)RunGWACommand("HIGHEST,ANAL.1");
+
+                            List<string> result = new List<string>();
+
+                            for (int i = 1; i <= highestRef; i++)
+                            {
+                                string res = (string)RunGWACommand("GET,ANAL," + i.ToString());
+                                if (res != null && res != "")
+                                    (result as List<string>).Add(res);
+                            }
+
+                            GSAGetCache[command] = string.Join("\n", result);
+                        }
                         else
                         {
                             GSAGetCache[command] = GSAObject.GwaCommand(command);

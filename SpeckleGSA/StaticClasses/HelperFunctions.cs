@@ -121,7 +121,7 @@ namespace SpeckleGSA
         /// <param name="n1">First number</param>
         /// <param name="n2">Second number</param>
         /// <returns>Mean</returns>
-        public static double mean(double n1, double n2)
+        public static double Mean(double n1, double n2)
         {
             return (n1 + n2) * 0.5;
         }
@@ -852,6 +852,74 @@ namespace SpeckleGSA
                 return true;
             else
                 return false;
+        }
+
+        public static List<Tuple<string, double>> ParseLoadDescription(string list, double currentMultiplier = 1)
+        {
+            List<Tuple<string, double>> ret = new List<Tuple<string, double>>();
+
+            list = list.Replace(" ", "");
+
+            double multiplier = 1;
+            bool negative = false;
+
+            for (int pos = 0; pos < list.Count(); pos++)
+            {
+                char currChar = list[pos];
+
+                if (currChar >= '0' && currChar <= '9')
+                {
+                    string mult = "";
+                    mult += currChar.ToString();
+
+                    pos++;
+                    while (pos < list.Count() && ((list[pos] >= '0' && list[pos] <= '9') || list[pos] == '.'))
+                        mult += list[pos++].ToString();
+                    pos--;
+
+                    multiplier = Convert.ToDouble(mult);
+                }
+                else if (currChar >= 'A' && currChar <= 'Z')
+                {
+                    string loadDesc = "";
+                    loadDesc += currChar.ToString();
+
+                    pos++;
+                    while (pos < list.Count() && list[pos] >= '0' && list[pos] <= '9')
+                        loadDesc += list[pos++].ToString();
+                    pos--;
+
+                    double actualFactor = multiplier == 0 ? 1 : multiplier;
+                    actualFactor *= currentMultiplier;
+                    actualFactor = negative ? -1 * actualFactor : actualFactor;
+
+                    ret.Add(new Tuple<string, double>(loadDesc, actualFactor));
+
+                    multiplier = 0;
+                    negative = false;
+                }
+                else if (currChar == '-')
+                    negative = !negative;
+                else if (currChar == '(')
+                {
+                    double actualFactor = multiplier == 0 ? 1 : multiplier;
+                    actualFactor *= currentMultiplier;
+                    actualFactor = negative ? -1 * actualFactor : actualFactor;
+
+                    ret.AddRange(ParseLoadDescription(string.Join("", list.Skip(pos + 1)), actualFactor));
+
+                    pos++;
+                    while (pos < list.Count() && list[pos] != ')')
+                        pos++;
+
+                    multiplier = 0;
+                    negative = false;
+                }
+                else if (currChar == ')')
+                    return ret;
+            }
+
+            return ret;
         }
         #endregion
     }

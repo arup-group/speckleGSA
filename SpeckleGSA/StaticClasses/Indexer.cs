@@ -77,7 +77,39 @@ namespace SpeckleGSA
         {
             return ResolveIndex(type.GetGSAKeyword(), structuralID, type.Name);
         }
-        
+
+        /// <summary>
+        /// Resolve the next index for the given keyword.
+        /// </summary>
+        /// <param name="keyword">GSA keyword</param>
+        /// <returns>Index</returns>
+        public static int ResolveIndex(string keyword)
+        {
+            return ResolveIndex(keyword, string.Empty, string.Empty);
+        }
+
+        /// <summary>
+        /// Resolve the index for the given IStructural object.
+        /// </summary>
+        /// <param name="keyword">GSA keyword</param>
+        /// <param name="obj">IStructural object</param>
+        /// <returns>Index</returns>
+        public static int ResolveIndex(string keyword, IStructural obj)
+        {
+            return ResolveIndex(keyword, obj.StructuralId, string.Empty);
+        }
+
+        /// <summary>
+        /// Resolve the index for the given structural ID.
+        /// </summary>
+        /// <param name="keyword">GSA keyword</param>
+        /// <param name="structuralID">structural ID</param>
+        /// <returns>Index</returns>
+        public static int ResolveIndex(string keyword, string structuralID)
+        {
+            return ResolveIndex(keyword, structuralID, string.Empty);
+        }
+
         /// <summary>
         /// Resolve the index for the given GSA keyword, structural ID, and type.
         /// </summary>
