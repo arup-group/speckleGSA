@@ -9,7 +9,7 @@ using SpeckleStructuresClasses;
 
 namespace SpeckleGSA
 {
-    [GSAObject("MAT", "properties", true, true, new Type[] { }, new Type[] { })]
+    [GSAObject("MAT", new string[] { }, "properties", true, true, new Type[] { }, new Type[] { })]
     public class GSAMaterial : StructuralMaterial, IGSAObject
     {
         // Need local reference since materials can have same reference if different types
@@ -29,15 +29,18 @@ namespace SpeckleGSA
             // TODO: Only supports steel and concrete
             string[] materialIdentifier = new string[]
                 { "MAT_STEEL.3", "MAT_CONCRETE.16" };
+            string[] subKeywords = MethodBase.GetCurrentMethod().DeclaringType.GetSubGSAKeyword();
 
             List<string> pieces = new List<string>();
             bool deleted = false;
             foreach (string id in materialIdentifier)
             {
                 string[] lines = GSA.GetGWARecords("GET_ALL," + id);
-                string[] deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + id);
+                List<string> deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + id).ToList();
+                foreach (string k in subKeywords)
+                    deletedLines.AddRange(GSA.GetDeletedGWARecords("GET_ALL," + k));
 
-                if (deletedLines.Length > 0)
+                if (deletedLines.Count() > 0)
                     deleted = true;
 
                 // Remove deleted lines

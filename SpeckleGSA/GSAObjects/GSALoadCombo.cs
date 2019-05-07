@@ -8,7 +8,7 @@ using SpeckleStructuresClasses;
 
 namespace SpeckleGSA
 {
-    [GSAObject("COMBINATION.1", "loads", true, true, new Type[] { typeof(GSALoadCase), typeof(GSALoadTask) }, new Type[] { typeof(GSALoadCase), typeof(GSALoadTask) })]
+    [GSAObject("COMBINATION.1", new string[] { }, "loads", true, true, new Type[] { typeof(GSALoadCase), typeof(GSALoadTask) }, new Type[] { typeof(GSALoadCase), typeof(GSALoadTask) })]
     public class GSALoadCombo : StructuralLoadCombo, IGSAObject
     {
         public string GWACommand { get; set; } = "";
@@ -23,9 +23,12 @@ namespace SpeckleGSA
             List<GSALoadCombo> loadCombos = new List<GSALoadCombo>();
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+            string[] subKeywords = MethodBase.GetCurrentMethod().DeclaringType.GetSubGSAKeyword();
 
             string[] lines = GSA.GetGWARecords("GET_ALL," + keyword);
-            string[] deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword);
+            List<string> deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword).ToList();
+            foreach (string k in subKeywords)
+                deletedLines.AddRange(GSA.GetDeletedGWARecords("GET_ALL," + k));
 
             // Remove deleted lines
             dict[typeof(GSALoadCombo)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
@@ -44,7 +47,7 @@ namespace SpeckleGSA
 
             dict[typeof(GSALoadCombo)].AddRange(loadCombos);
 
-            if (loadCombos.Count() > 0 || deletedLines.Length > 0) return true;
+            if (loadCombos.Count() > 0 || deletedLines.Count() > 0) return true;
 
             return false;
         }

@@ -8,47 +8,47 @@ using SpeckleStructuresClasses;
 
 namespace SpeckleGSA
 {
-    [GSAObject("EL.3", "elements", false, false, new Type[] { typeof(GSANode) }, new Type[] { })]
+    [GSAObject("EL.3", new string[] { "PROP_MASS" }, "elements", true, true, new Type[] { typeof(GSANode) }, new Type[] { })]
     public class GSA0DElement : StructuralNode, IGSAObject
     {
         public string GWACommand { get; set; } = "";
         public List<string> SubGWACommand { get; set; } = new List<string>();
 
         #region Sending Functions
-        public static bool GetObjects(Dictionary<Type, List<IGSAObject>> gsaObjects)
+        public static bool GetObjects(Dictionary<Type, List<IGSAObject>> dict)
         {
-            if (!gsaObjects.ContainsKey(typeof(GSANode)))
+            if (!dict.ContainsKey(typeof(GSANode)))
                 return false;
 
-            List<GSANode> nodes = gsaObjects[typeof(GSANode)].Cast<GSANode>().ToList();
+            List<GSANode> nodes = dict[typeof(GSANode)].Cast<GSANode>().ToList();
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+            string[] subKeywords = MethodBase.GetCurrentMethod().DeclaringType.GetSubGSAKeyword();
 
             // Read lines here
             string[] lines = GSA.GetGWARecords("GET_ALL," + keyword);
-            string[] deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword);
-
-            // Filter only new lines
-            string[] prevLines = gsaObjects[typeof(GSANode)].SelectMany(l => l.SubGWACommand).ToArray();
-            string[] newLines = lines.Where(l => !prevLines.Contains(l)).ToArray();
+            List<string> deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword).ToList();
+            foreach (string k in subKeywords)
+                deletedLines.AddRange(GSA.GetDeletedGWARecords("GET_ALL," + k));
 
             bool changed = false;
 
-            foreach (string p in deletedLines)
-            {
-                string[] pPieces = p.ListSplit(",");
-                if (pPieces[4].ParseElementNumNodes() == 1)
+            // Remove deleted lines
+            foreach (KeyValuePair<Type, List<IGSAObject>> kvp in dict)
+                foreach (IGSAObject o in kvp.Value.Where(l => l.SubGWACommand.Any(x => deletedLines.Contains(x))))
                 {
-                    GSA0DElement massNode = Get(p);
-
-                    nodes
-                        .Where(n => n.StructuralId == massNode.StructuralId).First()
-                        .Mass = 0;
+                    ((GSANode)o).Mass = 0;
+                    o.SubGWACommand.RemoveAll(s => lines.Contains(s));
+                    o.SubGWACommand.RemoveAll(s => deletedLines.Contains(s));
 
                     changed = true;
                 }
-            }
 
+
+            // Filter only new lines
+            string[] prevLines = dict[typeof(GSANode)].SelectMany(l => l.SubGWACommand).ToArray();
+            string[] newLines = lines.Where(l => !prevLines.Contains(l)).ToArray();
+            
             foreach (string p in newLines)
             {
                 string[] pPieces = p.ListSplit(",");
@@ -62,7 +62,7 @@ namespace SpeckleGSA
 
                     nodes.Cast<GSANode>()
                         .Where(n => n.StructuralId == massNode.StructuralId).First()
-                        .SubGWACommand.Add(p);
+                        .SubGWACommand.AddRange(massNode.SubGWACommand.Concat(new string[] { p }));
 
                     changed = true;
                 }
@@ -85,7 +85,9 @@ namespace SpeckleGSA
             counter++; // Name
             counter++; // Color
             counter++; // Type
-            ret.Mass = GetGSAMass(Convert.ToInt32(pieces[counter++]));
+            var massRet = GetGSAMass(Convert.ToInt32(pieces[counter++]));
+            ret.Mass = massRet.Item1;
+            ret.SubGWACommand.Add(massRet.Item2);
             counter++; // group
             ret.StructuralId = pieces[counter++];
             // Rest is unimportant for 0D element
@@ -93,12 +95,12 @@ namespace SpeckleGSA
             return ret;
         }
 
-        private static double GetGSAMass(int propertyRef)
+        private static Tuple<double, string> GetGSAMass(int propertyRef)
         {
             string res = GSA.GetGWARecords("GET,PROP_MASS," + propertyRef.ToString()).FirstOrDefault();
             string[] pieces = res.ListSplit(",");
 
-            return Convert.ToDouble(pieces[5]);
+            return new Tuple<double, string>(Convert.ToDouble(pieces[5]), res);
         }
         #endregion
 

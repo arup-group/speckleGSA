@@ -10,7 +10,7 @@ using System.Reflection;
 
 namespace SpeckleGSA
 {
-    [GSAObject("LOAD_NODE.2", "loads", true, true, new Type[] { typeof(GSANode) }, new Type[] { typeof(GSANode) })]
+    [GSAObject("LOAD_NODE.2", new string[] { "NODE.2", "AXIS" }, "loads", true, true, new Type[] { typeof(GSANode) }, new Type[] { typeof(GSANode) })]
     public class GSA0DLoad : Structural0DLoad, IGSAObject
     {
         public int Axis; // Store this temporarily to generate other loads
@@ -29,9 +29,12 @@ namespace SpeckleGSA
             List<GSANode> nodes = dict[typeof(GSANode)].Cast<GSANode>().ToList();
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+            string[] subKeywords = MethodBase.GetCurrentMethod().DeclaringType.GetSubGSAKeyword();
 
             string[] lines = GSA.GetGWARecords("GET_ALL," + keyword);
-            string[] deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword);
+            List<string> deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword).ToList();
+            foreach (string k in subKeywords)
+                deletedLines.AddRange(GSA.GetDeletedGWARecords("GET_ALL," + k));
 
             // Remove deleted lines
             dict[typeof(GSA0DLoad)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
@@ -65,17 +68,24 @@ namespace SpeckleGSA
 
                     // Transform load to defined axis
                     GSANode node = nodes.Where(n => (n.StructuralId == nRef)).First();
-                    StructuralAxis loadAxis = HelperFunctions.Parse0DAxis(initLoad.Axis, node.Value.ToArray());
+                    string gwaRecord = null;
+                    StructuralAxis loadAxis = HelperFunctions.Parse0DAxis(initLoad.Axis, out gwaRecord, node.Value.ToArray());
                     load.Loading = initLoad.Loading;
                     load.Loading.TransformOntoAxis(loadAxis);
 
                     // If the loading already exists, add node ref to list
                     GSA0DLoad match = loadSubList.Count() > 0 ? loadSubList.Where(l => l.Loading.Value.SequenceEqual(load.Loading.Value)).First() : null;
                     if (match != null)
+                    { 
                         match.NodeRefs.Add(nRef);
+                        if (gwaRecord != null)
+                            match.SubGWACommand.Add(gwaRecord);
+                    }
                     else
                     {
                         load.NodeRefs = new List<string>() { nRef };
+                        if (gwaRecord != null)
+                            load.SubGWACommand.Add(gwaRecord);
                         loadSubList.Add(load);
                     }
                 }
@@ -85,7 +95,7 @@ namespace SpeckleGSA
 
             dict[typeof(GSA0DLoad)].AddRange(loads);
 
-            if (loads.Count() > 0 || deletedLines.Length > 0) return true;
+            if (loads.Count() > 0 || deletedLines.Count() > 0) return true;
 
             return false;
         }

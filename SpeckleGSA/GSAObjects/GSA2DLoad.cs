@@ -10,7 +10,7 @@ using System.Reflection;
 
 namespace SpeckleGSA
 {
-    [GSAObject("LOAD_2D_FACE.2", "loads", true, true, new Type[] { typeof(GSA2DElement), typeof(GSA2DMember) }, new Type[] { typeof(GSA2DElement), typeof(GSA2DMember) })]
+    [GSAObject("LOAD_2D_FACE.2", new string[] { "EL.3", "MEMB.7" }, "loads", true, true, new Type[] { typeof(GSA2DElement), typeof(GSA2DMember) }, new Type[] { typeof(GSA2DElement), typeof(GSA2DMember) })]
     public class GSA2DLoad : Structural2DLoad, IGSAObject
     {
         public int Axis;
@@ -30,9 +30,12 @@ namespace SpeckleGSA
             List<GSA2DMember> members = GSA.TargetDesignLayer ? dict[typeof(GSA2DMember)].Cast<GSA2DMember>().ToList() : new List<GSA2DMember>();
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+            string[] subKeywords = MethodBase.GetCurrentMethod().DeclaringType.GetSubGSAKeyword();
 
             string[] lines = GSA.GetGWARecords("GET_ALL," + keyword);
-            string[] deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword);
+            List<string> deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword).ToList();
+            foreach (string k in subKeywords)
+                deletedLines.AddRange(GSA.GetDeletedGWARecords("GET_ALL," + k));
 
             // Remove deleted lines
             dict[typeof(GSA2DLoad)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
@@ -128,7 +131,7 @@ namespace SpeckleGSA
 
             dict[typeof(GSA2DLoad)].AddRange(loads);
 
-            if (loads.Count() > 0 || deletedLines.Length > 0) return true;
+            if (loads.Count() > 0 || deletedLines.Count() > 0) return true;
 
             return false;
         }

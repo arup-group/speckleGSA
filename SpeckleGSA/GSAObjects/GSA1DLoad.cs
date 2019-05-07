@@ -10,7 +10,7 @@ using System.Reflection;
 
 namespace SpeckleGSA
 {
-    [GSAObject("LOAD_BEAM", "loads", true, true, new Type[] { typeof(GSA1DElement), typeof(GSA1DMember) }, new Type[] { typeof(GSA1DElement), typeof(GSA1DMember), typeof(GSA1DElementPolyline) })]
+    [GSAObject("LOAD_BEAM", new string[] { "EL.3", "MEMB.7" }, "loads", true, true, new Type[] { typeof(GSA1DElement), typeof(GSA1DMember) }, new Type[] { typeof(GSA1DElement), typeof(GSA1DMember), typeof(GSA1DElementPolyline) })]
     public class GSA1DLoad : Structural1DLoad, IGSAObject
     {
         public int Axis;
@@ -30,9 +30,12 @@ namespace SpeckleGSA
             List<GSA1DMember> members = GSA.TargetDesignLayer ? dict[typeof(GSA1DMember)].Cast<GSA1DMember>().ToList() : new List<GSA1DMember>();
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+            string[] subKeywords = MethodBase.GetCurrentMethod().DeclaringType.GetSubGSAKeyword();
 
             string[] lines = GSA.GetGWARecords("GET_ALL," + keyword);
-            string[] deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword);
+            List<string> deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword).ToList();
+            foreach (string k in subKeywords)
+                deletedLines.AddRange(GSA.GetDeletedGWARecords("GET_ALL," + k));
 
             // Remove deleted lines
             dict[typeof(GSA1DLoad)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
@@ -159,7 +162,7 @@ namespace SpeckleGSA
 
             dict[typeof(GSA1DLoad)].AddRange(loads);
 
-            if (loads.Count() > 0 || deletedLines.Length > 0) return true;
+            if (loads.Count() > 0 || deletedLines.Count() > 0) return true;
 
             return false;
         }

@@ -10,7 +10,7 @@ using SpeckleStructuresClasses;
 
 namespace SpeckleGSA
 {
-    [GSAObject("PROP_2D.5", "properties", true, true, new Type[] { typeof(GSAMaterial) }, new Type[] { typeof(GSAMaterial) })]
+    [GSAObject("PROP_2D.5", new string[] { "MAT_STEEL.3", "MAT_CONCRETE.16" }, "properties", true, true, new Type[] { typeof(GSAMaterial) }, new Type[] { typeof(GSAMaterial) })]
     public class GSA2DProperty : Structural2DProperty, IGSAObject
     {
         public bool IsAxisLocal;
@@ -28,9 +28,12 @@ namespace SpeckleGSA
             List<GSAMaterial> mats = dict[typeof(GSAMaterial)].Cast<GSAMaterial>().ToList();
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+            string[] subKeywords = MethodBase.GetCurrentMethod().DeclaringType.GetSubGSAKeyword();
 
             string[] lines = GSA.GetGWARecords("GET_ALL," + keyword);
-            string[] deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword);
+            List<string> deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword).ToList();
+            foreach (string k in subKeywords)
+                deletedLines.AddRange(GSA.GetDeletedGWARecords("GET_ALL," + k));
 
             // Remove deleted lines
             dict[typeof(GSA2DProperty)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
@@ -49,7 +52,7 @@ namespace SpeckleGSA
 
             dict[typeof(GSA2DProperty)].AddRange(props);
 
-            if (props.Count() > 0 || deletedLines.Length > 0) return true;
+            if (props.Count() > 0 || deletedLines.Count() > 0) return true;
 
             return false;
         }

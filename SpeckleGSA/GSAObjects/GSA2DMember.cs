@@ -10,7 +10,7 @@ using System.Reflection;
 
 namespace SpeckleGSA
 {
-    [GSAObject("MEMB.7", "elements", false, true, new Type[] { typeof(GSANode), typeof(GSA2DProperty) }, new Type[] { typeof(GSA2DProperty) })]
+    [GSAObject("MEMB.7", new string[] { "NODE.2", "PROP_2D.5" }, "elements", false, true, new Type[] { typeof(GSANode), typeof(GSA2DProperty) }, new Type[] { typeof(GSA2DProperty) })]
     public class GSA2DMember : Structural2DElementMesh, IGSAObject
     {
         public int Group;
@@ -29,9 +29,12 @@ namespace SpeckleGSA
             List<GSA2DProperty> props = dict[typeof(GSA2DProperty)].Cast<GSA2DProperty>().ToList();
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+            string[] subKeywords = MethodBase.GetCurrentMethod().DeclaringType.GetSubGSAKeyword();
 
             string[] lines = GSA.GetGWARecords("GET_ALL," + keyword);
-            string[] deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword);
+            List<string> deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword).ToList();
+            foreach (string k in subKeywords)
+                deletedLines.AddRange(GSA.GetDeletedGWARecords("GET_ALL," + k));
 
             // Remove deleted lines
             dict[typeof(GSA2DMember)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
@@ -58,7 +61,7 @@ namespace SpeckleGSA
 
             dict[typeof(GSA2DMember)].AddRange(members);
 
-            if (members.Count() > 0 || deletedLines.Length > 0) return true;
+            if (members.Count() > 0 || deletedLines.Count() > 0) return true;
 
             return false;
         }

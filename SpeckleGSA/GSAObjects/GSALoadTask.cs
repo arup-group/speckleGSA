@@ -8,7 +8,7 @@ using SpeckleStructuresClasses;
 
 namespace SpeckleGSA
 {
-    [GSAObject("ANAL.1", "loads", true, true, new Type[] { typeof(GSALoadCase) }, new Type[] { typeof(GSALoadCase) })]
+    [GSAObject("ANAL.1", new string[] { }, "loads", true, true, new Type[] { typeof(GSALoadCase) }, new Type[] { typeof(GSALoadCase) })]
     public class GSALoadTask : StructuralLoadTask, IGSAObject
     {
         public string GWACommand { get; set; } = "";
@@ -23,9 +23,12 @@ namespace SpeckleGSA
             List<GSALoadTask> loadTasks = new List<GSALoadTask>();
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+            string[] subKeywords = MethodBase.GetCurrentMethod().DeclaringType.GetSubGSAKeyword();
 
             string[] lines = GSA.GetGWARecords("GET_ALL," + keyword);
-            string[] deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword);
+            List<string> deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword).ToList();
+            foreach (string k in subKeywords)
+                deletedLines.AddRange(GSA.GetDeletedGWARecords("GET_ALL," + k));
 
             // Remove deleted lines
             dict[typeof(GSALoadTask)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
@@ -44,7 +47,7 @@ namespace SpeckleGSA
 
             dict[typeof(GSALoadTask)].AddRange(loadTasks);
 
-            if (loadTasks.Count() > 0 || deletedLines.Length > 0) return true;
+            if (loadTasks.Count() > 0 || deletedLines.Count() > 0) return true;
 
             return false;
         }

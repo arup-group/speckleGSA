@@ -264,13 +264,16 @@ namespace SpeckleGSA
         /// Calculates the local axis of a point from a GSA node axis.
         /// </summary>
         /// <param name="axis">ID of GSA node axis</param>
+        /// <param name="gwaRecord">GWA record of AXIS if used</param>
         /// <param name="evalAtCoor">Coordinates to evaluate axis at</param>
         /// <returns>Axis</returns>
-        public static StructuralAxis Parse0DAxis(int axis, double[] evalAtCoor = null)
+        public static StructuralAxis Parse0DAxis(int axis, out string gwaRecord, double[] evalAtCoor = null)
         {
             Vector3D x;
             Vector3D y;
             Vector3D z;
+
+            gwaRecord = null;
 
             switch (axis)
             {
@@ -316,6 +319,8 @@ namespace SpeckleGSA
                     );
                 default:
                     string res = GSA.GetGWARecords("GET,AXIS," + axis.ToString()).FirstOrDefault();
+                    gwaRecord = res;
+
                     string[] pieces = res.Split(new char[] { ',' });
                     if (pieces.Length < 13)
                     {
@@ -743,6 +748,16 @@ namespace SpeckleGSA
         public static string GetGSAKeyword(this object t)
         {
             return (string)t.GetAttribute("GSAKeyword");
+        }
+
+        /// <summary>
+        /// Returns the sub GWA keyword from GSAObject objects or type.
+        /// </summary>
+        /// <param name="t">GSAObject objects or type</param>
+        /// <returns>Sub GWA keyword</returns>
+        public static string[] GetSubGSAKeyword(this object t)
+        {
+            return (string[])t.GetAttribute("SubGSAKeywords");
         }
 
         /// <summary>

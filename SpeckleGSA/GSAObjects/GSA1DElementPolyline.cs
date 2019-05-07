@@ -11,7 +11,7 @@ using SpeckleStructuresClasses;
 namespace SpeckleGSA
 {
     // Keyword set as MEMB to not clash with grouping of members
-    [GSAObject("MEMB.7", "elements", true, true, new Type[] { typeof(GSA1DElement) }, new Type[] { })]
+    [GSAObject("MEMB.7", new string[] { }, "elements", true, true, new Type[] { typeof(GSA1DElement) }, new Type[] { })]
     public class GSA1DElementPolyline : Structural1DElementPolyline, IGSAObject
     {
         public string GWACommand { get; set; } = "";

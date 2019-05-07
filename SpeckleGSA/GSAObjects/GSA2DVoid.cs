@@ -9,7 +9,7 @@ using System.Reflection;
 namespace SpeckleGSA.GSAObjects
 {
 
-    [GSAObject("MEMB.7", "elements", false, true, new Type[] { typeof(GSANode) }, new Type[] { })]
+    [GSAObject("MEMB.7", new string[] { "NODE.2" }, "elements", false, true, new Type[] { typeof(GSANode) }, new Type[] { })]
     public class GSA2DVoid : Structural2DVoid, IGSAObject
     {
         public string GWACommand { get; set; } = "";
@@ -25,9 +25,12 @@ namespace SpeckleGSA.GSAObjects
             List<GSANode> nodes = dict[typeof(GSANode)].Cast<GSANode>().ToList();
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+            string[] subKeywords = MethodBase.GetCurrentMethod().DeclaringType.GetSubGSAKeyword();
 
             string[] lines = GSA.GetGWARecords("GET_ALL," + keyword);
-            string[] deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword);
+            List<string> deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword).ToList();
+            foreach (string k in subKeywords)
+                deletedLines.AddRange(GSA.GetDeletedGWARecords("GET_ALL," + k));
 
             // Remove deleted lines
             dict[typeof(GSA2DVoid)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
@@ -54,7 +57,7 @@ namespace SpeckleGSA.GSAObjects
 
             dict[typeof(GSA2DVoid)].AddRange(voids);
 
-            if (voids.Count() > 0 || deletedLines.Length > 0) return true;
+            if (voids.Count() > 0 || deletedLines.Count() > 0) return true;
 
             return false;
         }

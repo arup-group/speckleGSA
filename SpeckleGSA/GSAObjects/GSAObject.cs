@@ -18,6 +18,11 @@ namespace SpeckleGSA
         private string gsaKeyword;
 
         /// <summary>
+        /// GSA keywords the object depends on
+        /// </summary>
+        private string[] subGsaKeywords;
+
+        /// <summary>
         /// Stream name, if sending to seperate streams
         /// </summary>
         private string stream;
@@ -42,9 +47,10 @@ namespace SpeckleGSA
         /// </summary>
         private Type[] writePrerequisite;
 
-        public GSAObject(string gsaKeyword, string stream, bool analysisLayer, bool designLayer, Type[] readPrerequisite, Type[] writePrerequisite)
+        public GSAObject(string gsaKeyword, string[] subGsaKeywords, string stream, bool analysisLayer, bool designLayer, Type[] readPrerequisite, Type[] writePrerequisite)
         {
             this.gsaKeyword = gsaKeyword;
+            this.subGsaKeywords = subGsaKeywords;
             this.stream = stream;
             this.analysisLayer = analysisLayer;
             this.designLayer = designLayer;
@@ -55,6 +61,11 @@ namespace SpeckleGSA
         public virtual string GSAKeyword
         {
             get { return gsaKeyword; }
+        }
+
+        public virtual string[] SubGSAKeywords
+        {
+            get { return subGsaKeywords; }
         }
 
         public virtual string Stream

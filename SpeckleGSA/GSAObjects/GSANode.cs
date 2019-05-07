@@ -7,7 +7,7 @@ using System.Windows.Media.Media3D;
 
 namespace SpeckleGSA
 {
-    [GSAObject("NODE.2", "nodes", true, true, new Type[] { }, new Type[] { typeof(GSA1DElement), typeof(GSA1DMember), typeof(GSA2DElement), typeof(GSA2DMember) })]
+    [GSAObject("NODE.2", new string[] { "AXIS" }, "nodes", true, true, new Type[] { }, new Type[] { typeof(GSA1DElement), typeof(GSA1DMember), typeof(GSA2DElement), typeof(GSA2DMember) })]
     public class GSANode : StructuralNode, IGSAObject
     {
         public bool ForceSend;
@@ -24,9 +24,12 @@ namespace SpeckleGSA
             List<GSANode> nodes = new List<GSANode>();
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
+            string[] subKeywords = MethodBase.GetCurrentMethod().DeclaringType.GetSubGSAKeyword();
 
             string[] lines = GSA.GetGWARecords("GET_ALL," + keyword);
-            string[] deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword);
+            List<string> deletedLines = GSA.GetDeletedGWARecords("GET_ALL," + keyword).ToList();
+            foreach (string k in subKeywords)
+                deletedLines.AddRange(GSA.GetDeletedGWARecords("GET_ALL," + k));
 
             // Remove deleted lines
             dict[typeof(GSANode)].RemoveAll(l => deletedLines.Contains(l.GWACommand));
@@ -45,7 +48,7 @@ namespace SpeckleGSA
 
             dict[typeof(GSANode)].AddRange(nodes);
 
-            if (nodes.Count() > 0 || deletedLines.Length > 0) return true;
+            if (nodes.Count() > 0 || deletedLines.Count() > 0) return true;
 
             return false;
         }
@@ -104,7 +107,12 @@ namespace SpeckleGSA
                     counter++; // Column slab factor
                 }
                 else
-                    ret.Axis = HelperFunctions.Parse0DAxis(Convert.ToInt32(pieces[counter++]), ret.Value.ToArray());
+                {
+                    string gwaRec = null;
+                    ret.Axis = HelperFunctions.Parse0DAxis(Convert.ToInt32(pieces[counter++]), out gwaRec, ret.Value.ToArray());
+                    if (gwaRec != null)
+                        ret.SubGWACommand.Add(gwaRec);
+                }
             }
 
             return ret;
