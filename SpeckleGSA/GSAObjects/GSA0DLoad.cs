@@ -184,7 +184,7 @@ namespace SpeckleGSA
             {
                 loadCaseRef = Indexer.LookupIndex(typeof(GSALoadCase), load.LoadCaseRef).Value;
             }
-            catch { }
+            catch { loadCaseRef = Indexer.ResolveIndex(typeof(GSALoadCase), load.LoadCaseRef); }
 
             string[] direction = new string[6] { "X", "Y", "Z", "X", "Y", "Z" };
 

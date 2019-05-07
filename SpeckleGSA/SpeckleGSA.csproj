@@ -60,6 +60,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="GSAObjects\GSAGridAreaLoad.cs" />
     <Compile Include="GSAObjects\GSA2DVoid.cs" />
     <Compile Include="GSAObjects\GSALoadCombo.cs" />
     <Compile Include="GSAObjects\GSALoadTask.cs" />

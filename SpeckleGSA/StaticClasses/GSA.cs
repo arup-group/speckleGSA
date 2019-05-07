@@ -353,8 +353,18 @@ namespace SpeckleGSA
 
             for (int i = 0; i < prevSets.Count(); i++)
             {
-                string[] split = prevSets[i].ListSplit(",");
-                prevSets[i] = split[1] + "," + split[2] + ",";
+                //TODO: Stupid polyline uses commas.
+                //Change to tab seperated at some point
+                if (prevSets[i].Contains("POLYLINE.1"))
+                {
+                    string[] split = prevSets[i].ListSplit("\t");
+                    prevSets[i] = split[1] + "\t" + split[2] + "\t";
+                }
+                else
+                {
+                    string[] split = prevSets[i].ListSplit(",");
+                    prevSets[i] = split[1] + "," + split[2] + ",";
+                }
 
             }
 
@@ -362,7 +372,11 @@ namespace SpeckleGSA
 
             foreach (string p in prevSets)
             {
-                string[] split = p.ListSplit(",");
+                string[] split = null;
+                if (p.Contains("POLYLINE.1"))
+                    split = p.ListSplit("\t");
+                else
+                    split = p.ListSplit(",");
 
                 if (split[1].IsDigits())
                 {
