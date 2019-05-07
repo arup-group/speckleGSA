@@ -1,5 +1,5 @@
 # SpeckleGSA
-![specklegsa-demo](https://gitlab.arup.com/tor_digital/SpeckleGSA/raw/ed1d344153290f2c8fcefff2f093d9ca1281d782/readme/demo.gif)
+![specklegsa-demo](https://gitlab.arup.com/speckle/SpeckleGSA/raw/b6be19d9e463f0aac00d4688e39084368ef8ecda/readme/demo.gif)
 
 SpeckleGSA is currently under development.
 
@@ -16,7 +16,7 @@ Requires GSA 10 beta build 30.
 
 ## Installation
 
-SpeckleGSA is bundled as part of the Speckle Structural Suite. Download the latest version [here](https://gitlab.arup.com/tor_digital/specklestructuralsuite-installer/-/jobs/artifacts/master/raw/SpeckleStructuralSuite.exe?job=build).
+SpeckleGSA is bundled as part of the Speckle Structural Suite. Download the latest version [here](https://gitlab.arup.com/speckle/specklestructuralsuite-installer/-/jobs/artifacts/master/raw/SpeckleStructuralSuite.exe?job=build).
 
 ## Usage
 SpeckleGSA implements key components of a Speckle client in it's tab interface:
@@ -32,7 +32,7 @@ SpeckleGSA implements key components of a Speckle client in it's tab interface:
 
 ## Bugs and Feature Requests
 
-SpeckleGSA is still currently under development which can cause many quick changes to occur. If there are any major bugs, please submit a new [issue](https://gitlab.arup.com/tor_digital/SpeckleGSA/issues).
+SpeckleGSA is still currently under development which can cause many quick changes to occur. If there are any major bugs, please submit a new [issue](https://gitlab.arup.com/speckle/SpeckleGSA/issues).
 
 ## Building SpeckleGSA
 
@@ -52,7 +52,7 @@ The SpeckleGSA repo is currently made up of the following projects:
 
 ### Building Process
 
-SpeckleGSA depends on SpeckleStructures being installed. Install SpeckleStructures using the Speckle Structural Suite installer [here](https://gitlab.arup.com/tor_digital/specklestructuralsuite-installer/-/jobs/artifacts/master/raw/SpeckleStructuralSuite.exe?job=build).
+SpeckleGSA depends on SpeckleStructures being installed. Install SpeckleStructures using the Speckle Structural Suite installer [here](https://gitlab.arup.com/speckle/specklestructuralsuite-installer/-/jobs/artifacts/master/raw/SpeckleStructuralSuite.exe?job=build).
 
 - Clone/fork the repo
 - Restore all Nuget package missing on the solution
