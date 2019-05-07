@@ -11,7 +11,7 @@ using System.Reflection;
 
 namespace SpeckleGSA
 {
-    [GSAObject("LOAD_GRID_AREA.2", new string[] { "POLYLINE.1", "GRID_SURFACE.1", "GRID_PLANE.4", "AXIS" }, "elements", false, true, new Type[] { }, new Type[] {  typeof(GSALoadCase) })]
+    [GSAObject("LOAD_GRID_AREA.2", new string[] { "POLYLINE.1", "GRID_SURFACE.1", "GRID_PLANE.4", "AXIS" }, "elements", true, true, new Type[] { }, new Type[] {  typeof(GSALoadCase) })]
     public class GSAGridAreaLoad : Structural2DLoadPanel, IGSAObject
     {
         public string GWACommand { get; set; } = "";
