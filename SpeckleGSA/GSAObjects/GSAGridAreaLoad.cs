@@ -273,7 +273,7 @@ namespace SpeckleGSA
             string[] pieces = res.ListSplit(",");
 
             // TODO: commas are used to seperate both data and polyline coordinate values...
-            return new Tuple<string, string>(string.Join("\t", pieces.Skip(6)), res);
+            return new Tuple<string, string>(string.Join(",", pieces.Skip(6)), res);
         }
 
         private static Tuple<int, string> GetGridPlaneRef(int gridSurfaceRef)
