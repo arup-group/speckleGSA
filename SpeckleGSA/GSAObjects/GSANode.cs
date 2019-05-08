@@ -147,7 +147,7 @@ namespace SpeckleGSA
             ls.Add(index.ToString());
             ls.Add(node.Name == null || node.Name == "" ? " " : node.Name);
             ls.Add("NO_RGB");
-            ls.Add(string.Join(",", node.Value.ToArray()));
+            ls.Add(string.Join("\t", node.Value.ToArray()));
 
             //ls.Add("0"); // TODO: Skip unknown fields in NODE.3
             //ls.Add("0"); // TODO: Skip unknown fields in NODE.3
@@ -157,7 +157,7 @@ namespace SpeckleGSA
 
             try
             { 
-                ls.Add(SetAxis(node.Axis).ToString());
+                ls.Add(GSA.SetAxis(node.Axis).ToString());
             } catch { ls.Add("0"); }
 
             try
@@ -204,42 +204,7 @@ namespace SpeckleGSA
 
             ls.Add("NO_MESH");
 
-            GSA.RunGWACommand(string.Join(",", ls));
-        }
-        #endregion
-
-        #region Helper Functions
-        private static int SetAxis(StructuralAxis axis)
-        {
-            if (axis.Xdir.Value.SequenceEqual(new double[] { 1, 0, 0 }) &&
-                axis.Ydir.Value.SequenceEqual(new double[] { 0, 1, 0 }) &&
-                axis.Normal.Value.SequenceEqual(new double[] { 0, 0, 1 }))
-                return 0;
-
-            List<string> ls = new List<string>();
-
-            int res = (int)GSA.RunGWACommand("HIGHEST,AXIS");
-
-            ls.Add("AXIS");
-            ls.Add((res + 1).ToString());
-            ls.Add("");
-            ls.Add("CART");
-
-            ls.Add("0");
-            ls.Add("0");
-            ls.Add("0");
-
-            ls.Add(axis.Xdir.Value[0].ToString());
-            ls.Add(axis.Xdir.Value[1].ToString());
-            ls.Add(axis.Xdir.Value[2].ToString());
-
-            ls.Add(axis.Ydir.Value[0].ToString());
-            ls.Add(axis.Ydir.Value[1].ToString());
-            ls.Add(axis.Ydir.Value[2].ToString());
-
-            GSA.RunGWACommand(string.Join(",", ls));
-
-            return res + 1;
+            GSA.RunGWACommand(string.Join("\t", ls));
         }
         #endregion
     }

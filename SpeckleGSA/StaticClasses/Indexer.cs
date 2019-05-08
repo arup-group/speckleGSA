@@ -224,8 +224,16 @@ namespace SpeckleGSA
         /// <param name="refs">List of indices</param>
         public static void ReserveIndices(Type type, List<int> refs)
         {
-            string keywordGSA = type.GetGSAKeyword();
+            ReserveIndices(type.GetGSAKeyword(), refs);
+        }
 
+        /// <summary>
+        /// Reserve the indices for the given keyword.
+        /// </summary>
+        /// <param name="keywordGSA">GSA keyword</param>
+        /// <param name="refs">List of indices</param>
+        public static void ReserveIndices(string keywordGSA, List<int> refs)
+        {
             if (!indexUsed.ContainsKey(keywordGSA))
                 indexUsed[keywordGSA] = refs;
             else

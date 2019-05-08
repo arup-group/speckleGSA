@@ -273,7 +273,7 @@ namespace SpeckleGSA
                 ls.Add(direction[i]);
                 ls.Add(load.Loading.Value[i].ToString());
 
-                GSA.RunGWACommand(string.Join(",", ls));
+                GSA.RunGWACommand(string.Join("\t", ls));
             }
         }
         #endregion

@@ -245,7 +245,7 @@ namespace SpeckleGSA
                     ls.Add("1");
                     break;
             }
-            GSA.RunGWACommand(string.Join(",", ls));
+            GSA.RunGWACommand(string.Join("\t", ls));
 
             // Set ANAL
             ls.Clear();
@@ -273,7 +273,7 @@ namespace SpeckleGSA
                 }
                 ls.Add(string.Join(" + ", subLs));
             }
-            GSA.RunGWACommand(string.Join(",", ls));
+            GSA.RunGWACommand(string.Join("\t", ls));
         }
         #endregion
 

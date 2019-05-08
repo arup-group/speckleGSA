@@ -100,12 +100,16 @@ namespace SpeckleGSA
 
                 try
                 {
-                    string keyword = kvp.Key.GetGSAKeyword();
+                    List<string> keywords = new List<string>() { kvp.Key.GetGSAKeyword() };
+                    keywords.AddRange(kvp.Key.GetSubGSAKeyword());
 
-                    int highestRecord = (int)GSA.RunGWACommand("HIGHEST," + keyword);
+                    foreach (string k in keywords)
+                    {
+                        int highestRecord = (int)GSA.RunGWACommand("HIGHEST," + k);
 
-                    if (highestRecord > 0)
-                        Indexer.ReserveIndices(kvp.Key, Enumerable.Range(1, highestRecord).ToList());
+                        if (highestRecord > 0)
+                            Indexer.ReserveIndices(k, Enumerable.Range(1, highestRecord).ToList());
+                    }
                 }
                 catch { }
             }

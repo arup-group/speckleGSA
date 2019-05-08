@@ -136,7 +136,7 @@ namespace SpeckleGSA
             ls.Add("0"); // Analysis material
             ls.Add(GetMaterialType(materialRef));
             ls.Add(materialRef.ToString());
-            ls.Add("1"); // Design
+            ls.Add("0"); // Design
             ls.Add(prop.Thickness.ToString());
             ls.Add("CENTROID"); // Reference point
             ls.Add("0"); // Ref_z
@@ -147,7 +147,7 @@ namespace SpeckleGSA
             ls.Add("100%"); // Weight modifier
             ls.Add("NO_ENV"); // Environmental data
 
-            GSA.RunGWACommand(string.Join(",", ls));
+            GSA.RunGWACommand(string.Join("\t", ls));
         }
 
         public static string GetMaterialType(int materialRef)

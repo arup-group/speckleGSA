@@ -251,7 +251,7 @@ namespace SpeckleGSA
             ls.Add("ALL"); // Exposure
 
 
-            GSA.RunGWACommand(string.Join(",", ls));
+            GSA.RunGWACommand(string.Join("\t", ls));
         }
         #endregion
 

@@ -8,7 +8,7 @@ using SpeckleStructuresClasses;
 
 namespace SpeckleGSA
 {
-    [GSAObject("EL.3", new string[] { "PROP_MASS" }, "elements", true, true, new Type[] { typeof(GSANode) }, new Type[] { })]
+    [GSAObject("EL.3", new string[] { "PROP_MASS.2" }, "elements", true, true, new Type[] { typeof(GSANode) }, new Type[] { typeof(GSANode) })]
     public class GSA0DElement : StructuralNode, IGSAObject
     {
         public string GWACommand { get; set; } = "";
@@ -97,7 +97,7 @@ namespace SpeckleGSA
 
         private static Tuple<double, string> GetGSAMass(int propertyRef)
         {
-            string res = GSA.GetGWARecords("GET,PROP_MASS," + propertyRef.ToString()).FirstOrDefault();
+            string res = GSA.GetGWARecords("GET,PROP_MASS.2," + propertyRef.ToString()).FirstOrDefault();
             string[] pieces = res.ListSplit(",");
 
             return new Tuple<double, string>(Convert.ToDouble(pieces[5]), res);
@@ -125,13 +125,9 @@ namespace SpeckleGSA
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
 
-            int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType);
-            int nodeRef;
-            try
-            { 
-                nodeRef = Indexer.LookupIndex(typeof(GSANode), node).Value;
-            }
-            catch { return; }
+            int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType, node);
+            int propIndex = Indexer.ResolveIndex("PROP_MASS.2", node);
+            int nodeRef = Indexer.ResolveIndex(typeof(GSANode), node);
 
             List<string> ls = new List<string>();
 
@@ -141,7 +137,7 @@ namespace SpeckleGSA
             ls.Add(node.Name == null || node.Name == "" ? " " : node.Name);
             ls.Add("NO_RGB");
             ls.Add("MASS");
-            ls.Add(SetMassProp(node.Mass).ToString()); // Property
+            ls.Add(propIndex.ToString());
             ls.Add("0"); // Group
             ls.Add(nodeRef.ToString());
             ls.Add("0"); // Orient Node
@@ -151,26 +147,18 @@ namespace SpeckleGSA
             ls.Add("0"); // Offset y-start
             ls.Add("0"); // Offset y
             ls.Add("0"); // Offset z
-
-            //ls.Add("NORMAL"); // Action // TODO: EL.4 SUPPORT
             ls.Add(""); //Dummy
+            
+            GSA.RunGWACommand(string.Join("\t", ls));
 
-            GSA.RunGWACommand(string.Join(",", ls));
-        }
-
-        private static int SetMassProp(double Mass)
-        {
-            List<string> ls = new List<string>();
-
-            int res = (int)GSA.RunGWACommand("HIGHEST,PROP_MASS");
-
+            ls.Clear();
             ls.Add("SET");
             ls.Add("PROP_MASS.2");
-            ls.Add((res + 1).ToString());
+            ls.Add(propIndex.ToString());
             ls.Add("");
             ls.Add("NO_RGB");
             ls.Add("GLOBAL");
-            ls.Add(Mass.ToString());
+            ls.Add(node.Mass.ToString());
             ls.Add("0");
             ls.Add("0");
             ls.Add("0");
@@ -182,10 +170,7 @@ namespace SpeckleGSA
             ls.Add("100%");
             ls.Add("100%");
             ls.Add("100%");
-
-            GSA.RunGWACommand(string.Join(",", ls));
-
-            return res + 1;
+            GSA.RunGWACommand(string.Join("\t", ls));
         }
         #endregion
     }

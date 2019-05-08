@@ -242,7 +242,7 @@ namespace SpeckleGSA
             //ls.Add("NORMAL"); // Action // TODO: EL.4 SUPPORT
             ls.Add(""); // Dummy
 
-            GSA.RunGWACommand(string.Join(",", ls));
+            GSA.RunGWACommand(string.Join("\t", ls));
         }
         #endregion
 

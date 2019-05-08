@@ -248,7 +248,7 @@ namespace SpeckleGSA
                 ls.Add("0"); // TODO: What is this?
             }
             
-            GSA.RunGWACommand(string.Join(",", ls));
+            GSA.RunGWACommand(string.Join("\t", ls));
         }
         #endregion
     }

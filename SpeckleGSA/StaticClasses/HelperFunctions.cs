@@ -623,6 +623,82 @@ namespace SpeckleGSA
 
             return sign >= 0 ? angle : -angle;
         }
+
+        /// <summary>
+        /// Maps a flat array of coordinates from a local coordinate system to the global Cartesian coordinate system.
+        /// </summary>
+        /// <param name="values">Flat array of coordinates</param>
+        /// <param name="axis">Local coordinate system</param>
+        /// <returns>Transformed array of coordinates</returns>
+        public static double[] MapPointsLocal2Global(double[] values, StructuralAxis axis)
+        {
+            List<double> newVals = new List<double>();
+
+            for (int i = 0; i < values.Length; i += 3)
+            {
+                List<double> coor = values.Skip(i).Take(3).ToList();
+
+                double x = 0;
+                double y = 0;
+                double z = 0;
+
+                x += axis.Xdir.Value[0] * coor[0];
+                y += axis.Xdir.Value[1] * coor[0];
+                z += axis.Xdir.Value[2] * coor[0];
+
+                x += axis.Ydir.Value[0] * coor[1];
+                y += axis.Ydir.Value[1] * coor[1];
+                z += axis.Ydir.Value[2] * coor[1];
+
+                x += axis.Normal.Value[0] * coor[2];
+                y += axis.Normal.Value[1] * coor[2];
+                z += axis.Normal.Value[2] * coor[2];
+
+                newVals.Add(x);
+                newVals.Add(y);
+                newVals.Add(z);
+            }
+
+            return newVals.ToArray();
+        }
+
+        /// <summary>
+        /// Maps a flat array of coordinates from the global Cartesian coordinate system to a local coordinate system.
+        /// </summary>
+        /// <param name="values">Flat array of coordinates</param>
+        /// <param name="axis">Local coordinate system</param>
+        /// <returns>Transformed array of coordinates</returns>
+        public static double[] MapPointsGlobal2Local(double[] values, StructuralAxis axis)
+        {
+            List<double> newVals = new List<double>();
+
+            for (int i = 0; i < values.Length; i += 3)
+            {
+                List<double> coor = values.Skip(i).Take(3).ToList();
+
+                double x = 0;
+                double y = 0;
+                double z = 0;
+
+                x += axis.Xdir.Value[0] * coor[0];
+                y += axis.Ydir.Value[0] * coor[0];
+                z += axis.Normal.Value[0] * coor[0];
+
+                x += axis.Xdir.Value[1] * coor[1];
+                y += axis.Ydir.Value[1] * coor[1];
+                z += axis.Normal.Value[1] * coor[1];
+
+                x += axis.Xdir.Value[2] * coor[2];
+                y += axis.Ydir.Value[2] * coor[2];
+                z += axis.Normal.Value[2] * coor[2];
+
+                newVals.Add(x);
+                newVals.Add(y);
+                newVals.Add(z);
+            }
+
+            return newVals.ToArray();
+        }
         #endregion
 
         #region Unit Conversion
@@ -868,6 +944,29 @@ namespace SpeckleGSA
             else
                 return false;
         }
+        
+        /// <summary>
+        /// Parses GSA polyline description. Projects all points onto XY plane.
+        /// </summary>
+        /// <param name="desc">GSA polyline description</param>
+        /// <returns>Flat array of coordinates</returns>
+        public static double[] ParsePolylineDesc(string desc)
+        {
+            List<double> coordinates = new List<double>();
+
+            foreach (Match m in Regex.Matches(desc, @"(?<=\()(.+?)(?=\))"))
+            {
+                string[] pieces = m.Value.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+
+                try
+                {
+                    coordinates.AddRange(pieces.Take(2).Select(p => Convert.ToDouble(p)));
+                    coordinates.Add(0);
+                }
+                catch { }
+            }
+            return coordinates.ToArray();
+        }
 
         /// <summary>
         /// Seperates the load description into tuples of the case/task/combo identifier and their factors.
@@ -967,6 +1066,4 @@ namespace SpeckleGSA
         }
         #endregion
     }
-
-
 }

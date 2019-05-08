@@ -137,7 +137,7 @@ namespace SpeckleGSA
             ls.Add(GetGSADesc(prop));
             ls.Add("0"); // Cost
 
-            GSA.RunGWACommand(string.Join(",", ls));
+            GSA.RunGWACommand(string.Join("\t", ls));
         }
 
         public static string GetMaterialType(int materialRef)

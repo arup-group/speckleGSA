@@ -152,7 +152,7 @@ namespace SpeckleGSA
             ls.Add("NONE"); // Direction
             ls.Add("INC_BOTH"); // Include
             
-            GSA.RunGWACommand(string.Join(",", ls));
+            GSA.RunGWACommand(string.Join("\t", ls));
         }
         #endregion
     }

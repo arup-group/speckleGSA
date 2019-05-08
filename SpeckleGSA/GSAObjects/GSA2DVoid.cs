@@ -155,7 +155,7 @@ namespace SpeckleGSA.GSAObjects
             ls.Add("0"); // Offset z
             ls.Add("ALL"); // Exposure
 
-            GSA.RunGWACommand(string.Join(",", ls));
+            GSA.RunGWACommand(string.Join("\t", ls));
         }
         #endregion
     }

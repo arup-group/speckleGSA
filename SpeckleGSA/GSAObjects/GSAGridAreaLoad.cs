@@ -94,12 +94,12 @@ namespace SpeckleGSA
                     polylineDescription = pieces[counter++];
                     break;
             }
-            double[] polyVals = ParsePolylineDesc(polylineDescription);
+            double[] polyVals = HelperFunctions.ParsePolylineDesc(polylineDescription);
 
             for (int i = 2; i < polyVals.Length; i += 3)
                 polyVals[i] = elevation;
 
-            ret.Value = TransformPolyline(polyVals, axis).ToList();
+            ret.Value = HelperFunctions.MapPointsLocal2Global(polyVals, axis).ToList();
             ret.Closed = true;
 
             ret.LoadCaseRef = pieces[counter++];
@@ -209,7 +209,7 @@ namespace SpeckleGSA
                 ls.Add(direction[i]);
                 ls.Add(load.Loading.Value[i].ToString());
 
-                GSA.RunGWACommand(string.Join(",", ls));
+                GSA.RunGWACommand(string.Join("\t", ls));
             }
 
             StructuralAxis axis = HelperFunctions.Parse2DAxis(load.Value.ToArray());
@@ -223,7 +223,7 @@ namespace SpeckleGSA
                     axis.Normal.Value[2] * axis.Normal.Value[2]);
 
             // Transform coordinate to new axis
-            double[] transformed = UntransformPolyline(load.Value.ToArray(), axis);
+            double[] transformed = HelperFunctions.MapPointsGlobal2Local(load.Value.ToArray(), axis);
 
             ls.Clear();
             ls.Add("SET");
@@ -250,7 +250,7 @@ namespace SpeckleGSA
             ls.Add("0.01"); // Tolerance
             ls.Add("ONE"); // Span option
             ls.Add("0"); // Span angle
-            GSA.RunGWACommand(string.Join(",", ls));
+            GSA.RunGWACommand(string.Join("\t", ls));
 
             ls.Clear();
             ls.Add("SET");
@@ -258,11 +258,11 @@ namespace SpeckleGSA
             ls.Add(gridPlaneIndex.ToString());
             ls.Add(load.Name == null || load.Name == "" ? " " : load.Name);
             ls.Add("GENERAL"); // Type
-            ls.Add(SetAxis(axis).ToString());
+            ls.Add(GSA.SetAxis(axis).ToString());
             ls.Add(elevation.ToString());
             ls.Add("0"); // Elevation above
             ls.Add("0"); // Elevation below
-            GSA.RunGWACommand(string.Join(",", ls));
+            GSA.RunGWACommand(string.Join("\t", ls));
         }
         #endregion
 
@@ -273,7 +273,7 @@ namespace SpeckleGSA
             string[] pieces = res.ListSplit(",");
 
             // TODO: commas are used to seperate both data and polyline coordinate values...
-            return new Tuple<string, string>(string.Join(",", pieces.Skip(6)), res);
+            return new Tuple<string, string>(string.Join("\t", pieces.Skip(6)), res);
         }
 
         private static Tuple<int, string> GetGridPlaneRef(int gridSurfaceRef)
@@ -290,121 +290,6 @@ namespace SpeckleGSA
             string[] pieces = res.ListSplit(",");
 
             return new Tuple<int, double, string>(Convert.ToInt32(pieces[4]), Convert.ToDouble(pieces[5]), res);
-        }
-
-        private static double[] TransformPolyline(double[] values, StructuralAxis axis)
-        {
-            List<double> newVals = new List<double>();
-
-            for (int i = 0; i < values.Length; i += 3)
-            {
-                List<double> coor = values.Skip(i).Take(3).ToList();
-
-                double x = 0;
-                double y = 0;
-                double z = 0;
-
-                x += axis.Xdir.Value[0] * coor[0];
-                y += axis.Xdir.Value[1] * coor[0];
-                z += axis.Xdir.Value[2] * coor[0];
-
-                x += axis.Ydir.Value[0] * coor[1];
-                y += axis.Ydir.Value[1] * coor[1];
-                z += axis.Ydir.Value[2] * coor[1];
-
-                x += axis.Normal.Value[0] * coor[2];
-                y += axis.Normal.Value[1] * coor[2];
-                z += axis.Normal.Value[2] * coor[2];
-
-                newVals.Add(x);
-                newVals.Add(y);
-                newVals.Add(z);
-            }
-
-            return newVals.ToArray();
-        }
-
-        private static double[] UntransformPolyline(double[] values, StructuralAxis axis)
-        {
-            List<double> newVals = new List<double>();
-
-            for (int i = 0; i < values.Length; i += 3)
-            {
-                List<double> coor = values.Skip(i).Take(3).ToList();
-
-                double x = 0;
-                double y = 0;
-                double z = 0;
-
-                x += axis.Xdir.Value[0] * coor[0];
-                y += axis.Ydir.Value[0] * coor[0];
-                z += axis.Normal.Value[0] * coor[0];
-
-                x += axis.Xdir.Value[1] * coor[1];
-                y += axis.Ydir.Value[1] * coor[1];
-                z += axis.Normal.Value[1] * coor[1];
-
-                x += axis.Xdir.Value[2] * coor[2];
-                y += axis.Ydir.Value[2] * coor[2];
-                z += axis.Normal.Value[2] * coor[2];
-
-                newVals.Add(x);
-                newVals.Add(y);
-                newVals.Add(z);
-            }
-
-            return newVals.ToArray();
-        }
-
-        private static double[] ParsePolylineDesc(string desc)
-        {
-            List<double> coordinates = new List<double>();
-
-            foreach (Match m in Regex.Matches(desc, @"(?<=\()(.+?)(?=\))" ))
-            {
-                string[] pieces = m.Value.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-
-                try
-                {
-                    coordinates.AddRange(pieces.Take(2).Select(p => Convert.ToDouble(p)));
-                    coordinates.Add(0);
-                }
-                catch { }
-            }
-            return coordinates.ToArray();
-        }
-
-        private static int SetAxis(StructuralAxis axis)
-        {
-            if (axis.Xdir.Value.SequenceEqual(new double[] { 1, 0, 0 }) &&
-                axis.Ydir.Value.SequenceEqual(new double[] { 0, 1, 0 }) &&
-                axis.Normal.Value.SequenceEqual(new double[] { 0, 0, 1 }))
-                return 0;
-
-            List<string> ls = new List<string>();
-
-            int res = (int)GSA.RunGWACommand("HIGHEST,AXIS");
-
-            ls.Add("AXIS");
-            ls.Add((res + 1).ToString());
-            ls.Add("");
-            ls.Add("CART");
-
-            ls.Add("0");
-            ls.Add("0");
-            ls.Add("0");
-
-            ls.Add(axis.Xdir.Value[0].ToString());
-            ls.Add(axis.Xdir.Value[1].ToString());
-            ls.Add(axis.Xdir.Value[2].ToString());
-
-            ls.Add(axis.Ydir.Value[0].ToString());
-            ls.Add(axis.Ydir.Value[1].ToString());
-            ls.Add(axis.Ydir.Value[2].ToString());
-
-            GSA.RunGWACommand(string.Join(",", ls));
-
-            return res + 1;
         }
         #endregion
     }

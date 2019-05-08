@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Interop.Gsa_10_0;
 using SQLite;
+using SpeckleStructuresClasses;
 
 namespace SpeckleGSA
 {
@@ -353,44 +354,64 @@ namespace SpeckleGSA
 
             for (int i = 0; i < prevSets.Count(); i++)
             {
-                //TODO: Stupid polyline uses commas.
-                //Change to tab seperated at some point
-                if (prevSets[i].Contains("POLYLINE.1"))
-                {
-                    string[] split = prevSets[i].ListSplit("\t");
-                    prevSets[i] = split[1] + "\t" + split[2] + "\t";
-                }
-                else
-                {
-                    string[] split = prevSets[i].ListSplit(",");
-                    prevSets[i] = split[1] + "," + split[2] + ",";
-                }
-
+                string[] split = prevSets[i].ListSplit("\t");
+                prevSets[i] = split[1] + "\t" + split[2] + "\t";
             }
 
             prevSets = prevSets.Where(l => !GSASetCache.Keys.Any(x => x.Contains(l))).ToList();
 
-            foreach (string p in prevSets)
+            for (int i = 0; i < prevSets.Count(); i++)
             {
-                string[] split = null;
-                if (p.Contains("POLYLINE.1"))
-                    split = p.ListSplit("\t");
-                else
-                    split = p.ListSplit(",");
+                string p = prevSets[i];
+
+                string[] split = p.ListSplit("\t");
 
                 if (split[1].IsDigits())
                 {
                     // Uses SET
                     if (!Indexer.InBaseline(split[0], Convert.ToInt32(split[1])))
-                        RunGWACommand("BLANK," + split[0] + "," + split[1], false);
+                        RunGWACommand("BLANK\t" + split[0] + "\t" + split[1], false);
                 }
                 else
                 {
                     // Uses SET_AT
                     if (!Indexer.InBaseline(split[1], Convert.ToInt32(split[0])))
-                    { 
-                        RunGWACommand("BLANK," + split[1] + "," + split[0], false);
-                        // TODO: Need to DELETE instead of BLANK, but also shift the cache indices
+                    {
+                        RunGWACommand("DELETE\t" + split[1] + "\t" + split[0], false);
+                        int idxShifter = Convert.ToInt32(split[0]) + 1;
+                        bool flag = false;
+                        while (!flag)
+                        {
+                            flag = true;
+
+                            prevSets = prevSets
+                                .Select(line => line.Replace(
+                                    idxShifter.ToString() + "\t" + split[1] + "\t",
+                                    (idxShifter - 1).ToString() + "\t" + split[1] + "\t")).ToList();
+
+                            string target = "\t" + idxShifter.ToString() + "\t" + split[1] + "\t";
+                            string rep = "\t" + (idxShifter - 1).ToString() + "\t" + split[1] + "\t";
+
+                            string prevCacheKey = PreviousGSASetCache.Keys
+                                .FirstOrDefault(x => x.Contains(target));
+                            if (prevCacheKey != null)
+                            {
+                                PreviousGSASetCache[prevCacheKey.Replace(target, rep)] = PreviousGSASetCache[prevCacheKey];
+                                PreviousGSASetCache.Remove(prevCacheKey);
+                                flag = false;
+                            }
+
+                            string currCacheKey = GSASetCache.Keys
+                                .FirstOrDefault(x => x.Contains(target));
+                            if (currCacheKey != null)
+                            {
+                                GSASetCache[currCacheKey.Replace(target, rep)] = GSASetCache[currCacheKey];
+                                GSASetCache.Remove(currCacheKey);
+                                flag = false;
+                            }
+
+                            idxShifter++;
+                        }
                     }
                 }
             }
@@ -554,11 +575,53 @@ namespace SpeckleGSA
                 Indexer.ReserveIndices(typeof(GSANode), new List<int>() { idx });
 
             // Add artificial cache
-            string cacheKey = "SET," + typeof(GSANode).GetGSAKeyword() + "," + idx.ToString() + ",";
+            string cacheKey = "SET\t" + typeof(GSANode).GetGSAKeyword() + "\t" + idx.ToString() + "\t";
             if (!GSASetCache.ContainsKey(cacheKey))
                 GSASetCache[cacheKey] = 0;
 
             return idx;
+        }
+        #endregion
+
+        #region Axis
+        /// <summary>
+        /// Set the structural axis in GSA and returns the index of the axis.
+        /// Returns 0 for global axis.
+        /// </summary>
+        /// <param name="axis">Axis to set</param>
+        /// <returns>Index of axis</returns>
+        public static int SetAxis(StructuralAxis axis)
+        {
+            if (axis.Xdir.Value.SequenceEqual(new double[] { 1, 0, 0 }) &&
+                axis.Ydir.Value.SequenceEqual(new double[] { 0, 1, 0 }) &&
+                axis.Normal.Value.SequenceEqual(new double[] { 0, 0, 1 }))
+                return 0;
+
+            List<string> ls = new List<string>();
+
+            int res = Indexer.ResolveIndex("AXIS");
+
+            ls.Add("SET");
+            ls.Add("AXIS");
+            ls.Add(res.ToString());
+            ls.Add("");
+            ls.Add("CART");
+
+            ls.Add("0");
+            ls.Add("0");
+            ls.Add("0");
+
+            ls.Add(axis.Xdir.Value[0].ToString());
+            ls.Add(axis.Xdir.Value[1].ToString());
+            ls.Add(axis.Xdir.Value[2].ToString());
+
+            ls.Add(axis.Ydir.Value[0].ToString());
+            ls.Add(axis.Ydir.Value[1].ToString());
+            ls.Add(axis.Ydir.Value[2].ToString());
+
+            GSA.RunGWACommand(string.Join("\t", ls));
+
+            return res;
         }
         #endregion
 
