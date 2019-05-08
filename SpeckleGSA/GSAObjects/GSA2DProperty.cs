@@ -10,7 +10,7 @@ using SpeckleStructuresClasses;
 
 namespace SpeckleGSA
 {
-    [GSAObject("PROP_2D.5", new string[] { "MAT_STEEL.3", "MAT_CONCRETE.16" }, "properties", true, true, new Type[] { typeof(GSAMaterial) }, new Type[] { typeof(GSAMaterial) })]
+    [GSAObject("PROP_2D.5", new string[] { "MAT_STEEL.3", "MAT_CONCRETE.16" }, "properties", true, true, new Type[] { typeof(GSAMaterialSteel), typeof(GSAMaterialConcrete) }, new Type[] { typeof(GSAMaterialSteel), typeof(GSAMaterialConcrete) })]
     public class GSA2DProperty : Structural2DProperty, IGSAObject
     {
         public bool IsAxisLocal;
@@ -25,7 +25,8 @@ namespace SpeckleGSA
                 dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<IGSAObject>();
 
             List<GSA2DProperty> props = new List<GSA2DProperty>();
-            List<GSAMaterial> mats = dict[typeof(GSAMaterial)].Cast<GSAMaterial>().ToList();
+            List<GSAMaterialSteel> steels = dict[typeof(GSAMaterialSteel)].Cast<GSAMaterialSteel>().ToList();
+            List<GSAMaterialConcrete> concretes = dict[typeof(GSAMaterialConcrete)].Cast<GSAMaterialConcrete>().ToList();
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
             string[] subKeywords = MethodBase.GetCurrentMethod().DeclaringType.GetSubGSAKeyword();
@@ -46,7 +47,7 @@ namespace SpeckleGSA
 
             foreach (string p in newLines)
             {
-                GSA2DProperty prop = ParseGWACommand(p, mats);
+                GSA2DProperty prop = ParseGWACommand(p, steels, concretes);
                 props.Add(prop);
             }
 
@@ -57,7 +58,7 @@ namespace SpeckleGSA
             return false;
         }
 
-        public static GSA2DProperty ParseGWACommand(string command, List<GSAMaterial> materials)
+        public static GSA2DProperty ParseGWACommand(string command, List<GSAMaterialSteel> steels, List<GSAMaterialConcrete> concretes)
         {
             GSA2DProperty ret = new GSA2DProperty();
 
@@ -73,22 +74,27 @@ namespace SpeckleGSA
             ret.IsAxisLocal = pieces[counter++] == "LOCAL"; // Axis
             counter++; // Analysis material
             string materialType = pieces[counter++];
-            StructuralMaterialType materialTypeEnum = StructuralMaterialType.Generic;
+            string materialGrade = pieces[counter++];
             if (materialType == "STEEL")
-                materialTypeEnum = StructuralMaterialType.Steel;
-            else if (materialType == "CONCRETE")
-                materialTypeEnum = StructuralMaterialType.Concrete;
-            int materialGrade = Convert.ToInt32(pieces[counter++]);
-
-            if (materials != null)
             {
-                GSAMaterial matchingMaterial = materials.Where(m => m.LocalReference == materialGrade & m.MaterialType == materialTypeEnum).FirstOrDefault();
-                ret.MaterialRef = matchingMaterial == null ? null : matchingMaterial.StructuralId;
-                if (matchingMaterial != null)
-                    ret.SubGWACommand.Add(matchingMaterial.GWACommand);
+                if (steels != null)
+                {
+                    GSAMaterialSteel matchingMaterial = steels.Where(m => m.StructuralId == materialGrade).FirstOrDefault();
+                    ret.MaterialRef = matchingMaterial == null ? null : matchingMaterial.StructuralId;
+                    if (matchingMaterial != null)
+                        ret.SubGWACommand.Add(matchingMaterial.GWACommand);
+                }
             }
-            else
-                ret.MaterialRef = null;
+            else if (materialType == "CONCRETE")
+            {
+                if (concretes != null)
+                {
+                    GSAMaterialConcrete matchingMaterial = concretes.Where(m => m.StructuralId == materialGrade).FirstOrDefault();
+                    ret.MaterialRef = matchingMaterial == null ? null : matchingMaterial.StructuralId;
+                    if (matchingMaterial != null)
+                        ret.SubGWACommand.Add(matchingMaterial.GWACommand);
+                }
+            }
 
             counter++; // Analysis material
             ret.Thickness = Convert.ToDouble(pieces[counter++]);
@@ -118,12 +124,24 @@ namespace SpeckleGSA
 
             int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType, prop);
             int materialRef = 0;
-            try
-            {
-                materialRef = Indexer.LookupIndex(typeof(GSAMaterial), prop.MaterialRef).Value;
-            }
-            catch { }
+            string materialType = "UNDEF";
 
+            var res = Indexer.LookupIndex(typeof(GSAMaterialSteel), prop.MaterialRef);
+            if (res.HasValue)
+            {
+                materialRef = res.Value;
+                materialType = "STEEL";
+            }
+            else
+            {
+                res = Indexer.LookupIndex(typeof(GSAMaterialConcrete), prop.MaterialRef);
+                if (res.HasValue)
+                {
+                    materialRef = res.Value;
+                    materialType = "CONCRETE";
+                }
+            }
+            
             List<string> ls = new List<string>();
 
             ls.Add("SET");
@@ -134,7 +152,7 @@ namespace SpeckleGSA
             ls.Add("SHELL");
             ls.Add("GLOBAL");
             ls.Add("0"); // Analysis material
-            ls.Add(GetMaterialType(materialRef));
+            ls.Add(materialType);
             ls.Add(materialRef.ToString());
             ls.Add("0"); // Design
             ls.Add(prop.Thickness.ToString());
@@ -148,18 +166,6 @@ namespace SpeckleGSA
             ls.Add("NO_ENV"); // Environmental data
 
             GSA.RunGWACommand(string.Join("\t", ls));
-        }
-
-        public static string GetMaterialType(int materialRef)
-        {
-            // Steel
-            if (GSA.GetGWARecords("GET,MAT_STEEL.3," + materialRef.ToString()).FirstOrDefault() != null) return "STEEL";
-
-            // Concrete
-            if (GSA.GetGWARecords("GET,MAT_CONCRETE.16," + materialRef.ToString()).FirstOrDefault() != null) return "CONCRETE";
-
-            // Default
-            return "GENERIC";
         }
         #endregion
     }

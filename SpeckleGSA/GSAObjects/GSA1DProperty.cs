@@ -12,7 +12,7 @@ using System.Reflection;
 
 namespace SpeckleGSA
 {
-    [GSAObject("PROP_SEC.3", new string[] { "MAT_STEEL.3", "MAT_CONCRETE.16" }, "properties", true, true, new Type[] { typeof(GSAMaterial) }, new Type[] { typeof(GSAMaterial) })]
+    [GSAObject("PROP_SEC.3", new string[] { "MAT_STEEL.3", "MAT_CONCRETE.16" }, "properties", true, true, new Type[] { typeof(GSAMaterialSteel), typeof(GSAMaterialConcrete) }, new Type[] { typeof(GSAMaterialSteel), typeof(GSAMaterialConcrete) })]
     public class GSA1DProperty : Structural1DProperty, IGSAObject
     {
         public string GWACommand { get; set; } = "";
@@ -25,7 +25,8 @@ namespace SpeckleGSA
                 dict[MethodBase.GetCurrentMethod().DeclaringType] = new List<IGSAObject>();
 
             List<GSA1DProperty> props = new List<GSA1DProperty>();
-            List<GSAMaterial> mats = dict[typeof(GSAMaterial)].Cast<GSAMaterial>().ToList();
+            List<GSAMaterialSteel> steels = dict[typeof(GSAMaterialSteel)].Cast<GSAMaterialSteel>().ToList();
+            List<GSAMaterialConcrete> concretes = dict[typeof(GSAMaterialConcrete)].Cast<GSAMaterialConcrete>().ToList();
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
             string[] subKeywords = MethodBase.GetCurrentMethod().DeclaringType.GetSubGSAKeyword();
@@ -46,7 +47,7 @@ namespace SpeckleGSA
 
             foreach (string p in newLines)
             {
-                GSA1DProperty prop = ParseGWACommand(p, mats);
+                GSA1DProperty prop = ParseGWACommand(p, steels, concretes);
                 props.Add(prop);
             }
 
@@ -57,7 +58,7 @@ namespace SpeckleGSA
             return false;
         }
 
-        public static GSA1DProperty ParseGWACommand(string command, List<GSAMaterial> materials)
+        public static GSA1DProperty ParseGWACommand(string command, List<GSAMaterialSteel> steels, List<GSAMaterialConcrete> concretes)
         {
             GSA1DProperty ret = new GSA1DProperty();
 
@@ -70,22 +71,27 @@ namespace SpeckleGSA
             ret.Name = pieces[counter++].Trim(new char[] { '"' });
             counter++; // Color
             string materialType = pieces[counter++];
-            StructuralMaterialType materialTypeEnum = StructuralMaterialType.Generic;
+            string materialGrade = pieces[counter++];
             if (materialType == "STEEL")
-                materialTypeEnum = StructuralMaterialType.Steel;
-            else if (materialType == "CONCRETE")
-                materialTypeEnum = StructuralMaterialType.Concrete;
-            int materialGrade = Convert.ToInt32(pieces[counter++]);
-
-            if (materials != null)
             {
-                GSAMaterial matchingMaterial = materials.Where(m => m.LocalReference == materialGrade & m.MaterialType == materialTypeEnum).FirstOrDefault();
-                ret.MaterialRef = matchingMaterial == null ? null : matchingMaterial.StructuralId;
-                if (matchingMaterial != null)
-                    ret.SubGWACommand.Add(matchingMaterial.GWACommand);
+                if (steels != null)
+                { 
+                    GSAMaterialSteel matchingMaterial = steels.Where(m => m.StructuralId == materialGrade).FirstOrDefault();
+                    ret.MaterialRef = matchingMaterial == null ? null : matchingMaterial.StructuralId;
+                    if (matchingMaterial != null)
+                        ret.SubGWACommand.Add(matchingMaterial.GWACommand);
+                }
             }
-            else
-                ret.MaterialRef = null;
+            else if (materialType == "CONCRETE")
+            {
+                if (concretes != null)
+                { 
+                    GSAMaterialConcrete matchingMaterial = concretes.Where(m => m.StructuralId == materialGrade).FirstOrDefault();
+                    ret.MaterialRef = matchingMaterial == null ? null : matchingMaterial.StructuralId;
+                    if (matchingMaterial != null)
+                        ret.SubGWACommand.Add(matchingMaterial.GWACommand);
+                }
+            }
 
             counter++; // Analysis material
             ret = SetDesc(ret, pieces[counter++]);
@@ -118,11 +124,23 @@ namespace SpeckleGSA
 
             int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType, prop);
             int materialRef = 0;
-            try
-            {
-                materialRef = Indexer.LookupIndex(typeof(GSAMaterial), prop.MaterialRef).Value;
+            string materialType = "UNDEF";
+
+            var res = Indexer.LookupIndex(typeof(GSAMaterialSteel), prop.MaterialRef);
+            if (res.HasValue)
+            { 
+                materialRef = res.Value;
+                materialType = "STEEL";
             }
-            catch { }
+            else
+            {
+                res = Indexer.LookupIndex(typeof(GSAMaterialConcrete), prop.MaterialRef);
+                if (res.HasValue)
+                { 
+                    materialRef = res.Value;
+                    materialType = "CONCRETE";
+                }
+            }
 
             List<string> ls = new List<string>();
 
@@ -131,25 +149,13 @@ namespace SpeckleGSA
             ls.Add(index.ToString());
             ls.Add(prop.Name == null || prop.Name == "" ? " " : prop.Name);
             ls.Add("NO_RGB");
-            ls.Add(GetMaterialType(materialRef));
+            ls.Add(materialType);
             ls.Add(materialRef.ToString());
             ls.Add("0"); // Analysis material
             ls.Add(GetGSADesc(prop));
             ls.Add("0"); // Cost
 
             GSA.RunGWACommand(string.Join("\t", ls));
-        }
-
-        public static string GetMaterialType(int materialRef)
-        {
-            // Steel
-            if (GSA.GetGWARecords("GET,MAT_STEEL.3," + materialRef.ToString()).FirstOrDefault() != null) return "STEEL";
-
-            // Concrete
-            if (GSA.GetGWARecords("GET,MAT_CONCRETE.16," + materialRef.ToString()).FirstOrDefault() != null) return "CONCRETE";
-
-            // Default
-            return "UNDEF";
         }
         #endregion
 
