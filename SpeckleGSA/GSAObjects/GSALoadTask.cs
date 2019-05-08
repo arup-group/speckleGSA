@@ -8,7 +8,7 @@ using SpeckleStructuresClasses;
 
 namespace SpeckleGSA
 {
-    [GSAObject("ANAL.1", new string[] { }, "loads", true, true, new Type[] { typeof(GSALoadCase) }, new Type[] { typeof(GSALoadCase) })]
+    [GSAObject("ANAL.1", new string[] { "TASK.1" }, "loads", true, true, new Type[] { typeof(GSALoadCase) }, new Type[] { typeof(GSALoadCase) })]
     public class GSALoadTask : StructuralLoadTask, IGSAObject
     {
         public string GWACommand { get; set; } = "";
@@ -117,7 +117,7 @@ namespace SpeckleGSA
 
             string keyword = MethodBase.GetCurrentMethod().DeclaringType.GetGSAKeyword();
 
-            int taskIndex = (int)GSA.RunGWACommand("HIGHEST,TASK.1") + 1;
+            int taskIndex = Indexer.ResolveIndex("TASK.1", loadTask);
             int index = Indexer.ResolveIndex(MethodBase.GetCurrentMethod().DeclaringType, loadTask);
 
             List<string> ls = new List<string>();
