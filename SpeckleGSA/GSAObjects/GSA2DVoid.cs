@@ -127,7 +127,7 @@ namespace SpeckleGSA.GSAObjects
             ls.Add(index.ToString());
             ls.Add(v.Name == null || v.Name == "" ? " " : v.Name);
             ls.Add(v.Colors == null || v.Colors.Count() < 1 ? "NO_RGB" : v.Colors[0].ArgbToHexColor().ToString());
-            ls.Add("2D_GENERIC");
+            ls.Add("2D_VOID_CUTTER");
             ls.Add("1"); // Property reference
             ls.Add("0"); // Group
             string topo = "";
@@ -150,7 +150,7 @@ namespace SpeckleGSA.GSAObjects
             ls.Add("0"); // Time 2
             ls.Add("0"); // Time 3
             ls.Add("0"); // TODO: What is this?
-            ls.Add("DUMMY"); // Dummy
+            ls.Add("ACTIVE"); // Dummy
             ls.Add("NO"); // Internal auto offset
             ls.Add("0"); // Offset z
             ls.Add("ALL"); // Exposure

@@ -184,6 +184,19 @@ namespace SpeckleGSA
             }
             catch { loadCaseRef = Indexer.ResolveIndex(typeof(GSALoadCase), load.LoadCaseRef); }
 
+            StructuralAxis axis = HelperFunctions.Parse2DAxis(load.Value.ToArray());
+
+            // Calculate elevation
+            double elevation = (load.Value[0] * axis.Normal.Value[0] +
+                load.Value[1] * axis.Normal.Value[1] +
+                load.Value[2] * axis.Normal.Value[2]) /
+                Math.Sqrt(axis.Normal.Value[0] * axis.Normal.Value[0] +
+                    axis.Normal.Value[1] * axis.Normal.Value[1] +
+                    axis.Normal.Value[2] * axis.Normal.Value[2]);
+
+            // Transform coordinate to new axis
+            double[] transformed = HelperFunctions.MapPointsGlobal2Local(load.Value.ToArray(), axis);
+
             List<string> ls = new List<string>();
 
             string[] direction = new string[3] { "X", "Y", "Z" };
@@ -201,8 +214,11 @@ namespace SpeckleGSA
                 ls.Add(keyword);
                 ls.Add(load.Name == null || load.Name == "" ? " " : load.Name);
                 ls.Add(gridSurfaceIndex.ToString());
-                ls.Add("POLYREF");
-                ls.Add(polylineIndex.ToString());
+                ls.Add("POLYGON");
+                List<string> subLs = new List<string>();
+                for (int j = 0; j < transformed.Count(); j += 3)
+                    subLs.Add("(" + transformed[j].ToString() + "," + transformed[j + 1].ToString() + ")");
+                ls.Add(string.Join(" ", subLs));
                 ls.Add(loadCaseRef.ToString());
                 ls.Add("GLOBAL");
                 ls.Add("NO");
@@ -211,33 +227,6 @@ namespace SpeckleGSA
 
                 GSA.RunGWACommand(string.Join("\t", ls));
             }
-
-            StructuralAxis axis = HelperFunctions.Parse2DAxis(load.Value.ToArray());
-
-            // Calculate elevation
-            double elevation = (load.Value[0] * axis.Normal.Value[0] +
-                load.Value[1] * axis.Normal.Value[1] +
-                load.Value[2] * axis.Normal.Value[2]) /
-                Math.Sqrt(axis.Normal.Value[0] * axis.Normal.Value[0] +
-                    axis.Normal.Value[1] * axis.Normal.Value[1] +
-                    axis.Normal.Value[2] * axis.Normal.Value[2]);
-
-            // Transform coordinate to new axis
-            double[] transformed = HelperFunctions.MapPointsGlobal2Local(load.Value.ToArray(), axis);
-
-            ls.Clear();
-            ls.Add("SET");
-            ls.Add("POLYLINE.1");
-            ls.Add(polylineIndex.ToString());
-            ls.Add(load.Name == null || load.Name == "" ? " " : load.Name);
-            ls.Add("NO_RGB");
-            ls.Add("-1"); // Grid plane
-            ls.Add("2");
-            List<string> subLs = new List<string>();
-            for(int i = 0; i < transformed.Count(); i+=3)
-                subLs.Add("(" + transformed[i].ToString() + "," + transformed[i + 1].ToString() + ")");
-            ls.Add(string.Join(" ", subLs));
-            GSA.RunGWACommand(string.Join("\t", ls));
             
             ls.Clear();
             ls.Add("SET"); 
