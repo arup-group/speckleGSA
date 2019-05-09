@@ -16,7 +16,7 @@ Requires GSA 10 beta build 30.
 
 ## Installation
 
-SpeckleGSA is bundled as part of the Speckle Structural Suite. Download the latest version [here](https://gitlab.arup.com/speckle/specklestructuralsuite-installer/-/jobs/artifacts/master/raw/SpeckleStructuralSuite.exe?job=build).
+SpeckleGSA is bundled as part of the Speckle Structural Suite. Download the latest version [here](https://gitlab.arup.com/speckle/specklestructuralsuite-installer/releases).
 
 ## Usage
 SpeckleGSA implements key components of a Speckle client in it's tab interface:
