@@ -116,7 +116,11 @@ namespace SpeckleGSA
             counter++; //Ofsset x-end
             counter++; //Ofsset y
 
-            ret.Offset = GetGSATotalElementOffset(Convert.ToInt32(ret.PropertyRef), Convert.ToDouble(pieces[counter++]));
+            var offsetRet = GetGSATotalElementOffset(Convert.ToInt32(ret.PropertyRef), Convert.ToDouble(pieces[counter++]));
+
+            ret.Offset = offsetRet.Item1;
+            if (offsetRet.Item2 != null)
+                ret.SubGWACommand.Add(offsetRet.Item2);
 
             //counter++; // Action // TODO: EL.4 SUPPORT
             counter++; // Dummy
@@ -178,42 +182,27 @@ namespace SpeckleGSA
             ls.Add(mesh.Offset.ToString());
 
             //ls.Add("NORMAL"); // Action // TODO: EL.4 SUPPORT
-            ls.Add(""); // Dummy
+            ls.Add(mesh.Dummy ? "DUMMY" : "");
 
             GSA.RunGWACommand(string.Join("\t", ls));
         }
         #endregion
 
         #region Helper Functions
-        private static double GetGSATotalElementOffset(int propIndex, double insertionPointOffset)
+        private static Tuple<double, string> GetGSATotalElementOffset(int propIndex, double insertionPointOffset)
         {
             double materialInsertionPointOffset = 0;
             double zMaterialOffset = 0;
-            double materialThickness = 0;
 
             string res = GSA.GetGWARecords("GET,PROP_2D," + propIndex.ToString()).FirstOrDefault();
 
             if (res == null || res == "")
-                return insertionPointOffset;
+                return new Tuple<double, string> (insertionPointOffset, null);
 
             string[] pieces = res.ListSplit(",");
-
-            materialThickness = Convert.ToDouble(pieces[10]);
-            switch (pieces[11])
-            {
-                case "TOP_CENTRE":
-                    materialInsertionPointOffset = -materialThickness / 2;
-                    break;
-                case "BOT_CENTRE":
-                    materialInsertionPointOffset = materialThickness / 2;
-                    break;
-                default:
-                    materialInsertionPointOffset = 0;
-                    break;
-            }
-
+            
             zMaterialOffset = -Convert.ToDouble(pieces[12]);
-            return insertionPointOffset + zMaterialOffset + materialInsertionPointOffset;
+            return new Tuple<double, string>(insertionPointOffset + zMaterialOffset + materialInsertionPointOffset, res);
         }
         #endregion
     }

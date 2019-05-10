@@ -187,7 +187,7 @@ namespace SpeckleGSA
                 ls.Add(HelperFunctions.Get1DAngle(member.Value.ToArray(), member.ZAxis).ToString());
             }
             catch { ls.Add("0"); }
-            ls.Add("1"); // Target mesh size
+            ls.Add(member.MeshSize == 0 ? "0" : member.MeshSize.ToString()); // Target mesh size
             ls.Add("MESH"); // TODO: What is this?
             ls.Add("BEAM"); // Element type
             ls.Add("0"); // Fire
@@ -195,7 +195,7 @@ namespace SpeckleGSA
             ls.Add("0"); // Time 2
             ls.Add("0"); // Time 3
             ls.Add("0"); // TODO: What is this?
-            ls.Add("ACTIVE"); // Dummy
+            ls.Add(member.Dummy ? "DUMMY" : "ACTIVE");
 
             try
             { 

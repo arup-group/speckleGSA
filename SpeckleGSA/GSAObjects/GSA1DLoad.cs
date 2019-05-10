@@ -208,7 +208,7 @@ namespace SpeckleGSA
             ret.LoadCaseRef = pieces[counter++];
 
             string axis = pieces[counter++];
-            ret.Axis = axis == "GLOBAL" ? 0 : Convert.ToInt32(axis);
+            ret.Axis = axis == "GLOBAL" ? 0 : -1;// Convert.ToInt32(axis); // TODO: Assume local if not global
 
             ret.Projected = pieces[counter++] == "YES";
 

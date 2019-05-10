@@ -119,7 +119,12 @@ namespace SpeckleGSA
 
             // Skip to offsets at second to last
             counter = pieces.Length - 2;
-            ret.Offset = Convert.ToDouble(pieces[counter++]);
+
+            var offsetRet = GetGSATotalElementOffset(Convert.ToInt32(ret.PropertyRef), Convert.ToDouble(pieces[counter++]));
+
+            ret.Offset = offsetRet.Item1;
+            if (offsetRet.Item2 != null)
+                ret.SubGWACommand.Add(offsetRet.Item2);
 
             return ret;
         }
@@ -182,7 +187,7 @@ namespace SpeckleGSA
                 ls.Add(HelperFunctions.Get2DAngle(coor.ToArray(), mesh.Axis).ToString());
             }
             catch { ls.Add("0"); }
-            ls.Add("1"); // Target mesh size
+            ls.Add(mesh.MeshSize == 0 ? "1" : mesh.MeshSize.ToString()); // Target mesh size
             ls.Add("MESH"); // TODO: What is this?
             ls.Add("LINEAR"); // Element type
             ls.Add("0"); // Fire
@@ -190,12 +195,30 @@ namespace SpeckleGSA
             ls.Add("0"); // Time 2
             ls.Add("0"); // Time 3
             ls.Add("0"); // TODO: What is this?
-            ls.Add("ACTIVE"); // Dummy
+            ls.Add(mesh.Dummy ? "DUMMY" : "ACTIVE");
             ls.Add("NO"); // Internal auto offset
             ls.Add(mesh.Offset.ToString()); // Offset z
             ls.Add("ALL"); // Exposure
 
             GSA.RunGWACommand(string.Join("\t", ls));
+        }
+        #endregion
+
+        #region Helper Functions
+        private static Tuple<double, string> GetGSATotalElementOffset(int propIndex, double insertionPointOffset)
+        {
+            double materialInsertionPointOffset = 0;
+            double zMaterialOffset = 0;
+
+            string res = GSA.GetGWARecords("GET,PROP_2D," + propIndex.ToString()).FirstOrDefault();
+
+            if (res == null || res == "")
+                return new Tuple<double, string>(insertionPointOffset, null);
+
+            string[] pieces = res.ListSplit(",");
+
+            zMaterialOffset = -Convert.ToDouble(pieces[12]);
+            return new Tuple<double, string>(insertionPointOffset + zMaterialOffset + materialInsertionPointOffset, res);
         }
         #endregion
     }

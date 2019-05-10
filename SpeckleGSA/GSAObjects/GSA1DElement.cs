@@ -240,7 +240,7 @@ namespace SpeckleGSA
             }
 
             //ls.Add("NORMAL"); // Action // TODO: EL.4 SUPPORT
-            ls.Add(""); // Dummy
+            ls.Add(element.Dummy ? "DUMMY" : "");
 
             GSA.RunGWACommand(string.Join("\t", ls));
         }

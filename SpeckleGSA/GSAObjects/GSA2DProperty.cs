@@ -98,6 +98,22 @@ namespace SpeckleGSA
 
             counter++; // Analysis material
             ret.Thickness = Convert.ToDouble(pieces[counter++]);
+
+            switch(pieces[counter++])
+            {
+                case "CENTROID":
+                    ret.ReferenceSurface = Structural2DPropertyReferenceSurface.Middle;
+                    break;
+                case "TOP_CENTRE":
+                    ret.ReferenceSurface = Structural2DPropertyReferenceSurface.Top;
+                    break;
+                case "BOT_CENTRE":
+                    ret.ReferenceSurface = Structural2DPropertyReferenceSurface.Bottom;
+                    break;
+                default:
+                    ret.ReferenceSurface = Structural2DPropertyReferenceSurface.Middle;
+                    break;
+            }
             // Ignore the rest
 
             return ret;
@@ -156,7 +172,21 @@ namespace SpeckleGSA
             ls.Add(materialRef.ToString());
             ls.Add("0"); // Design
             ls.Add(prop.Thickness.ToString());
-            ls.Add("CENTROID"); // Reference point
+            switch (prop.ReferenceSurface)
+            {
+                case Structural2DPropertyReferenceSurface.Middle:
+                    ls.Add("CENTROID");
+                    break;
+                case Structural2DPropertyReferenceSurface.Top:
+                    ls.Add("TOP_CENTRE");
+                    break;
+                case Structural2DPropertyReferenceSurface.Bottom:
+                    ls.Add("BOT_CENTRE");
+                    break;
+                default:
+                    ls.Add("CENTROID");
+                    break;
+            }
             ls.Add("0"); // Ref_z
             ls.Add("0"); // Mass
             ls.Add("100%"); // Flex modifier
