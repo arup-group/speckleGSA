@@ -1,9 +1,9 @@
 ﻿using SpeckleCore;
-using SpeckleStructuresClasses;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -14,25 +14,14 @@ namespace SpeckleGSA
     /// </summary>
     public class Sender
     {
-        public Dictionary<string, SpeckleGSASender> Senders;
-        public Dictionary<Type, List<IGSAObject>> SenderObjectCache;
-        public Dictionary<Type, List<Type>> TypePrerequisites;
+        public Dictionary<Type, List<object>> SenderObjects = new Dictionary<Type, List<object>>();
+        public Dictionary<string, SpeckleGSASender> Senders = new Dictionary<string, SpeckleGSASender>();
+        public Dictionary<Type, List<Type>> TypePrerequisites = new Dictionary<Type, List<Type>>();
+        public Dictionary<Type, string> StreamMap = new Dictionary<Type, string>();
 
-        public bool IsInit;
-        public bool IsBusy;
-
-        /// <summary>
-        /// Creates Sender object.
-        /// </summary>
-        public Sender()
-        {
-            Senders = new Dictionary<string, SpeckleGSASender>();
-            SenderObjectCache = new Dictionary<Type, List<IGSAObject>>();
-            TypePrerequisites = new Dictionary<Type, List<Type>>();
-            IsInit = false;
-            IsBusy = false;
-        }
-
+        public bool IsInit = false;
+        public bool IsBusy = false;
+        
         /// <summary>
         /// Initializes sender.
         /// </summary>
@@ -49,32 +38,78 @@ namespace SpeckleGSA
                 return;
             }
 
-            GSA.FullClearCache();
+            var assemblies = SpeckleCore.SpeckleInitializer.GetAssemblies();
+            foreach (var ass in assemblies)
+            {
+                var types = ass.GetTypes();
+                foreach (var type in types)
+                {
+                    if (type.GetInterfaces().Contains(typeof(SpeckleCore.ISpeckleInitializer)))
+                    {
+                        if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
+                        {
+                            var gsaInterface = type.GetProperty("GSA").GetValue(null);
+                            gsaInterface.GetType().GetMethod("FullClearCache").Invoke(gsaInterface, new object[0]);
+                        }
+                    }
+                }
+            }
+            
+            // Grab GSA interface type
+            Type interfaceType = null;
+            Type attributeType = null;
+            foreach (var ass in assemblies)
+            {
+                var types = ass.GetTypes();
+                foreach (var type in types)
+                {
+                    if (type.FullName.Contains("IGSASpeckleContainer"))
+                    {
+                        interfaceType = type;
+                    }
 
-            // Initialize object read priority list
-            IEnumerable<Type> objTypes = typeof(GSA)
-                .Assembly.GetTypes()
-                .Where(t => t.IsSubclassOf(typeof(SpeckleObject)) && !t.IsAbstract);
+                    if (type.FullName.Contains("GSAObject"))
+                    {
+                        attributeType = type;
+                    }
+                }
+            }
 
+            if (interfaceType == null)
+                return;
+
+            // Grab all GSA related object
             Status.ChangeStatus("Preparing to read GSA Objects");
+
+            List<Type> objTypes = new List<Type>();
+            foreach (var ass in assemblies)
+            {
+                var types = ass.GetTypes();
+                foreach (var type in types)
+                {
+                    if (interfaceType.IsAssignableFrom(type) && type != interfaceType)
+                    {
+                        objTypes.Add(type);
+                    }
+                }
+            }
 
             foreach (Type t in objTypes)
             {
-                if (t.GetMethod("GetObjects",
-                    new Type[] { typeof(Dictionary<Type, List<IGSAObject>>) }) == null)
+                if (t.GetAttribute("Stream", attributeType) != null)
+                    StreamMap[t] = (string)t.GetAttribute("Stream", attributeType);
+                else
                     continue;
 
-                if (t.GetAttribute("Stream") == null) continue;
+                if (t.GetAttribute("AnalysisLayer", attributeType) != null)
+                    if (Settings.TargetAnalysisLayer && !(bool)t.GetAttribute("AnalysisLayer", attributeType)) continue;
 
-                if (t.GetAttribute("AnalysisLayer") != null)
-                    if (GSA.TargetAnalysisLayer && !(bool)t.GetAttribute("AnalysisLayer")) continue;
-
-                if (t.GetAttribute("DesignLayer") != null)
-                    if (GSA.TargetDesignLayer && !(bool)t.GetAttribute("DesignLayer")) continue;
+                if (t.GetAttribute("DesignLayer", attributeType) != null)
+                    if (Settings.TargetDesignLayer && !(bool)t.GetAttribute("DesignLayer", attributeType)) continue;
 
                 List<Type> prereq = new List<Type>();
-                if (t.GetAttribute("ReadPrerequisite") != null)
-                    prereq = ((Type[])t.GetAttribute("ReadPrerequisite")).ToList();
+                if (t.GetAttribute("ReadPrerequisite", attributeType) != null)
+                    prereq = ((Type[])t.GetAttribute("ReadPrerequisite", attributeType)).ToList();
 
                 TypePrerequisites[t] = prereq;
             }
@@ -82,13 +117,13 @@ namespace SpeckleGSA
             // Remove wrong layer objects from prerequisites
             foreach (Type t in objTypes)
             {
-                if (t.GetAttribute("AnalysisLayer") != null)
-                    if (GSA.TargetAnalysisLayer && !(bool)t.GetAttribute("AnalysisLayer"))
+                if (t.GetAttribute("AnalysisLayer", attributeType) != null)
+                    if (Settings.TargetAnalysisLayer && !(bool)t.GetAttribute("AnalysisLayer", attributeType))
                         foreach (KeyValuePair<Type, List<Type>> kvp in TypePrerequisites)
                             kvp.Value.Remove(t);
 
-                if (t.GetAttribute("DesignLayer") != null)
-                    if (GSA.TargetDesignLayer && !(bool)t.GetAttribute("DesignLayer"))
+                if (t.GetAttribute("DesignLayer", attributeType) != null)
+                    if (Settings.TargetDesignLayer && !(bool)t.GetAttribute("DesignLayer", attributeType))
                         foreach (KeyValuePair<Type, List<Type>> kvp in TypePrerequisites)
                             kvp.Value.Remove(t);
             }
@@ -101,7 +136,7 @@ namespace SpeckleGSA
             if (Settings.SeperateStreams)
             {
                 foreach (Type t in objTypes)
-                    streamNames.Add((string)t.GetAttribute("Stream"));
+                    streamNames.Add((string)t.GetAttribute("Stream", attributeType));
                 streamNames = streamNames.Distinct().ToList();
             }
             else
@@ -134,8 +169,64 @@ namespace SpeckleGSA
             if (!IsInit) return;
 
             IsBusy = true;
-            GSA.ClearCache();
             GSA.UpdateUnits();
+
+            // Inject!!!!
+            var assemblies = SpeckleCore.SpeckleInitializer.GetAssemblies();
+            foreach (var ass in assemblies)
+            {
+                var types = ass.GetTypes();
+                foreach (var type in types)
+                {
+                    if (type.GetInterfaces().Contains(typeof(SpeckleCore.ISpeckleInitializer)))
+                    {
+                        if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
+                        {
+                            var gsaInterface = type.GetProperty("GSA").GetValue(null);
+                            
+                            gsaInterface.GetType().GetField("GSAObject").SetValue(gsaInterface, GSA.GSAObject);
+                            gsaInterface.GetType().GetMethod("ClearCache").Invoke(gsaInterface, new object[] { });
+                        }
+
+                        if (type.GetProperties().Select(p => p.Name).Contains("GSAUnits"))
+                        {
+                            type.GetProperty("GSAUnits").SetValue(null, GSA.Units);
+                        }
+
+                        if (type.GetProperties().Select(p => p.Name).Contains("GSASenderObjects"))
+                        {
+                            type.GetProperty("GSASenderObjects").SetValue(null, SenderObjects);
+                        }
+
+                        if (Settings.TargetDesignLayer)
+                        {
+                            if (type.GetProperties().Select(p => p.Name).Contains("GSATargetDesignLayer"))
+                                type.GetProperty("GSATargetDesignLayer").SetValue(null, true);
+                        }
+
+                        if (Settings.TargetAnalysisLayer)
+                        {
+                            if (type.GetProperties().Select(p => p.Name).Contains("GSATargetAnalysisLayer"))
+                                type.GetProperty("GSATargetAnalysisLayer").SetValue(null, true);
+                        }
+
+                        if (type.GetProperties().Select(p => p.Name).Contains("GSASendResults"))
+                        {
+                            type.GetProperty("GSASendResults").SetValue(null, Settings.SendResults);
+                        }
+
+                        if (type.GetProperties().Select(p => p.Name).Contains("GSAResultCases"))
+                        {
+                            type.GetProperty("GSAResultCases").SetValue(null, Settings.ResultCases);
+                        }
+
+                        if (type.GetProperties().Select(p => p.Name).Contains("GSAResultInLocalAxis"))
+                        {
+                            type.GetProperty("GSAResultInLocalAxis").SetValue(null, Settings.ResultInLocalAxis);
+                        }
+                    }
+                }
+            }
 
             // Read objects
             List<Type> currentBatch = new List<Type>();
@@ -149,13 +240,13 @@ namespace SpeckleGSA
 
                 foreach (Type t in currentBatch)
                 {
-                    //Status.ChangeStatus("Reading " + t.Name);
+                    if (changeDetected) // This will skip the first read but it avoids flickering
+                        Status.ChangeStatus("Reading " + t.Name);
 
-                    bool result = (bool)t.GetMethod("GetObjects",
-                        new Type[] { typeof(Dictionary<Type, List<IGSAObject>>) })
-                        .Invoke(null, new object[] { SenderObjectCache });
+                    object dummyObject = Activator.CreateInstance(t);
+                    var result = Converter.Serialise(dummyObject);
 
-                    if (result)
+                    if (!(result is SpeckleNull))
                         changeDetected = true;
 
                     traversedTypes.Add(t);
@@ -168,46 +259,33 @@ namespace SpeckleGSA
                 IsBusy = false;
                 return;
             }
-
-            // Convert objects to base class
-            Dictionary<Type, List<IStructural>> convertedBucket = new Dictionary<Type, List<IStructural>>();
-            foreach (KeyValuePair<Type, List<IGSAObject>> kvp in SenderObjectCache)
-            {
-                if ((kvp.Key == typeof(GSANode)) && Settings.SendOnlyMeaningfulNodes && SenderObjectCache.ContainsKey(typeof(GSANode)))
-                {
-                    // Remove unimportant nodes
-                    convertedBucket[kvp.Key] = kvp.Value.Cast<GSANode>()
-                        .Where(n => n.ForceSend ||
-                        (n.Restraint != null && n.Restraint.Value.Any(x => x)) ||
-                        (n.Restraint != null && n.Stiffness.Value.Any(x => x == 0)) ||
-                        n.Mass > 0)
-                        .Select(x => x.GetBase()).Cast<IStructural>().ToList();
-                }
-                else
-                {
-                    convertedBucket[kvp.Key] = kvp.Value.Select(
-                        x => x.GetBase()).Cast<IStructural>().ToList();
-                }
-            }
-
+            
             // Seperate objects into streams
             Dictionary<string, Dictionary<string, List<object>>> streamBuckets = new Dictionary<string, Dictionary<string, List<object>>>();
-
-            Status.ChangeStatus("Preparing stream buckets");
-
-            foreach (KeyValuePair<Type, List<IStructural>> kvp in convertedBucket)
+            
+            foreach (KeyValuePair<Type, List<object>> kvp in SenderObjects)
             {
-                string stream;
+                string targetStream = Settings.SeperateStreams ? StreamMap[kvp.Key] : "Full Model";
 
-                if (Settings.SeperateStreams)
-                    stream = (string)kvp.Key.GetAttribute("Stream");
-                else
-                    stream = "Full Model";
+                foreach(object obj in kvp.Value)
+                {
+                    if (Settings.SendOnlyMeaningfulNodes)
+                    { 
+                        if (obj.GetType().Name.Contains("GSANode") && !(bool)obj.GetType().GetField("ForceSend").GetValue(obj))
+                            continue;
+                    }
+                    object insideVal = obj.GetType().GetProperty("Value").GetValue(obj);
 
-                if (!streamBuckets.ContainsKey(stream))
-                    streamBuckets[stream] = new Dictionary<string, List<object>>() { { kvp.Key.BaseType.Name.ToString(), (kvp.Value as IList).Cast<object>().ToList() } };
-                else
-                    streamBuckets[stream][kvp.Key.BaseType.Name.ToString()] = (kvp.Value as IList).Cast<object>().ToList();
+                    (insideVal as SpeckleObject).GenerateHash();
+
+                    if (!streamBuckets.ContainsKey(targetStream))
+                        streamBuckets[targetStream] = new Dictionary<string, List<object>>();
+
+                    if (streamBuckets[targetStream].ContainsKey(insideVal.GetType().Name))
+                        streamBuckets[targetStream][insideVal.GetType().Name].Add(insideVal);
+                    else
+                        streamBuckets[targetStream][insideVal.GetType().Name] = new List<object>() { insideVal };
+                }
             }
 
             // Send package

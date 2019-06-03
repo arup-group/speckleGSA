@@ -20,6 +20,7 @@ using System.Windows.Interop;
 using Microsoft.Win32;
 using System.Windows.Threading;
 using System.Collections.ObjectModel;
+using System.Collections;
 
 namespace SpeckleGSAUI
 {
@@ -70,6 +71,8 @@ namespace SpeckleGSAUI
             SeperateStreams.IsChecked = Settings.SeperateStreams;
             PollingRate.Text = Settings.PollingRate.ToString();
             CoincidentNodeAllowance.Text = Settings.CoincidentNodeAllowance.ToString();
+            ResultCases.Text = string.Join("\r\n", Settings.ResultCases);
+            ResultInLocalAxis.IsChecked = Settings.ResultInLocalAxis;
 
             //Draw buttons
             SendButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
@@ -228,19 +231,30 @@ namespace SpeckleGSAUI
                 SendButtonPath.Data = Geometry.Parse(PAUSE_BUTTON);
                 SendButtonPath.Fill = Brushes.DimGray;
 
+                if (SenderResultToggle.IsChecked.Value && !SenderLayerToggle.IsChecked.Value)
+                    MessageBox.Show("Results only supported for analysis layer.", "SpeckleGSA", MessageBoxButton.OK, MessageBoxImage.Warning);
+
+                if (SenderResultToggle.IsChecked.Value && !SenderContinuousToggle.IsChecked.Value)
+                    MessageBox.Show("Results only supported for single send mode.", "SpeckleGSA", MessageBoxButton.OK, MessageBoxImage.Warning);
+
                 if (SenderLayerToggle.IsChecked.Value)
                 {
-                    GSA.TargetAnalysisLayer = true;
-                    GSA.TargetDesignLayer = false;
+                    Settings.TargetAnalysisLayer = true;
+                    Settings.TargetDesignLayer = false;
+                    if (SenderContinuousToggle.IsChecked.Value)
+                        Settings.SendResults = SenderResultToggle.IsChecked.Value;
+                    else
+                        Settings.SendResults = false;
                 }
                 else
                 {
-
-                    GSA.TargetAnalysisLayer = false;
-                    GSA.TargetDesignLayer = true;
+                    Settings.TargetAnalysisLayer = false;
+                    Settings.TargetDesignLayer = true;
+                    Settings.SendResults = false;
                 }
                 SenderLayerToggle.IsEnabled = false;
                 SenderContinuousToggle.IsEnabled = false;
+                SenderResultToggle.IsEnabled = false;
 
                 GSA.GetSpeckleClients(EmailAddress, RestApi);
                 gsaSender = new Sender();
@@ -263,6 +277,7 @@ namespace SpeckleGSAUI
 
                                     SenderLayerToggle.IsEnabled = true;
                                     SenderContinuousToggle.IsEnabled = true;
+                                    SenderResultToggle.IsEnabled = true;
                                 })
                             );
                         });
@@ -287,6 +302,7 @@ namespace SpeckleGSAUI
 
                 SenderLayerToggle.IsEnabled = true;
                 SenderContinuousToggle.IsEnabled = true;
+                SenderResultToggle.IsEnabled = true;
             }
         }
 
@@ -367,14 +383,14 @@ namespace SpeckleGSAUI
 
                 if (ReceiverLayerToggle.IsChecked.Value)
                 {
-                    GSA.TargetAnalysisLayer = true;
-                    GSA.TargetDesignLayer = false;
+                    Settings.TargetAnalysisLayer = true;
+                    Settings.TargetDesignLayer = false;
                 }
                 else
                 {
 
-                    GSA.TargetAnalysisLayer = false;
-                    GSA.TargetDesignLayer = true;
+                    Settings.TargetAnalysisLayer = false;
+                    Settings.TargetDesignLayer = true;
                 }
                 ReceiverLayerToggle.IsEnabled = false;
                 ReceiverContinuousToggle.IsEnabled = false;
@@ -407,7 +423,6 @@ namespace SpeckleGSAUI
             }
             else if (status == UIStatus.RECEIVING)
             {
-                gsaReceiver.Dispose();
                 status = UIStatus.IDLE;
                 ReceiveButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
                 ReceiveButtonPath.Fill = Brushes.LightGray;
@@ -418,7 +433,9 @@ namespace SpeckleGSAUI
 
                 MessageBoxResult result = MessageBox.Show("Bake received objects permanently? ", "SpeckleGSA", MessageBoxButton.YesNo, MessageBoxImage.Question);
                 if (result != MessageBoxResult.Yes)
-                    GSA.DeleteSpeckleObjects();
+                    gsaReceiver.DeleteSpeckleObjects();
+
+                gsaReceiver.Dispose();
             }
         }
         #endregion
@@ -549,17 +566,43 @@ namespace SpeckleGSAUI
                 string propertyName = "";
                 object propertyValue = null;
 
+
                 if (sender is CheckBox)
                 {
                     propertyName = (sender as CheckBox).Name;
                     propertyValue = (sender as CheckBox).IsChecked;
-                    typeof(Settings).GetField(propertyName).SetValue(null, propertyValue);
+
+                    var fieldInfo = typeof(Settings).GetField(propertyName);
+                    Type fieldType = fieldInfo.FieldType;
+
+                    if (fieldType == typeof(bool))
+                    {
+                        fieldInfo.SetValue(null, propertyValue);
+                    }
                 }
                 else if (sender is TextBox)
                 {
                     propertyName = (sender as TextBox).Name;
                     propertyValue = (sender as TextBox).Text;
-                    typeof(Settings).GetField(propertyName).SetValue(null, Convert.ChangeType(PollingRate, typeof(Settings).GetField(propertyName).FieldType));
+
+                    var fieldInfo = typeof(Settings).GetField(propertyName);
+                    Type fieldType = fieldInfo.FieldType;
+
+                    if (fieldType == typeof(string))
+                    {
+                        fieldInfo.SetValue(null, Convert.ChangeType(propertyValue, fieldType));
+                    }
+                    else if (typeof(IEnumerable).IsAssignableFrom(fieldType))
+                    {
+                        string[] pieces = ((string)propertyValue).Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+                        Type subType = fieldType.GetGenericArguments()[0];
+
+                        var newList = Activator.CreateInstance(fieldType);
+                        foreach (string p in pieces)
+                            newList.GetType().GetMethod("Add").Invoke(newList, new object[] { Convert.ChangeType(p, newList.GetType().GetGenericArguments().Single()) });
+                        
+                        fieldInfo.SetValue(null, newList);
+                    }
                 }
             }
             catch

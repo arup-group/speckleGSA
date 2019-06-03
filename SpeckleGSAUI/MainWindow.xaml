@@ -99,6 +99,7 @@
                             <RowDefinition Height="auto"/>
                             <RowDefinition Height="auto"/>
                             <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <Grid Grid.Row="0" Background="Transparent">
@@ -125,9 +126,17 @@
                                 Content="Streaming Method:"
                                 Style="{StaticResource ContinuousSingleToggle}"/>
                         </StackPanel>
+                        <StackPanel Grid.Row="3" HorizontalAlignment="Right" Orientation="Horizontal">
+                            <ToggleButton
+                                x:Name="SenderResultToggle"
+                                Margin="5"
+                                Content="Send Result:"
+                                Style="{StaticResource ResultToggle}">
+                            </ToggleButton>
+                        </StackPanel>
                         <DataGrid
                             x:Name="SenderStreams"
-                            Grid.Row="3"
+                            Grid.Row="4"
                             Margin="5"
                             CanUserSortColumns="False"
                             AutoGenerateColumns="False"
@@ -250,8 +259,15 @@
                                 <CheckBox Margin="5" Content="Seperate sender streams" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="SeperateStreams"/>
                                 <DockPanel Margin="5" LastChildFill="True">
                                     <TextBlock DockPanel.Dock="Left" Text="Polling Rate:"/>
-                                    <TextBox Margin="5 0 0 0" x:Name="PollingRate"/>
+                                    <TextBox Margin="5 0 0 0" x:Name="PollingRate" TextChanged="UpdateSettings"/>
                                 </DockPanel>
+                                <GroupBox Header="Result" Margin="5">
+                                    <StackPanel>
+                                        <TextBlock Text="Cases:" Margin="5"/>
+                                        <TextBox TextWrapping="Wrap" AcceptsReturn="True" Margin="5" x:Name="ResultCases" TextChanged="UpdateSettings"/>
+                                        <CheckBox Margin="5" Content="Results in local axis" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="ResultInLocalAxis"/>
+                                    </StackPanel>
+                                </GroupBox>
                             </StackPanel>
                         </GroupBox>
                         <GroupBox Grid.Column="1" Header="Receiver" Margin="5">
