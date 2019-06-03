@@ -1,9 +1,7 @@
 # SpeckleGSA
 ![specklegsa-demo](https://gitlab.arup.com/speckle/SpeckleGSA/raw/b6be19d9e463f0aac00d4688e39084368ef8ecda/readme/demo.gif)
 
-SpeckleGSA is currently under development.
-
-Requires GSA 10 beta build 30.
+Requires GSA 10.
 
 ## Contents
 
@@ -46,13 +44,11 @@ SpeckleGSA is still currently under development which can cause many quick chang
 The SpeckleGSA repo is currently made up of the following projects:
 - SpeckleGSA: main project with receiver and sender and GSA class objects
 - SpeckleGSAUI: user interface
-- SpeckleStructures: submodule
-- SpeckleCoreGeometry: submodule
 - SpeckleCore: submodule
 
 ### Building Process
 
-SpeckleGSA depends on SpeckleStructures being installed. Install SpeckleStructures using the Speckle Structural Suite installer [here](https://gitlab.arup.com/speckle/specklestructuralsuite-installer/-/jobs/artifacts/master/raw/SpeckleStructuralSuite.exe?job=build).
+SpeckleGSA depends on Speckle being installed. Install Speckle using the Speckle  installer [here](https://speckle.works/builds/).
 
 - Clone/fork the repo
 - Restore all Nuget package missing on the solution
