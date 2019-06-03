@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using SpeckleStructuresClasses;
 using SpeckleCore;
 
 namespace SpeckleGSA
@@ -14,24 +13,13 @@ namespace SpeckleGSA
     /// </summary>
     public class Receiver
     {
-        public Dictionary<string, SpeckleGSAReceiver> Receivers;
-        public Dictionary<Type, List<Type>> TypePrerequisites;
-        public List<KeyValuePair<Type, List<Type>>> TypeCastPriority;
+        public Dictionary<string, SpeckleGSAReceiver> Receivers = new Dictionary<string, SpeckleGSAReceiver>();
+        public Dictionary<Type, List<Type>> TypePrerequisites = new Dictionary<Type, List<Type>>();
+        public List<KeyValuePair<Type, List<Type>>> TypeCastPriority = new List<KeyValuePair<Type, List<Type>>>();
 
-        public bool IsInit;
-        public bool IsBusy;
+        public bool IsInit = false;
+        public bool IsBusy = false;
         
-        /// <summary>
-        /// Creates Receiver object.
-        /// </summary>
-        public Receiver()
-        {
-            Receivers = new Dictionary<string, SpeckleGSAReceiver>();
-            TypePrerequisites = new Dictionary<Type, List<Type>>();
-            TypeCastPriority = new List<KeyValuePair<Type, List<Type>>>();
-            IsInit = false;
-        }
-
         /// <summary>
         /// Initializes receiver.
         /// </summary>
@@ -48,28 +36,72 @@ namespace SpeckleGSA
                 return;
             }
 
-            GSA.FullClearCache();
+            // Full clear cache
+            var assemblies = SpeckleCore.SpeckleInitializer.GetAssemblies();
+            foreach (var ass in assemblies)
+            {
+                var types = ass.GetTypes();
+                foreach (var type in types)
+                {
+                    if (type.GetInterfaces().Contains(typeof(SpeckleCore.ISpeckleInitializer)))
+                    {
+                        if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
+                        {
+                            var gsaInterface = type.GetProperty("GSA").GetValue(null);
+                            gsaInterface.GetType().GetMethod("FullClearCache").Invoke(gsaInterface,  new object[0]);
+                        }
+                    }
+                }
+            }
 
-            // Initialize object write priority list
-            IEnumerable<Type> objTypes = typeof(GSA)
-                .Assembly.GetTypes()
-                .Where(t => t.IsSubclassOf(typeof(SpeckleObject)) && !t.IsAbstract);
+            // Grab GSA interface and attribute type
+            Type interfaceType = null;
+            Type attributeType = null;
+            foreach (var ass in assemblies)
+            {
+                var types = ass.GetTypes();
+                foreach (var type in types)
+                {
+                    if (type.FullName.Contains("IGSASpeckleContainer"))
+                    {
+                        interfaceType = type;
+                    }
+
+                    if (type.FullName.Contains("GSAObject"))
+                    {
+                        attributeType = type;
+                    }
+                }
+            }
+
+            if (interfaceType == null)
+                return;
+
+            // Grab all GSA related object
+            List<Type> objTypes = new List<Type>();
+            foreach (var ass in assemblies)
+            {
+                var types = ass.GetTypes();
+                foreach (var type in types)
+                {
+                    if (interfaceType.IsAssignableFrom(type) && type != interfaceType)
+                    {
+                        objTypes.Add(type);
+                    }
+                }
+            }
 
             foreach (Type t in objTypes)
             {
-                if (t.GetMethod("SetObjects",
-                    new Type[] { typeof(Dictionary<Type, List<IStructural>>) }) == null)
-                    continue;
+                if (t.GetAttribute("AnalysisLayer", attributeType) != null)
+                    if (Settings.TargetAnalysisLayer && !(bool)t.GetAttribute("AnalysisLayer", attributeType)) continue;
 
-                if (t.GetAttribute("AnalysisLayer") != null)
-                    if (GSA.TargetAnalysisLayer && !(bool)t.GetAttribute("AnalysisLayer")) continue;
-
-                if (t.GetAttribute("DesignLayer") != null)
-                    if (GSA.TargetDesignLayer && !(bool)t.GetAttribute("DesignLayer")) continue;
+                if (t.GetAttribute("DesignLayer", attributeType) != null)
+                    if (Settings.TargetDesignLayer && !(bool)t.GetAttribute("DesignLayer", attributeType)) continue;
 
                 List<Type> prereq = new List<Type>();
-                if (t.GetAttribute("WritePrerequisite") != null)
-                    prereq = ((Type[])t.GetAttribute("WritePrerequisite")).ToList();
+                if (t.GetAttribute("WritePrerequisite", attributeType) != null)
+                    prereq = ((Type[])t.GetAttribute("WritePrerequisite", attributeType)).ToList();
 
                 TypePrerequisites[t] = prereq;
             }
@@ -77,13 +109,13 @@ namespace SpeckleGSA
             // Remove wrong layer objects from prerequisites
             foreach (Type t in objTypes)
             {
-                if (t.GetAttribute("AnalysisLayer") != null)
-                    if (GSA.TargetAnalysisLayer && !(bool)t.GetAttribute("AnalysisLayer"))
+                if (t.GetAttribute("AnalysisLayer", attributeType) != null)
+                    if (Settings.TargetAnalysisLayer && !(bool)t.GetAttribute("AnalysisLayer", attributeType))
                         foreach (KeyValuePair<Type, List<Type>> kvp in TypePrerequisites)
                             kvp.Value.Remove(t);
 
-                if (t.GetAttribute("DesignLayer") != null)
-                    if (GSA.TargetDesignLayer && !(bool)t.GetAttribute("DesignLayer"))
+                if (t.GetAttribute("DesignLayer", attributeType) != null)
+                    if (Settings.TargetDesignLayer && !(bool)t.GetAttribute("DesignLayer", attributeType))
                         foreach (KeyValuePair<Type, List<Type>> kvp in TypePrerequisites)
                             kvp.Value.Remove(t);
             }
@@ -92,28 +124,45 @@ namespace SpeckleGSA
             TypeCastPriority = TypePrerequisites.ToList();
             TypeCastPriority.Sort((x, y) => x.Value.Count().CompareTo(y.Value.Count()));
 
+            // Get Indexer
+            object indexer = null;
+            foreach (var ass in assemblies)
+            {
+                var types = ass.GetTypes();
+                foreach (var type in types)
+                {
+                    if (type.GetInterfaces().Contains(typeof(SpeckleCore.ISpeckleInitializer)))
+                    {
+                        if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
+                        {
+                            var gsaInterface = type.GetProperty("GSA").GetValue(null);
+
+                            indexer = gsaInterface.GetType().GetField("Indexer").GetValue(gsaInterface);
+                        }
+                    }
+                }
+            }
+
+
             // Add existing GSA file objects to counters
-            Indexer.Clear();
             foreach (KeyValuePair<Type, List<Type>> kvp in TypePrerequisites)
             {
-                Status.ChangeStatus("Clearing " + kvp.Key.Name);
-
                 try
                 {
-                    List<string> keywords = new List<string>() { kvp.Key.GetGSAKeyword() };
-                    keywords.AddRange(kvp.Key.GetSubGSAKeyword());
+                    List<string> keywords = new List<string>() { (string)kvp.Key.GetAttribute("GSAKeyword", attributeType) };
+                    keywords.AddRange((string[])kvp.Key.GetAttribute("SubGSAKeywords", attributeType));
 
                     foreach (string k in keywords)
                     {
-                        int highestRecord = (int)GSA.RunGWACommand("HIGHEST," + k);
+                        int highestRecord = (int)GSA.GSAObject.GwaCommand("HIGHEST," + k);
 
                         if (highestRecord > 0)
-                            Indexer.ReserveIndices(k, Enumerable.Range(1, highestRecord).ToList());
+                            indexer.GetType().GetMethod("ReserveIndices", new Type[] { typeof(string), typeof(List<int>) }).Invoke(indexer, new object[] { k, Enumerable.Range(1, highestRecord).ToList() });
                     }
                 }
                 catch { }
             }
-            Indexer.SetBaseline();
+            indexer.GetType().GetMethod("SetBaseline").Invoke(indexer, new object[] { });
 
             // Create receivers
             Status.ChangeStatus("Accessing stream");
@@ -144,76 +193,93 @@ namespace SpeckleGSA
             if (!IsInit) return;
 
             IsBusy = true;
-            GSA.ClearCache();
             GSA.UpdateUnits();
 
-            Dictionary<string, List<SpeckleObject>> convertedObjects = new Dictionary<string, List<SpeckleObject>>();
+            // Inject!!!!
+            var assemblies = SpeckleCore.SpeckleInitializer.GetAssemblies();
+            foreach (var ass in assemblies)
+            {
+                var types = ass.GetTypes();
+                foreach (var type in types)
+                {
+                    if (type.GetInterfaces().Contains(typeof(SpeckleCore.ISpeckleInitializer)))
+                    {
+                        if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
+                        {
+                            var gsaInterface = type.GetProperty("GSA").GetValue(null);
+
+                            gsaInterface.GetType().GetField("GSAObject").SetValue(gsaInterface, GSA.GSAObject);
+                            gsaInterface.GetType().GetField("CoincidentNodeAllowance").SetValue(gsaInterface, Settings.CoincidentNodeAllowance);
+                            gsaInterface.GetType().GetMethod("ClearCache").Invoke(gsaInterface, new object[] { });
+                        }
+
+                        if (type.GetProperties().Select(p => p.Name).Contains("GSAUnits"))
+                        {
+                            type.GetProperty("GSAUnits").SetValue(null, GSA.Units);
+                        }
+                        
+                        if (Settings.TargetDesignLayer)
+                        {
+                            if (type.GetProperties().Select(p => p.Name).Contains("GSATargetDesignLayer"))
+                                type.GetProperty("GSATargetDesignLayer").SetValue(null, true);
+                        }
+
+                        if (Settings.TargetAnalysisLayer)
+                        {
+                            if (type.GetProperties().Select(p => p.Name).Contains("GSATargetAnalysisLayer"))
+                                type.GetProperty("GSATargetAnalysisLayer").SetValue(null, true);
+                        }
+                    }
+                }
+            }
+
+            List<SpeckleObject> objects = new List<SpeckleObject> ();
 
             // Read objects
             Status.ChangeStatus("Receiving stream");
             foreach (KeyValuePair<string, SpeckleGSAReceiver> kvp in Receivers)
             {
                 try
-                { 
-                    convertedObjects[kvp.Key] = Receivers[kvp.Key].GetStructuralObjects();
+                {
+                    var receivedObjects = Receivers[kvp.Key].GetObjects();
+
+                    double scaleFactor = (1.0).ConvertUnit(Receivers[kvp.Key].Units.ShortUnitName(), GSA.Units);
+                    
+                    foreach (SpeckleObject o in receivedObjects)
+                        o.Scale(scaleFactor);
+
+                    objects.AddRange(receivedObjects);
                 }
                 catch { Status.AddError("Unable to get stream " + kvp.Key); }
             }
 
-            // Populate new item dictionary
-            Status.ChangeStatus("Bucketing objects");
 
-            Dictionary<Type, List<IStructural>> newObjects = new Dictionary<Type, List<IStructural>>();
-
-            foreach (KeyValuePair<string, List<SpeckleObject>> kvp in convertedObjects)
+            // Get Indexer
+            object indexer = null;
+            foreach (var ass in assemblies)
             {
-                double scaleFactor = (1.0).ConvertUnit(Receivers[kvp.Key].Units.ShortUnitName(), GSA.Units);
-
-                foreach (object obj in kvp.Value)
+                var types = ass.GetTypes();
+                foreach (var type in types)
                 {
-                    if (obj == null) continue;
-                    if (obj is SpeckleCore.SpecklePlaceholder) continue;
-
-                    try
+                    if (type.GetInterfaces().Contains(typeof(SpeckleCore.ISpeckleInitializer)))
                     {
-                        if (obj is IList)
+                        if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
                         {
-                            foreach (SpeckleObject o in obj as IList)
-                            {
-                                SpeckleObject copy = o.CreateSpeckleCopy();
-                                
-                                if (!newObjects.ContainsKey(copy.GetType()))
-                                    newObjects[copy.GetType()] = new List<IStructural>() { (IStructural)copy };
-                                else
-                                    (newObjects[copy.GetType()] as List<IStructural>).Add((IStructural)copy);
-                            }
-                        }
-                        else
-                        {
-                            SpeckleObject copy = (obj as SpeckleObject).CreateSpeckleCopy();
-                            copy.Scale(scaleFactor);
+                            var gsaInterface = type.GetProperty("GSA").GetValue(null);
 
-                            if (!newObjects.ContainsKey(copy.GetType()))
-                                newObjects[copy.GetType()] = new List<IStructural>() { (IStructural)copy };
-                            else
-                                (newObjects[copy.GetType()] as List<IStructural>).Add((IStructural)copy);
+                            indexer = gsaInterface.GetType().GetField("Indexer").GetValue(gsaInterface);
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        Status.AddError(ex.Message);
                     }
                 }
             }
 
-            // Set up counter
-            Indexer.ResetToBaseline();
+            // Add existing GSA file objects to counters
+            indexer.GetType().GetMethod("ResetToBaseline").Invoke(indexer, new object[] { });
 
             // Write objects
             Status.ChangeStatus("Writing objects");
             List<Type> currentBatch = new List<Type>();
             List<Type> traversedTypes = new List<Type>();
-
             do
             {
                 currentBatch = TypePrerequisites.Where(i => i.Value.Count(x => !traversedTypes.Contains(x)) == 0).Select(i => i.Key).ToList();
@@ -221,18 +287,41 @@ namespace SpeckleGSA
 
                 foreach (Type t in currentBatch)
                 {
-                    //Status.ChangeStatus("Writing " + t.Name);
+                    object dummyObject = Activator.CreateInstance(t);
 
-                    t.GetMethod("SetObjects",
-                        new Type[] { typeof(Dictionary<Type, List<IStructural>>) })
-                        .Invoke(null, new object[] { newObjects });
+                    Type valueType = t.GetProperty("Value").GetValue(dummyObject).GetType();
+                    var targetObjects = objects.Where(o => o.GetType() == valueType);
+                    Converter.Deserialise(targetObjects);
 
+                    objects.RemoveAll(x => targetObjects.Any(o => x == o));
+                    
                     traversedTypes.Add(t);
                 }
             } while (currentBatch.Count > 0);
 
-            GSA.BlankDepreciatedGWASetCommands();
+            // Write leftover
+            Converter.Deserialise(objects);
+
+            // Blank files
+            foreach (var ass in assemblies)
+            {
+                var types = ass.GetTypes();
+                foreach (var type in types)
+                {
+                    if (type.GetInterfaces().Contains(typeof(SpeckleCore.ISpeckleInitializer)))
+                    {
+                        if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
+                        {
+                            var gsaInterface = type.GetProperty("GSA").GetValue(null);
+                            
+                            gsaInterface.GetType().GetMethod("BlankDepreciatedGWASetCommands").Invoke(gsaInterface, new object[] { });
+                        }
+                    }
+                }
+            }
+            
             GSA.UpdateViews();
+            GSA.UpdateCasesAndTasks();
 
             IsBusy = false;
             Status.ChangeStatus("Finished receiving", 100);
@@ -248,6 +337,28 @@ namespace SpeckleGSA
                 Receivers[streamID].UpdateGlobalTrigger -= Trigger;
                 Receivers[streamID].Dispose();
             }
+        }
+
+        public void DeleteSpeckleObjects()
+        {
+            var assemblies = SpeckleCore.SpeckleInitializer.GetAssemblies();
+            foreach (var ass in assemblies)
+            {
+                var types = ass.GetTypes();
+                foreach (var type in types)
+                {
+                    if (type.GetInterfaces().Contains(typeof(SpeckleCore.ISpeckleInitializer)))
+                    {
+                        if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
+                        {
+                            var gsaInterface = type.GetProperty("GSA").GetValue(null);
+                            gsaInterface.GetType().GetMethod("DeleteSpeckleObjects").Invoke(gsaInterface, new object[0]);
+                        }
+                    }
+                }
+            }
+
+            GSA.UpdateViews();
         }
     }
 }

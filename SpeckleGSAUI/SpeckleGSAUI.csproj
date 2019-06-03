@@ -53,9 +53,20 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup>
-      <ApplicationIcon>icon.ico</ApplicationIcon>
+    <ApplicationIcon>icon.ico</ApplicationIcon>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Interop.Gsa_10_0">
+      <HintPath>..\Resource\Interop.Gsa_10_0.dll</HintPath>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="SpeckleNewtonsoft">
+      <HintPath>..\SpeckleCore\SpeckleNewtonsoft.dll</HintPath>
+      <Aliases>SpeckleNewtonsoft</Aliases>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
@@ -107,6 +118,9 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+    <None Include="app.manifest">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -119,6 +133,10 @@
     <ProjectReference Include="..\SpeckleCore\SpeckleAccountManager\SpecklePopup.csproj">
       <Project>{d65594c8-ea2e-46ca-a756-b1634edc3ae3}</Project>
       <Name>SpecklePopup</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SpeckleCore\SpeckleCore\SpeckleCore.csproj">
+      <Project>{cfe27d3d-8a1a-43f9-9387-8fd9e119e174}</Project>
+      <Name>SpeckleCore</Name>
     </ProjectReference>
     <ProjectReference Include="..\SpeckleGSA\SpeckleGSA.csproj">
       <Project>{6d8ca3ad-e530-4cda-af79-9715a7583f4f}</Project>
@@ -137,4 +155,10 @@
     <Copy SourceFiles="@(SqlLiteRefHack)" DestinationFolder="$(ProjectDir)bin\$(ConfigurationName)\">
     </Copy>
   </Target>
+  <PropertyGroup>
+    <PostBuildEvent>rename "$(TargetDir)SpeckleNewtonsoft.dll" "Newtonsoft.Json.dll"</PostBuildEvent>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PreBuildEvent>del "$(TargetDir)Newtonsoft.Json.dll"</PreBuildEvent>
+  </PropertyGroup>
 </Project>

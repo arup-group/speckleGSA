@@ -60,34 +60,11 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="GSAObjects\GSAGridAreaLoad.cs" />
-    <Compile Include="GSAObjects\GSA2DVoid.cs" />
-    <Compile Include="GSAObjects\GSALoadCombo.cs" />
-    <Compile Include="GSAObjects\GSALoadTask.cs" />
-    <Compile Include="GSAObjects\GSAMaterialConcrete.cs" />
-    <Compile Include="GSAObjects\GSAMaterialSteel.cs" />
-    <Compile Include="GSAObjects\GSAObject.cs" />
-    <Compile Include="GSAObjects\GSALoadCase.cs" />
-    <Compile Include="GSAObjects\GSA1DLoad.cs" />
-    <Compile Include="GSAObjects\GSA1DElementPolyline.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Receiver.cs" />
     <Compile Include="Sender.cs" />
     <Compile Include="StaticClasses\GSA.cs" />
-    <Compile Include="GSAObjects\GSA0DElement.cs" />
-    <Compile Include="GSAObjects\GSA0DLoad.cs" />
-    <Compile Include="GSAObjects\GSA1DElement.cs" />
-    <Compile Include="GSAObjects\GSA1DMember.cs" />
-    <Compile Include="GSAObjects\GSA1DProperty.cs" />
-    <Compile Include="GSAObjects\GSA2DElement.cs" />
-    <Compile Include="GSAObjects\GSA2DElementMesh.cs" />
-    <Compile Include="GSAObjects\GSA2DLoad.cs" />
-    <Compile Include="GSAObjects\GSA2DMember.cs" />
-    <Compile Include="GSAObjects\GSA2DProperty.cs" />
-    <Compile Include="GSAObjects\GSAMaterial.cs" />
-    <Compile Include="GSAObjects\GSANode.cs" />
     <Compile Include="StaticClasses\HelperFunctions.cs" />
-    <Compile Include="StaticClasses\Indexer.cs" />
     <Compile Include="StaticClasses\Settings.cs" />
     <Compile Include="SpeckleInterface\SpeckleGSAReceiver.cs" />
     <Compile Include="SpeckleInterface\SpeckleGSASender.cs" />
@@ -97,14 +74,15 @@
   <ItemGroup>
     <Reference Include="Interop.Gsa_10_0">
       <HintPath>..\Resource\Interop.Gsa_10_0.dll</HintPath>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="Newtonsoft.Json, Version=11.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.11.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
-    </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
+    <Reference Include="SpeckleNewtonsoft">
+      <HintPath>..\SpeckleCore\SpeckleNewtonsoft.dll</HintPath>
+      <Aliases>global, SpeckleNewtonsoft</Aliases>
+    </Reference>
     <Reference Include="SQLite-net, Version=1.5.231.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\sqlite-net-pcl.1.5.231\lib\netstandard1.1\SQLite-net.dll</HintPath>
     </Reference>
@@ -127,14 +105,6 @@
     <ProjectReference Include="..\SpeckleCore\SpeckleCore\SpeckleCore.csproj">
       <Project>{cfe27d3d-8a1a-43f9-9387-8fd9e119e174}</Project>
       <Name>SpeckleCore</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\SpeckleStructures\SpeckleCoreGeometry\SpeckleCoreGeometryClasses\SpeckleCoreGeometryClasses.csproj">
-      <Project>{ad40ce88-276b-45bf-9736-7180730e7281}</Project>
-      <Name>SpeckleCoreGeometryClasses</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\SpeckleStructures\SpeckleStructuresClasses\SpeckleStructuresClasses.csproj">
-      <Project>{081db7cc-206c-47e2-a57d-df7c4d2d4b13}</Project>
-      <Name>SpeckleStructuresClasses</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
