@@ -287,6 +287,8 @@ namespace SpeckleGSA
 
         foreach (Type t in currentBatch)
         {
+          Status.ChangeStatus("Writing " + t.Name);
+
           object dummyObject = Activator.CreateInstance(t);
 
           Type valueType = t.GetProperty("Value").GetValue(dummyObject).GetType();
