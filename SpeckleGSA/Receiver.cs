@@ -244,8 +244,13 @@ namespace SpeckleGSA
           double scaleFactor = (1.0).ConvertUnit(Receivers[kvp.Key].Units.ShortUnitName(), GSA.Units);
 
           foreach (SpeckleObject o in receivedObjects)
-            o.Scale(scaleFactor);
-
+          {
+            try
+            {
+              o.Scale(scaleFactor);
+            }
+            catch { }
+          }
           objects.AddRange(receivedObjects);
         }
         catch { Status.AddError("Unable to get stream " + kvp.Key); }
