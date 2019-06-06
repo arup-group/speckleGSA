@@ -38,6 +38,7 @@ namespace SpeckleGSA
         return;
       }
 
+      // Run initialize sender method in interfacer
       var assemblies = SpeckleCore.SpeckleInitializer.GetAssemblies();
       foreach (var ass in assemblies)
       {
@@ -49,7 +50,7 @@ namespace SpeckleGSA
             if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
             {
               var gsaInterface = type.GetProperty("GSA").GetValue(null);
-              gsaInterface.GetType().GetMethod("FullClearCache").Invoke(gsaInterface, new object[0]);
+              gsaInterface.GetType().GetMethod("InitializeSender").Invoke(gsaInterface, new object[] { GSA.GSAObject });
             }
           }
         }
@@ -64,14 +65,10 @@ namespace SpeckleGSA
         foreach (var type in types)
         {
           if (type.FullName.Contains("IGSASpeckleContainer"))
-          {
             interfaceType = type;
-          }
 
           if (type.FullName.Contains("GSAObject"))
-          {
             attributeType = type;
-          }
         }
       }
 
@@ -86,12 +83,8 @@ namespace SpeckleGSA
       {
         var types = ass.GetTypes();
         foreach (var type in types)
-        {
           if (interfaceType.IsAssignableFrom(type) && type != interfaceType)
-          {
             objTypes.Add(type);
-          }
-        }
       }
 
       foreach (Type t in objTypes)
@@ -171,7 +164,7 @@ namespace SpeckleGSA
       IsBusy = true;
       GSA.UpdateUnits();
 
-      // Inject!!!!
+      // Run pre sending method and inject!!!!
       var assemblies = SpeckleCore.SpeckleInitializer.GetAssemblies();
       foreach (var ass in assemblies)
       {
@@ -183,9 +176,8 @@ namespace SpeckleGSA
             if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
             {
               var gsaInterface = type.GetProperty("GSA").GetValue(null);
-
-              gsaInterface.GetType().GetField("GSAObject").SetValue(gsaInterface, GSA.GSAObject);
-              gsaInterface.GetType().GetMethod("ClearCache").Invoke(gsaInterface, new object[] { });
+              
+              gsaInterface.GetType().GetMethod("PreSending").Invoke(gsaInterface, new object[] { });
             }
 
             if (type.GetProperties().Select(p => p.Name).Contains("GSAUnits"))
@@ -302,6 +294,24 @@ namespace SpeckleGSA
 
         Senders[kvp.Key].UpdateName(streamName);
         Senders[kvp.Key].SendGSAObjects(kvp.Value);
+      }
+
+      // Run post sending method
+      foreach (var ass in assemblies)
+      {
+        var types = ass.GetTypes();
+        foreach (var type in types)
+        {
+          if (type.GetInterfaces().Contains(typeof(SpeckleCore.ISpeckleInitializer)))
+          {
+            if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
+            {
+              var gsaInterface = type.GetProperty("GSA").GetValue(null);
+
+              gsaInterface.GetType().GetMethod("PostSending").Invoke(gsaInterface, new object[] { });
+            }
+          }
+        }
       }
 
       IsBusy = false;

@@ -36,7 +36,7 @@ namespace SpeckleGSA
         return;
       }
 
-      // Full clear cache
+      // Run initialize receiver method in interfacer
       var assemblies = SpeckleCore.SpeckleInitializer.GetAssemblies();
       foreach (var ass in assemblies)
       {
@@ -48,7 +48,7 @@ namespace SpeckleGSA
             if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
             {
               var gsaInterface = type.GetProperty("GSA").GetValue(null);
-              gsaInterface.GetType().GetMethod("FullClearCache").Invoke(gsaInterface, new object[0]);
+              gsaInterface.GetType().GetMethod("InitializeSender").Invoke(gsaInterface, new object[] { GSA.GSAObject });
             }
           }
         }
@@ -83,12 +83,8 @@ namespace SpeckleGSA
       {
         var types = ass.GetTypes();
         foreach (var type in types)
-        {
           if (interfaceType.IsAssignableFrom(type) && type != interfaceType)
-          {
             objTypes.Add(type);
-          }
-        }
       }
 
       foreach (Type t in objTypes)
@@ -142,8 +138,7 @@ namespace SpeckleGSA
           }
         }
       }
-
-
+      
       // Add existing GSA file objects to counters
       foreach (KeyValuePair<Type, List<Type>> kvp in TypePrerequisites)
       {
@@ -195,7 +190,7 @@ namespace SpeckleGSA
       IsBusy = true;
       GSA.UpdateUnits();
 
-      // Inject!!!!
+      // Run pre receiving method and inject!!!!
       var assemblies = SpeckleCore.SpeckleInitializer.GetAssemblies();
       foreach (var ass in assemblies)
       {
@@ -207,15 +202,18 @@ namespace SpeckleGSA
             if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
             {
               var gsaInterface = type.GetProperty("GSA").GetValue(null);
-
-              gsaInterface.GetType().GetField("GSAObject").SetValue(gsaInterface, GSA.GSAObject);
-              gsaInterface.GetType().GetField("CoincidentNodeAllowance").SetValue(gsaInterface, Settings.CoincidentNodeAllowance);
-              gsaInterface.GetType().GetMethod("ClearCache").Invoke(gsaInterface, new object[] { });
+              
+              gsaInterface.GetType().GetMethod("PreReceiving").Invoke(gsaInterface, new object[] { });
             }
 
             if (type.GetProperties().Select(p => p.Name).Contains("GSAUnits"))
             {
               type.GetProperty("GSAUnits").SetValue(null, GSA.Units);
+            }
+
+            if (type.GetProperties().Select(p => p.Name).Contains("GSACoincidentNodeAllowance"))
+            {
+              type.GetProperty("GSACoincidentNodeAllowance").SetValue(null, Settings.CoincidentNodeAllowance);
             }
 
             if (Settings.TargetDesignLayer)
@@ -253,7 +251,6 @@ namespace SpeckleGSA
         catch { Status.AddError("Unable to get stream " + kvp.Key); }
       }
 
-
       // Get Indexer
       object indexer = null;
       foreach (var ass in assemblies)
@@ -277,7 +274,6 @@ namespace SpeckleGSA
       indexer.GetType().GetMethod("ResetToBaseline").Invoke(indexer, new object[] { });
 
       // Write objects
-      Status.ChangeStatus("Writing objects");
       List<Type> currentBatch = new List<Type>();
       List<Type> traversedTypes = new List<Type>();
       do
@@ -304,7 +300,7 @@ namespace SpeckleGSA
       // Write leftover
       Converter.Deserialise(objects);
 
-      // Blank files
+      // Run post receiving method
       foreach (var ass in assemblies)
       {
         var types = ass.GetTypes();
@@ -316,7 +312,7 @@ namespace SpeckleGSA
             {
               var gsaInterface = type.GetProperty("GSA").GetValue(null);
 
-              gsaInterface.GetType().GetMethod("BlankDepreciatedGWASetCommands").Invoke(gsaInterface, new object[] { });
+              gsaInterface.GetType().GetMethod("PostReceiving").Invoke(gsaInterface, new object[] { });
             }
           }
         }
