@@ -33,7 +33,7 @@ namespace SpeckleGSAUI
     const string PAUSE_BUTTON = "M15,16H13V8H15M11,16H9V8H11M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z";
 
     public ObservableCollection<string> Messages { get; set; }
-
+    
     private UIStatus status;
     enum UIStatus
     {
@@ -75,7 +75,7 @@ namespace SpeckleGSAUI
       ResultInLocalAxis.IsChecked = Settings.ResultInLocalAxis;
 
       //Result List
-      foreach(string s in Result.NodalResultMap.Keys)
+      foreach (string s in Result.NodalResultMap.Keys)
       {
         CheckBox chk = new CheckBox();
         chk.Content = s;
@@ -107,9 +107,9 @@ namespace SpeckleGSAUI
 
       //Draw buttons
       SendButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
-      SendButtonPath.Fill = Brushes.LightGray;
+      SendButtonPath.Fill = (SolidColorBrush)FindResource("PrimaryHueMidBrush");
       ReceiveButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
-      ReceiveButtonPath.Fill = Brushes.LightGray;
+      ReceiveButtonPath.Fill = (SolidColorBrush)FindResource("PrimaryHueMidBrush");
 
       GSA.Init();
       Status.Init(this.AddMessage, this.AddError, this.ChangeStatus);
@@ -125,21 +125,18 @@ namespace SpeckleGSAUI
       SpecklePopup.MainWindow p = new SpecklePopup.MainWindow(false, true);
 
       this.IsEnabled = false;
-      Brush oldBackground = this.Background;
-      this.Background = new SolidColorBrush(Color.FromArgb(255, 81, 140, 255));
 
       p.ShowDialog();
 
       this.IsEnabled = true;
-      this.Background = oldBackground;
 
       if (p.restApi != null && p.apitoken != null)
       {
         Status.AddMessage("Logged in to " + p.selectedEmail);
 
         GSA.Close();
-        SenderTab.IsEnabled = false;
-        ReceiverTab.IsEnabled = false;
+        (SenderTab.Content as Grid).IsEnabled = false;
+        (ReceiverTab.Content as Grid).IsEnabled = false;
         EmailAddress = p.selectedEmail;
         RestApi = p.restApi;
         ApiToken = p.apitoken;
@@ -166,15 +163,15 @@ namespace SpeckleGSAUI
                   DispatcherPriority.Background,
                   new Action(() =>
                   {
-                List<Tuple<string, string>> streams = res.Result;
-                if (streams != null)
-                {
-                  streams.Reverse();
-                  StreamList.Items.Clear();
-                  foreach (Tuple<string, string> t in streams)
-                    StreamList.Items.Add(t);
-                }
-              }
+                    List<Tuple<string, string>> streams = res.Result;
+                    if (streams != null)
+                    {
+                      streams.Reverse();
+                      StreamList.Items.Clear();
+                      foreach (Tuple<string, string> t in streams)
+                        StreamList.Items.Add(t);
+                    }
+                  }
                   ));
       });
     }
@@ -186,8 +183,8 @@ namespace SpeckleGSAUI
     /// </summary>
     private void NewGSAFile(object sender, RoutedEventArgs e)
     {
-      SenderTab.IsEnabled = false;
-      ReceiverTab.IsEnabled = false;
+      (SenderTab.Content as Grid).IsEnabled = false;
+      (ReceiverTab.Content as Grid).IsEnabled = false;
       Status.ChangeStatus("Opening New File");
       Task.Run(() => GSA.NewFile(EmailAddress, RestApi)).ContinueWith(
           delegate
@@ -198,11 +195,11 @@ namespace SpeckleGSAUI
                         DispatcherPriority.Background,
                         new Action(() =>
                         {
-                        UpdateClientLists();
-                        SenderTab.IsEnabled = true;
-                        ReceiverTab.IsEnabled = true;
-                        Status.ChangeStatus("Ready", 0);
-                      }
+                          UpdateClientLists();
+                          (SenderTab.Content as Grid).IsEnabled = true;
+                          (ReceiverTab.Content as Grid).IsEnabled = true;
+                          Status.ChangeStatus("Ready", 0);
+                        }
                         ));
             }
             catch
@@ -218,8 +215,8 @@ namespace SpeckleGSAUI
       OpenFileDialog openFileDialog = new OpenFileDialog();
       if (openFileDialog.ShowDialog() == true)
       {
-        SenderTab.IsEnabled = false;
-        ReceiverTab.IsEnabled = false;
+        (SenderTab.Content as Grid).IsEnabled = false;
+        (ReceiverTab.Content as Grid).IsEnabled = false;
         Status.ChangeStatus("Opening File");
         Task.Run(() => GSA.OpenFile(openFileDialog.FileName, EmailAddress, RestApi)).ContinueWith(
             delegate
@@ -227,15 +224,15 @@ namespace SpeckleGSAUI
               try
               {
                 Application.Current.Dispatcher.BeginInvoke(
-                            DispatcherPriority.Background,
-                            new Action(() =>
-                            {
-                          UpdateClientLists();
-                          SenderTab.IsEnabled = true;
-                          ReceiverTab.IsEnabled = true;
-                          Status.ChangeStatus("Ready", 0);
-                        }
-                            ));
+                  DispatcherPriority.Background,
+                  new Action(() =>
+                  {
+                    UpdateClientLists();
+                    (SenderTab.Content as Grid).IsEnabled = true;
+                    (ReceiverTab.Content as Grid).IsEnabled = true;
+                    Status.ChangeStatus("Ready", 0);
+                  }
+                  ));
               }
               catch
               { Status.ChangeStatus("Failed to open file", 0); }
@@ -301,22 +298,22 @@ namespace SpeckleGSAUI
         if (SenderContinuousToggle.IsChecked.Value)
         {
           await Task.Run(() => gsaSender.Trigger())
-              .ContinueWith(res =>
-              {
-                Application.Current.Dispatcher.BeginInvoke(
-                              DispatcherPriority.Background,
-                              new Action(() =>
-                              {
-                        UpdateClientLists();
-                        status = UIStatus.IDLE;
-                        SendButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
-                        SendButtonPath.Fill = Brushes.LightGray;
+            .ContinueWith(res =>
+            {
+              Application.Current.Dispatcher.BeginInvoke(
+                  DispatcherPriority.Background,
+                  new Action(() =>
+                  {
+                    UpdateClientLists();
+                    status = UIStatus.IDLE;
+                    SendButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
+                    SendButtonPath.Fill = (SolidColorBrush)FindResource("PrimaryHueMidBrush");
 
-                        SenderLayerToggle.IsEnabled = true;
-                        SenderContinuousToggle.IsEnabled = true;
-                      })
-                          );
-              });
+                    SenderLayerToggle.IsEnabled = true;
+                    SenderContinuousToggle.IsEnabled = true;
+                  })
+              );
+            });
         }
         else
         {
@@ -326,7 +323,7 @@ namespace SpeckleGSAUI
           status = UIStatus.SENDING;
           triggerTimer.Start();
 
-          SendButtonPath.Fill = (SolidColorBrush)(new BrushConverter().ConvertFrom("#0080ff"));
+          SendButtonPath.Fill = (SolidColorBrush)FindResource("SecondaryAccentBrush");// (new BrushConverter().ConvertFrom("#0080ff"));
         }
       }
       else if (status == UIStatus.SENDING)
@@ -334,7 +331,7 @@ namespace SpeckleGSAUI
         gsaSender.Dispose();
         status = UIStatus.IDLE;
         SendButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
-        SendButtonPath.Fill = Brushes.LightGray;
+        SendButtonPath.Fill = (SolidColorBrush)FindResource("PrimaryHueMidBrush");
 
         SenderLayerToggle.IsEnabled = true;
         SenderContinuousToggle.IsEnabled = true;
@@ -442,25 +439,25 @@ namespace SpeckleGSAUI
               .ContinueWith(res =>
               {
                 Application.Current.Dispatcher.BeginInvoke(
-                              DispatcherPriority.Background,
-                              new Action(() =>
-                              {
-                        ReceiveStream(sender, e);
-                      })
-                          );
+                    DispatcherPriority.Background,
+                    new Action(() =>
+                    {
+                      ReceiveStream(sender, e);
+                    })
+                );
               });
         }
         else
         {
           await Task.Run(() => gsaReceiver.Trigger(null, null));
-          ReceiveButtonPath.Fill = (SolidColorBrush)(new BrushConverter().ConvertFrom("#0080ff"));
+          ReceiveButtonPath.Fill = (SolidColorBrush)FindResource("SecondaryAccentBrush");// (SolidColorBrush)(new BrushConverter().ConvertFrom("#0080ff"));
         }
       }
       else if (status == UIStatus.RECEIVING)
       {
         status = UIStatus.IDLE;
         ReceiveButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
-        ReceiveButtonPath.Fill = Brushes.LightGray;
+        ReceiveButtonPath.Fill = (SolidColorBrush)FindResource("PrimaryHueMidBrush");
 
         ReceiverLayerToggle.IsEnabled = true;
         ReceiverContinuousToggle.IsEnabled = true;
@@ -551,12 +548,10 @@ namespace SpeckleGSAUI
           case UIStatus.SENDING:
             e.Handled = true;
             UITabControl.SelectedIndex = previousTabIndex;
-            MessageBox.Show("Unable to switch tabs while sending");
             break;
           case UIStatus.RECEIVING:
             e.Handled = true;
             UITabControl.SelectedIndex = previousTabIndex;
-            MessageBox.Show("Unable to switch tabs while receiving");
             break;
           default:
             previousTabIndex = UITabControl.SelectedIndex;
@@ -779,12 +774,12 @@ namespace SpeckleGSAUI
                       DispatcherPriority.Background,
                       new Action(() =>
                       {
-                  try
-                  {
-                    Status.AddMessage("Cloned to: " + res.Result);
-                  }
-                  catch { Status.AddError("Could not clone " + streamID); }
-                }
+                        try
+                        {
+                          Status.AddMessage("Cloned to: " + res.Result);
+                        }
+                        catch { Status.AddError("Could not clone " + streamID); }
+                      }
                       ));
         });
       }
