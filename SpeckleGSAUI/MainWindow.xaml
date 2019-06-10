@@ -11,17 +11,16 @@
         mc:Ignorable="d"
         
         Title="SpeckleGSA" Height="700" Width="500">
-    <Grid
+  <Grid
         Margin="0,0,0,0">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="auto"/>
-            <RowDefinition Height="200"/>
-        </Grid.RowDefinitions>
-        <Grid
+    <Grid.RowDefinitions>
+      <RowDefinition Height="auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="auto"/>
+    </Grid.RowDefinitions>
+    <Grid
             Grid.Row="0">
-            <TextBlock
+      <TextBlock
                 Width="97"
                 Height="29"
                 HorizontalAlignment="Left"
@@ -32,22 +31,22 @@
                 Foreground="White" 
                 Text="Speckle!"
                 TextWrapping="Wrap" />
-        </Grid>
-        <Grid
+    </Grid>
+    <Grid
             Grid.Row="1"
             Margin="20,0,20,0">
-            <TabControl
-                x:Name="UITabControl"
-                SelectionChanged="ChangeTab">
-                <TabItem Header="Server">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="auto"/>
-                            <RowDefinition Height="*"/>
-                            <RowDefinition Height="auto"/>
-                        </Grid.RowDefinitions>
-                        <Button Grid.Row="0" Click="Login" Content="Login" Margin="5" Padding="5" MinWidth="100" Grid.ColumnSpan="2"/>
-                        <DataGrid
+      <TabControl
+        x:Name="UITabControl"
+        SelectionChanged="ChangeTab">
+        <TabItem Header="Server">
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="auto"/>
+              <RowDefinition Height="*"/>
+              <RowDefinition Height="auto"/>
+            </Grid.RowDefinitions>
+            <Button Grid.Row="0" Click="Login" Content="Login" Margin="5" Padding="5" MinWidth="100" Grid.ColumnSpan="2"/>
+            <DataGrid
                             x:Name="StreamList"
                             Grid.Row="1"
                             Margin="5"
@@ -58,83 +57,75 @@
                             CopyingRowClipboardContent="CopyStreamList"
                             RowHeaderWidth="0"
                             GridLinesVisibility="None">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Name" Width="*" Binding="{Binding Item1}"/>
-                                <DataGridTextColumn Header="StreamID" Width="*" Binding="{Binding Item2}"/>
-                            </DataGrid.Columns>
-                            <DataGrid.ContextMenu>
-                                <ContextMenu>
-                                    <MenuItem Header="Copy streamId" Click="StreamList_CopyStreamID"/>
-                                    <Separator />
-                                    <MenuItem Header="View stream" Click="StreamList_ViewStream"/>
-                                    <MenuItem Header="View stream data" Click="StreamList_ViewStreamData"/>
-                                    <MenuItem Header="View object data" Click="StreamList_ViewObjectData"/>
-                                </ContextMenu>
-                            </DataGrid.ContextMenu>
-                            <DataGrid.CellStyle>
-                                <Style
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Name" Width="*" Binding="{Binding Item1}"/>
+                <DataGridTextColumn Header="StreamID" Width="*" Binding="{Binding Item2}"/>
+              </DataGrid.Columns>
+              <DataGrid.ContextMenu>
+                <ContextMenu>
+                  <MenuItem Header="Copy streamId" Click="StreamList_CopyStreamID"/>
+                  <Separator />
+                  <MenuItem Header="View stream" Click="StreamList_ViewStream"/>
+                  <MenuItem Header="View stream data" Click="StreamList_ViewStreamData"/>
+                  <MenuItem Header="View object data" Click="StreamList_ViewObjectData"/>
+                </ContextMenu>
+              </DataGrid.ContextMenu>
+              <DataGrid.CellStyle>
+                <Style
                                         TargetType="DataGridCell"
                                         BasedOn="{StaticResource {x:Type DataGridCell}}">
-                                    <Setter Property="BorderThickness" Value="0"/>
-                                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-                                </Style>
-                            </DataGrid.CellStyle>
-                        </DataGrid>
-                        <Button Grid.Row="2" Click="UpdateStreamList"  Content="Update Stream List" Margin="0,5,5,5" Padding="5" HorizontalAlignment="Right" MinWidth="100" Grid.Column="1"/>
-                    </Grid>
-                </TabItem>
-                <TabItem Header="GSA">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="auto"/>
-                            <RowDefinition Height="auto"/>
-                        </Grid.RowDefinitions>
-                        <Button Grid.Row="0" Content="New File" Click="NewGSAFile" Margin="5" Padding="5"/>
-                        <Button Grid.Row="1" Content="Open File" Click="OpenGSAFile" Margin="5" Padding="5"/>
-                    </Grid>
-                </TabItem>
-                <TabItem Header="Sender" x:Name="SenderTab" IsEnabled="False">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="auto"/>
-                            <RowDefinition Height="auto"/>
-                            <RowDefinition Height="auto"/>
-                            <RowDefinition Height="auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <Grid Grid.Row="0" Background="Transparent">
-                            <Button Style="{StaticResource TransparentButton}" Click="SendStream" Width="48" Height="48" Margin="25" Background="Transparent" BorderThickness="0">
-                                <Viewbox>
-                                    <Canvas Width="24" Height="24">
-                                        <Path x:Name="SendButtonPath"
+                  <Setter Property="BorderThickness" Value="0"/>
+                  <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                </Style>
+              </DataGrid.CellStyle>
+            </DataGrid>
+            <Button Grid.Row="2" Click="UpdateStreamList"  Content="Update Stream List" Margin="0,5,5,5" Padding="5" HorizontalAlignment="Right" MinWidth="100" Grid.Column="1"/>
+          </Grid>
+        </TabItem>
+        <TabItem Header="GSA">
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="auto"/>
+              <RowDefinition Height="auto"/>
+            </Grid.RowDefinitions>
+            <Button Grid.Row="0" Content="New File" Click="NewGSAFile" Margin="5" Padding="5"/>
+            <Button Grid.Row="1" Content="Open File" Click="OpenGSAFile" Margin="5" Padding="5"/>
+          </Grid>
+        </TabItem>
+        <TabItem Header="Sender" x:Name="SenderTab" IsEnabled="False">
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="auto"/>
+              <RowDefinition Height="auto"/>
+              <RowDefinition Height="auto"/>
+              <RowDefinition Height="auto"/>
+              <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Grid Grid.Row="0" Background="Transparent">
+              <Button Style="{StaticResource TransparentButton}" Click="SendStream" Width="48" Height="48" Margin="25" Background="Transparent" BorderThickness="0">
+                <Viewbox>
+                  <Canvas Width="24" Height="24">
+                    <Path x:Name="SendButtonPath"
                                               Fill="#0080FF" />
-                                    </Canvas>
-                                </Viewbox>
-                            </Button>
-                        </Grid>
-                        <StackPanel Grid.Row="1" HorizontalAlignment="Right" Orientation="Horizontal">
-                            <ToggleButton
+                  </Canvas>
+                </Viewbox>
+              </Button>
+            </Grid>
+            <StackPanel Grid.Row="1" HorizontalAlignment="Right" Orientation="Horizontal">
+              <ToggleButton
                                 x:Name="SenderLayerToggle"
                                 Margin="5"
                                 Content="Layer to Stream:"
                                 Style="{StaticResource AnalysisDesignToggle}"/>
-                        </StackPanel>
-                        <StackPanel Grid.Row="2" HorizontalAlignment="Right" Orientation="Horizontal">
-                            <ToggleButton
+            </StackPanel>
+            <StackPanel Grid.Row="2" HorizontalAlignment="Right" Orientation="Horizontal">
+              <ToggleButton
                                 x:Name="SenderContinuousToggle"
                                 Margin="5"
                                 Content="Streaming Method:"
                                 Style="{StaticResource ContinuousSingleToggle}"/>
-                        </StackPanel>
-                        <StackPanel Grid.Row="3" HorizontalAlignment="Right" Orientation="Horizontal">
-                            <ToggleButton
-                                x:Name="SenderResultToggle"
-                                Margin="5"
-                                Content="Send Result:"
-                                Style="{StaticResource ResultToggle}">
-                            </ToggleButton>
-                        </StackPanel>
-                        <DataGrid
+            </StackPanel>
+            <DataGrid
                             x:Name="SenderStreams"
                             Grid.Row="4"
                             Margin="5"
@@ -145,74 +136,74 @@
                             CopyingRowClipboardContent="CopyStreamList"
                             RowHeaderWidth="0"
                             GridLinesVisibility="None">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Name" Width="*" Binding="{Binding Item1}"/>
-                                <DataGridTextColumn Header="StreamID" Width="*" Binding="{Binding Item2}"/>
-                            </DataGrid.Columns>
-                            <DataGrid.ContextMenu>
-                                <ContextMenu>
-                                    <MenuItem Header="Copy streamId" Click="SenderStreams_CopyStreamID"/>
-                                    <Separator />
-                                    <MenuItem Header="View stream" Click="SenderStreams_ViewStream"/>
-                                    <MenuItem Header="View stream data" Click="SenderStreams_ViewStreamData"/>
-                                    <MenuItem Header="View object data" Click="SenderStreams_ViewObjectData"/>
-                                    <MenuItem Header="Clone stream" Click="SenderStreams_CloneStreams"/>
-                                </ContextMenu>
-                            </DataGrid.ContextMenu>
-                            <DataGrid.CellStyle>
-                                <Style
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Name" Width="*" Binding="{Binding Item1}"/>
+                <DataGridTextColumn Header="StreamID" Width="*" Binding="{Binding Item2}"/>
+              </DataGrid.Columns>
+              <DataGrid.ContextMenu>
+                <ContextMenu>
+                  <MenuItem Header="Copy streamId" Click="SenderStreams_CopyStreamID"/>
+                  <Separator />
+                  <MenuItem Header="View stream" Click="SenderStreams_ViewStream"/>
+                  <MenuItem Header="View stream data" Click="SenderStreams_ViewStreamData"/>
+                  <MenuItem Header="View object data" Click="SenderStreams_ViewObjectData"/>
+                  <MenuItem Header="Clone stream" Click="SenderStreams_CloneStreams"/>
+                </ContextMenu>
+              </DataGrid.ContextMenu>
+              <DataGrid.CellStyle>
+                <Style
                                     TargetType="DataGridCell"
                                     BasedOn="{StaticResource {x:Type DataGridCell}}">
-                                    <Setter Property="BorderThickness" Value="0"/>
-                                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-                                </Style>
-                            </DataGrid.CellStyle>
-                        </DataGrid>
-                    </Grid>
-                </TabItem>
-                <TabItem Header="Receiver" x:Name="ReceiverTab" IsEnabled="False">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="auto"/>
-                            <RowDefinition Height="auto"/>
-                            <RowDefinition Height="auto"/>
-                            <RowDefinition Height="auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <Grid Grid.Row="0" Background="Transparent">
-                            <Button Style="{StaticResource TransparentButton}" Click="ReceiveStream" Width="48" Height="48" Margin="25" Background="Transparent" BorderThickness="0">
-                                <Viewbox>
-                                    <Canvas Width="24" Height="24">
-                                        <Path x:Name="ReceiveButtonPath"
+                  <Setter Property="BorderThickness" Value="0"/>
+                  <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                </Style>
+              </DataGrid.CellStyle>
+            </DataGrid>
+          </Grid>
+        </TabItem>
+        <TabItem Header="Receiver" x:Name="ReceiverTab" IsEnabled="False">
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="auto"/>
+              <RowDefinition Height="auto"/>
+              <RowDefinition Height="auto"/>
+              <RowDefinition Height="auto"/>
+              <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Grid Grid.Row="0" Background="Transparent">
+              <Button Style="{StaticResource TransparentButton}" Click="ReceiveStream" Width="48" Height="48" Margin="25" Background="Transparent" BorderThickness="0">
+                <Viewbox>
+                  <Canvas Width="24" Height="24">
+                    <Path x:Name="ReceiveButtonPath"
                                               Fill="#0080FF" />
-                                    </Canvas>
-                                </Viewbox>
-                            </Button>
-                        </Grid>
-                        <StackPanel Grid.Row="1" HorizontalAlignment="Right" Orientation="Horizontal">
-                            <ToggleButton
+                  </Canvas>
+                </Viewbox>
+              </Button>
+            </Grid>
+            <StackPanel Grid.Row="1" HorizontalAlignment="Right" Orientation="Horizontal">
+              <ToggleButton
                                 x:Name="ReceiverLayerToggle"
                                 Margin="5"
                                 Content="Layer to Stream:"
                                 Style="{StaticResource AnalysisDesignToggle}"/>
-                        </StackPanel>
-                        <StackPanel Grid.Row="2" HorizontalAlignment="Right" Orientation="Horizontal">
-                            <ToggleButton
+            </StackPanel>
+            <StackPanel Grid.Row="2" HorizontalAlignment="Right" Orientation="Horizontal">
+              <ToggleButton
                                 x:Name="ReceiverContinuousToggle"
                                 Margin="5"
                                 Content="Streaming Method:"
                                 Style="{StaticResource ContinuousSingleToggle}"/>
-                        </StackPanel>
-                        <DockPanel Grid.Row="3" LastChildFill="True" x:Name="ReceiverControlPanel">
-                            <Button DockPanel.Dock="Right" Click="ClearReceiver" Content="Clear All"  Margin="5" Padding="5" MinWidth="100"/>
-                            <Button DockPanel.Dock="Right" Click="PasteClipboardReceiver" Content="Paste Clipboard"  Margin="5" Padding="5"  MinWidth="100"/>
-                            <Rectangle DockPanel.Dock="Right" VerticalAlignment="Stretch" Width="1" Margin="2" Stroke="DarkGray" />
-                            <DockPanel DockPanel.Dock="Left" LastChildFill="True">
-                                <Button DockPanel.Dock="Right" Click="AddReceiver" Content="Add Receiver" Margin="5" Padding="5" MinWidth="100"/>
-                                <TextBox x:Name="ReceiverTextbox" Margin="5" Padding="5"/>
-                            </DockPanel>
-                        </DockPanel>
-                        <DataGrid
+            </StackPanel>
+            <DockPanel Grid.Row="3" LastChildFill="True" x:Name="ReceiverControlPanel">
+              <Button DockPanel.Dock="Right" Click="ClearReceiver" Content="Clear All"  Margin="5" Padding="5" MinWidth="100"/>
+              <Button DockPanel.Dock="Right" Click="PasteClipboardReceiver" Content="Paste Clipboard"  Margin="5" Padding="5"  MinWidth="100"/>
+              <Rectangle DockPanel.Dock="Right" VerticalAlignment="Stretch" Width="1" Margin="2" Stroke="DarkGray" />
+              <DockPanel DockPanel.Dock="Left" LastChildFill="True">
+                <Button DockPanel.Dock="Right" Click="AddReceiver" Content="Add Receiver" Margin="5" Padding="5" MinWidth="100"/>
+                <TextBox x:Name="ReceiverTextbox" Margin="5" Padding="5"/>
+              </DockPanel>
+            </DockPanel>
+            <DataGrid
                             x:Name="ReceiverStreams"
                             Grid.Row="4"
                             Margin="5"
@@ -223,109 +214,132 @@
                             CopyingRowClipboardContent="CopyStreamList"
                             RowHeaderWidth="0"
                             GridLinesVisibility="None" Grid.ColumnSpan="2">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="StreamID" Width="*" Binding="{Binding}"/>
-                            </DataGrid.Columns>
-                            <DataGrid.ContextMenu>
-                                <ContextMenu>
-                                    <MenuItem Header="Copy streamId" Click="ReceiverStreams_CopyStreamID"/>
-                                    <MenuItem Header="Remove stream" Click="ReceiverStreams_RemoveStream"/>
-                                    <Separator />
-                                    <MenuItem Header="View stream" Click="ReceiverStreams_ViewStream"/>
-                                    <MenuItem Header="View stream data" Click="ReceiverStreams_ViewStreamData"/>
-                                    <MenuItem Header="View object data" Click="ReceiverStreams_ViewObjectData"/>
-                                </ContextMenu>
-                            </DataGrid.ContextMenu>
-                            <DataGrid.CellStyle>
-                                <Style
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="StreamID" Width="*" Binding="{Binding}"/>
+              </DataGrid.Columns>
+              <DataGrid.ContextMenu>
+                <ContextMenu>
+                  <MenuItem Header="Copy streamId" Click="ReceiverStreams_CopyStreamID"/>
+                  <MenuItem Header="Remove stream" Click="ReceiverStreams_RemoveStream"/>
+                  <Separator />
+                  <MenuItem Header="View stream" Click="ReceiverStreams_ViewStream"/>
+                  <MenuItem Header="View stream data" Click="ReceiverStreams_ViewStreamData"/>
+                  <MenuItem Header="View object data" Click="ReceiverStreams_ViewObjectData"/>
+                </ContextMenu>
+              </DataGrid.ContextMenu>
+              <DataGrid.CellStyle>
+                <Style
                                     TargetType="DataGridCell"
                                     BasedOn="{StaticResource {x:Type DataGridCell}}">
-                                    <Setter Property="BorderThickness" Value="0"/>
-                                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-                                </Style>
-                            </DataGrid.CellStyle>
-                        </DataGrid>
-                    </Grid>
-                </TabItem>
-                <TabItem Header="Settings">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <GroupBox Grid.Column="0" Header="Sender" Margin="5">
-                            <StackPanel>
-                                <CheckBox Margin="5" Content="Send only meaningful nodes" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="SendOnlyMeaningfulNodes"/>
-                                <CheckBox Margin="5" Content="Seperate sender streams" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="SeperateStreams"/>
-                                <DockPanel Margin="5" LastChildFill="True">
-                                    <TextBlock DockPanel.Dock="Left" Text="Polling Rate:"/>
-                                    <TextBox Margin="5 0 0 0" x:Name="PollingRate" TextChanged="UpdateSettings"/>
-                                </DockPanel>
-                                <GroupBox Header="Result" Margin="5">
-                                    <StackPanel>
-                                        <TextBlock Text="Cases:" Margin="5"/>
-                                        <TextBox TextWrapping="Wrap" AcceptsReturn="True" Margin="5" x:Name="ResultCases" TextChanged="UpdateSettings"/>
-                                        <CheckBox Margin="5" Content="Results in local axis" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="ResultInLocalAxis"/>
-                                    </StackPanel>
-                                </GroupBox>
-                            </StackPanel>
-                        </GroupBox>
-                        <GroupBox Grid.Column="1" Header="Receiver" Margin="5">
-                            <StackPanel>
-                                <DockPanel Margin="5" LastChildFill="True">
-                                    <TextBlock DockPanel.Dock="Left" Text="Coincident Node Allowance:"/>
-                                    <TextBox Margin="5 0 0 0" x:Name="CoincidentNodeAllowance"/>
-                                </DockPanel>
-                            </StackPanel>
-                        </GroupBox>
-                    </Grid>
-                </TabItem>
-            </TabControl>
-        </Grid>
-        <GridSplitter Grid.Row="2" Height="5" Margin="20 0 20 0" HorizontalAlignment="Stretch" Background="LightGray" />
-        <Grid 
-            Grid.Row="3"
-            Margin="20,0,20,20"
-            Background="White">
+                  <Setter Property="BorderThickness" Value="0"/>
+                  <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                </Style>
+              </DataGrid.CellStyle>
+            </DataGrid>
+          </Grid>
+        </TabItem>
+        <TabItem Header="Settings">
+          <Grid>
             <Grid.RowDefinitions>
-                <RowDefinition Height="auto"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="auto"/>
+              <RowDefinition Height="*"/>
+              <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <Label
-                Grid.Row="0"
-                FontWeight="Medium"
-                Content="Message Log"/>
-            <Grid
-                Grid.Row="1"
-                Margin="5">
-                <ListBox
-                    x:Name="MessagePane">
-                    <ListBox.Resources>
-                        <DataTemplate x:Key="MessageItem">
-                            <Label x:Name="MessageLine" Margin="0" Padding="0"  Content="{Binding}"/>
-                        </DataTemplate>
-                    </ListBox.Resources>
-                </ListBox>
-            </Grid>
-            <Grid
-                Grid.Row="2"
-                Margin="5"
-                VerticalAlignment="Bottom">
-                <StackPanel>
-                    <Label
-                        x:Name="StatusText"
-                        HorizontalAlignment="Center"
-                        Content="READY">
-                    </Label>
-                    <ProgressBar
-                        x:Name="ProgressBar"
-                        Height="25"
-                        Minimum="0"
-                        Maximum="100">
-                    </ProgressBar>
+            <GroupBox Grid.Row="0" Header="Sender" Margin="5">
+              <Grid>
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <StackPanel Grid.Row="0">
+                  <CheckBox Margin="5" Content="Send only meaningful nodes" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="SendOnlyMeaningfulNodes"/>
+                  <CheckBox Margin="5" Content="Seperate sender streams" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="SeperateStreams"/>
+                  <DockPanel Margin="5" LastChildFill="True">
+                    <TextBlock DockPanel.Dock="Left" Text="Polling Rate:"/>
+                    <TextBox Margin="5 0 0 0" x:Name="PollingRate" TextChanged="UpdateSettings"/>
+                  </DockPanel>
                 </StackPanel>
-            </Grid>
-        </Grid>
+                <GroupBox Header="Result" Margin="5" Grid.Row="1">
+                  <Grid>
+                    <Grid.RowDefinitions>
+                      <RowDefinition Height="Auto"/>
+                      <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0">
+                      <TextBlock Text="Cases:" Margin="5"/>
+                      <TextBox TextWrapping="Wrap" AcceptsReturn="True" Margin="5" x:Name="ResultCases" TextChanged="UpdateSettings"/>
+                      <CheckBox Margin="5" Content="Results in local axis" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="ResultInLocalAxis"/>
+                      <Separator/>
+                      <TextBlock Text="Result to Send:" Margin="5"/>
+                    </StackPanel>
+                    <ScrollViewer Grid.Row="1" Margin="5">
+                      <StackPanel x:Name="ResultSelection">
+                        <StackPanel.Resources>
+                          <Style TargetType="{x:Type CheckBox}">
+                            <Setter Property="Margin" Value="2"/>
+                          </Style>
+                        </StackPanel.Resources>
+                      </StackPanel>
+                    </ScrollViewer>
+                  </Grid>
+                </GroupBox>
+              </Grid>
+            </GroupBox>
+            <GroupBox Grid.Row="1" Header="Receiver" Margin="5">
+              <StackPanel>
+                <DockPanel Margin="5" LastChildFill="True">
+                  <TextBlock DockPanel.Dock="Left" Text="Coincident Node Allowance:"/>
+                  <TextBox Margin="5 0 0 0" x:Name="CoincidentNodeAllowance"/>
+                </DockPanel>
+              </StackPanel>
+            </GroupBox>
+          </Grid>
+        </TabItem>
+      </TabControl>
     </Grid>
+    <Grid 
+      Grid.Row="2"
+      Margin="20,10,20,20"
+      Background="White">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="auto"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="auto"/>
+      </Grid.RowDefinitions>
+      <Label
+        Grid.Row="0"
+        FontWeight="Medium"
+        Content="Message Log"/>
+      <Grid
+        Grid.Row="1"
+        Margin="5">
+        <ListBox
+          x:Name="MessagePane"
+          Height="100">
+          <ListBox.Resources>
+            <DataTemplate x:Key="MessageItem">
+              <Label x:Name="MessageLine" Margin="0" Padding="0"  Content="{Binding}"/>
+            </DataTemplate>
+          </ListBox.Resources>
+        </ListBox>
+      </Grid>
+      <Grid
+        Grid.Row="2"
+        Margin="5"
+        VerticalAlignment="Bottom">
+        <StackPanel>
+          <Label
+            x:Name="StatusText"
+            HorizontalAlignment="Center"
+            Content="READY">
+          </Label>
+          <ProgressBar
+            x:Name="ProgressBar"
+            Height="10"
+            Minimum="0"
+            Maximum="100">
+          </ProgressBar>
+        </StackPanel>
+      </Grid>
+    </Grid>
+  </Grid>
 </Window>

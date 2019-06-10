@@ -74,6 +74,37 @@ namespace SpeckleGSAUI
       ResultCases.Text = string.Join("\r\n", Settings.ResultCases);
       ResultInLocalAxis.IsChecked = Settings.ResultInLocalAxis;
 
+      //Result List
+      foreach(string s in Result.NodalResultMap.Keys)
+      {
+        CheckBox chk = new CheckBox();
+        chk.Content = s;
+        chk.Tag = Result.NodalResultMap[s];
+        chk.Checked += UpdateNodalResult;
+        chk.Unchecked += UpdateNodalResult;
+        ResultSelection.Children.Add(chk);
+      }
+
+      foreach (string s in Result.Element1DResultMap.Keys)
+      {
+        CheckBox chk = new CheckBox();
+        chk.Content = s;
+        chk.Tag = Result.Element1DResultMap[s];
+        chk.Checked += UpdateElement1DResult;
+        chk.Unchecked += UpdateElement1DResult;
+        ResultSelection.Children.Add(chk);
+      }
+
+      foreach (string s in Result.Element2DResultMap.Keys)
+      {
+        CheckBox chk = new CheckBox();
+        chk.Content = s;
+        chk.Tag = Result.Element2DResultMap[s];
+        chk.Checked += UpdateElement2DResult;
+        chk.Unchecked += UpdateElement2DResult;
+        ResultSelection.Children.Add(chk);
+      }
+
       //Draw buttons
       SendButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
       SendButtonPath.Fill = Brushes.LightGray;
@@ -231,30 +262,36 @@ namespace SpeckleGSAUI
         SendButtonPath.Data = Geometry.Parse(PAUSE_BUTTON);
         SendButtonPath.Fill = Brushes.DimGray;
 
-        if (SenderResultToggle.IsChecked.Value && !SenderLayerToggle.IsChecked.Value)
-          MessageBox.Show("Results only supported for analysis layer.", "SpeckleGSA", MessageBoxButton.OK, MessageBoxImage.Warning);
-
-        if (SenderResultToggle.IsChecked.Value && !SenderContinuousToggle.IsChecked.Value)
-          MessageBox.Show("Results only supported for single send mode.", "SpeckleGSA", MessageBoxButton.OK, MessageBoxImage.Warning);
+        if (Settings.ChosenNodalResult.Count > 0 || Settings.ChosenElement1DResult.Count > 0 || Settings.ChosenElement2DResult.Count > 0)
+        {
+          if (!SenderLayerToggle.IsChecked.Value)
+          {
+            MessageBox.Show("Results only supported for analysis layer.\r\nNo results will be sent.", "SpeckleGSA", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Settings.SendResults = false;
+          }
+          else if (!SenderContinuousToggle.IsChecked.Value)
+          {
+            MessageBox.Show("Results only supported for single send mode.\r\nNo results will be sent.", "SpeckleGSA", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Settings.SendResults = false;
+          }
+          else
+            Settings.SendResults = true;
+        }
+        else
+          Settings.SendResults = false;
 
         if (SenderLayerToggle.IsChecked.Value)
         {
           Settings.TargetAnalysisLayer = true;
           Settings.TargetDesignLayer = false;
-          if (SenderContinuousToggle.IsChecked.Value)
-            Settings.SendResults = SenderResultToggle.IsChecked.Value;
-          else
-            Settings.SendResults = false;
         }
         else
         {
           Settings.TargetAnalysisLayer = false;
           Settings.TargetDesignLayer = true;
-          Settings.SendResults = false;
         }
         SenderLayerToggle.IsEnabled = false;
         SenderContinuousToggle.IsEnabled = false;
-        SenderResultToggle.IsEnabled = false;
 
         GSA.GetSpeckleClients(EmailAddress, RestApi);
         gsaSender = new Sender();
@@ -277,7 +314,6 @@ namespace SpeckleGSAUI
 
                         SenderLayerToggle.IsEnabled = true;
                         SenderContinuousToggle.IsEnabled = true;
-                        SenderResultToggle.IsEnabled = true;
                       })
                           );
               });
@@ -302,7 +338,6 @@ namespace SpeckleGSAUI
 
         SenderLayerToggle.IsEnabled = true;
         SenderContinuousToggle.IsEnabled = true;
-        SenderResultToggle.IsEnabled = true;
       }
     }
 
@@ -607,6 +642,33 @@ namespace SpeckleGSAUI
       }
       catch
       { }
+    }
+
+    private void UpdateNodalResult(Object sender, RoutedEventArgs e)
+    {
+      var chk = sender as CheckBox;
+      if (chk.IsChecked.Value)
+        Settings.ChosenNodalResult[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
+      else
+        Settings.ChosenNodalResult.Remove(chk.Content as string);
+    }
+
+    private void UpdateElement1DResult(Object sender, RoutedEventArgs e)
+    {
+      var chk = sender as CheckBox;
+      if (chk.IsChecked.Value)
+        Settings.ChosenElement1DResult[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
+      else
+        Settings.ChosenElement1DResult.Remove(chk.Content as string);
+    }
+
+    private void UpdateElement2DResult(Object sender, RoutedEventArgs e)
+    {
+      var chk = sender as CheckBox;
+      if (chk.IsChecked.Value)
+        Settings.ChosenElement2DResult[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
+      else
+        Settings.ChosenElement2DResult.Remove(chk.Content as string);
     }
 
     private void StreamList_CopyStreamID(object sender, RoutedEventArgs e)

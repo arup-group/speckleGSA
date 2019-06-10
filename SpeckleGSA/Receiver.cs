@@ -207,26 +207,18 @@ namespace SpeckleGSA
             }
 
             if (type.GetProperties().Select(p => p.Name).Contains("GSAUnits"))
-            {
               type.GetProperty("GSAUnits").SetValue(null, GSA.Units);
-            }
 
             if (type.GetProperties().Select(p => p.Name).Contains("GSACoincidentNodeAllowance"))
-            {
               type.GetProperty("GSACoincidentNodeAllowance").SetValue(null, Settings.CoincidentNodeAllowance);
-            }
 
             if (Settings.TargetDesignLayer)
-            {
               if (type.GetProperties().Select(p => p.Name).Contains("GSATargetDesignLayer"))
                 type.GetProperty("GSATargetDesignLayer").SetValue(null, true);
-            }
 
             if (Settings.TargetAnalysisLayer)
-            {
               if (type.GetProperties().Select(p => p.Name).Contains("GSATargetAnalysisLayer"))
                 type.GetProperty("GSATargetAnalysisLayer").SetValue(null, true);
-            }
           }
         }
       }

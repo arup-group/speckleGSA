@@ -25,7 +25,7 @@ namespace SpeckleGSA
 
     public static Dictionary<string, string> Senders { get; set; }
     public static List<string> Receivers { get; set; }
-
+    
     public static void Init()
     {
       if (IsInit)

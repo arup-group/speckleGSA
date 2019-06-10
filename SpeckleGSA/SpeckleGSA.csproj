@@ -65,6 +65,7 @@
     <Compile Include="Sender.cs" />
     <Compile Include="StaticClasses\GSA.cs" />
     <Compile Include="StaticClasses\HelperFunctions.cs" />
+    <Compile Include="StaticClasses\Result.cs" />
     <Compile Include="StaticClasses\Settings.cs" />
     <Compile Include="SpeckleInterface\SpeckleGSAReceiver.cs" />
     <Compile Include="SpeckleInterface\SpeckleGSASender.cs" />

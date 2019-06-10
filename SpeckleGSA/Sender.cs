@@ -180,42 +180,37 @@ namespace SpeckleGSA
               gsaInterface.GetType().GetMethod("PreSending").Invoke(gsaInterface, new object[] { });
             }
 
-            if (type.GetProperties().Select(p => p.Name).Contains("GSAUnits"))
-            {
-              type.GetProperty("GSAUnits").SetValue(null, GSA.Units);
-            }
-
             if (type.GetProperties().Select(p => p.Name).Contains("GSASenderObjects"))
-            {
               type.GetProperty("GSASenderObjects").SetValue(null, SenderObjects);
-            }
+
+            if (type.GetProperties().Select(p => p.Name).Contains("GSAUnits"))
+              type.GetProperty("GSAUnits").SetValue(null, GSA.Units);
 
             if (Settings.TargetDesignLayer)
-            {
               if (type.GetProperties().Select(p => p.Name).Contains("GSATargetDesignLayer"))
                 type.GetProperty("GSATargetDesignLayer").SetValue(null, true);
-            }
 
             if (Settings.TargetAnalysisLayer)
-            {
               if (type.GetProperties().Select(p => p.Name).Contains("GSATargetAnalysisLayer"))
                 type.GetProperty("GSATargetAnalysisLayer").SetValue(null, true);
-            }
+            
+            if (Settings.SendResults)
+            { 
+              if (type.GetProperties().Select(p => p.Name).Contains("GSANodalResults"))
+                type.GetProperty("GSANodalResults").SetValue(null, Settings.ChosenNodalResult);
 
-            if (type.GetProperties().Select(p => p.Name).Contains("GSASendResults"))
-            {
-              type.GetProperty("GSASendResults").SetValue(null, Settings.SendResults);
+              if (type.GetProperties().Select(p => p.Name).Contains("GSAElement1DResults"))
+                type.GetProperty("GSAElement1DResults").SetValue(null, Settings.ChosenElement1DResult);
+
+              if (type.GetProperties().Select(p => p.Name).Contains("GSAElement2DResults"))
+                type.GetProperty("GSAElement2DResults").SetValue(null, Settings.ChosenElement2DResult);
             }
 
             if (type.GetProperties().Select(p => p.Name).Contains("GSAResultCases"))
-            {
               type.GetProperty("GSAResultCases").SetValue(null, Settings.ResultCases);
-            }
 
             if (type.GetProperties().Select(p => p.Name).Contains("GSAResultInLocalAxis"))
-            {
               type.GetProperty("GSAResultInLocalAxis").SetValue(null, Settings.ResultInLocalAxis);
-            }
           }
         }
       }
