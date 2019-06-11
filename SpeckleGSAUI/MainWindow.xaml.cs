@@ -105,6 +105,16 @@ namespace SpeckleGSAUI
         ResultSelection.Children.Add(chk);
       }
 
+      foreach (string s in Result.MiscResultMap.Keys)
+      {
+        CheckBox chk = new CheckBox();
+        chk.Content = s;
+        chk.Tag = Result.MiscResultMap[s];
+        chk.Checked += UpdateMiscResult;
+        chk.Unchecked += UpdateMiscResult;
+        ResultSelection.Children.Add(chk);
+      }
+
       //Draw buttons
       SendButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
       SendButtonPath.Fill = (SolidColorBrush)FindResource("PrimaryHueMidBrush");
@@ -259,7 +269,7 @@ namespace SpeckleGSAUI
         SendButtonPath.Data = Geometry.Parse(PAUSE_BUTTON);
         SendButtonPath.Fill = Brushes.DimGray;
 
-        if (Settings.ChosenNodalResult.Count > 0 || Settings.ChosenElement1DResult.Count > 0 || Settings.ChosenElement2DResult.Count > 0)
+        if (Settings.ChosenNodalResult.Count > 0 || Settings.ChosenElement1DResult.Count > 0 || Settings.ChosenElement2DResult.Count > 0 || Settings.ChosenMiscResult.Count > 0)
         {
           if (!SenderLayerToggle.IsChecked.Value)
           {
@@ -664,6 +674,15 @@ namespace SpeckleGSAUI
         Settings.ChosenElement2DResult[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
       else
         Settings.ChosenElement2DResult.Remove(chk.Content as string);
+    }
+
+    private void UpdateMiscResult(Object sender, RoutedEventArgs e)
+    {
+      var chk = sender as CheckBox;
+      if (chk.IsChecked.Value)
+        Settings.ChosenMiscResult[chk.Content as string] = chk.Tag as Tuple<string, int, int, List<string>>;
+      else
+        Settings.ChosenMiscResult.Remove(chk.Content as string);
     }
 
     private void StreamList_CopyStreamID(object sender, RoutedEventArgs e)

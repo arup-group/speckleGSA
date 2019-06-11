@@ -311,5 +311,17 @@ namespace SpeckleGSA
         "bot",
       }) },
     };
+
+    public static Dictionary<string, Tuple<string, int, int, List<string>>> MiscResultMap = new Dictionary<string, Tuple<string, int, int, List<string>>>()
+    {
+      { "Assembly Forces and Moments",  new Tuple<string,int, int, List<string>>("ASSEMBLY", 18002000, 0, new List<string>() {
+        "fx",
+        "fy",
+        "fz",
+        "mxx",
+        "myy",
+        "mzz",
+      }) },
+    };
   }
 }

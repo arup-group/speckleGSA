@@ -204,6 +204,9 @@ namespace SpeckleGSA
 
               if (type.GetProperties().Select(p => p.Name).Contains("GSAElement2DResults"))
                 type.GetProperty("GSAElement2DResults").SetValue(null, Settings.ChosenElement2DResult);
+
+              if (type.GetProperties().Select(p => p.Name).Contains("GSAMiscResults"))
+                type.GetProperty("GSAMiscResults").SetValue(null, Settings.ChosenMiscResult);
             }
 
             if (type.GetProperties().Select(p => p.Name).Contains("GSAResultCases"))
