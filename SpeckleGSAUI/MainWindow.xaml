@@ -305,6 +305,10 @@
                   <TextBlock Text="Cases:" Margin="5"/>
                   <TextBox TextWrapping="Wrap" AcceptsReturn="True" Margin="5,0,5,5" x:Name="ResultCases" TextChanged="UpdateSettings"/>
                   <CheckBox Margin="5" Content="Results in local axis" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="ResultInLocalAxis"/>
+                  <DockPanel Margin="5" LastChildFill="True">
+                    <TextBlock DockPanel.Dock="Left" Text="Additional Positions for 1D Elements:" Margin="0 5 0 0"/>
+                    <TextBox Margin="5 0 0 0" x:Name="Result1DNumPosition" TextChanged="UpdateSettings"/>
+                  </DockPanel>
                   <TextBlock Text="Result to Send:" Margin="5,5,5,5"/>
                 </StackPanel>
                 <ScrollViewer Grid.Row="1" Margin="5,0,5,5">

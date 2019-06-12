@@ -73,6 +73,7 @@ namespace SpeckleGSAUI
       CoincidentNodeAllowance.Text = Settings.CoincidentNodeAllowance.ToString();
       ResultCases.Text = string.Join("\r\n", Settings.ResultCases);
       ResultInLocalAxis.IsChecked = Settings.ResultInLocalAxis;
+      Result1DNumPosition.Text = Settings.Result1DNumPosition.ToString();
 
       //Result List
       foreach (string s in Result.NodalResultMap.Keys)
@@ -628,11 +629,7 @@ namespace SpeckleGSAUI
           var fieldInfo = typeof(Settings).GetField(propertyName);
           Type fieldType = fieldInfo.FieldType;
 
-          if (fieldType == typeof(string))
-          {
-            fieldInfo.SetValue(null, Convert.ChangeType(propertyValue, fieldType));
-          }
-          else if (typeof(IEnumerable).IsAssignableFrom(fieldType))
+          if (typeof(IEnumerable).IsAssignableFrom(fieldType))
           {
             string[] pieces = ((string)propertyValue).Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
             Type subType = fieldType.GetGenericArguments()[0];
@@ -643,6 +640,8 @@ namespace SpeckleGSAUI
 
             fieldInfo.SetValue(null, newList);
           }
+          else
+            fieldInfo.SetValue(null, Convert.ChangeType(propertyValue, fieldType));
         }
       }
       catch

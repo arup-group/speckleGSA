@@ -214,6 +214,9 @@ namespace SpeckleGSA
 
             if (type.GetProperties().Select(p => p.Name).Contains("GSAResultInLocalAxis"))
               type.GetProperty("GSAResultInLocalAxis").SetValue(null, Settings.ResultInLocalAxis);
+
+            if (type.GetProperties().Select(p => p.Name).Contains("GSAResult1DNumPosition"))
+              type.GetProperty("GSAResult1DNumPosition").SetValue(null, Settings.Result1DNumPosition);
           }
         }
       }

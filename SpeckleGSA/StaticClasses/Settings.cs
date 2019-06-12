@@ -28,5 +28,6 @@ namespace SpeckleGSA
 
     public static List<string> ResultCases = new List<string>();
     public static bool ResultInLocalAxis = false;
+    public static int Result1DNumPosition = 3;
   }
 }
