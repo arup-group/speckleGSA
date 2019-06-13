@@ -61,7 +61,7 @@ namespace SpeckleGSA
     {
       UpdateGlobal();
 
-      return myReceiver.Stream.Objects.Where(o => o != null).ToList();
+      return myReceiver.Stream.Objects.Where(o => o != null && !(o is SpecklePlaceholder)).ToList();
     }
 
     /// <summary>
