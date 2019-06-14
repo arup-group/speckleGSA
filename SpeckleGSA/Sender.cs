@@ -100,6 +100,9 @@ namespace SpeckleGSA
         if (t.GetAttribute("DesignLayer", attributeType) != null)
           if (Settings.TargetDesignLayer && !(bool)t.GetAttribute("DesignLayer", attributeType)) continue;
 
+        if (t.GetAttribute("Stream", attributeType) != null)
+          if (Settings.SendOnlyResults && t.GetAttribute("Stream", attributeType) as string != "results") continue;
+
         List<Type> prereq = new List<Type>();
         if (t.GetAttribute("ReadPrerequisite", attributeType) != null)
           prereq = ((Type[])t.GetAttribute("ReadPrerequisite", attributeType)).ToList();
@@ -117,6 +120,11 @@ namespace SpeckleGSA
 
         if (t.GetAttribute("DesignLayer", attributeType) != null)
           if (Settings.TargetDesignLayer && !(bool)t.GetAttribute("DesignLayer", attributeType))
+            foreach (KeyValuePair<Type, List<Type>> kvp in TypePrerequisites)
+              kvp.Value.Remove(t);
+
+        if (t.GetAttribute("Stream", attributeType) != null)
+          if (Settings.SendOnlyResults && t.GetAttribute("Stream", attributeType) as string != "results")
             foreach (KeyValuePair<Type, List<Type>> kvp in TypePrerequisites)
               kvp.Value.Remove(t);
       }
@@ -195,7 +203,10 @@ namespace SpeckleGSA
                 type.GetProperty("GSATargetAnalysisLayer").SetValue(null, true);
             
             if (Settings.SendResults)
-            { 
+            {
+              if (type.GetProperties().Select(p => p.Name).Contains("GSAEmbedResults"))
+                type.GetProperty("GSAEmbedResults").SetValue(null, Settings.EmbedResults);
+
               if (type.GetProperties().Select(p => p.Name).Contains("GSANodalResults"))
                 type.GetProperty("GSANodalResults").SetValue(null, Settings.ChosenNodalResult);
 
@@ -264,7 +275,7 @@ namespace SpeckleGSA
         {
           if (Settings.SendOnlyMeaningfulNodes)
           {
-            if (obj.GetType().Name.Contains("GSANode") && !(bool)obj.GetType().GetField("ForceSend").GetValue(obj))
+            if (obj.GetType().Name == "GSANode" && !(bool)obj.GetType().GetField("ForceSend").GetValue(obj))
               continue;
           }
           object insideVal = obj.GetType().GetProperty("Value").GetValue(obj);

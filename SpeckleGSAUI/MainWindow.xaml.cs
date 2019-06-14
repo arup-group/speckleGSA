@@ -71,6 +71,8 @@ namespace SpeckleGSAUI
       SeperateStreams.IsChecked = Settings.SeperateStreams;
       PollingRate.Text = Settings.PollingRate.ToString();
       CoincidentNodeAllowance.Text = Settings.CoincidentNodeAllowance.ToString();
+      SendOnlyResults.IsChecked = Settings.SendOnlyResults;
+      EmbedResults.IsChecked = Settings.EmbedResults;
       ResultCases.Text = string.Join("\r\n", Settings.ResultCases);
       ResultInLocalAxis.IsChecked = Settings.ResultInLocalAxis;
       Result1DNumPosition.Text = Settings.Result1DNumPosition.ToString();

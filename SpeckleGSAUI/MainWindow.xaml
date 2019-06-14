@@ -302,6 +302,8 @@
                   <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <StackPanel Grid.Row="0">
+                  <CheckBox Margin="5" Content="Send only results" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="SendOnlyResults"/>
+                  <CheckBox Margin="5" Content="Embed results in objects" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="EmbedResults"/>
                   <TextBlock Text="Cases:" Margin="5"/>
                   <TextBox TextWrapping="Wrap" AcceptsReturn="True" Margin="5,0,5,5" x:Name="ResultCases" TextChanged="UpdateSettings"/>
                   <CheckBox Margin="5" Content="Results in local axis" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="ResultInLocalAxis"/>
