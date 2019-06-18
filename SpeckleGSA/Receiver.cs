@@ -226,13 +226,14 @@ namespace SpeckleGSA
       List<SpeckleObject> objects = new List<SpeckleObject>();
 
       // Read objects
-      Status.ChangeStatus("Receiving stream");
       foreach (KeyValuePair<string, SpeckleGSAReceiver> kvp in Receivers)
       {
         try
         {
-          var receivedObjects = Receivers[kvp.Key].GetObjects();
+          Status.ChangeStatus("Receiving stream");
+          var receivedObjects = Receivers[kvp.Key].GetObjects().Distinct();
 
+          Status.ChangeStatus("Scaling objects");
           double scaleFactor = (1.0).ConvertUnit(Receivers[kvp.Key].Units.ShortUnitName(), GSA.Units);
 
           foreach (SpeckleObject o in receivedObjects)
