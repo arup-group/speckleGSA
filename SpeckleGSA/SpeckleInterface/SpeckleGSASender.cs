@@ -106,7 +106,7 @@ namespace SpeckleGSA
         objectCounter += convertedObjects.Count;
       }
 
-      //Status.AddMessage("Succesfully converted: " + bucketObjects.Count() + " objects.");
+      //Status.AddMessage("Successfully converted: " + bucketObjects.Count() + " objects.");
 
       // Prune objects with placeholders using local DB
       try
@@ -118,7 +118,7 @@ namespace SpeckleGSA
       // Store IDs of objects to add to stream
       List<string> objectsInStream = new List<string>();
 
-      // Seperate objects into sizeable payloads
+      // Separate objects into sizeable payloads
       List<List<SpeckleObject>> payloads = CreatePayloads(bucketObjects);
 
       if (bucketObjects.Count(o => o.Type == "Placeholder") < bucketObjects.Count)
@@ -177,7 +177,7 @@ namespace SpeckleGSA
 
         mySender.BroadcastMessage("stream", StreamID, new { eventType = "update-global" });
 
-        Status.AddMessage("Succesfully sent " + StreamName + " stream with " + updateStream.Objects.Count() + " objects.");
+        Status.AddMessage("Successfully sent " + StreamName + " stream with " + updateStream.Objects.Count() + " objects.");
       }
       catch
       {
@@ -188,11 +188,11 @@ namespace SpeckleGSA
     /// <summary>
     /// Create payloads.
     /// </summary>
-    /// <param name="bucketObjects">List of SpeckleObjects to seperate into payloads</param>
-    /// <returns>List of list of SpeckleObjects seperated into payloads</returns>
+    /// <param name="bucketObjects">List of SpeckleObjects to separate into payloads</param>
+    /// <returns>List of list of SpeckleObjects separated into payloads</returns>
     public List<List<SpeckleObject>> CreatePayloads(List<SpeckleObject> bucketObjects)
     {
-      // Seperate objects into sizable payloads
+      // Separate objects into sizable payloads
       long totalBucketSize = 0;
       long currentBucketSize = 0;
       List<List<SpeckleObject>> objectUpdatePayloads = new List<List<SpeckleObject>>();

@@ -279,7 +279,7 @@
                 </Grid.RowDefinitions>
                 <StackPanel Grid.Row="0">
                   <CheckBox Margin="5" Content="Send only meaningful nodes" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="SendOnlyMeaningfulNodes"/>
-                  <CheckBox Margin="5" Content="Seperate sender streams" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="SeperateStreams"/>
+                  <CheckBox Margin="5" Content="Separate sender streams" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="SeparateStreams"/>
                   <DockPanel Margin="5" LastChildFill="True">
                     <TextBlock DockPanel.Dock="Left" Text="Polling Rate:" Margin="0 5 0 0"/>
                     <TextBox Margin="5 0 0 0" x:Name="PollingRate" TextChanged="UpdateSettings"/>
