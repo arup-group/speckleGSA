@@ -6,9 +6,9 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Interop.Gsa_10_0;
 using SQLite;
 using SpeckleCore;
+using Gsa_10_0;
 
 namespace SpeckleGSA
 {
