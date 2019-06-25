@@ -314,7 +314,40 @@ namespace SpeckleGSA
 
     public static Dictionary<string, Tuple<string, int, int, List<string>>> MiscResultMap = new Dictionary<string, Tuple<string, int, int, List<string>>>()
     {
-      { "Assembly Forces and Moments",  new Tuple<string,int, int, List<string>>("ASSEMBLY", 18002000, 0, new List<string>() {
+      // TODO: UNCOMMENT THIS ONCE THE ARRAY OUTPUT FUNCTION IS WORKING FOR THESE RESULTS
+      //{ "Assembly Displacements",  new Tuple<string,int, int, List<string>>("ASSEMBLY.3", 18001000, 0, new List<string>() {
+      //  "ux",
+      //  "uy",
+      //  "uz",
+      //  "|u|",
+      //  "rxx",
+      //  "ryy",
+      //  "rzz",
+      //  "|r|",
+      //}) },
+      //{ "Assembly Drift",  new Tuple<string,int, int, List<string>>("ASSEMBLY.3", 18001500, 0, new List<string>() {
+      //  "ux",
+      //  "uy",
+      //  "uz",
+      //  "|u|",
+      //  "rxx",
+      //  "ryy",
+      //  "rzz",
+      //  "|r|",
+      //  "uxy",
+      //}) },
+      //{ "Assembly Drift Index",  new Tuple<string,int, int, List<string>>("ASSEMBLY.3", 18001600, 0, new List<string>() {
+      //  "ux",
+      //  "uy",
+      //  "uz",
+      //  "|u|",
+      //  "rxx",
+      //  "ryy",
+      //  "rzz",
+      //  "|r|",
+      //  "uxy",
+      //}) },
+      { "Assembly Forces and Moments",  new Tuple<string,int, int, List<string>>("ASSEMBLY.3", 18002000, 0, new List<string>() {
         "fx",
         "fy",
         "fz",
