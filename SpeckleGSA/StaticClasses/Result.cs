@@ -318,9 +318,11 @@ namespace SpeckleGSA
         "fx",
         "fy",
         "fz",
+        "frc",
         "mxx",
         "myy",
         "mzz",
+        "mom",
       }) },
     };
   }
