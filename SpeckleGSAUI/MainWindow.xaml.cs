@@ -704,7 +704,7 @@ namespace SpeckleGSAUI
       {
         string streamID = (cell as Tuple<string, string>).Item2;
         string url = RestApi.Split(new string[] { "api" }, StringSplitOptions.RemoveEmptyEntries)[0];
-        System.Diagnostics.Process.Start(url + @"view/?streams=" + streamID);
+        System.Diagnostics.Process.Start(url + @"#/view/" + streamID);
       }
     }
 
@@ -748,7 +748,7 @@ namespace SpeckleGSAUI
       {
         string streamID = (cell as Tuple<string, string>).Item2;
         string url = RestApi.Split(new string[] { "api" }, StringSplitOptions.RemoveEmptyEntries)[0];
-        System.Diagnostics.Process.Start(url + @"view/?streams=" + streamID);
+        System.Diagnostics.Process.Start(url + @"#/view/" + streamID);
       }
     }
 
@@ -822,7 +822,7 @@ namespace SpeckleGSAUI
       if (streamID.GetType() == typeof(string))
       {
         string url = RestApi.Split(new string[] { "api" }, StringSplitOptions.RemoveEmptyEntries)[0];
-        System.Diagnostics.Process.Start(url + @"view/?streams=" + (string)streamID);
+        System.Diagnostics.Process.Start(url + @"#/view/" + streamID);
       }
     }
 
