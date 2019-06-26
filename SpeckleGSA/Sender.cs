@@ -134,7 +134,7 @@ namespace SpeckleGSA
 
       List<string> streamNames = new List<string>();
 
-      if (Settings.SeperateStreams)
+      if (Settings.SeparateStreams)
       {
         foreach (Type t in objTypes)
           streamNames.Add((string)t.GetAttribute("Stream", attributeType));
@@ -264,12 +264,12 @@ namespace SpeckleGSA
         return;
       }
 
-      // Seperate objects into streams
+      // Separate objects into streams
       Dictionary<string, Dictionary<string, List<object>>> streamBuckets = new Dictionary<string, Dictionary<string, List<object>>>();
 
       foreach (KeyValuePair<Type, List<object>> kvp in SenderObjects)
       {
-        string targetStream = Settings.SeperateStreams ? StreamMap[kvp.Key] : "Full Model";
+        string targetStream = Settings.SeparateStreams ? StreamMap[kvp.Key] : "Full Model";
 
         foreach (object obj in kvp.Value)
         {
@@ -299,7 +299,7 @@ namespace SpeckleGSA
       {
         string streamName = "";
 
-        if (Settings.SeperateStreams)
+        if (Settings.SeparateStreams)
           streamName = GSA.Title() + "." + kvp.Key;
         else
           streamName = GSA.Title();

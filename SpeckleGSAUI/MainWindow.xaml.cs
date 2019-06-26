@@ -68,7 +68,7 @@ namespace SpeckleGSAUI
 
       //Default settings
       SendOnlyMeaningfulNodes.IsChecked = Settings.SendOnlyMeaningfulNodes;
-      SeperateStreams.IsChecked = Settings.SeperateStreams;
+      SeparateStreams.IsChecked = Settings.SeparateStreams;
       PollingRate.Text = Settings.PollingRate.ToString();
       CoincidentNodeAllowance.Text = Settings.CoincidentNodeAllowance.ToString();
       SendOnlyResults.IsChecked = Settings.SendOnlyResults;
