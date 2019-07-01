@@ -297,6 +297,8 @@ namespace SpeckleGSA
 
       foreach (KeyValuePair<string, Dictionary<string, List<object>>> kvp in streamBuckets)
       {
+        Status.ChangeStatus("Sending to stream: " + Senders[kvp.Key].StreamID);
+
         string streamName = "";
 
         if (Settings.SeparateStreams)
