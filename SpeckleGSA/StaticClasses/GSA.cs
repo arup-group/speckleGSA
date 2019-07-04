@@ -8,7 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using SQLite;
 using SpeckleCore;
-using Gsa_10_0;
+using Interop.Gsa_10_0;
 
 namespace SpeckleGSA
 {

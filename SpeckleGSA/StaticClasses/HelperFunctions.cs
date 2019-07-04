@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Gsa_10_0;
+using Interop.Gsa_10_0;
 using System.Text.RegularExpressions;
 using System.Windows.Media.Media3D;
 using System.Drawing;
