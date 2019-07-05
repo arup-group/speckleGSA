@@ -138,7 +138,7 @@ namespace SpeckleGSA
       Receivers.Clear();
 
       string key = emailAddress + "&" + serverAddress.Replace(':', '&');
-      string res = (string)GSAObject.GwaCommand("GET,SID");
+      string res = (string)GSAObject.GwaCommand("GET\tSID");
 
       if (res == "")
         return;
@@ -171,7 +171,7 @@ namespace SpeckleGSA
     public static void SetSpeckleClients(string emailAddress, string serverAddress)
     {
       string key = emailAddress + "&" + serverAddress.Replace(':', '&');
-      string res = (string)GSAObject.GwaCommand("GET,SID");
+      string res = (string)GSAObject.GwaCommand("GET\tSID");
 
       List<string[]> sids = Regex.Matches(res, @"(?<={).*?(?=})").Cast<Match>()
               .Select(m => m.Value.Split(new char[] { ':' }))
@@ -194,7 +194,7 @@ namespace SpeckleGSA
       foreach (string[] s in sids)
         sidRecord += "{" + s[0] + ":" + s[1] + "}";
 
-      GSAObject.GwaCommand("SET,SID," + sidRecord);
+      GSAObject.GwaCommand("SET\tSID\t" + sidRecord);
     }
     #endregion
 
@@ -205,9 +205,9 @@ namespace SpeckleGSA
     /// <returns>GSA model title</returns>
     public static string Title()
     {
-      string res = (string)GSAObject.GwaCommand("GET,TITLE");
+      string res = (string)GSAObject.GwaCommand("GET\tTITLE");
 
-      string[] pieces = res.ListSplit(",");
+      string[] pieces = res.ListSplit("\t");
 
       return pieces[1];
     }
@@ -223,7 +223,7 @@ namespace SpeckleGSA
       baseProps["units"] = Units.LongUnitName();
       // TODO: Add other units
 
-      string[] tolerances = ((string)GSAObject.GwaCommand("GET,TOL")).ListSplit(",");
+      string[] tolerances = ((string)GSAObject.GwaCommand("GET\tTOL")).ListSplit("\t");
 
       List<double> lengthTolerances = new List<double>() {
                 Convert.ToDouble(tolerances[3]), // edge
@@ -247,7 +247,7 @@ namespace SpeckleGSA
     /// </summary>
     public static void UpdateUnits()
     {
-      Units = ((string)GSAObject.GwaCommand("GET,UNIT_DATA.1,LENGTH")).ListSplit(",")[2];
+      Units = ((string)GSAObject.GwaCommand("GET\tUNIT_DATA.1\tLENGTH")).ListSplit("\t")[2];
     }
     #endregion
 

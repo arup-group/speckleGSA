@@ -149,7 +149,7 @@ namespace SpeckleGSA
 
           foreach (string k in keywords)
           {
-            int highestRecord = (int)GSA.GSAObject.GwaCommand("HIGHEST," + k);
+            int highestRecord = (int)GSA.GSAObject.GwaCommand("HIGHEST\t" + k);
 
             if (highestRecord > 0)
               indexer.GetType().GetMethod("ReserveIndices", new Type[] { typeof(string), typeof(List<int>) }).Invoke(indexer, new object[] { k, Enumerable.Range(1, highestRecord).ToList() });

@@ -64,7 +64,7 @@ namespace SpeckleGSA
     public static void ChangeStatus(string name, double percent = -1)
     {
       if (StatusChanged != null)
-        StatusChanged(null, new StatusEventArgs(name.ToUpper(), percent));
+        StatusChanged(null, new StatusEventArgs(name, percent));
     }
   }
 
