@@ -67,6 +67,7 @@ namespace SpeckleGSA
       //        .Split(new char[] { '\n' })[0]
       //        .Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries)[1]);
       GSAObject.NewFile();
+      GSAObject.SetLocale(Locale.LOC_EN_GB);
       GSAObject.DisplayGsaWindow(true);
 
       GetSpeckleClients(emailAddress, serverAddress);
@@ -102,6 +103,7 @@ namespace SpeckleGSA
       //        .Split(new char[] { '\n' })[0]
       //        .Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries)[1]);
       GSAObject.Open(path);
+      GSAObject.SetLocale(Locale.LOC_EN_GB);
       GSAObject.DisplayGsaWindow(true);
 
       GetSpeckleClients(emailAddress, serverAddress);
