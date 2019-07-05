@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using SpeckleGSA;
 using System.IO;
+using System.Globalization;
 
 namespace SpeckleGSAUI
 {
@@ -25,6 +26,9 @@ namespace SpeckleGSAUI
 
     private void Application_Startup(object sender, StartupEventArgs e)
     {
+      CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+      CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
+
       if (e.Args.Length == 0)
       {
         MainWindow wnd = new MainWindow();
