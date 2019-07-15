@@ -86,15 +86,15 @@ namespace SpeckleGSAUI
         Console.WriteLine("Usage: SpeckleGSAUI.exe receiver\n");
         Console.WriteLine("\n");
         Console.Write("Required arguments:\n");
-        Console.Write("-server <server>\t\tAddress of Speckle server\n");
-        Console.Write("-email <email>\t\t\tEmail of account\n");
-        Console.Write("-password <password>\t\tAccount password\n");
-        Console.Write("-file <path>\t\t\tFile to save to. If file does not exist, a new one will be created\n");
-        Console.Write("-streamIDs <streamIDs>\t\tComma-delimited ID of streams to be received\n");
+        Console.Write("--server <server>\t\tAddress of Speckle server\n");
+        Console.Write("--email <email>\t\t\tEmail of account\n");
+        Console.Write("--password <password>\t\tAccount password\n");
+        Console.Write("--file <path>\t\t\tFile to save to. If file does not exist, a new one will be created\n");
+        Console.Write("--streamIDs <streamIDs>\t\tComma-delimited ID of streams to be received\n");
         Console.WriteLine("\n");
         Console.Write("Optional arguments:\n");
-        Console.Write("-layer [analysis|design]\tSet which layer to write to. Default is design layer\n");
-        Console.Write("-nodeAllowance <distance>\tMax distance before nodes are not merged\n");
+        Console.Write("--layer [analysis|design]\tSet which layer to write to. Default is design layer\n");
+        Console.Write("--nodeAllowance <distance>\tMax distance before nodes are not merged\n");
         return;
       }
       else if (cliMode == "sender" && arguments.ContainsKey("h"))
@@ -103,21 +103,21 @@ namespace SpeckleGSAUI
         Console.WriteLine("Usage: SpeckleGSAUI.exe sender\n");
         Console.WriteLine("\n");
         Console.Write("Required arguments:\n");
-        Console.Write("-server <server>\t\tAddress of Speckle server\n");
-        Console.Write("-email <email>\t\t\tEmail of account\n");
-        Console.Write("-password <password>\t\tAccount password\n");
-        Console.Write("-file <path>\t\t\tFile to open. If file does not exist, a new one will be created\n");
+        Console.Write("--server <server>\t\tAddress of Speckle server\n");
+        Console.Write("--email <email>\t\t\tEmail of account\n");
+        Console.Write("--password <password>\t\tAccount password\n");
+        Console.Write("--file <path>\t\t\tFile to open. If file does not exist, a new one will be created\n");
         Console.WriteLine("\n");
         Console.Write("Optional arguments:\n");
-        Console.Write("-layer [analysis|design]\tSet which layer to write to. Default is design layer\n");
-        Console.Write("-sendAllNodes\t\t\tSend all nodes in model. Default is to send only 'meaningful' nodes\n");
-        Console.Write("-separateStreams\t\tSeparate model into different streams\n");
-        Console.Write("-result <options>\t\tType of result to send. Each input should be in quotation marks. Comma-delimited\n");
-        Console.Write("-resultCases <cases>\t\tCases to extract results from. Comma-delimited\n");
-        Console.Write("-resultOnly\t\t\tSend only results\n");
-        Console.Write("-resultUnembedded\t\tSend results as separate objects\n");
-        Console.Write("-resultInLocalAxis\t\tSend results calculated at the local axis. Default is global\n");
-        Console.Write("-result1DNumPosition <num>\tNumber of additional result points within 1D elements\n");
+        Console.Write("--layer [analysis|design]\tSet which layer to write to. Default is design layer\n");
+        Console.Write("--sendAllNodes\t\t\tSend all nodes in model. Default is to send only 'meaningful' nodes\n");
+        Console.Write("--separateStreams\t\tSeparate model into different streams\n");
+        Console.Write("--result <options>\t\tType of result to send. Each input should be in quotation marks. Comma-delimited\n");
+        Console.Write("--resultCases <cases>\t\tCases to extract results from. Comma-delimited\n");
+        Console.Write("--resultOnly\t\t\tSend only results\n");
+        Console.Write("--resultUnembedded\t\tSend results as separate objects\n");
+        Console.Write("--resultInLocalAxis\t\tSend results calculated at the local axis. Default is global\n");
+        Console.Write("--result1DNumPosition <num>\tNumber of additional result points within 1D elements\n");
         return;
       }
 
