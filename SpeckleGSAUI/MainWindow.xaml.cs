@@ -376,7 +376,7 @@ namespace SpeckleGSAUI
     {
       if (ReceiverTextbox.Text != "")
       {
-        GSA.Receivers.Add(ReceiverTextbox.Text);
+        GSA.Receivers.Add(new Tuple<string, string> (ReceiverTextbox.Text, null));
         GSA.SetSpeckleClients(EmailAddress, RestApi);
         UpdateClientLists();
 
@@ -392,7 +392,7 @@ namespace SpeckleGSAUI
       string[] paste = Clipboard.GetText(TextDataFormat.Text).Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
 
       foreach (string p in paste)
-        GSA.Receivers.Add(p);
+        GSA.Receivers.Add(new Tuple<string, string>(p, null));
 
       GSA.SetSpeckleClients(EmailAddress, RestApi);
       UpdateClientLists();
@@ -582,12 +582,12 @@ namespace SpeckleGSAUI
       ReceiverStreams.Items.Clear();
 
       if (GSA.Senders != null)
-        foreach (KeyValuePair<string, string> sender in GSA.Senders)
-          SenderStreams.Items.Add(new Tuple<string, string>(sender.Key, sender.Value));
+        foreach (KeyValuePair<string, Tuple<string, string>> sender in GSA.Senders)
+          SenderStreams.Items.Add(new Tuple<string, string>(sender.Key, sender.Value.Item1));
 
       if (GSA.Receivers != null)
-        foreach (string receiver in GSA.Receivers)
-          ReceiverStreams.Items.Add(receiver);
+        foreach (Tuple<string,string> receiver in GSA.Receivers)
+          ReceiverStreams.Items.Add(receiver.Item1);
     }
 
     /// <summary>
@@ -852,7 +852,7 @@ namespace SpeckleGSAUI
 
       if (streamID.GetType() == typeof(string))
       {
-        GSA.Receivers.Remove((string)streamID);
+        GSA.Receivers.Remove(GSA.Receivers.First(x => x.Item1 == (string)streamID));
         GSA.SetSpeckleClients(EmailAddress, RestApi);
         UpdateClientLists();
       }

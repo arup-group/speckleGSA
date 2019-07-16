@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Interop.Gsa_10_0;
+using SpeckleCore;
+using SQLite;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -6,9 +9,6 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using SQLite;
-using SpeckleCore;
-using Interop.Gsa_10_0;
 
 namespace SpeckleGSA
 {
@@ -19,20 +19,22 @@ namespace SpeckleGSA
   {
     public static ComAuto GSAObject;
 
+    public static string FilePath;
+
     public static bool IsInit;
 
     public static string Units { get; private set; }
 
-    public static Dictionary<string, string> Senders { get; set; }
-    public static List<string> Receivers { get; set; }
-    
+    public static Dictionary<string, Tuple<string, string>> Senders { get; set; }
+    public static List<Tuple<string, string>> Receivers { get; set; }
+
     public static void Init()
     {
       if (IsInit)
         return;
 
-      Senders = new Dictionary<string, string>();
-      Receivers = new List<string>();
+      Senders = new Dictionary<string, Tuple<string, string>>();
+      Receivers = new List<Tuple<string, string>>();
 
       IsInit = true;
 
@@ -97,12 +99,15 @@ namespace SpeckleGSA
       }
 
       GSAObject = new ComAuto();
-      //GSAObject.LogFeatureUsage("api::specklegsa::" +
-      //    FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
-      //        .ProductVersion + "::GSA " + GSAObject.VersionString()
-      //        .Split(new char[] { '\n' })[0]
-      //        .Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries)[1]);
+
+      GSAObject.LogFeatureUsage("api::specklegsa::" +
+        FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
+          .ProductVersion + "::GSA " + GSAObject.VersionString()
+          .Split(new char[] { '\n' })[0]
+          .Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries)[1]);
+
       GSAObject.Open(path);
+      FilePath = path;
       GSAObject.SetLocale(Locale.LOC_EN_GB);
       GSAObject.DisplayGsaWindow(true);
 
@@ -153,16 +158,21 @@ namespace SpeckleGSA
       string[] senderList = sids.Where(s => s[0] == "SpeckleSender&" + key).FirstOrDefault();
       string[] receiverList = sids.Where(s => s[0] == "SpeckleReceiver&" + key).FirstOrDefault();
 
-      if (senderList != null)
+      if (senderList != null && !string.IsNullOrEmpty(senderList[1]))
       {
-        string[] senders = senderList[1].Split(new char[] { '&' }, StringSplitOptions.RemoveEmptyEntries);
+        string[] senders = senderList[1].Split(new char[] { '&' });
 
-        for (int i = 0; i < senders.Length; i += 2)
-          Senders[senders[i]] = senders[i + 1];
+        for (int i = 0; i < senders.Length; i += 3)
+          Senders[senders[i]] = new Tuple<string, string>(senders[i + 1], senders[i + 2]);
       }
 
-      if (receiverList != null)
-        Receivers = receiverList[1].Split(new char[] { '&' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+      if (receiverList != null && !string.IsNullOrEmpty(receiverList[1]))
+      {
+        string[] receivers = receiverList[1].Split(new char[] { '&' });
+
+        for (int i = 0; i < receivers.Length; i += 2)
+          Receivers.Add(new Tuple<string, string>(receivers[i], receivers[i + 1]));
+      }
     }
 
     /// <summary>
@@ -183,14 +193,22 @@ namespace SpeckleGSA
       sids.RemoveAll(S => S[0] == "SpeckleSender&" + key || S[0] == "SpeckleReceiver&" + key);
 
       List<string> senderList = new List<string>();
-      foreach (KeyValuePair<string, string> kvp in Senders)
+      foreach (KeyValuePair<string, Tuple<string, string>> kvp in Senders)
       {
         senderList.Add(kvp.Key);
-        senderList.Add(kvp.Value);
+        senderList.Add(kvp.Value.Item1);
+        senderList.Add(kvp.Value.Item2);
+      }
+
+      List<string> receiverList = new List<string>();
+      foreach (Tuple<string, string> t in Receivers)
+      {
+        receiverList.Add(t.Item1);
+        receiverList.Add(t.Item2);
       }
 
       sids.Add(new string[] { "SpeckleSender&" + key, string.Join("&", senderList) });
-      sids.Add(new string[] { "SpeckleReceiver&" + key, string.Join("&", Receivers) });
+      sids.Add(new string[] { "SpeckleReceiver&" + key, string.Join("&", receiverList) });
 
       string sidRecord = "";
       foreach (string[] s in sids)

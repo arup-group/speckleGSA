@@ -181,7 +181,7 @@ namespace SpeckleGSAUI
 
       var streamIds = arguments["streamIDs"].Split(new char[] { ',' });
       foreach (string id in streamIds)
-        GSA.Receivers.Add(id);
+        GSA.Receivers.Add(new Tuple<string, string>(id, null));
       GSA.SetSpeckleClients(EmailAddress, RestApi);
 
       if (arguments.ContainsKey("layer"))

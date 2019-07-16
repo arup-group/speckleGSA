@@ -150,11 +150,11 @@ namespace SpeckleGSA
         if (!GSA.Senders.ContainsKey(streamName))
         {
           Status.AddMessage(streamName + " sender not initialized. Creating new " + streamName + " sender.");
-          await Senders[streamName].InitializeSender(null, streamName);
-          GSA.Senders[streamName] = Senders[streamName].StreamID;
+          await Senders[streamName].InitializeSender(null, null, streamName);
+          GSA.Senders[streamName] = new Tuple<string, string> (Senders[streamName].StreamID, Senders[streamName].ClientID);
         }
         else
-          await Senders[streamName].InitializeSender(GSA.Senders[streamName], streamName);
+          await Senders[streamName].InitializeSender(GSA.Senders[streamName].Item1, GSA.Senders[streamName].Item2, streamName);
       }
 
       Status.ChangeStatus("Ready to stream");
@@ -337,7 +337,7 @@ namespace SpeckleGSA
     /// </summary>
     public void Dispose()
     {
-      foreach (KeyValuePair<string, string> kvp in GSA.Senders)
+      foreach (KeyValuePair<string, Tuple<string, string>> kvp in GSA.Senders)
         Senders[kvp.Key].Dispose();
     }
   }

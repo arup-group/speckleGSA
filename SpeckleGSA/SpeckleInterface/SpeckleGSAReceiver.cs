@@ -46,9 +46,37 @@ namespace SpeckleGSA
     /// </summary>
     /// <param name="streamID">Stream ID of stream</param>
     /// <returns>Task</returns>
-    public async Task InitializeReceiver(string streamID)
+    public async Task InitializeReceiver(string streamID, string clientID = "")
     {
-      await myReceiver.IntializeReceiver(streamID, "GSA", "GSA", "none", apiToken);
+      myReceiver.StreamId = streamID;
+      myReceiver.AuthToken = apiToken;
+
+      if (string.IsNullOrEmpty(clientID))
+      {
+        var clientResponse = myReceiver.ClientCreateAsync(new AppClient()
+        {
+          DocumentName = Path.GetFileNameWithoutExtension(GSA.FilePath),
+          DocumentType = "GSA",
+          Role = "Receiver",
+          StreamId = streamID,
+          Online = true,
+        }).Result;
+
+        myReceiver.ClientId = clientResponse.Resource._id;
+      }
+      else
+      {
+        var clientResponse = myReceiver.ClientUpdateAsync(clientID, new AppClient()
+        {
+          DocumentName = Path.GetFileNameWithoutExtension(GSA.FilePath),
+          Online = true,
+        }).Result;
+
+        myReceiver.ClientId = clientID;
+      }
+
+      myReceiver.SetupWebsocket();
+      myReceiver.JoinRoom("stream", streamID);
 
       myReceiver.OnWsMessage += OnWsMessage;
     }
@@ -172,7 +200,7 @@ namespace SpeckleGSA
     /// </summary>
     public void Dispose()
     {
-      myReceiver.Dispose(true);
+      myReceiver.ClientUpdateAsync(myReceiver.ClientId, new AppClient() { Online = false });
     }
   }
 }

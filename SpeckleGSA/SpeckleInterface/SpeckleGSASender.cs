@@ -18,8 +18,9 @@ namespace SpeckleGSA
   {
     const double MAX_BUCKET_SIZE = 5e5;
 
-    public string StreamName { get; private set; }
-    public string StreamID { get; private set; }
+    public string StreamName { get => mySender == null ? null : mySender.Stream.Name; }
+    public string StreamID { get => mySender == null ? null : mySender.StreamId; }
+    public string ClientID { get => mySender == null ? null : mySender.ClientId; }
 
     private SpeckleApiClient mySender;
     private string apiToken;
@@ -32,8 +33,6 @@ namespace SpeckleGSA
     public SpeckleGSASender(string serverAddress, string apiToken)
     {
       this.apiToken = apiToken;
-      this.StreamID = "";
-      this.StreamName = "";
 
       mySender = new SpeckleApiClient() { BaseUrl = serverAddress.ToString() };
 
@@ -47,21 +46,48 @@ namespace SpeckleGSA
     /// <param name="streamID">Stream ID of stream. If no stream ID is given, a new stream is created.</param>
     /// <param name="streamName">Stream name</param>
     /// <returns>Task</returns>
-    public async Task InitializeSender(string streamID = null, string streamName = "")
+    public async Task InitializeSender(string streamID = "", string clientID = "", string streamName = "")
     {
-      await mySender.IntializeSender(apiToken, "GSA", "GSA", "none");
-      this.StreamName = streamName;
+      mySender.AuthToken = apiToken;
 
-      if (streamID != null)
+      if (string.IsNullOrEmpty(clientID))
       {
-        // TODO: workaround for having persistent sender
-        await mySender.StreamDeleteAsync(mySender.StreamId);
-        this.StreamID = streamID;
+        var streamResponse = mySender.StreamCreateAsync(new SpeckleStream()).Result;
+
+        mySender.Stream = streamResponse.Resource;
+        mySender.StreamId = streamResponse.Resource.StreamId;
+
+        var clientResponse = mySender.ClientCreateAsync(new AppClient()
+        {
+          DocumentName = Path.GetFileNameWithoutExtension(GSA.FilePath),
+          DocumentType = "GSA",
+          Role = "Sender",
+          StreamId = this.StreamID,
+          Online = true,
+        }).Result;
+
+        mySender.ClientId = clientResponse.Resource._id;
       }
       else
       {
-        this.StreamID = mySender.Stream.StreamId;
+        var streamResponse = mySender.StreamGetAsync(streamID, null).Result;
+
+        mySender.Stream = streamResponse.Resource;
+        mySender.StreamId = streamResponse.Resource.StreamId;
+
+        var clientResponse = mySender.ClientUpdateAsync(clientID, new AppClient()
+        {
+          DocumentName = Path.GetFileNameWithoutExtension(GSA.FilePath),
+          Online = true,
+        }).Result;
+
+        mySender.ClientId = clientID;
       }
+
+      mySender.Stream.Name = streamName;
+
+      mySender.SetupWebsocket();
+      mySender.JoinRoom("stream", streamID);
     }
 
     /// <summary>
@@ -70,7 +96,9 @@ namespace SpeckleGSA
     /// <param name="streamName">Stream name</param>
     public void UpdateName(string streamName)
     {
-      this.StreamName = streamName;
+      mySender.StreamUpdateAsync(mySender.StreamId, new SpeckleStream() { Name = streamName });
+
+      mySender.Stream.Name = streamName;
     }
 
     /// <summary>
@@ -227,7 +255,7 @@ namespace SpeckleGSA
     /// </summary>
     public void Dispose()
     {
-      mySender.Dispose(true);
+      mySender.ClientUpdateAsync(mySender.ClientId, new AppClient() { Online = false });
     }
   }
 }

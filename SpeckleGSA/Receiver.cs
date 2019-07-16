@@ -162,16 +162,16 @@ namespace SpeckleGSA
       // Create receivers
       Status.ChangeStatus("Accessing stream");
 
-      foreach (string streamID in GSA.Receivers)
+      foreach (Tuple<string,string> streamInfo in GSA.Receivers)
       {
-        if (streamID == "")
-          Status.AddMessage("No " + streamID + " stream specified.");
+        if (streamInfo.Item1 == "")
+          Status.AddMessage("No stream specified.");
         else
         {
-          Status.AddMessage("Creating receiver " + streamID);
-          Receivers[streamID] = new SpeckleGSAReceiver(restApi, apiToken);
-          await Receivers[streamID].InitializeReceiver(streamID);
-          Receivers[streamID].UpdateGlobalTrigger += Trigger;
+          Status.AddMessage("Creating receiver " + streamInfo.Item1);
+          Receivers[streamInfo.Item1] = new SpeckleGSAReceiver(restApi, apiToken);
+          await Receivers[streamInfo.Item1].InitializeReceiver(streamInfo.Item1, streamInfo.Item2);
+          Receivers[streamInfo.Item1].UpdateGlobalTrigger += Trigger;
         }
       }
 
@@ -328,10 +328,10 @@ namespace SpeckleGSA
     /// </summary>
     public void Dispose()
     {
-      foreach (string streamID in GSA.Receivers)
+      foreach (Tuple<string,string> streamInfo in GSA.Receivers)
       {
-        Receivers[streamID].UpdateGlobalTrigger -= Trigger;
-        Receivers[streamID].Dispose();
+        Receivers[streamInfo.Item1].UpdateGlobalTrigger -= Trigger;
+        Receivers[streamInfo.Item1].Dispose();
       }
     }
 
