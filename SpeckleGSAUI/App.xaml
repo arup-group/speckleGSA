@@ -40,22 +40,23 @@
             <ControlTemplate TargetType="{x:Type ToggleButton}">
               <StackPanel Orientation="Horizontal">
                 <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" Margin="{TemplateBinding Padding}" RecognizesAccessKey="True" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                <Border x:Name="design" Width="75" Height="25" Background="{DynamicResource PrimaryHueMidBrush}" Margin="10,0,0,0" BorderBrush="{DynamicResource PrimaryHueMidBrush}" BorderThickness="3 3 0 3">
+                <Border x:Name="design" Width="75" Height="25" Background="{DynamicResource PrimaryHueMidBrush}" Margin="10,0,0,0" BorderBrush="{DynamicResource PrimaryHueMidBrush}" BorderThickness="3 3 0 3" CornerRadius="2 0 0 2">
                   <TextBlock x:Name="designText" Text="Design" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FFFFFF"/>
                 </Border>
-                <Border x:Name="analysis" Width="75" Height="25" Background="{DynamicResource PrimaryHueMidBrush}" BorderBrush="{DynamicResource PrimaryHueMidBrush}" BorderThickness="0 3 3 3">
+                <Border x:Name="analysis" Width="75" Height="25" Background="{DynamicResource PrimaryHueMidBrush}" BorderBrush="{DynamicResource PrimaryHueMidBrush}" BorderThickness="0 3 3 3" CornerRadius="0 2 2 0">
                   <TextBlock x:Name="analysisText" Text="Analysis" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FFFFFF"/>
                 </Border>
               </StackPanel>
               <ControlTemplate.Triggers>
                 <Trigger Property="IsEnabled" Value="false">
-                  <Setter TargetName="design" Property="Background" Value="#AAAAAA"/>
-                  <Setter TargetName="design" Property="BorderBrush" Value="#AAAAAA"/>
-                  <Setter TargetName="analysis" Property="Background" Value="#AAAAAA"/>
-                  <Setter TargetName="analysis" Property="BorderBrush" Value="#AAAAAA"/>
+                  <Setter TargetName="design" Property="Background" Value="#EEEEEE"/>
+                  <Setter TargetName="design" Property="BorderBrush" Value="#EEEEEE"/>
+                  <Setter TargetName="analysis" Property="Background" Value="#EEEEEE"/>
+                  <Setter TargetName="analysis" Property="BorderBrush" Value="#EEEEEE"/>
                 </Trigger>
                 <Trigger Property="IsChecked" Value="false">
                   <Setter TargetName="design" Property="Background" Value="White"/>
+                  <Setter TargetName="designText" Property="Foreground" Value="Black"/>
                   <Setter TargetName="designText" Property="Foreground" Value="Black"/>
                 </Trigger>
                 <Trigger Property="IsChecked" Value="true">
@@ -80,19 +81,19 @@
             <ControlTemplate TargetType="{x:Type ToggleButton}">
               <StackPanel Orientation="Horizontal">
                 <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" Margin="{TemplateBinding Padding}" RecognizesAccessKey="True" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                <Border x:Name="continuous" Width="75" Height="25" Background="{DynamicResource PrimaryHueMidBrush}" Margin="10,0,0,0" BorderBrush="{DynamicResource PrimaryHueMidBrush}" BorderThickness="3 3 0 3">
+                <Border x:Name="continuous" Width="75" Height="25" Background="{DynamicResource PrimaryHueMidBrush}" Margin="10,0,0,0" BorderBrush="{DynamicResource PrimaryHueMidBrush}" BorderThickness="3 3 0 3" CornerRadius="2 0 0 2">
                   <TextBlock x:Name="continuousText" Text="Continuous" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FFFFFF"/>
                 </Border>
-                <Border x:Name="single" Width="75" Height="25" Background="{DynamicResource PrimaryHueMidBrush}" BorderBrush="{DynamicResource PrimaryHueMidBrush}" BorderThickness="0 3 3 3">
+                <Border x:Name="single" Width="75" Height="25" Background="{DynamicResource PrimaryHueMidBrush}" BorderBrush="{DynamicResource PrimaryHueMidBrush}" BorderThickness="0 3 3 3" CornerRadius="0 2 2 0">
                   <TextBlock x:Name="singleText" Text="Single" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FFFFFF"/>
                 </Border>
               </StackPanel>
               <ControlTemplate.Triggers>
                 <Trigger Property="IsEnabled" Value="false">
-                  <Setter TargetName="continuous" Property="Background" Value="#AAAAAA"/>
-                  <Setter TargetName="continuous" Property="BorderBrush" Value="#AAAAAA"/>
-                  <Setter TargetName="single" Property="Background" Value="#AAAAAA"/>
-                  <Setter TargetName="single" Property="BorderBrush" Value="#AAAAAA"/>
+                  <Setter TargetName="continuous" Property="Background" Value="#EEEEEE"/>
+                  <Setter TargetName="continuous" Property="BorderBrush" Value="#EEEEEE"/>
+                  <Setter TargetName="single" Property="Background" Value="#EEEEEE"/>
+                  <Setter TargetName="single" Property="BorderBrush" Value="#EEEEEE"/>
                 </Trigger>
                 <Trigger Property="IsChecked" Value="false">
                   <Setter TargetName="continuous" Property="Background" Value="White"/>
