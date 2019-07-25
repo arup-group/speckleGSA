@@ -155,10 +155,10 @@ namespace SpeckleGSAUI
 
       // GSA File
       if (File.Exists(arguments["file"]))
-        GSA.OpenFile(arguments["file"], EmailAddress, RestApi);
+        GSA.OpenFile(arguments["file"], EmailAddress, RestApi, false);
       else
       {
-        GSA.NewFile(EmailAddress, RestApi);
+        GSA.NewFile(EmailAddress, RestApi, false);
         GSA.GSAObject.SaveAs(arguments["file"]);
       }
 

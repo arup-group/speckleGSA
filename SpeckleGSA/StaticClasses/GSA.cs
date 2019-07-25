@@ -47,7 +47,7 @@ namespace SpeckleGSA
     /// </summary>
     /// <param name="emailAddress">User email address</param>
     /// <param name="serverAddress">Speckle server address</param>
-    public static void NewFile(string emailAddress, string serverAddress)
+    public static void NewFile(string emailAddress, string serverAddress, bool showWindow = true)
     {
       if (!IsInit)
         return;
@@ -70,7 +70,7 @@ namespace SpeckleGSA
       //        .Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries)[1]);
       GSAObject.NewFile();
       GSAObject.SetLocale(Locale.LOC_EN_GB);
-      GSAObject.DisplayGsaWindow(true);
+      GSAObject.DisplayGsaWindow(showWindow);
 
       GetSpeckleClients(emailAddress, serverAddress);
 
@@ -83,7 +83,7 @@ namespace SpeckleGSA
     /// <param name="path">Absolute path to GSA file</param>
     /// <param name="emailAddress">User email address</param>
     /// <param name="serverAddress">Speckle server address</param>
-    public static void OpenFile(string path, string emailAddress, string serverAddress)
+    public static void OpenFile(string path, string emailAddress, string serverAddress, bool showWindow = true)
     {
       if (!IsInit)
         return;
@@ -109,7 +109,7 @@ namespace SpeckleGSA
       GSAObject.Open(path);
       FilePath = path;
       GSAObject.SetLocale(Locale.LOC_EN_GB);
-      GSAObject.DisplayGsaWindow(true);
+      GSAObject.DisplayGsaWindow(showWindow);
 
       GetSpeckleClients(emailAddress, serverAddress);
 
@@ -144,34 +144,44 @@ namespace SpeckleGSA
       Senders.Clear();
       Receivers.Clear();
 
-      string key = emailAddress + "&" + serverAddress.Replace(':', '&');
-      string res = (string)GSAObject.GwaCommand("GET\tSID");
+      try
+      { 
+        string key = emailAddress + "&" + serverAddress.Replace(':', '&');
+        string res = (string)GSAObject.GwaCommand("GET\tSID");
 
-      if (res == "")
-        return;
+        if (res == "")
+          return;
 
-      List<string[]> sids = Regex.Matches(res, @"(?<={).*?(?=})").Cast<Match>()
-              .Select(m => m.Value.Split(new char[] { ':' }))
-              .Where(s => s.Length == 2)
-              .ToList();
+        List<string[]> sids = Regex.Matches(res, @"(?<={).*?(?=})").Cast<Match>()
+                .Select(m => m.Value.Split(new char[] { ':' }))
+                .Where(s => s.Length == 2)
+                .ToList();
 
-      string[] senderList = sids.Where(s => s[0] == "SpeckleSender&" + key).FirstOrDefault();
-      string[] receiverList = sids.Where(s => s[0] == "SpeckleReceiver&" + key).FirstOrDefault();
+        string[] senderList = sids.Where(s => s[0] == "SpeckleSender&" + key).FirstOrDefault();
+        string[] receiverList = sids.Where(s => s[0] == "SpeckleReceiver&" + key).FirstOrDefault();
 
-      if (senderList != null && !string.IsNullOrEmpty(senderList[1]))
-      {
-        string[] senders = senderList[1].Split(new char[] { '&' });
+        if (senderList != null && !string.IsNullOrEmpty(senderList[1]))
+        {
+          string[] senders = senderList[1].Split(new char[] { '&' });
 
-        for (int i = 0; i < senders.Length; i += 3)
-          Senders[senders[i]] = new Tuple<string, string>(senders[i + 1], senders[i + 2]);
+          for (int i = 0; i < senders.Length; i += 3)
+            Senders[senders[i]] = new Tuple<string, string>(senders[i + 1], senders[i + 2]);
+        }
+
+        if (receiverList != null && !string.IsNullOrEmpty(receiverList[1]))
+        {
+          string[] receivers = receiverList[1].Split(new char[] { '&' });
+
+          for (int i = 0; i < receivers.Length; i += 2)
+            Receivers.Add(new Tuple<string, string>(receivers[i], receivers[i + 1]));
+        }
       }
-
-      if (receiverList != null && !string.IsNullOrEmpty(receiverList[1]))
+      catch
       {
-        string[] receivers = receiverList[1].Split(new char[] { '&' });
-
-        for (int i = 0; i < receivers.Length; i += 2)
-          Receivers.Add(new Tuple<string, string>(receivers[i], receivers[i + 1]));
+        // If fail to read, clear client SIDs
+        Senders.Clear();
+        Receivers.Clear();
+        SetSpeckleClients(emailAddress, serverAddress);
       }
     }
 
