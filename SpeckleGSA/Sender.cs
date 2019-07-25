@@ -49,8 +49,16 @@ namespace SpeckleGSA
           {
             if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
             {
-              var gsaInterface = type.GetProperty("GSA").GetValue(null);
-              gsaInterface.GetType().GetMethod("InitializeSender").Invoke(gsaInterface, new object[] { GSA.GSAObject });
+              try
+              {
+                var gsaInterface = type.GetProperty("GSA").GetValue(null);
+                gsaInterface.GetType().GetMethod("InitializeSender").Invoke(gsaInterface, new object[] { GSA.GSAObject });
+              }
+              catch
+              {
+                Status.AddError("Unable to access kit. Try updating Speckle installation to a later release.");
+                throw new Exception("Unable to initialize");
+              }
             }
           }
         }
@@ -181,53 +189,61 @@ namespace SpeckleGSA
         {
           if (type.GetInterfaces().Contains(typeof(SpeckleCore.ISpeckleInitializer)))
           {
-            if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
+            try
             {
-              var gsaInterface = type.GetProperty("GSA").GetValue(null);
-              
-              gsaInterface.GetType().GetMethod("PreSending").Invoke(gsaInterface, new object[] { });
+              if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
+              {
+                var gsaInterface = type.GetProperty("GSA").GetValue(null);
+
+                gsaInterface.GetType().GetMethod("PreSending").Invoke(gsaInterface, new object[] { });
+              }
+
+              if (type.GetProperties().Select(p => p.Name).Contains("GSASenderObjects"))
+                type.GetProperty("GSASenderObjects").SetValue(null, SenderObjects);
+
+              if (type.GetProperties().Select(p => p.Name).Contains("GSAUnits"))
+                type.GetProperty("GSAUnits").SetValue(null, GSA.Units);
+
+              if (Settings.TargetDesignLayer)
+                if (type.GetProperties().Select(p => p.Name).Contains("GSATargetDesignLayer"))
+                  type.GetProperty("GSATargetDesignLayer").SetValue(null, true);
+
+              if (Settings.TargetAnalysisLayer)
+                if (type.GetProperties().Select(p => p.Name).Contains("GSATargetAnalysisLayer"))
+                  type.GetProperty("GSATargetAnalysisLayer").SetValue(null, true);
+
+              if (Settings.SendResults)
+              {
+                if (type.GetProperties().Select(p => p.Name).Contains("GSAEmbedResults"))
+                  type.GetProperty("GSAEmbedResults").SetValue(null, Settings.EmbedResults);
+
+                if (type.GetProperties().Select(p => p.Name).Contains("GSANodalResults"))
+                  type.GetProperty("GSANodalResults").SetValue(null, Settings.ChosenNodalResult);
+
+                if (type.GetProperties().Select(p => p.Name).Contains("GSAElement1DResults"))
+                  type.GetProperty("GSAElement1DResults").SetValue(null, Settings.ChosenElement1DResult);
+
+                if (type.GetProperties().Select(p => p.Name).Contains("GSAElement2DResults"))
+                  type.GetProperty("GSAElement2DResults").SetValue(null, Settings.ChosenElement2DResult);
+
+                if (type.GetProperties().Select(p => p.Name).Contains("GSAMiscResults"))
+                  type.GetProperty("GSAMiscResults").SetValue(null, Settings.ChosenMiscResult);
+              }
+
+              if (type.GetProperties().Select(p => p.Name).Contains("GSAResultCases"))
+                type.GetProperty("GSAResultCases").SetValue(null, Settings.ResultCases);
+
+              if (type.GetProperties().Select(p => p.Name).Contains("GSAResultInLocalAxis"))
+                type.GetProperty("GSAResultInLocalAxis").SetValue(null, Settings.ResultInLocalAxis);
+
+              if (type.GetProperties().Select(p => p.Name).Contains("GSAResult1DNumPosition"))
+                type.GetProperty("GSAResult1DNumPosition").SetValue(null, Settings.Result1DNumPosition);
             }
-
-            if (type.GetProperties().Select(p => p.Name).Contains("GSASenderObjects"))
-              type.GetProperty("GSASenderObjects").SetValue(null, SenderObjects);
-
-            if (type.GetProperties().Select(p => p.Name).Contains("GSAUnits"))
-              type.GetProperty("GSAUnits").SetValue(null, GSA.Units);
-
-            if (Settings.TargetDesignLayer)
-              if (type.GetProperties().Select(p => p.Name).Contains("GSATargetDesignLayer"))
-                type.GetProperty("GSATargetDesignLayer").SetValue(null, true);
-
-            if (Settings.TargetAnalysisLayer)
-              if (type.GetProperties().Select(p => p.Name).Contains("GSATargetAnalysisLayer"))
-                type.GetProperty("GSATargetAnalysisLayer").SetValue(null, true);
-            
-            if (Settings.SendResults)
+            catch
             {
-              if (type.GetProperties().Select(p => p.Name).Contains("GSAEmbedResults"))
-                type.GetProperty("GSAEmbedResults").SetValue(null, Settings.EmbedResults);
-
-              if (type.GetProperties().Select(p => p.Name).Contains("GSANodalResults"))
-                type.GetProperty("GSANodalResults").SetValue(null, Settings.ChosenNodalResult);
-
-              if (type.GetProperties().Select(p => p.Name).Contains("GSAElement1DResults"))
-                type.GetProperty("GSAElement1DResults").SetValue(null, Settings.ChosenElement1DResult);
-
-              if (type.GetProperties().Select(p => p.Name).Contains("GSAElement2DResults"))
-                type.GetProperty("GSAElement2DResults").SetValue(null, Settings.ChosenElement2DResult);
-
-              if (type.GetProperties().Select(p => p.Name).Contains("GSAMiscResults"))
-                type.GetProperty("GSAMiscResults").SetValue(null, Settings.ChosenMiscResult);
+              Status.AddError("Unable to access kit. Try updating Speckle installation to a later release.");
+              throw new Exception("Unable to trigger");
             }
-
-            if (type.GetProperties().Select(p => p.Name).Contains("GSAResultCases"))
-              type.GetProperty("GSAResultCases").SetValue(null, Settings.ResultCases);
-
-            if (type.GetProperties().Select(p => p.Name).Contains("GSAResultInLocalAxis"))
-              type.GetProperty("GSAResultInLocalAxis").SetValue(null, Settings.ResultInLocalAxis);
-
-            if (type.GetProperties().Select(p => p.Name).Contains("GSAResult1DNumPosition"))
-              type.GetProperty("GSAResult1DNumPosition").SetValue(null, Settings.Result1DNumPosition);
           }
         }
       }
@@ -320,9 +336,16 @@ namespace SpeckleGSA
           {
             if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
             {
-              var gsaInterface = type.GetProperty("GSA").GetValue(null);
-
-              gsaInterface.GetType().GetMethod("PostSending").Invoke(gsaInterface, new object[] { });
+              try
+              {
+                var gsaInterface = type.GetProperty("GSA").GetValue(null);
+                gsaInterface.GetType().GetMethod("PostSending").Invoke(gsaInterface, new object[] { });
+              }
+              catch
+              {
+                Status.AddError("Unable to access kit. Try updating Speckle installation to a later release.");
+                throw new Exception("Unable to trigger");
+              }
             }
           }
         }

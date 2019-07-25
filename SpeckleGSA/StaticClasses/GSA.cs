@@ -63,11 +63,13 @@ namespace SpeckleGSA
       }
 
       GSAObject = new ComAuto();
-      //GSAObject.LogFeatureUsage("api::specklegsa::" +
-      //    FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
-      //        .ProductVersion + "::GSA " + GSAObject.VersionString()
-      //        .Split(new char[] { '\n' })[0]
-      //        .Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries)[1]);
+
+      GSAObject.LogFeatureUsage("api::specklegsa::" +
+          FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
+              .ProductVersion + "::GSA " + GSAObject.VersionString()
+              .Split(new char[] { '\n' })[0]
+              .Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries)[1]);
+
       GSAObject.NewFile();
       GSAObject.SetLocale(Locale.LOC_EN_GB);
       GSAObject.DisplayGsaWindow(showWindow);

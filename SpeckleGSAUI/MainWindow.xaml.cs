@@ -1,26 +1,26 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using SpeckleGSA;
+using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using SpeckleGSA;
-using System.Timers;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-using System.Windows.Interop;
-using Microsoft.Win32;
 using System.Windows.Threading;
-using System.Collections.ObjectModel;
-using System.Collections;
 
 namespace SpeckleGSAUI
 {
@@ -33,7 +33,7 @@ namespace SpeckleGSAUI
     const string PAUSE_BUTTON = "M15,16H13V8H15M11,16H9V8H11M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z";
 
     public ObservableCollection<string> Messages { get; set; }
-    
+
     private UIStatus status;
     enum UIStatus
     {
@@ -308,32 +308,35 @@ namespace SpeckleGSAUI
         await gsaSender.Initialize(RestApi, ApiToken);
         GSA.SetSpeckleClients(EmailAddress, RestApi);
 
+        status = UIStatus.SENDING;
         if (SenderContinuousToggle.IsChecked.Value)
         {
-          await Task.Run(() => gsaSender.Trigger())
-            .ContinueWith(res =>
-            {
-              Application.Current.Dispatcher.BeginInvoke(
-                  DispatcherPriority.Background,
-                  new Action(() =>
-                  {
-                    UpdateClientLists();
-                    status = UIStatus.IDLE;
-                    SendButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
-                    SendButtonPath.Fill = (SolidColorBrush)FindResource("PrimaryHueMidBrush");
-
-                    SenderLayerToggle.IsEnabled = true;
-                    SenderContinuousToggle.IsEnabled = true;
-                  })
-              );
-            });
+          try
+          {
+            await Task.Run(() => gsaSender.Trigger())
+              .ContinueWith(res =>
+              {
+                Application.Current.Dispatcher.BeginInvoke(
+                    DispatcherPriority.Background,
+                    new Action(() =>
+                    {
+                      UpdateClientLists();
+                      SendStream(sender, e);
+                    })
+                );
+              });
+          }
+          catch (Exception ex)
+          {
+            Status.AddError(ex.Message);
+            SendStream(sender, e);
+          }
         }
         else
         {
           triggerTimer = new Timer(Settings.PollingRate);
           triggerTimer.Elapsed += SenderTimerTrigger;
           triggerTimer.AutoReset = false;
-          status = UIStatus.SENDING;
           triggerTimer.Start();
 
           SendButtonPath.Fill = (SolidColorBrush)FindResource("SecondaryAccentBrush");// (new BrushConverter().ConvertFrom("#0080ff"));
@@ -356,15 +359,24 @@ namespace SpeckleGSAUI
     /// </summary>
     private void SenderTimerTrigger(Object source, ElapsedEventArgs e)
     {
-      gsaSender.Trigger();
-      Application.Current.Dispatcher.BeginInvoke(
+      try
+      {
+        gsaSender.Trigger();
+        Application.Current.Dispatcher.BeginInvoke(
           DispatcherPriority.Background,
           new Action(() => UpdateClientLists()
           )
-      );
+        );
 
-      if (status == UIStatus.SENDING)
-        triggerTimer.Start();
+        if (status == UIStatus.SENDING)
+          triggerTimer.Start();
+      }
+      catch (Exception ex)
+      {
+        Status.AddError(ex.Message);
+
+        SendStream(null, null);
+      }
     }
     #endregion
 
@@ -376,7 +388,7 @@ namespace SpeckleGSAUI
     {
       if (ReceiverTextbox.Text != "")
       {
-        GSA.Receivers.Add(new Tuple<string, string> (ReceiverTextbox.Text, null));
+        GSA.Receivers.Add(new Tuple<string, string>(ReceiverTextbox.Text, null));
         GSA.SetSpeckleClients(EmailAddress, RestApi);
         UpdateClientLists();
 
@@ -448,21 +460,40 @@ namespace SpeckleGSAUI
         status = UIStatus.RECEIVING;
         if (ReceiverContinuousToggle.IsChecked.Value)
         {
-          await Task.Run(() => gsaReceiver.Trigger(null, null))
+          try
+          {
+            await Task.Run(() => gsaReceiver.Trigger(null, null))
               .ContinueWith(res =>
               {
                 Application.Current.Dispatcher.BeginInvoke(
-                    DispatcherPriority.Background,
-                    new Action(() =>
-                    {
-                      ReceiveStream(sender, e);
-                    })
+                  DispatcherPriority.Background,
+                  new Action(() =>
+                  {
+                    ReceiveStream(sender, e);
+                  })
                 );
               });
+          }
+          catch (Exception ex)
+          {
+            Status.AddError(ex.Message);
+
+            ReceiveStream(sender, e);
+          }
+
         }
         else
         {
-          await Task.Run(() => gsaReceiver.Trigger(null, null));
+          try
+          {
+            await Task.Run(() => gsaReceiver.Trigger(null, null));
+          }
+          catch (Exception ex)
+          {
+            Status.AddError(ex.Message);
+
+            ReceiveStream(sender, e);
+          }
           ReceiveButtonPath.Fill = (SolidColorBrush)FindResource("SecondaryAccentBrush");// (SolidColorBrush)(new BrushConverter().ConvertFrom("#0080ff"));
         }
       }
@@ -586,7 +617,7 @@ namespace SpeckleGSAUI
           SenderStreams.Items.Add(new Tuple<string, string>(sender.Key, sender.Value.Item1));
 
       if (GSA.Receivers != null)
-        foreach (Tuple<string,string> receiver in GSA.Receivers)
+        foreach (Tuple<string, string> receiver in GSA.Receivers)
           ReceiverStreams.Items.Add(receiver.Item1);
     }
 

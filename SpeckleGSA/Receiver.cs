@@ -38,6 +38,7 @@ namespace SpeckleGSA
 
       // Run initialize receiver method in interfacer
       var assemblies = SpeckleCore.SpeckleInitializer.GetAssemblies();
+      
       foreach (var ass in assemblies)
       {
         var types = ass.GetTypes();
@@ -47,8 +48,16 @@ namespace SpeckleGSA
           {
             if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
             {
-              var gsaInterface = type.GetProperty("GSA").GetValue(null);
-              gsaInterface.GetType().GetMethod("InitializeSender").Invoke(gsaInterface, new object[] { GSA.GSAObject });
+              try
+              { 
+                var gsaInterface = type.GetProperty("GSA").GetValue(null);
+                gsaInterface.GetType().GetMethod("InitializeSender").Invoke(gsaInterface, new object[] { GSA.GSAObject });
+              }
+              catch
+              {
+                Status.AddError("Unable to access kit. Try updating Speckle installation to a later release.");
+                throw new Exception("Unable to initialize");
+              }
             }
           }
         }
@@ -131,9 +140,16 @@ namespace SpeckleGSA
           {
             if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
             {
-              var gsaInterface = type.GetProperty("GSA").GetValue(null);
-
-              indexer = gsaInterface.GetType().GetField("Indexer").GetValue(gsaInterface);
+              try
+              {
+                var gsaInterface = type.GetProperty("GSA").GetValue(null);
+                indexer = gsaInterface.GetType().GetField("Indexer").GetValue(gsaInterface);
+              }
+              catch
+              {
+                Status.AddError("Unable to access kit. Try updating Speckle installation to a later release.");
+                throw new Exception("Unable to initialize");
+              }
             }
           }
         }
@@ -199,26 +215,34 @@ namespace SpeckleGSA
         {
           if (type.GetInterfaces().Contains(typeof(SpeckleCore.ISpeckleInitializer)))
           {
-            if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
+            try
             {
-              var gsaInterface = type.GetProperty("GSA").GetValue(null);
-              
-              gsaInterface.GetType().GetMethod("PreReceiving").Invoke(gsaInterface, new object[] { });
+              if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
+              {
+                var gsaInterface = type.GetProperty("GSA").GetValue(null);
+
+                gsaInterface.GetType().GetMethod("PreReceiving").Invoke(gsaInterface, new object[] { });
+              }
+
+              if (type.GetProperties().Select(p => p.Name).Contains("GSAUnits"))
+                type.GetProperty("GSAUnits").SetValue(null, GSA.Units);
+
+              if (type.GetProperties().Select(p => p.Name).Contains("GSACoincidentNodeAllowance"))
+                type.GetProperty("GSACoincidentNodeAllowance").SetValue(null, Settings.CoincidentNodeAllowance);
+
+              if (Settings.TargetDesignLayer)
+                if (type.GetProperties().Select(p => p.Name).Contains("GSATargetDesignLayer"))
+                  type.GetProperty("GSATargetDesignLayer").SetValue(null, true);
+
+              if (Settings.TargetAnalysisLayer)
+                if (type.GetProperties().Select(p => p.Name).Contains("GSATargetAnalysisLayer"))
+                  type.GetProperty("GSATargetAnalysisLayer").SetValue(null, true);
             }
-
-            if (type.GetProperties().Select(p => p.Name).Contains("GSAUnits"))
-              type.GetProperty("GSAUnits").SetValue(null, GSA.Units);
-
-            if (type.GetProperties().Select(p => p.Name).Contains("GSACoincidentNodeAllowance"))
-              type.GetProperty("GSACoincidentNodeAllowance").SetValue(null, Settings.CoincidentNodeAllowance);
-
-            if (Settings.TargetDesignLayer)
-              if (type.GetProperties().Select(p => p.Name).Contains("GSATargetDesignLayer"))
-                type.GetProperty("GSATargetDesignLayer").SetValue(null, true);
-
-            if (Settings.TargetAnalysisLayer)
-              if (type.GetProperties().Select(p => p.Name).Contains("GSATargetAnalysisLayer"))
-                type.GetProperty("GSATargetAnalysisLayer").SetValue(null, true);
+            catch
+            {
+              Status.AddError("Unable to access kit. Try updating Speckle installation to a later release.");
+              throw new Exception("Unable to trigger");
+            }
           }
         }
       }
@@ -260,9 +284,16 @@ namespace SpeckleGSA
           {
             if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
             {
-              var gsaInterface = type.GetProperty("GSA").GetValue(null);
-
-              indexer = gsaInterface.GetType().GetField("Indexer").GetValue(gsaInterface);
+              try
+              {
+                var gsaInterface = type.GetProperty("GSA").GetValue(null);
+                indexer = gsaInterface.GetType().GetField("Indexer").GetValue(gsaInterface);
+              }
+              catch
+              {
+                Status.AddError("Unable to access kit. Try updating Speckle installation to a later release.");
+                throw new Exception("Unable to trigger");
+              }
             }
           }
         }
@@ -308,9 +339,16 @@ namespace SpeckleGSA
           {
             if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
             {
-              var gsaInterface = type.GetProperty("GSA").GetValue(null);
-
-              gsaInterface.GetType().GetMethod("PostReceiving").Invoke(gsaInterface, new object[] { });
+              try
+              {
+                var gsaInterface = type.GetProperty("GSA").GetValue(null);
+                gsaInterface.GetType().GetMethod("PostReceiving").Invoke(gsaInterface, new object[] { });
+              }
+              catch
+              {
+                Status.AddError("Unable to access kit. Try updating Speckle installation to a later release.");
+                throw new Exception("Unable to trigger");
+              }
             }
           }
         }
@@ -347,8 +385,16 @@ namespace SpeckleGSA
           {
             if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
             {
-              var gsaInterface = type.GetProperty("GSA").GetValue(null);
-              gsaInterface.GetType().GetMethod("DeleteSpeckleObjects").Invoke(gsaInterface, new object[0]);
+              try
+              {
+                var gsaInterface = type.GetProperty("GSA").GetValue(null);
+                gsaInterface.GetType().GetMethod("DeleteSpeckleObjects").Invoke(gsaInterface, new object[0]);
+              }
+              catch
+              {
+                Status.AddError("Unable to access kit. Try updating Speckle installation to a later release.");
+                throw new Exception("Unable to delete expired objects");
+              }
             }
           }
         }
