@@ -205,6 +205,8 @@ namespace SpeckleGSA
 
         mySender.BroadcastMessage("stream", StreamID, new { eventType = "update-global" });
 
+        var responseClone = mySender.StreamCloneAsync(StreamID).Result;
+
         Status.AddMessage("Successfully sent " + StreamName + " stream with " + updateStream.Objects.Count() + " objects.");
       }
       catch
