@@ -241,7 +241,7 @@ namespace SpeckleGSA
 
       string[] pieces = res.ListSplit("\t");
 
-      return pieces.Length > 1 ? pieces[1] : "";
+      return pieces.Length > 1 ? pieces[1] : "My GSA Model";
     }
 
     /// <summary>
