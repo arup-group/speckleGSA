@@ -111,7 +111,6 @@ namespace SpeckleGSA
 				Status.ChangeStatus("Accessing streams");
 
 				var nonBlankReceivers = GSA.Receivers.Where(r => !string.IsNullOrEmpty(r.Item1)).ToList();
-
 				
 				foreach (var streamInfo in nonBlankReceivers)
 				{
@@ -119,11 +118,11 @@ namespace SpeckleGSA
 					Receivers[streamInfo.Item1] = new SpeckleGSAReceiver(restApi, apiToken);
 				}
 
-				nonBlankReceivers.ForEachAsync(async (streamInfo) => 
+				await nonBlankReceivers.ForEachAsync(async (streamInfo) => 
 				{
 					await Receivers[streamInfo.Item1].InitializeReceiver(streamInfo.Item1, streamInfo.Item2);
 					Receivers[streamInfo.Item1].UpdateGlobalTrigger += Trigger;
-				}, Environment.ProcessorCount).Wait();
+				}, Environment.ProcessorCount);
 
 				// Generate which GSA object to cast for each type
 				TypeCastPriority = TypePrerequisites.ToList();
