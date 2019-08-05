@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -136,7 +137,7 @@ namespace SpeckleGSA
     /// <summary>
     /// Trigger to update stream. Is called automatically when update-global ws message is received on stream.
     /// </summary>
-    public void Trigger(object sender, EventArgs e)
+    public async void Trigger(object sender, EventArgs e)
     {
       if (IsBusy) return;
       if (!IsInit) return;
@@ -187,32 +188,38 @@ namespace SpeckleGSA
 
       List<SpeckleObject> objects = new List<SpeckleObject>();
 
-      // Read objects
-      foreach (KeyValuePair<string, SpeckleGSAReceiver> kvp in Receivers)
-      {
-        try
-        {
-          Status.ChangeStatus("Receiving stream");
-          var receivedObjects = Receivers[kvp.Key].GetObjects().Distinct();
+			// Read objects
+			Status.ChangeStatus("Receiving streams");
+			var errors = new ConcurrentBag<string>();
+			Parallel.ForEach(Receivers, (kvp) =>
+			{
+				try
+				{
+					var receivedObjects = Receivers[kvp.Key].GetObjects().Distinct();
+					double scaleFactor = (1.0).ConvertUnit(Receivers[kvp.Key].Units.ShortUnitName(), GSA.Units);
+					foreach (var o in receivedObjects)
+					{
+						try
+						{
+							o.Scale(scaleFactor);
+						}
+						catch { }
+					}
+					objects.AddRange(receivedObjects);
+				}
+				catch { errors.Add("Unable to get stream " + kvp.Key); }
+			});
 
-          Status.ChangeStatus("Scaling objects");
-          double scaleFactor = (1.0).ConvertUnit(Receivers[kvp.Key].Units.ShortUnitName(), GSA.Units);
+			if (errors.Count() > 0)
+			{
+				foreach (var error in errors)
+				{
+					Status.AddError(error);
+				}
+			}
 
-          foreach (SpeckleObject o in receivedObjects)
-          {
-            try
-            {
-              o.Scale(scaleFactor);
-            }
-            catch { }
-          }
-          objects.AddRange(receivedObjects);
-        }
-        catch { Status.AddError("Unable to get stream " + kvp.Key); }
-      }
-
-      // Get Indexer
-      object indexer = null;
+			// Get Indexer
+			object indexer = null;
       foreach (var ass in assemblies)
       {
         var types = ass.GetTypes();

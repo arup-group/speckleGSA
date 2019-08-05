@@ -53,24 +53,28 @@ namespace SpeckleGSA
 
       if (string.IsNullOrEmpty(clientID))
       {
-        var clientResponse = myReceiver.ClientCreateAsync(new AppClient()
-        {
-          DocumentName = Path.GetFileNameWithoutExtension(GSA.FilePath),
-          DocumentType = "GSA",
-          Role = "Receiver",
-          StreamId = streamID,
-          Online = true,
-        }).Result;
+				var task = myReceiver.ClientCreateAsync(new AppClient()
+				{
+					DocumentName = Path.GetFileNameWithoutExtension(GSA.FilePath),
+					DocumentType = "GSA",
+					Role = "Receiver",
+					StreamId = streamID,
+					Online = true,
+				});
+				await task;
+				var clientResponse = task.Result;
 
         myReceiver.ClientId = clientResponse.Resource._id;
       }
       else
       {
-        var clientResponse = myReceiver.ClientUpdateAsync(clientID, new AppClient()
-        {
-          DocumentName = Path.GetFileNameWithoutExtension(GSA.FilePath),
-          Online = true,
-        }).Result;
+				var task = myReceiver.ClientUpdateAsync(clientID, new AppClient()
+				{
+					DocumentName = Path.GetFileNameWithoutExtension(GSA.FilePath),
+					Online = true,
+				});
+				await task;
+				var clientResponse = task.Result;
 
         myReceiver.ClientId = clientID;
       }
