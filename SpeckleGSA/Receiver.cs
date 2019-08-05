@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using SpeckleCore;
@@ -20,180 +21,118 @@ namespace SpeckleGSA
     public bool IsInit = false;
     public bool IsBusy = false;
 
-    /// <summary>
-    /// Initializes receiver.
-    /// </summary>
-    /// <param name="restApi">Server address</param>
-    /// <param name="apiToken">API token of account</param>
-    /// <returns>Task</returns>
-    public async Task Initialize(string restApi, string apiToken)
-    {
-      if (IsInit) return;
+		/// <summary>
+		/// Initializes receiver.
+		/// </summary>
+		/// <param name="restApi">Server address</param>
+		/// <param name="apiToken">API token of account</param>
+		/// <returns>Task</returns>
+		public async Task Initialize(string restApi, string apiToken)
+		{
+			if (IsInit) return;
 
-      if (!GSA.IsInit)
-      {
-        Status.AddError("GSA link not found.");
-        return;
-      }
+			if (!GSA.IsInit)
+			{
+				Status.AddError("GSA link not found.");
+				return;
+			}
 
-      // Run initialize receiver method in interfacer
-      var assemblies = SpeckleCore.SpeckleInitializer.GetAssemblies();
-      
-      foreach (var ass in assemblies)
-      {
-        var types = ass.GetTypes();
-        foreach (var type in types)
-        {
-          if (type.GetInterfaces().Contains(typeof(SpeckleCore.ISpeckleInitializer)))
-          {
-            if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
-            {
-              try
-              { 
-                var gsaInterface = type.GetProperty("GSA").GetValue(null);
-                gsaInterface.GetType().GetMethod("InitializeSender").Invoke(gsaInterface, new object[] { GSA.GSAObject });
-              }
-              catch
-              {
-                Status.AddError("Unable to access kit. Try updating Speckle installation to a later release.");
-                throw new Exception("Unable to initialize");
-              }
-            }
-          }
-        }
-      }
+			// Run initialize receiver method in interfacer
+			var assemblies = SpeckleInitializer.GetAssemblies();
 
-      // Grab GSA interface and attribute type
-      Type interfaceType = null;
-      Type attributeType = null;
-      foreach (var ass in assemblies)
-      {
-        var types = ass.GetTypes();
-        foreach (var type in types)
-        {
-          if (type.FullName.Contains("IGSASpeckleContainer"))
-          {
-            interfaceType = type;
-          }
+			foreach (var ass in assemblies)
+			{
+				var types = ass.GetTypes();
 
-          if (type.FullName.Contains("GSAObject"))
-          {
-            attributeType = type;
-          }
-        }
-      }
+				object gsaInterface;
+				object indexer;
 
-      if (interfaceType == null)
-        return;
+				var gsaInterfaceType = types.FirstOrDefault(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer)) && t.GetProperties().Select(p => p.Name).Contains("GSA"));
+				if (gsaInterfaceType == null)
+				{
+					continue;
+				}
 
-      // Grab all GSA related object
-      List<Type> objTypes = new List<Type>();
-      foreach (var ass in assemblies)
-      {
-        var types = ass.GetTypes();
-        foreach (var type in types)
-          if (interfaceType.IsAssignableFrom(type) && type != interfaceType)
-            objTypes.Add(type);
-      }
+				try
+				{
+					gsaInterface = gsaInterfaceType.GetProperty("GSA").GetValue(null);
+					gsaInterface.GetType().GetMethod("InitializeSender").Invoke(gsaInterface, new object[] { GSA.GSAObject });
 
-      foreach (Type t in objTypes)
-      {
-        if (t.GetAttribute("AnalysisLayer", attributeType) != null)
-          if (Settings.TargetAnalysisLayer && !(bool)t.GetAttribute("AnalysisLayer", attributeType)) continue;
+					indexer = gsaInterface.GetType().GetField("Indexer").GetValue(gsaInterface);
+				}
+				catch
+				{
+					Status.AddError("Unable to access kit. Try updating Speckle installation to a later release.");
+					throw new Exception("Unable to initialize");
+				}
 
-        if (t.GetAttribute("DesignLayer", attributeType) != null)
-          if (Settings.TargetDesignLayer && !(bool)t.GetAttribute("DesignLayer", attributeType)) continue;
+				// Grab GSA interface and attribute type
+				var interfaceType = types.FirstOrDefault(t => t.FullName.Contains("IGSASpeckleContainer"));
+				var attributeType = types.FirstOrDefault(t => t.FullName.Contains("GSAObject"));
+				if (interfaceType == null || attributeType == null)
+				{
+					return;
+				}
 
-        List<Type> prereq = new List<Type>();
-        if (t.GetAttribute("WritePrerequisite", attributeType) != null)
-          prereq = ((Type[])t.GetAttribute("WritePrerequisite", attributeType)).ToList();
+				// Grab all GSA related object
+				var objTypesMatchingLayer = types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType && ObjectTypeMatchesLayer(t, attributeType));
 
-        TypePrerequisites[t] = prereq;
-      }
 
-      // Remove wrong layer objects from prerequisites
-      foreach (Type t in objTypes)
-      {
-        if (t.GetAttribute("AnalysisLayer", attributeType) != null)
-          if (Settings.TargetAnalysisLayer && !(bool)t.GetAttribute("AnalysisLayer", attributeType))
-            foreach (KeyValuePair<Type, List<Type>> kvp in TypePrerequisites)
-              kvp.Value.Remove(t);
+				//Pass one: for each type who has the correct layer attribute, record its prerequisites (some of which might not be the correct layer)
+				foreach (var t in objTypesMatchingLayer)
+				{
+					TypePrerequisites[t] = (t.GetAttribute("WritePrerequisite", attributeType) == null)
+						? new List<Type>()
+						: ((Type[])t.GetAttribute("WritePrerequisite", attributeType)).Where(prereqT => ObjectTypeMatchesLayer(prereqT, attributeType)).ToList();
+				}
 
-        if (t.GetAttribute("DesignLayer", attributeType) != null)
-          if (Settings.TargetDesignLayer && !(bool)t.GetAttribute("DesignLayer", attributeType))
-            foreach (KeyValuePair<Type, List<Type>> kvp in TypePrerequisites)
-              kvp.Value.Remove(t);
-      }
+				foreach (var kvp in TypePrerequisites)
+				{
+					try
+					{
+						var keywords = new List<string>() { (string)kvp.Key.GetAttribute("GSAKeyword", attributeType) };
+						keywords.AddRange((string[])kvp.Key.GetAttribute("SubGSAKeywords", attributeType));
 
-      // Generate which GSA object to cast for each type
-      TypeCastPriority = TypePrerequisites.ToList();
-      TypeCastPriority.Sort((x, y) => x.Value.Count().CompareTo(y.Value.Count()));
+						foreach (string k in keywords)
+						{
+							int highestRecord = (int)GSA.GSAObject.GwaCommand("HIGHEST\t" + k);
 
-      // Get Indexer
-      object indexer = null;
-      foreach (var ass in assemblies)
-      {
-        var types = ass.GetTypes();
-        foreach (var type in types)
-        {
-          if (type.GetInterfaces().Contains(typeof(SpeckleCore.ISpeckleInitializer)))
-          {
-            if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
-            {
-              try
-              {
-                var gsaInterface = type.GetProperty("GSA").GetValue(null);
-                indexer = gsaInterface.GetType().GetField("Indexer").GetValue(gsaInterface);
-              }
-              catch
-              {
-                Status.AddError("Unable to access kit. Try updating Speckle installation to a later release.");
-                throw new Exception("Unable to initialize");
-              }
-            }
-          }
-        }
-      }
-      
-      // Add existing GSA file objects to counters
-      foreach (KeyValuePair<Type, List<Type>> kvp in TypePrerequisites)
-      {
-        try
-        {
-          List<string> keywords = new List<string>() { (string)kvp.Key.GetAttribute("GSAKeyword", attributeType) };
-          keywords.AddRange((string[])kvp.Key.GetAttribute("SubGSAKeywords", attributeType));
+							if (highestRecord > 0)
+							{
+								indexer.GetType().GetMethod("ReserveIndices", new Type[] { typeof(string), typeof(List<int>) }).Invoke(indexer, new object[] { k, Enumerable.Range(1, highestRecord).ToList() });
+							}
+						}
+					}
+					catch { }
+				}
+				indexer.GetType().GetMethod("SetBaseline").Invoke(indexer, null);
 
-          foreach (string k in keywords)
-          {
-            int highestRecord = (int)GSA.GSAObject.GwaCommand("HIGHEST\t" + k);
+				// Create receivers
+				Status.ChangeStatus("Accessing streams");
 
-            if (highestRecord > 0)
-              indexer.GetType().GetMethod("ReserveIndices", new Type[] { typeof(string), typeof(List<int>) }).Invoke(indexer, new object[] { k, Enumerable.Range(1, highestRecord).ToList() });
-          }
-        }
-        catch { }
-      }
-      indexer.GetType().GetMethod("SetBaseline").Invoke(indexer, new object[] { });
+				var nonBlankReceivers = GSA.Receivers.Where(r => !string.IsNullOrEmpty(r.Item1)).ToList();
 
-      // Create receivers
-      Status.ChangeStatus("Accessing stream");
+				
+				foreach (var streamInfo in nonBlankReceivers)
+				{
+					Status.AddMessage("Creating receiver " + streamInfo.Item1);
+					Receivers[streamInfo.Item1] = new SpeckleGSAReceiver(restApi, apiToken);
+				}
 
-      foreach (Tuple<string,string> streamInfo in GSA.Receivers)
-      {
-        if (streamInfo.Item1 == "")
-          Status.AddMessage("No stream specified.");
-        else
-        {
-          Status.AddMessage("Creating receiver " + streamInfo.Item1);
-          Receivers[streamInfo.Item1] = new SpeckleGSAReceiver(restApi, apiToken);
-          await Receivers[streamInfo.Item1].InitializeReceiver(streamInfo.Item1, streamInfo.Item2);
-          Receivers[streamInfo.Item1].UpdateGlobalTrigger += Trigger;
-        }
-      }
+				nonBlankReceivers.ForEachAsync(async (streamInfo) => 
+				{
+					await Receivers[streamInfo.Item1].InitializeReceiver(streamInfo.Item1, streamInfo.Item2);
+					Receivers[streamInfo.Item1].UpdateGlobalTrigger += Trigger;
+				}, Environment.ProcessorCount).Wait();
 
-      Status.ChangeStatus("Ready to receive");
-      IsInit = true;
-    }
+				// Generate which GSA object to cast for each type
+				TypeCastPriority = TypePrerequisites.ToList();
+				TypeCastPriority.Sort((x, y) => x.Value.Count().CompareTo(y.Value.Count()));
+			}
+
+			Status.ChangeStatus("Ready to receive");
+			IsInit = true;
+		}
 
     /// <summary>
     /// Trigger to update stream. Is called automatically when update-global ws message is received on stream.
@@ -402,5 +341,19 @@ namespace SpeckleGSA
 
       GSA.UpdateViews();
     }
-  }
+
+		private bool ObjectTypeMatchesLayer(Type t, Type attributeType)
+		{
+			var analysisLayerAttribute = t.GetAttribute("AnalysisLayer", attributeType);
+			var designLayerAttribute = t.GetAttribute("DesignLayer", attributeType);
+
+			//If an object type has a layer attribute exists and its boolean value doesn't match the settings target layer, then it doesn't match.  This could be reviewed and simplified.
+			if ((analysisLayerAttribute != null && Settings.TargetAnalysisLayer && !(bool)analysisLayerAttribute)
+				|| (designLayerAttribute != null && Settings.TargetDesignLayer && !(bool)designLayerAttribute))
+			{
+				return false;
+			}
+			return true;
+		}
+	}
 }
