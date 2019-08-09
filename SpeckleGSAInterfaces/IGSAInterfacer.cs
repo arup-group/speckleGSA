@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
 namespace SpeckleGSAInterfaces
 {
@@ -44,12 +40,14 @@ namespace SpeckleGSAInterfaces
 		/// <summary>
 		/// Create new node at the coordinate. If a node already exists, no new nodes are created. Updates Indexer with the index.
 		/// </summary>
+		/// <param name="keyword">GSA keyword a node</param>
+		/// <param name="typeName">name of the type of the node</param>
 		/// <param name="x">X coordinate of the node</param>
 		/// <param name="y">Y coordinate of the node</param>
 		/// <param name="z">Z coordinate of the node</param>
 		/// <param name="applicationId">Application ID of the node</param>
 		/// <returns>Node index</returns>
-		int NodeAt(double x, double y, double z, double coincidentNodeAllowance, string applicationId = null);
+		int NodeAt(string keyword, string typeName, double x, double y, double z, double coincidentNodeAllowance, string applicationId = null);
 		#endregion
 
 
@@ -116,41 +114,5 @@ namespace SpeckleGSAInterfaces
 		/// <returns>Dictionary of reactions with keys {x,y,z,xx,yy,zz}.</returns>
 		Dictionary<string, object> GetGSAResult(int id, int resHeader, int flags, List<string> keys, string loadCase, string axis = "local", int num1DPoints = 2);
 		#endregion
-	}
-
-	public interface IGSAIndexer
-	{
-		int ResolveIndex(Type type);
-		int ResolveIndex(Type type, string applicationId);
-		List<int> ResolveIndices(Type type, IEnumerable<string> applicationIds);
-		int? LookupIndex(Type type, string applicationId);
-		List<int?> LookupIndices(Type type, IEnumerable<string> applicationIds);
-		void ReserveIndices(Type type, IEnumerable<int> indices);
-		void ReserveIndicesAndMap(Type type, IEnumerable<int> refs, IEnumerable<string> applicationId);
-		void SetBaseline();
-		void ResetToBaseline();
-		bool InBaseline(string keywordGSA, int index);
-	}
-
-	public interface ISettings
-	{
-
-	}
-
-	public enum GSATargetLayer
-	{
-		Design,
-		Analysis
-	}
-
-
-	public enum GSAEntity
-	{
-		NODE = 1,
-		ELEMENT = 2,
-		MEMBER = 3,
-		LINE = 6,
-		AREA = 7,
-		REGION = 8
 	}
 }

@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 
 namespace SpeckleGSAProxy
 {
+	//Aim: to provide a thread-safe interface to the GSA process
 	public class GSAInterfacer : IGSAInterfacer
 	{
 		public IGSAIndexer Indexer { get; set; }
@@ -420,17 +421,17 @@ namespace SpeckleGSAProxy
 			return SidCache[keyword + "\t" + id.ToString()];
 		}
 
-		public int NodeAt(double x, double y, double z, double coincidentNodeAllowance, string applicationId = null)
+		public int NodeAt(string keyword, string typeName, double x, double y, double z, double coincidentNodeAllowance, string applicationId = null)
 		{
 			int idx = GSAObject.Gen_NodeAt(x, y, z, coincidentNodeAllowance);
 
 			if (applicationId != null)
-				Indexer.ReserveIndicesAndMap(typeof(GSANode), new List<int>() { idx }, new List<string>() { applicationId });
+				Indexer.ReserveIndicesAndMap(keyword, typeName, new List<int>() { idx }, new List<string>() { applicationId });
 			else
-				Indexer.ReserveIndices(typeof(GSANode), new List<int>() { idx });
+				Indexer.ReserveIndices(keyword, new List<int>() { idx });
 
 			// Add artificial cache
-			string cacheKey = "SET\t" + typeof(GSANode).GetGSAKeyword() + "\t" + idx.ToString() + "\t";
+			string cacheKey = "SET\t" + keyword + "\t" + idx.ToString() + "\t";
 			if (!GSASetCache.ContainsKey(cacheKey))
 				GSASetCache[cacheKey] = 0;
 

@@ -8,7 +8,7 @@
     <OutputType>Library</OutputType>
     <RootNamespace>SpeckleGSA</RootNamespace>
     <AssemblyName>SpeckleGSA</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <TargetFrameworkProfile />
@@ -111,6 +111,16 @@
     <Reference Include="websocket-sharp, Version=1.0.2.32519, Culture=neutral, PublicKeyToken=5660b08a1845a91e, processorArchitecture=MSIL">
       <HintPath>..\packages\WebSocketSharp-NonPreRelease.1.0.0\lib\net35\websocket-sharp.dll</HintPath>
     </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SpeckleGSAInterfaces\SpeckleGSAInterfaces.csproj">
+      <Project>{5ca1bffe-f623-4677-8412-9d20f0017523}</Project>
+      <Name>SpeckleGSAInterfaces</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SpeckleGSAProxy\SpeckleGSAProxy.csproj">
+      <Project>{88ae85c3-1966-4b71-8c91-242c80dce6d4}</Project>
+      <Name>SpeckleGSAProxy</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="AfterBuild">

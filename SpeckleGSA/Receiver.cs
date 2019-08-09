@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using SpeckleCore;
+using SpeckleGSAInterfaces;
 
 namespace SpeckleGSA
 {
@@ -60,6 +61,9 @@ namespace SpeckleGSA
 					gsaInterface.GetType().GetMethod("InitializeSender").Invoke(gsaInterface, new object[] { GSA.GSAObject });
 
 					indexer = gsaInterface.GetType().GetField("Indexer").GetValue(gsaInterface);
+
+					//TEST
+					gsaInterfaceType.GetProperty("TestInterface").SetValue(null, GSA.testInterfacer);
 				}
 				catch
 				{

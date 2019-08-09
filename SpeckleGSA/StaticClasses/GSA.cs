@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using SpeckleGSAInterfaces;
 
 namespace SpeckleGSA
 {
@@ -17,7 +18,11 @@ namespace SpeckleGSA
   /// </summary>
   public static class GSA
   {
-    public static ComAuto GSAObject;
+		//TEST
+		public static IGSASettings testSettings;
+		public static IGSAInterfacer testInterfacer;
+
+		public static ComAuto GSAObject;
 
     public static string FilePath;
 
@@ -62,7 +67,12 @@ namespace SpeckleGSA
         GSAObject = null;
       }
 
-      GSAObject = new ComAuto();
+			//TEST
+			testSettings = new SpeckleGSAProxy.Settings();
+			testInterfacer = new SpeckleGSAProxy.GSAInterfacer();
+			testInterfacer.Indexer = new SpeckleGSAProxy.Indexer();
+
+			GSAObject = new ComAuto();
 
       GSAObject.LogFeatureUsage("api::specklegsa::" +
           FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
