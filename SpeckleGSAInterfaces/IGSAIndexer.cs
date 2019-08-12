@@ -5,7 +5,7 @@ namespace SpeckleGSAInterfaces
 {
 	public interface IGSAIndexer
 	{
-		int ResolveIndex(string keyword, string applicationId, string type = "");
+		int ResolveIndex(string keyword, string applicationId = "", string type = "");
 		List<int> ResolveIndices(string keyword, IEnumerable<string> applicationIds);
 		int? LookupIndex(string keyword, string applicationId, string type = "");
 		List<int?> LookupIndices(string keyword, IEnumerable<string> applicationIds);
