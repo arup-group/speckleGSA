@@ -127,6 +127,9 @@ namespace SpeckleGSAUI
       GSA.Init();
       Status.Init(this.AddMessage, this.AddError, this.ChangeStatus);
       MessagePane.ItemsSource = Messages;
+
+      SpeckleCore.SpeckleInitializer.Initialize();
+      SpeckleCore.LocalContext.Init();
     }
 
     #region Speckle Operations
@@ -135,24 +138,29 @@ namespace SpeckleGSAUI
     /// </summary>
     private void Login(object sender, RoutedEventArgs e)
     {
-      SpecklePopup.MainWindow p = new SpecklePopup.MainWindow(false, true);
+      var signInWindow = new SpecklePopup.SignInWindow(true);
+
+      var helper = new System.Windows.Interop.WindowInteropHelper(signInWindow);
+      helper.Owner = new System.Windows.Interop.WindowInteropHelper(this).Handle;
 
       this.IsEnabled = false;
 
-      p.ShowDialog();
-
+      signInWindow.ShowDialog();
+      
       this.IsEnabled = true;
 
-      if (p.restApi != null && p.apitoken != null)
+      if (signInWindow.AccountListBox.SelectedIndex != -1)
       {
-        Status.AddMessage("Logged in to " + p.selectedEmail);
+        var account = signInWindow.accounts[signInWindow.AccountListBox.SelectedIndex];
+
+        Status.AddMessage("Login successful");
 
         GSA.Close();
         (SenderTab.Content as Grid).IsEnabled = false;
         (ReceiverTab.Content as Grid).IsEnabled = false;
-        EmailAddress = p.selectedEmail;
-        RestApi = p.restApi;
-        ApiToken = p.apitoken;
+        EmailAddress = account.Email;
+        RestApi = account.RestApi;
+        ApiToken = account.Token;
         UpdateClientLists();
       }
       else
