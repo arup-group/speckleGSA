@@ -113,6 +113,13 @@ namespace SpeckleGSAInterfaces
 		/// <param name="axis">Result axis</param>
 		/// <returns>Dictionary of reactions with keys {x,y,z,xx,yy,zz}.</returns>
 		Dictionary<string, object> GetGSAResult(int id, int resHeader, int flags, List<string> keys, string loadCase, string axis = "local", int num1DPoints = 2);
+
+		/// <summary>
+		/// Checks if the load case exists in the GSA file
+		/// </summary>
+		/// <param name="loadCase">GSA load case description</param>
+		/// <returns>True if load case exists</returns>
+		bool CaseExist(string loadCase);
 		#endregion
 	}
 }

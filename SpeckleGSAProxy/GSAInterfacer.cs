@@ -293,8 +293,8 @@ namespace SpeckleGSAProxy
 						GSAObject.Output_Init_Arr(flags, axis, loadCase, (ResHeader)resHeader, num1DPoints);
 						PreviousGSAResultInit = initKey;
 					}
-					try
 
+					try
 					{
 						GSAObject.Output_Extract_Arr(id, out var outputExtractResults, out num);
 						res = (GsaResults[])outputExtractResults;
@@ -477,6 +477,27 @@ namespace SpeckleGSAProxy
 			}
 
 			return GSAObject.GwaCommand(command);
+		}
+
+		/// <summary>
+		/// Checks if the load case exists in the GSA file
+		/// </summary>
+		/// <param name="loadCase">GSA load case description</param>
+		/// <returns>True if load case exists</returns>
+		public bool CaseExist(string loadCase)
+		{
+			try
+			{
+				string[] pieces = loadCase.Split(new char[] { 'p' }, StringSplitOptions.RemoveEmptyEntries);
+
+				if (pieces.Length == 1)
+					return GSAObject.CaseExist(loadCase[0].ToString(), Convert.ToInt32(loadCase.Substring(1))) == 1;
+				else if (pieces.Length == 2)
+					return GSAObject.CaseExist(loadCase[0].ToString(), Convert.ToInt32(pieces[0].Substring(1))) == 1;
+				else
+					return false;
+			}
+			catch { return false; }
 		}
 	}
 }
