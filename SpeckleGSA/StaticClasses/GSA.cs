@@ -72,7 +72,9 @@ namespace SpeckleGSA
 
       GSAObject.NewFile();
       GSAObject.SetLocale(Locale.LOC_EN_GB);
-      GSAObject.DisplayGsaWindow(showWindow);
+
+      if (showWindow)
+        GSAObject.DisplayGsaWindow(true);
 
       GetSpeckleClients(emailAddress, serverAddress);
 
@@ -111,7 +113,9 @@ namespace SpeckleGSA
       GSAObject.Open(path);
       FilePath = path;
       GSAObject.SetLocale(Locale.LOC_EN_GB);
-      GSAObject.DisplayGsaWindow(showWindow);
+
+      if (showWindow)
+        GSAObject.DisplayGsaWindow(true);
 
       GetSpeckleClients(emailAddress, serverAddress);
 
