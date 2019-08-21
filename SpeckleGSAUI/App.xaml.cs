@@ -9,6 +9,7 @@ using System.Windows;
 using SpeckleGSA;
 using System.IO;
 using System.Globalization;
+using SpeckleGSAProxy;
 
 namespace SpeckleGSAUI
 {
@@ -159,7 +160,7 @@ namespace SpeckleGSAUI
       else
       {
         GSA.NewFile(EmailAddress, RestApi, false);
-        GSA.GSAObject.SaveAs(arguments["file"]);
+        ((GSAInterfacer)GSA.Interfacer).SaveAs(arguments["file"]);
       }
 
       // We will receive all the things!
@@ -187,15 +188,15 @@ namespace SpeckleGSAUI
       if (arguments.ContainsKey("layer"))
         if (arguments["layer"].ToLower() == "analysis")
         {
-          Settings.TargetAnalysisLayer = true;
-          Settings.TargetDesignLayer = false;
+          GSA.Settings.TargetAnalysisLayer = true;
+					GSA.Settings.TargetDesignLayer = false;
         }
       
       if (arguments.ContainsKey("nodeAllowance"))
       {
         try
         {
-          Settings.CoincidentNodeAllowance = Convert.ToDouble(arguments["nodeAllowance"]);
+					GSA.Settings.CoincidentNodeAllowance = Convert.ToDouble(arguments["nodeAllowance"]);
         }
         catch { }
       }
@@ -207,8 +208,8 @@ namespace SpeckleGSAUI
       gsaReceiver.Trigger(null, null);
       gsaReceiver.Dispose();
 
-      GSA.GSAObject.SaveAs(arguments["file"]);
-      GSA.Close();
+			((GSAInterfacer)GSA.Interfacer).SaveAs(arguments["file"]);
+			GSA.Close();
 
       Console.WriteLine("Receiving complete");
     }
@@ -218,55 +219,55 @@ namespace SpeckleGSAUI
       if (arguments.ContainsKey("layer"))
         if (arguments["layer"].ToLower() == "analysis")
         {
-          Settings.TargetAnalysisLayer = true;
-          Settings.TargetDesignLayer = false;
+					GSA.Settings.TargetAnalysisLayer = true;
+					GSA.Settings.TargetDesignLayer = false;
         }
 
       if (arguments.ContainsKey("sendAllNodes"))
-        Settings.SendOnlyMeaningfulNodes = false;
+				((Settings)GSA.Settings).SendOnlyMeaningfulNodes = false;
 
       if (arguments.ContainsKey("separateStreams"))
-        Settings.SeparateStreams = true;
+				((Settings)GSA.Settings).SeparateStreams = true;
 
       if (arguments.ContainsKey("resultOnly"))
-        Settings.SendOnlyResults = true;
+				((Settings)GSA.Settings).SendOnlyResults = true;
 
       if (arguments.ContainsKey("resultUnembedded"))
-        Settings.EmbedResults = false;
+				((Settings)GSA.Settings).EmbedResults = false;
 
       if (arguments.ContainsKey("resultInLocalAxis"))
-        Settings.ResultInLocalAxis = true;
+				((Settings)GSA.Settings).ResultInLocalAxis = true;
 
       if (arguments.ContainsKey("result1DNumPosition"))
       {
         try
         {
-          Settings.Result1DNumPosition = Convert.ToInt32(arguments["result1DNumPosition"]);
+					((Settings)GSA.Settings).Result1DNumPosition = Convert.ToInt32(arguments["result1DNumPosition"]);
         }
         catch { }
       }
 
       if (arguments.ContainsKey("result"))
       {
-        Settings.SendResults = true;
+				((Settings)GSA.Settings).SendResults = true;
 
         var results = arguments["result"].Split(new char[] { ',' }).Select(x => x.Replace("\"", ""));
 
         foreach (string r in results)
         {
           if (Result.NodalResultMap.ContainsKey(r))
-            Settings.ChosenNodalResult[r] = Result.NodalResultMap[r];
+						((Settings)GSA.Settings).ChosenNodalResult[r] = Result.NodalResultMap[r];
           else if (Result.Element1DResultMap.ContainsKey(r))
-            Settings.ChosenElement1DResult[r] = Result.Element1DResultMap[r];
+						((Settings)GSA.Settings).ChosenElement1DResult[r] = Result.Element1DResultMap[r];
           else if (Result.Element2DResultMap.ContainsKey(r))
-            Settings.ChosenElement2DResult[r] = Result.Element2DResultMap[r];
+						((Settings)GSA.Settings).ChosenElement2DResult[r] = Result.Element2DResultMap[r];
           else if (Result.MiscResultMap.ContainsKey(r))
-            Settings.ChosenMiscResult[r] = Result.MiscResultMap[r];
+						((Settings)GSA.Settings).ChosenMiscResult[r] = Result.MiscResultMap[r];
         }
       }
 
       if (arguments.ContainsKey("resultCases"))
-        Settings.ResultCases = arguments["resultCases"].Split(new char[] { ',' }).ToList();
+				((Settings)GSA.Settings).ResultCases = arguments["resultCases"].Split(new char[] { ',' }).ToList();
       
       GSA.GetSpeckleClients(EmailAddress, RestApi);
       var gsaSender = new Sender();
@@ -275,8 +276,8 @@ namespace SpeckleGSAUI
       gsaSender.Trigger();
       gsaSender.Dispose();
 
-      GSA.GSAObject.SaveAs(arguments["file"]);
-      GSA.Close();
+			((GSAInterfacer)GSA.Interfacer).SaveAs(arguments["file"]);
+			GSA.Close();
 
       Console.WriteLine("Sending complete");
     }

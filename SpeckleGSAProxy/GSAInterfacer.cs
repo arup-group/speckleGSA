@@ -6,6 +6,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Interop.Gsa_10_0;
 using System.Text.RegularExpressions;
+using System.Diagnostics;
+using System.Reflection;
 
 namespace SpeckleGSAProxy
 {
@@ -28,11 +30,13 @@ namespace SpeckleGSAProxy
 
 		private ComAuto GSAObject;
 
+		public string FilePath;
+
 		#region Communication
-		public void InitializeReceiver(ComAuto GSAObject)
+		public void InitializeReceiver()
 		{
 			FullClearCache();
-			this.GSAObject = GSAObject;
+			this.GSAObject = new ComAuto();
 		}
 
 		public void PreReceiving()
@@ -45,10 +49,10 @@ namespace SpeckleGSAProxy
 			BlankDepreciatedGWASetCommands();
 		}
 
-		public void InitializeSender(ComAuto GSAObject)
+		public void InitializeSender()
 		{
 			FullClearCache();
-			this.GSAObject = GSAObject;
+			this.GSAObject = new ComAuto();
 		}
 
 		public void PreSending()
@@ -498,6 +502,166 @@ namespace SpeckleGSAProxy
 					return false;
 			}
 			catch { return false; }
+		}
+
+
+		#region File Operations
+		/// <summary>
+		/// Creates a new GSA file. Email address and server address is needed for logging purposes.
+		/// </summary>
+		/// <param name="emailAddress">User email address</param>
+		/// <param name="serverAddress">Speckle server address</param>
+		public void NewFile(string emailAddress, string serverAddress, bool showWindow = true)
+		{
+			if (GSAObject != null)
+			{
+				try
+				{
+					GSAObject.Close();
+				}
+				catch { }
+				GSAObject = null;
+			}
+
+			GSAObject = new ComAuto();
+
+			GSAObject.LogFeatureUsage("api::specklegsa::" +
+					FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
+							.ProductVersion + "::GSA " + GSAObject.VersionString()
+							.Split(new char[] { '\n' })[0]
+							.Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries)[1]);
+
+			GSAObject.NewFile();
+			GSAObject.SetLocale(Locale.LOC_EN_GB);
+			GSAObject.DisplayGsaWindow(showWindow);
+
+			//GetSpeckleClients(emailAddress, serverAddress);
+
+			//Status.AddMessage("Created new file.");
+		}
+
+		/// <summary>
+		/// Opens an existing GSA file. Email address and server address is needed for logging purposes.
+		/// </summary>
+		/// <param name="path">Absolute path to GSA file</param>
+		/// <param name="emailAddress">User email address</param>
+		/// <param name="serverAddress">Speckle server address</param>
+		public void OpenFile(string path, string emailAddress, string serverAddress, bool showWindow = true)
+		{
+
+			if (GSAObject != null)
+			{
+				try
+				{
+					GSAObject.Close();
+				}
+				catch { }
+				GSAObject = null;
+			}
+
+			GSAObject = new ComAuto();
+
+			GSAObject.LogFeatureUsage("api::specklegsa::" +
+				FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
+					.ProductVersion + "::GSA " + GSAObject.VersionString()
+					.Split(new char[] { '\n' })[0]
+					.Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries)[1]);
+
+			GSAObject.Open(path);
+			FilePath = path;
+			GSAObject.SetLocale(Locale.LOC_EN_GB);
+			GSAObject.DisplayGsaWindow(showWindow);
+
+			//GetSpeckleClients(emailAddress, serverAddress);
+
+			//Status.AddMessage("Opened new file.");
+		}
+
+		public int SaveAs(string filePath)
+		{
+			return GSAObject.SaveAs(filePath);
+		}
+
+		/// <summary>
+		/// Close GSA file.
+		/// </summary>
+		public void Close()
+		{
+			try
+			{
+				GSAObject.Close();
+			}
+			catch { }
+
+		}
+		#endregion
+
+		#region Speckle Client
+				/// <summary>
+		/// Writes sender and receiver streams associated with the account.
+		/// </summary>
+		/// <param name="emailAddress">User email address</param>
+		/// <param name="serverAddress">Speckle server address</param>
+		public void SetSID(string sidRecord)
+		{
+			GSAObject.GwaCommand("SET\tSID\t" + sidRecord);
+		}
+		#endregion
+
+		#region Document Properties
+		/// <summary>
+		/// Extract the title of the GSA model.
+		/// </summary>
+		/// <returns>GSA model title</returns>
+		public string GetTitle()
+		{
+			string res = (string)GSAObject.GwaCommand("GET\tTITLE");
+
+			string[] pieces = res.ListSplit("\t");
+
+			return pieces.Length > 1 ? pieces[1] : "My GSA Model";
+		}
+
+		public string[] GetTolerances()
+		{
+			return ((string)GSAObject.GwaCommand("GET\tTOL")).ListSplit("\t");
+		}
+
+		/// <summary>
+		/// Updates the GSA unit stored in SpeckleGSA.
+		/// </summary>
+		public string GetUnits()
+		{
+			return ((string)GSAObject.GwaCommand("GET\tUNIT_DATA.1\tLENGTH")).ListSplit("\t")[2];
+		}
+		#endregion
+
+		#region Views
+		/// <summary>
+		/// Update GSA viewer. This should be called at the end of changes.
+		/// </summary>
+		public void UpdateViews()
+		{
+			GSAObject.UpdateViews();
+		}
+
+		/// <summary>
+		/// Update GSA case and task links. This should be called at the end of changes.
+		/// </summary>
+		public void UpdateCasesAndTasks()
+		{
+			GSAObject.ReindexCasesAndTasks();
+		}
+
+		public string GetSID()
+		{
+			return (string)GSAObject.GwaCommand("GET\tSID");
+		}
+		#endregion
+
+		public int HighestIndex(string keyword)
+		{
+			return (int)GSAObject.GwaCommand("HIGHEST\t" + keyword);
 		}
 	}
 }

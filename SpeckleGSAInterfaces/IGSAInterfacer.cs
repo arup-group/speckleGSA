@@ -101,6 +101,8 @@ namespace SpeckleGSAInterfaces
 		#region SID
 
 		string GetSID(string keyword, int id);
+
+		string GetSID();
 		#endregion
 
 		#region Results

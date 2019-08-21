@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using SpeckleCore;
+using SpeckleGSAProxy;
 
 namespace SpeckleGSA
 {
@@ -55,7 +56,7 @@ namespace SpeckleGSA
       {
 				var task = myReceiver.ClientCreateAsync(new AppClient()
 				{
-					DocumentName = Path.GetFileNameWithoutExtension(GSA.FilePath),
+					DocumentName = Path.GetFileNameWithoutExtension(((GSAInterfacer)GSA.Interfacer).FilePath),
 					DocumentType = "GSA",
 					Role = "Receiver",
 					StreamId = streamID,
@@ -70,7 +71,7 @@ namespace SpeckleGSA
       {
 				var task = myReceiver.ClientUpdateAsync(clientID, new AppClient()
 				{
-					DocumentName = Path.GetFileNameWithoutExtension(GSA.FilePath),
+					DocumentName = Path.GetFileNameWithoutExtension(((GSAInterfacer)GSA.Interfacer).FilePath),
 					Online = true,
 				});
 				await task;

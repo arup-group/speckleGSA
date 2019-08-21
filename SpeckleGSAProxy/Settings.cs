@@ -1,4 +1,4 @@
-﻿using SpeckleGSAInterfaces;
+﻿/*using SpeckleGSAInterfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,3 +15,4 @@ namespace SpeckleGSAProxy
 		public double CoincidentNodeAllowance { get; set; }
 	}
 }
+*/

@@ -43,10 +43,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="GSAObject.cs" />
     <Compile Include="IGSAIndexer.cs" />
     <Compile Include="IGSAInterfacer.cs" />
     <Compile Include="Enums.cs" />
-    <Compile Include="ISettings.cs" />
+    <Compile Include="IGSASettings.cs" />
+    <Compile Include="IGSASpeckleContainer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -10,7 +10,7 @@ namespace SpeckleGSAInterfaces
 		int? LookupIndex(string keyword, string applicationId, string type = "");
 		List<int?> LookupIndices(string keyword, IEnumerable<string> applicationIds);
 
-		void ReserveIndices(string typeName, IEnumerable<int> indices);
+		void ReserveIndices(string keyword, IEnumerable<int> indices);
 		void ReserveIndicesAndMap(string keyword, string typeName, IList<int> indices, IList<string> applicationIds);
 
 		void SetBaseline();

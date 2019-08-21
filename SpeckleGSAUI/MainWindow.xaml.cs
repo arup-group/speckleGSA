@@ -67,15 +67,15 @@ namespace SpeckleGSAUI
       previousTabIndex = 0;
 
       //Default settings
-      SendOnlyMeaningfulNodes.IsChecked = Settings.SendOnlyMeaningfulNodes;
-      SeparateStreams.IsChecked = Settings.SeparateStreams;
-      PollingRate.Text = Settings.PollingRate.ToString();
-      CoincidentNodeAllowance.Text = Settings.CoincidentNodeAllowance.ToString();
-      SendOnlyResults.IsChecked = Settings.SendOnlyResults;
-      EmbedResults.IsChecked = Settings.EmbedResults;
-      ResultCases.Text = string.Join("\r\n", Settings.ResultCases);
-      ResultInLocalAxis.IsChecked = Settings.ResultInLocalAxis;
-      Result1DNumPosition.Text = Settings.Result1DNumPosition.ToString();
+      SendOnlyMeaningfulNodes.IsChecked = ((Settings) GSA.Settings).SendOnlyMeaningfulNodes;
+      SeparateStreams.IsChecked = ((Settings)GSA.Settings).SeparateStreams;
+      PollingRate.Text = ((Settings)GSA.Settings).PollingRate.ToString();
+      CoincidentNodeAllowance.Text = GSA.Settings.CoincidentNodeAllowance.ToString();
+      SendOnlyResults.IsChecked = ((Settings)GSA.Settings).SendOnlyResults;
+      EmbedResults.IsChecked = ((Settings)GSA.Settings).EmbedResults;
+      ResultCases.Text = string.Join("\r\n", ((Settings)GSA.Settings).ResultCases);
+      ResultInLocalAxis.IsChecked = ((Settings)GSA.Settings).ResultInLocalAxis;
+      Result1DNumPosition.Text = ((Settings)GSA.Settings).Result1DNumPosition.ToString();
 
       //Result List
       foreach (string s in Result.NodalResultMap.Keys)
@@ -272,33 +272,34 @@ namespace SpeckleGSAUI
         SendButtonPath.Data = Geometry.Parse(PAUSE_BUTTON);
         SendButtonPath.Fill = Brushes.DimGray;
 
-        if (Settings.ChosenNodalResult.Count > 0 || Settings.ChosenElement1DResult.Count > 0 || Settings.ChosenElement2DResult.Count > 0 || Settings.ChosenMiscResult.Count > 0)
+        if (((Settings)GSA.Settings).ChosenNodalResult.Count > 0 || ((Settings)GSA.Settings).ChosenElement1DResult.Count > 0 
+					|| ((Settings)GSA.Settings).ChosenElement2DResult.Count > 0 || ((Settings)GSA.Settings).ChosenMiscResult.Count > 0)
         {
           if (!SenderLayerToggle.IsChecked.Value)
           {
             MessageBox.Show("Results only supported for analysis layer.\r\nNo results will be sent.", "SpeckleGSA", MessageBoxButton.OK, MessageBoxImage.Warning);
-            Settings.SendResults = false;
+						((Settings)GSA.Settings).SendResults = false;
           }
           else if (!SenderContinuousToggle.IsChecked.Value)
           {
             MessageBox.Show("Results only supported for single send mode.\r\nNo results will be sent.", "SpeckleGSA", MessageBoxButton.OK, MessageBoxImage.Warning);
-            Settings.SendResults = false;
+						((Settings)GSA.Settings).SendResults = false;
           }
           else
-            Settings.SendResults = true;
+						((Settings)GSA.Settings).SendResults = true;
         }
         else
-          Settings.SendResults = false;
+					((Settings)GSA.Settings).SendResults = false;
 
         if (SenderLayerToggle.IsChecked.Value)
         {
-          Settings.TargetAnalysisLayer = true;
-          Settings.TargetDesignLayer = false;
+          GSA.Settings.TargetAnalysisLayer = true;
+					GSA.Settings.TargetDesignLayer = false;
         }
         else
         {
-          Settings.TargetAnalysisLayer = false;
-          Settings.TargetDesignLayer = true;
+					GSA.Settings.TargetAnalysisLayer = false;
+					GSA.Settings.TargetDesignLayer = true;
         }
         SenderLayerToggle.IsEnabled = false;
         SenderContinuousToggle.IsEnabled = false;
@@ -334,7 +335,7 @@ namespace SpeckleGSAUI
         }
         else
         {
-          triggerTimer = new Timer(Settings.PollingRate);
+          triggerTimer = new Timer(((Settings)GSA.Settings).PollingRate);
           triggerTimer.Elapsed += SenderTimerTrigger;
           triggerTimer.AutoReset = false;
           triggerTimer.Start();
@@ -440,14 +441,14 @@ namespace SpeckleGSAUI
 
         if (ReceiverLayerToggle.IsChecked.Value)
         {
-          Settings.TargetAnalysisLayer = true;
-          Settings.TargetDesignLayer = false;
+					GSA.Settings.TargetAnalysisLayer = true;
+					GSA.Settings.TargetDesignLayer = false;
         }
         else
         {
 
-          Settings.TargetAnalysisLayer = false;
-          Settings.TargetDesignLayer = true;
+					GSA.Settings.TargetAnalysisLayer = false;
+					GSA.Settings.TargetDesignLayer = true;
         }
         ReceiverLayerToggle.IsEnabled = false;
         ReceiverContinuousToggle.IsEnabled = false;
@@ -685,36 +686,36 @@ namespace SpeckleGSAUI
     {
       var chk = sender as CheckBox;
       if (chk.IsChecked.Value)
-        Settings.ChosenNodalResult[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
+				((Settings)GSA.Settings).ChosenNodalResult[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
       else
-        Settings.ChosenNodalResult.Remove(chk.Content as string);
+				((Settings)GSA.Settings).ChosenNodalResult.Remove(chk.Content as string);
     }
 
     private void UpdateElement1DResult(Object sender, RoutedEventArgs e)
     {
       var chk = sender as CheckBox;
       if (chk.IsChecked.Value)
-        Settings.ChosenElement1DResult[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
+				((Settings)GSA.Settings).ChosenElement1DResult[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
       else
-        Settings.ChosenElement1DResult.Remove(chk.Content as string);
+				((Settings)GSA.Settings).ChosenElement1DResult.Remove(chk.Content as string);
     }
 
     private void UpdateElement2DResult(Object sender, RoutedEventArgs e)
     {
       var chk = sender as CheckBox;
       if (chk.IsChecked.Value)
-        Settings.ChosenElement2DResult[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
+				((Settings)GSA.Settings).ChosenElement2DResult[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
       else
-        Settings.ChosenElement2DResult.Remove(chk.Content as string);
+				((Settings)GSA.Settings).ChosenElement2DResult.Remove(chk.Content as string);
     }
 
     private void UpdateMiscResult(Object sender, RoutedEventArgs e)
     {
       var chk = sender as CheckBox;
       if (chk.IsChecked.Value)
-        Settings.ChosenMiscResult[chk.Content as string] = chk.Tag as Tuple<string, int, int, List<string>>;
+				((Settings)GSA.Settings).ChosenMiscResult[chk.Content as string] = chk.Tag as Tuple<string, int, int, List<string>>;
       else
-        Settings.ChosenMiscResult.Remove(chk.Content as string);
+				((Settings)GSA.Settings).ChosenMiscResult.Remove(chk.Content as string);
     }
 
     private void StreamList_CopyStreamID(object sender, RoutedEventArgs e)

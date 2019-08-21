@@ -37,5 +37,63 @@ namespace SpeckleGSAProxy
 			return true;
 		}
 		#endregion
+
+		/// <summary>
+		/// Convert degrees to radians.
+		/// </summary>
+		/// <param name="degrees">Angle in degrees</param>
+		/// <returns>Angle in radians</returns>
+		public static double ToRadians(this double degrees)
+		{
+			return degrees * (Math.PI / 180);
+		}
+
+		/// <summary>
+		/// Converts value from one unit to another.
+		/// </summary>
+		/// <param name="value">Value to scale</param>
+		/// <param name="originalDimension">Original unit</param>
+		/// <param name="targetDimension">Target unit</param>
+		/// <returns></returns>
+		public static double ConvertUnit(this double value, string originalDimension, string targetDimension)
+		{
+			if (originalDimension == targetDimension)
+				return value;
+
+			if (targetDimension == "m")
+			{
+				switch (originalDimension)
+				{
+					case "mm":
+						return value / 1000;
+					case "cm":
+						return value / 100;
+					case "ft":
+						return value / 3.281;
+					case "in":
+						return value / 39.37;
+					default:
+						return value;
+				}
+			}
+			else if (originalDimension == "m")
+			{
+				switch (targetDimension)
+				{
+					case "mm":
+						return value * 1000;
+					case "cm":
+						return value * 100;
+					case "ft":
+						return value * 3.281;
+					case "in":
+						return value * 39.37;
+					default:
+						return value;
+				}
+			}
+			else
+				return value.ConvertUnit(originalDimension, "m").ConvertUnit("m", targetDimension);
+		}
 	}
 }

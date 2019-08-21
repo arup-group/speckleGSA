@@ -10,6 +10,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using SpeckleGSAInterfaces;
+using SpeckleGSAProxy;
 
 namespace SpeckleGSA
 {
@@ -18,17 +19,19 @@ namespace SpeckleGSA
   /// </summary>
   public static class GSA
   {
-		//TEST
-		public static IGSASettings testSettings;
-		public static IGSAInterfacer testInterfacer;
+		public static IGSASettings Settings = new Settings();
+		public static IGSAInterfacer Interfacer = new GSAInterfacer
+		{
+			Indexer = new Indexer()
+		};
 
-		public static ComAuto GSAObject;
+		//public static ComAuto GSAObject;
 
-    public static string FilePath;
+    //public static string FilePath;
 
     public static bool IsInit;
 
-    public static string Units { get; private set; }
+    //public static string Units { get; private set; }
 
     public static Dictionary<string, Tuple<string, string>> Senders { get; set; }
     public static List<Tuple<string, string>> Receivers { get; set; }
@@ -56,7 +59,7 @@ namespace SpeckleGSA
     {
       if (!IsInit)
         return;
-
+			/*
       if (GSAObject != null)
       {
         try
@@ -66,11 +69,6 @@ namespace SpeckleGSA
         catch { }
         GSAObject = null;
       }
-
-			//TEST
-			testSettings = new SpeckleGSAProxy.Settings();
-			testInterfacer = new SpeckleGSAProxy.GSAInterfacer();
-			testInterfacer.Indexer = new SpeckleGSAProxy.Indexer();
 
 			GSAObject = new ComAuto();
 
@@ -83,8 +81,10 @@ namespace SpeckleGSA
       GSAObject.NewFile();
       GSAObject.SetLocale(Locale.LOC_EN_GB);
       GSAObject.DisplayGsaWindow(showWindow);
-
-      GetSpeckleClients(emailAddress, serverAddress);
+			*/
+			GetSpeckleClients(emailAddress, serverAddress);
+			
+			((GSAInterfacer)Interfacer).NewFile(emailAddress, serverAddress, showWindow);
 
       Status.AddMessage("Created new file.");
     }
@@ -100,6 +100,7 @@ namespace SpeckleGSA
       if (!IsInit)
         return;
 
+			/*
       if (GSAObject != null)
       {
         try
@@ -122,10 +123,13 @@ namespace SpeckleGSA
       FilePath = path;
       GSAObject.SetLocale(Locale.LOC_EN_GB);
       GSAObject.DisplayGsaWindow(showWindow);
+			*/
+			GetSpeckleClients(emailAddress, serverAddress);
+			
 
-      GetSpeckleClients(emailAddress, serverAddress);
+			((GSAInterfacer)Interfacer).OpenFile(path, emailAddress, serverAddress, showWindow);
 
-      Status.AddMessage("Opened new file.");
+			Status.AddMessage("Opened new file.");
     }
 
     /// <summary>
@@ -134,13 +138,15 @@ namespace SpeckleGSA
     public static void Close()
     {
       if (!IsInit) return;
-
+			/*
       try
       {
         GSAObject.Close();
       }
       catch { }
-      Senders.Clear();
+			*/
+			((GSAInterfacer)Interfacer).Close();
+			Senders.Clear();
       Receivers.Clear();
     }
     #endregion
@@ -159,7 +165,8 @@ namespace SpeckleGSA
       try
       { 
         string key = emailAddress + "&" + serverAddress.Replace(':', '&');
-        string res = (string)GSAObject.GwaCommand("GET\tSID");
+				
+        string res = ((GSAInterfacer)Interfacer).GetSID();
 
         if (res == "")
           return;
@@ -205,9 +212,9 @@ namespace SpeckleGSA
     public static void SetSpeckleClients(string emailAddress, string serverAddress)
     {
       string key = emailAddress + "&" + serverAddress.Replace(':', '&');
-      string res = (string)GSAObject.GwaCommand("GET\tSID");
+			string res = ((GSAInterfacer)Interfacer).GetSID();
 
-      List<string[]> sids = Regex.Matches(res, @"(?<={).*?(?=})").Cast<Match>()
+			List<string[]> sids = Regex.Matches(res, @"(?<={).*?(?=})").Cast<Match>()
               .Select(m => m.Value.Split(new char[] { ':' }))
               .Where(s => s.Length == 2)
               .ToList();
@@ -236,23 +243,21 @@ namespace SpeckleGSA
       foreach (string[] s in sids)
         sidRecord += "{" + s[0] + ":" + s[1] + "}";
 
-      GSAObject.GwaCommand("SET\tSID\t" + sidRecord);
+			((GSAInterfacer)GSA.Interfacer).SetSID(sidRecord);
     }
     #endregion
 
     #region Document Properties
+		/*
     /// <summary>
     /// Extract the title of the GSA model.
     /// </summary>
     /// <returns>GSA model title</returns>
     public static string Title()
     {
-      string res = (string)GSAObject.GwaCommand("GET\tTITLE");
-
-      string[] pieces = res.ListSplit("\t");
-
-      return pieces.Length > 1 ? pieces[1] : "My GSA Model";
+      string res = ((GSAInterfacer)GSA.Interfacer).GetTitle();
     }
+		*/
 
     /// <summary>
     /// Extracts the base properties of the Speckle stream.
@@ -260,12 +265,12 @@ namespace SpeckleGSA
     /// <returns>Base property dictionary</returns>
     public static Dictionary<string, object> GetBaseProperties()
     {
-      Dictionary<string, object> baseProps = new Dictionary<string, object>();
+      var baseProps = new Dictionary<string, object>();
 
-      baseProps["units"] = Units.LongUnitName();
+      baseProps["units"] = Settings.Units.LongUnitName();
       // TODO: Add other units
 
-      string[] tolerances = ((string)GSAObject.GwaCommand("GET\tTOL")).ListSplit("\t");
+      var tolerances = ((GSAInterfacer)GSA.Interfacer).GetTolerances();
 
       List<double> lengthTolerances = new List<double>() {
                 Convert.ToDouble(tolerances[3]), // edge
@@ -278,7 +283,7 @@ namespace SpeckleGSA
                 Convert.ToDouble(tolerances[6]), // meemb_orient
             };
 
-      baseProps["tolerance"] = lengthTolerances.Max().ConvertUnit("m", Units);
+      baseProps["tolerance"] = lengthTolerances.Max().ConvertUnit("m", Settings.Units);
       baseProps["angleTolerance"] = angleTolerances.Max().ToRadians();
 
       return baseProps;
@@ -289,25 +294,18 @@ namespace SpeckleGSA
     /// </summary>
     public static void UpdateUnits()
     {
-      Units = ((string)GSAObject.GwaCommand("GET\tUNIT_DATA.1\tLENGTH")).ListSplit("\t")[2];
+			Settings.Units = ((GSAInterfacer)Interfacer).GetUnits();
     }
     #endregion
 
     #region Views
-    /// <summary>
-    /// Update GSA viewer. This should be called at the end of changes.
-    /// </summary>
-    public static void UpdateViews()
-    {
-      GSAObject.UpdateViews();
-    }
 
     /// <summary>
     /// Update GSA case and task links. This should be called at the end of changes.
     /// </summary>
     public static void UpdateCasesAndTasks()
     {
-      GSAObject.ReindexCasesAndTasks();
+			((GSAInterfacer)GSA.Interfacer).UpdateCasesAndTasks();
     }
     #endregion
   }
