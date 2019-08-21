@@ -82,9 +82,9 @@ namespace SpeckleGSA
       GSAObject.SetLocale(Locale.LOC_EN_GB);
       GSAObject.DisplayGsaWindow(showWindow);
 			*/
-			GetSpeckleClients(emailAddress, serverAddress);
-			
 			((GSAInterfacer)Interfacer).NewFile(emailAddress, serverAddress, showWindow);
+
+			GetSpeckleClients(emailAddress, serverAddress);
 
       Status.AddMessage("Created new file.");
     }

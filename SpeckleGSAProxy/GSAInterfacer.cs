@@ -36,7 +36,7 @@ namespace SpeckleGSAProxy
 		public void InitializeReceiver()
 		{
 			FullClearCache();
-			this.GSAObject = new ComAuto();
+			//this.GSAObject = new ComAuto();
 		}
 
 		public void PreReceiving()
@@ -52,7 +52,7 @@ namespace SpeckleGSAProxy
 		public void InitializeSender()
 		{
 			FullClearCache();
-			this.GSAObject = new ComAuto();
+			//this.GSAObject = new ComAuto();
 		}
 
 		public void PreSending()

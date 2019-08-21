@@ -30,34 +30,38 @@ namespace SpeckleGSA
 		/// <param name="restApi">Server address</param>
 		/// <param name="apiToken">API token of account</param>
 		/// <returns>Task</returns>
-		public async Task Initialize(string restApi, string apiToken)
+		public async Task<List<string>> Initialize(string restApi, string apiToken)
 		{
-			if (IsInit) return;
+			if (IsInit) return null;
 
 			if (!GSA.IsInit)
 			{
 				Status.AddError("GSA link not found.");
-				return;
+				return null;
 			}
 
+			var statusMessages = new List<string>();
+
+			//var interfacePropertyToFind = typeof(ISpeckleInitializer).GetProperties().Where(p => p.DeclaringType == typeof(IGSAInterfacer));
+
 			// Run initialize receiver method in interfacer
-			var assemblies = SpeckleInitializer.GetAssemblies();
+			var assemblies = SpeckleInitializer.GetAssemblies().Where(a => a.GetTypes().Any(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer))));
 
 			foreach (var ass in assemblies)
 			{
-				var types = ass.GetTypes();
-
 				//object gsaInterface;
 				//object indexer;
 
-				var gsaInterfaceType = types.FirstOrDefault(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer)) && t.GetProperties().Select(p => p.Name).Contains("GSA"));
-				if (gsaInterfaceType == null)
-				{
-					continue;
-				}
+				var types = ass.GetTypes();
 
 				try
 				{
+					var gsaInterfaceType = types.FirstOrDefault(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer)) && t.GetProperties().Any(p => p.PropertyType == typeof(IGSAInterfacer)));
+					if (gsaInterfaceType == null)
+					{
+						continue;
+					}
+
 					/*
 					gsaInterface = gsaInterfaceType.GetProperty("GSA").GetValue(null);
 					gsaInterface.GetType().GetMethod("InitializeSender").Invoke(gsaInterface, new object[] { GSA.GSAObject });
@@ -70,8 +74,10 @@ namespace SpeckleGSA
 				}
 				catch
 				{
-					Status.AddError("Unable to access kit. Try updating Speckle installation to a later release.");
-					throw new Exception("Unable to initialize");
+					//Status.AddError("Unable to access kit. Try updating Speckle installation to a later release.");
+					//throw new Exception("Unable to initialize");
+					statusMessages.Add("Unable to access kit: " + ass.GetName());
+					continue;
 				}
 
 				var attributeType = typeof(GSAObject);
@@ -146,6 +152,8 @@ namespace SpeckleGSA
 
 			Status.ChangeStatus("Ready to receive");
 			IsInit = true;
+
+			return statusMessages;
 		}
 
     /// <summary>
