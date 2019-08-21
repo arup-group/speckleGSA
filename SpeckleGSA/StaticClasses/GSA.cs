@@ -80,7 +80,7 @@ namespace SpeckleGSA
 
       GSAObject.NewFile();
       GSAObject.SetLocale(Locale.LOC_EN_GB);
-      GSAObject.DisplayGsaWindow(showWindow);
+
 			*/
 			((GSAInterfacer)Interfacer).NewFile(emailAddress, serverAddress, showWindow);
 
@@ -122,12 +122,10 @@ namespace SpeckleGSA
       GSAObject.Open(path);
       FilePath = path;
       GSAObject.SetLocale(Locale.LOC_EN_GB);
-      GSAObject.DisplayGsaWindow(showWindow);
-			*/
-			GetSpeckleClients(emailAddress, serverAddress);
-			
 
+			*/
 			((GSAInterfacer)Interfacer).OpenFile(path, emailAddress, serverAddress, showWindow);
+			GetSpeckleClients(emailAddress, serverAddress);
 
 			Status.AddMessage("Opened new file.");
     }

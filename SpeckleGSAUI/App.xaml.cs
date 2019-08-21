@@ -89,7 +89,7 @@ namespace SpeckleGSAUI
         Console.Write("Required arguments:\n");
         Console.Write("--server <server>\t\tAddress of Speckle server\n");
         Console.Write("--email <email>\t\t\tEmail of account\n");
-        Console.Write("--password <password>\t\tAccount password\n");
+        Console.Write("--token <token>\t\tJWT token\n");
         Console.Write("--file <path>\t\t\tFile to save to. If file does not exist, a new one will be created\n");
         Console.Write("--streamIDs <streamIDs>\t\tComma-delimited ID of streams to be received\n");
         Console.WriteLine("\n");
@@ -106,7 +106,7 @@ namespace SpeckleGSAUI
         Console.Write("Required arguments:\n");
         Console.Write("--server <server>\t\tAddress of Speckle server\n");
         Console.Write("--email <email>\t\t\tEmail of account\n");
-        Console.Write("--password <password>\t\tAccount password\n");
+        Console.Write("--token <token>\t\tJWT token\n");
         Console.Write("--file <path>\t\t\tFile to open. If file does not exist, a new one will be created\n");
         Console.WriteLine("\n");
         Console.Write("Optional arguments:\n");
@@ -122,7 +122,7 @@ namespace SpeckleGSAUI
         return;
       }
 
-      string[] neededArgs = new string[] { "server", "email", "password", "file" };
+      string[] neededArgs = new string[] { "server", "email", "token", "file" };
 
       foreach (string a in neededArgs)
       {
@@ -136,23 +136,7 @@ namespace SpeckleGSAUI
       // Login
       EmailAddress = arguments["email"];
       RestApi = arguments["server"];
-
-      var myUser = new SpeckleCore.User()
-      {
-        Email = EmailAddress,
-        Password = arguments["password"],
-      };
-
-      var spkClient = new SpeckleCore.SpeckleApiClient() { BaseUrl = RestApi };
-
-      var response = spkClient.UserLoginAsync(myUser).Result;
-      if (response.Success == true)
-        ApiToken = response.Resource.Apitoken;
-      else
-      {
-        Console.WriteLine("Failed to login");
-        return;
-      }
+      ApiToken = arguments["token"];
 
       // GSA File
       if (File.Exists(arguments["file"]))
