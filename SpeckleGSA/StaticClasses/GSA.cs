@@ -88,30 +88,14 @@ namespace SpeckleGSA
 					continue;
 				}
 
-				var objTypesMatchingLayer = types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType && ObjectTypeMatchesLayer(t, attributeType));
+				var objTypes = types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType);
 
-				//Pass one: for each type who has the correct layer attribute, record its prerequisites (some of which might not be the correct layer)
-				foreach (var t in objTypesMatchingLayer)
+				foreach (var t in objTypes)
 				{
-					TypePrerequisites[t] = (t.GetAttribute("WritePrerequisite", attributeType) == null)
-						? new List<Type>()
-						: ((Type[])t.GetAttribute("WritePrerequisite", attributeType)).Where(prereqT => ObjectTypeMatchesLayer(prereqT, attributeType)).ToList();
+					var prereq = t.GetAttribute("WritePrerequisite", attributeType);
+					TypePrerequisites[t] = (prereq != null) ? ((Type[])prereq).ToList() : new List<Type>();
 				}
 			}
-		}
-
-		private static bool ObjectTypeMatchesLayer(Type t, Type attributeType)
-		{
-			var analysisLayerAttribute = t.GetAttribute("AnalysisLayer", attributeType);
-			var designLayerAttribute = t.GetAttribute("DesignLayer", attributeType);
-
-			//If an object type has a layer attribute exists and its boolean value doesn't match the settings target layer, then it doesn't match.  This could be reviewed and simplified.
-			if ((analysisLayerAttribute != null && GSA.Settings.TargetAnalysisLayer && !(bool)analysisLayerAttribute)
-				|| (designLayerAttribute != null && GSA.Settings.TargetDesignLayer && !(bool)designLayerAttribute))
-			{
-				return false;
-			}
-			return true;
 		}
 
 		#region File Operations

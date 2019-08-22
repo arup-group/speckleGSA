@@ -14,7 +14,8 @@ namespace SpeckleGSA
   /// </summary>
   public class SpeckleGSAReceiver
   {
-    const int MAX_OBJ_REQUEST_COUNT = 20;
+		//This was chosen to cause typical message payloads of round 100-300k to be sent from the server
+    const int MAX_OBJ_REQUEST_COUNT = 1000;
 
     private SpeckleApiClient myReceiver;
 
@@ -87,48 +88,6 @@ namespace SpeckleGSA
     }
 
 		/// <summary>
-		/// Initializes receiver.
-		/// </summary>
-		/// <param name="streamID">Stream ID of stream</param>
-		/// <returns>Task</returns>
-		public void InitialiseReceiver2(string streamID, string clientID = "")
-		{
-			myReceiver.StreamId = streamID;
-			myReceiver.AuthToken = apiToken;
-
-			if (string.IsNullOrEmpty(clientID))
-			{
-				var task = myReceiver.ClientCreateAsync(new AppClient()
-				{
-					DocumentName = Path.GetFileNameWithoutExtension(GSA.Interfacer.FilePath),
-					DocumentType = "GSA",
-					Role = "Receiver",
-					StreamId = streamID,
-					Online = true,
-				});
-				var clientResponse = task.Result;
-
-				myReceiver.ClientId = clientResponse.Resource._id;
-			}
-			else
-			{
-				var task = myReceiver.ClientUpdateAsync(clientID, new AppClient()
-				{
-					DocumentName = Path.GetFileNameWithoutExtension(GSA.Interfacer.FilePath),
-					Online = true,
-				});
-				var clientResponse = task.Result;
-
-				myReceiver.ClientId = clientID;
-			}
-
-			myReceiver.SetupWebsocket();
-			myReceiver.JoinRoom("stream", streamID);
-
-			myReceiver.OnWsMessage += OnWsMessage;
-		}
-
-		/// <summary>
 		/// Return a list of SpeckleObjects from the stream.
 		/// </summary>
 		/// <returns>List of SpeckleObjects</returns>
@@ -171,76 +130,76 @@ namespace SpeckleGSA
       myReceiver.Stream.Children = result.Resource.Children;
     }
 
-    /// <summary>
-    /// Force client to update to stream.
-    /// </summary>
-    public void UpdateGlobal()
-    {
-      // Try to get stream
-      ResponseStream streamGetResult = myReceiver.StreamGetAsync(myReceiver.StreamId, null).Result;
+		/// <summary>
+		/// Force client to update to stream.
+		/// </summary>
+		public void UpdateGlobal()
+		{
+			// Try to get stream
+			ResponseStream streamGetResult = myReceiver.StreamGetAsync(myReceiver.StreamId, null).Result;
 
-      if (streamGetResult.Success == false)
-      {
-        Status.AddError("Failed to receive " + myReceiver.Stream.Name + "stream.");
-      }
-      else
-      {
-        myReceiver.Stream = streamGetResult.Resource;
+			if (streamGetResult.Success == false)
+			{
+				Status.AddError("Failed to receive " + myReceiver.Stream.Name + "stream.");
+			}
+			else
+			{
+				myReceiver.Stream = streamGetResult.Resource;
 
-        // Store stream data in local DB
-        try
-        {
-          LocalContext.AddOrUpdateStream(myReceiver.Stream, myReceiver.BaseUrl);
-        }
-        catch { }
+				// Store stream data in local DB
+				try
+				{
+					LocalContext.AddOrUpdateStream(myReceiver.Stream, myReceiver.BaseUrl);
+				}
+				catch { }
 
-        // Get cached objects
-        try
-        {
-          LocalContext.GetCachedObjects(myReceiver.Stream.Objects, myReceiver.BaseUrl);
-        }
-        catch { }
+				// Get cached objects
+				try
+				{
+					LocalContext.GetCachedObjects(myReceiver.Stream.Objects, myReceiver.BaseUrl);
+				}
+				catch { }
 
-        string[] payload = myReceiver.Stream.Objects.Where(o => o.Type == "Placeholder").Select(o => o._id).ToArray();
+				string[] payload = myReceiver.Stream.Objects.Where(o => o.Type == "Placeholder").Select(o => o._id).ToArray();
 
-        List<SpeckleObject> receivedObjects = new List<SpeckleObject>();
+				List<SpeckleObject> receivedObjects = new List<SpeckleObject>();
 
-        // Get remaining objects from server
-        for (int i = 0; i < payload.Length; i += MAX_OBJ_REQUEST_COUNT)
-        {
-          string[] partialPayload = payload.Skip(i).Take(MAX_OBJ_REQUEST_COUNT).ToArray();
+				// Get remaining objects from server
+				for (int i = 0; i < payload.Length; i += MAX_OBJ_REQUEST_COUNT)
+				{
+					string[] partialPayload = payload.Skip(i).Take(MAX_OBJ_REQUEST_COUNT).ToArray();
 
-          ResponseObject response = myReceiver.ObjectGetBulkAsync(partialPayload, "omit=displayValue").Result;
+					ResponseObject response = myReceiver.ObjectGetBulkAsync(partialPayload, "omit=displayValue").Result;
 
-          receivedObjects.AddRange(response.Resources);
-        }
+					receivedObjects.AddRange(response.Resources);
+				}
 
-        foreach (SpeckleObject obj in receivedObjects)
-        {
-          int streamLoc = myReceiver.Stream.Objects.FindIndex(o => o._id == obj._id);
-          try
-          {
-            myReceiver.Stream.Objects[streamLoc] = obj;
-          }
-          catch
-          { }
-        }
+				foreach (SpeckleObject obj in receivedObjects)
+				{
+					int streamLoc = myReceiver.Stream.Objects.FindIndex(o => o._id == obj._id);
+					try
+					{
+						myReceiver.Stream.Objects[streamLoc] = obj;
+					}
+					catch
+					{ }
+				}
 
-        Task.Run(() =>
-       {
-         foreach (SpeckleObject obj in receivedObjects)
-         {
-           try
-           {
-             LocalContext.AddCachedObject(obj, myReceiver.BaseUrl);
-           }
-           catch { }
-         }
-       });
+				Task.Run(() =>
+				{
+					foreach (SpeckleObject obj in receivedObjects)
+					{
+						try
+						{
+							LocalContext.AddCachedObject(obj, myReceiver.BaseUrl);
+						}
+						catch { }
+					 }
+				 });
 
-        Status.AddMessage("Received " + myReceiver.Stream.Name + " stream with " + myReceiver.Stream.Objects.Count() + " objects.");
-      }
-    }
+				Status.AddMessage("Received " + myReceiver.Stream.Name + " stream with " + myReceiver.Stream.Objects.Count() + " objects.");
+			}
+		}
 
     /// <summary>
     /// Dispose the receiver.

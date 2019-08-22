@@ -1,12 +1,8 @@
 ﻿using SpeckleCore;
 using SpeckleGSAInterfaces;
-using SpeckleGSAProxy;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace SpeckleGSA
@@ -14,15 +10,11 @@ namespace SpeckleGSA
   /// <summary>
   /// Responsible for reading and sending GSA models.
   /// </summary>
-  public class Sender
+  public class Sender : BaseReceiverSender
   {
     public Dictionary<Type, List<object>> SenderObjects = new Dictionary<Type, List<object>>();
     public Dictionary<string, SpeckleGSASender> Senders = new Dictionary<string, SpeckleGSASender>();
-    public Dictionary<Type, List<Type>> TypePrerequisites = new Dictionary<Type, List<Type>>();
     public Dictionary<Type, string> StreamMap = new Dictionary<Type, string>();
-
-    public bool IsInit = false;
-    public bool IsBusy = false;
 
     /// <summary>
     /// Initializes sender.
@@ -30,45 +22,16 @@ namespace SpeckleGSA
     /// <param name="restApi">Server address</param>
     /// <param name="apiToken">API token of account</param>
     /// <returns>Task</returns>
-    public async Task Initialize(string restApi, string apiToken)
+    public async Task<List<string>> Initialize(string restApi, string apiToken)
     {
-      if (IsInit) return;
+			var statusMessages = new List<string>();
 
-      if (!GSA.IsInit)
-      {
-        Status.AddError("GSA link not found.");
-        return;
-      }
-			var gsaInterfacer = (GSAInterfacer)GSA.Interfacer;
+			if (!Initialise(GSA.Settings.SendOnlyResults ? "results" : null)) return statusMessages;
 
 			// Run initialize sender method in interfacer
 			var assemblies = SpeckleInitializer.GetAssemblies();
-			/*
-      foreach (var ass in assemblies)
-      {
-        var types = ass.GetTypes();
-        foreach (var type in types)
-        {
-          if (type.GetInterfaces().Contains(typeof(SpeckleCore.ISpeckleInitializer)))
-          {
-            if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
-            {
-              try
-              {
-                var gsaInterface = type.GetProperty("GSA").GetValue(null);
-                gsaInterface.GetType().GetMethod("InitializeSender").Invoke(gsaInterface, new object[] { GSA.GSAObject });
-              }
-              catch
-              {
-                Status.AddError("Unable to access kit. Try updating Speckle installation to a later release.");
-                throw new Exception("Unable to initialize");
-              }
-            }
-          }
-        }
-      }
-			*/
-			gsaInterfacer.InitializeSender();
+
+			GSA.Interfacer.InitializeSender();
 
 			// Grab GSA interface type
 			var attributeType = typeof(GSAObject);
@@ -84,61 +47,10 @@ namespace SpeckleGSA
 				objTypes.AddRange(types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType));
       }
 
-      foreach (var t in objTypes)
-      {
-        if (t.GetAttribute("Stream", attributeType) != null)
-          StreamMap[t] = (string)t.GetAttribute("Stream", attributeType);
-        else
-          continue;
-
-        if (t.GetAttribute("AnalysisLayer", attributeType) != null)
-          if (GSA.Settings.TargetAnalysisLayer && !(bool)t.GetAttribute("AnalysisLayer", attributeType)) continue;
-
-        if (t.GetAttribute("DesignLayer", attributeType) != null)
-          if (GSA.Settings.TargetDesignLayer && !(bool)t.GetAttribute("DesignLayer", attributeType)) continue;
-
-        if (t.GetAttribute("Stream", attributeType) != null)
-          if (((Settings)GSA.Settings).SendOnlyResults && t.GetAttribute("Stream", attributeType) as string != "results") continue;
-
-        List<Type> prereq = new List<Type>();
-        if (t.GetAttribute("ReadPrerequisite", attributeType) != null)
-          prereq = ((Type[])t.GetAttribute("ReadPrerequisite", attributeType)).ToList();
-
-        TypePrerequisites[t] = prereq;
-      }
-
-      // Remove wrong layer objects from prerequisites
-      foreach (Type t in objTypes)
-      {
-        if (t.GetAttribute("AnalysisLayer", attributeType) != null)
-          if (GSA.Settings.TargetAnalysisLayer && !(bool)t.GetAttribute("AnalysisLayer", attributeType))
-            foreach (KeyValuePair<Type, List<Type>> kvp in TypePrerequisites)
-              kvp.Value.Remove(t);
-
-        if (t.GetAttribute("DesignLayer", attributeType) != null)
-          if (GSA.Settings.TargetDesignLayer && !(bool)t.GetAttribute("DesignLayer", attributeType))
-            foreach (KeyValuePair<Type, List<Type>> kvp in TypePrerequisites)
-              kvp.Value.Remove(t);
-
-        if (t.GetAttribute("Stream", attributeType) != null)
-          if (((Settings)GSA.Settings).SendOnlyResults && t.GetAttribute("Stream", attributeType) as string != "results")
-            foreach (KeyValuePair<Type, List<Type>> kvp in TypePrerequisites)
-              kvp.Value.Remove(t);
-      }
-
       // Create the streams
       Status.ChangeStatus("Creating streams");
 
-      List<string> streamNames = new List<string>();
-
-      if (((Settings)GSA.Settings).SeparateStreams)
-      {
-        foreach (Type t in objTypes)
-          streamNames.Add((string)t.GetAttribute("Stream", attributeType));
-        streamNames = streamNames.Distinct().ToList();
-      }
-      else
-        streamNames.Add("Full Model");
+			var streamNames = (GSA.Settings.SeparateStreams) ? objTypes.Select(t => (string)t.GetAttribute("Stream", attributeType)).Distinct().ToList() : new List<string>() { "Full Model" };
 
       foreach (string streamName in streamNames)
       {
@@ -156,6 +68,8 @@ namespace SpeckleGSA
 
       Status.ChangeStatus("Ready to stream");
       IsInit = true;
+
+			return statusMessages;
     }
 
     /// <summary>
@@ -166,80 +80,9 @@ namespace SpeckleGSA
       if ((IsBusy) || (!IsInit)) return;
 
       IsBusy = true;
-			var gsaInterfacer = (GSAInterfacer)GSA.Interfacer;
-			var gsaSettings = (Settings)GSA.Settings;
-			gsaSettings.Units = gsaInterfacer.GetUnits();
+			GSA.Settings.Units = GSA.Interfacer.GetUnits();
 
-			/*
-      // Run pre sending method and inject!!!!
-      var assemblies = SpeckleCore.SpeckleInitializer.GetAssemblies();
-      foreach (var ass in assemblies)
-      {
-        var types = ass.GetTypes();
-        foreach (var type in types)
-        {
-          if (type.GetInterfaces().Contains(typeof(SpeckleCore.ISpeckleInitializer)))
-          {
-            try
-            {
-              if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
-              {
-                var gsaInterface = type.GetProperty("GSA").GetValue(null);
-
-                gsaInterface.GetType().GetMethod("PreSending").Invoke(gsaInterface, new object[] { });
-              }
-
-              if (type.GetProperties().Select(p => p.Name).Contains("GSASenderObjects"))
-                type.GetProperty("GSASenderObjects").SetValue(null, SenderObjects);
-
-              if (type.GetProperties().Select(p => p.Name).Contains("GSAUnits"))
-                type.GetProperty("GSAUnits").SetValue(null, GSA.Settings.Units);
-
-              if (GSA.Settings.TargetDesignLayer)
-                if (type.GetProperties().Select(p => p.Name).Contains("GSATargetDesignLayer"))
-                  type.GetProperty("GSATargetDesignLayer").SetValue(null, true);
-
-              if (GSA.Settings.TargetAnalysisLayer)
-                if (type.GetProperties().Select(p => p.Name).Contains("GSATargetAnalysisLayer"))
-                  type.GetProperty("GSATargetAnalysisLayer").SetValue(null, true);
-
-              if (Settings.SendResults)
-              {
-                if (type.GetProperties().Select(p => p.Name).Contains("GSAEmbedResults"))
-                  type.GetProperty("GSAEmbedResults").SetValue(null, Settings.EmbedResults);
-
-                if (type.GetProperties().Select(p => p.Name).Contains("GSANodalResults"))
-                  type.GetProperty("GSANodalResults").SetValue(null, Settings.ChosenNodalResult);
-
-                if (type.GetProperties().Select(p => p.Name).Contains("GSAElement1DResults"))
-                  type.GetProperty("GSAElement1DResults").SetValue(null, Settings.ChosenElement1DResult);
-
-                if (type.GetProperties().Select(p => p.Name).Contains("GSAElement2DResults"))
-                  type.GetProperty("GSAElement2DResults").SetValue(null, Settings.ChosenElement2DResult);
-
-                if (type.GetProperties().Select(p => p.Name).Contains("GSAMiscResults"))
-                  type.GetProperty("GSAMiscResults").SetValue(null, Settings.ChosenMiscResult);
-              }
-
-              if (type.GetProperties().Select(p => p.Name).Contains("GSAResultCases"))
-                type.GetProperty("GSAResultCases").SetValue(null, Settings.ResultCases);
-
-              if (type.GetProperties().Select(p => p.Name).Contains("GSAResultInLocalAxis"))
-                type.GetProperty("GSAResultInLocalAxis").SetValue(null, Settings.ResultInLocalAxis);
-
-              if (type.GetProperties().Select(p => p.Name).Contains("GSAResult1DNumPosition"))
-                type.GetProperty("GSAResult1DNumPosition").SetValue(null, Settings.Result1DNumPosition);
-            }
-            catch
-            {
-              Status.AddError("Unable to access kit. Try updating Speckle installation to a later release.");
-              throw new Exception("Unable to trigger");
-            }
-          }
-        }
-      }
-			*/
-			gsaInterfacer.PreSending();
+			GSA.Interfacer.PreSending();
 
 			// Read objects
 			var currentBatch = new List<Type>();
@@ -248,19 +91,18 @@ namespace SpeckleGSA
       bool changeDetected = false;
       do
       {
-        currentBatch = TypePrerequisites.Where(i => i.Value.Count(x => !traversedTypes.Contains(x)) == 0).Select(i => i.Key).ToList();
+        currentBatch = FilteredTypePrerequisites.Where(i => i.Value.Count(x => !traversedTypes.Contains(x)) == 0).Select(i => i.Key).ToList();
         currentBatch.RemoveAll(i => traversedTypes.Contains(i));
 
-        foreach (Type t in currentBatch)
+        foreach (var t in currentBatch)
         {
           if (changeDetected) // This will skip the first read but it avoids flickering
             Status.ChangeStatus("Reading " + t.Name);
 
-          object dummyObject = Activator.CreateInstance(t);
+          var dummyObject = Activator.CreateInstance(t);
           var result = Converter.Serialise(dummyObject);
 
-          if (!(result is SpeckleNull))
-            changeDetected = true;
+          if (!(result is SpeckleNull)) changeDetected = true;
 
           traversedTypes.Add(t);
         }
@@ -278,18 +120,18 @@ namespace SpeckleGSA
 
       foreach (var kvp in SenderObjects)
       {
-        var targetStream = gsaSettings.SeparateStreams ? StreamMap[kvp.Key] : "Full Model";
+        var targetStream = GSA.Settings.SeparateStreams ? StreamMap[kvp.Key] : "Full Model";
 
         foreach (object obj in kvp.Value)
         {
-          if (((Settings)GSA.Settings).SendOnlyMeaningfulNodes)
+          if (GSA.Settings.SendOnlyMeaningfulNodes)
           {
             if (obj.GetType().Name == "GSANode" && !(bool)obj.GetType().GetField("ForceSend").GetValue(obj))
               continue;
           }
           object insideVal = obj.GetType().GetProperty("Value").GetValue(obj);
 
-          (insideVal as SpeckleObject).GenerateHash();
+          ((SpeckleObject)insideVal).GenerateHash();
 
           if (!streamBuckets.ContainsKey(targetStream))
             streamBuckets[targetStream] = new Dictionary<string, List<object>>();
@@ -309,14 +151,14 @@ namespace SpeckleGSA
         Status.ChangeStatus("Sending to stream: " + Senders[kvp.Key].StreamID);
 
         var streamName = "";
-				var title = gsaInterfacer.GetTitle();
-				streamName = gsaSettings.SeparateStreams ? title + "." + kvp.Key : title;
+				var title = GSA.Interfacer.GetTitle();
+				streamName = GSA.Settings.SeparateStreams ? title + "." + kvp.Key : title;
 
         Senders[kvp.Key].UpdateName(streamName);
         Senders[kvp.Key].SendGSAObjects(kvp.Value);
       }
 
-			gsaInterfacer.PostSending();
+			GSA.Interfacer.PostSending();
 
 			IsBusy = false;
       Status.ChangeStatus("Finished sending", 100);

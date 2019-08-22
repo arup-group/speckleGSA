@@ -1,28 +1,22 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 using SpeckleCore;
 using SpeckleGSAInterfaces;
-using SpeckleGSAProxy;
 
 namespace SpeckleGSA
 {
-  /// <summary>
-  /// Responsible for reading and writing Speckle streams.
-  /// </summary>
-  public class Receiver
-  {
+	/// <summary>
+	/// Responsible for reading and writing Speckle streams.
+	/// </summary>
+	public class Receiver : BaseReceiverSender
+	{
     public Dictionary<string, SpeckleGSAReceiver> Receivers = new Dictionary<string, SpeckleGSAReceiver>();
     
     public List<KeyValuePair<Type, List<Type>>> TypeCastPriority = new List<KeyValuePair<Type, List<Type>>>();
 
-    public bool IsInit = false;
-    public bool IsBusy = false;
 
 		/// <summary>
 		/// Initializes receiver.
@@ -32,23 +26,17 @@ namespace SpeckleGSA
 		/// <returns>Task</returns>
 		public async Task<List<string>> Initialize(string restApi, string apiToken)
 		{
-			if (IsInit) return null;
+			var statusMessages = new List<string>();
 
-			if (!GSA.IsInit)
-			{
-				Status.AddError("GSA link not found.");
-				return null;
-			}
+			if (!base.Initialise()) return statusMessages;
 
 			Status.AddMessage("Initialising receivers");
-
-			var statusMessages = new List<string>();
 
 			GSA.Interfacer.InitializeReceiver();
 
 			var attributeType = typeof(GSAObject);
 
-			foreach (var kvp in GSA.TypePrerequisites)
+			foreach (var kvp in FilteredTypePrerequisites)
 			{
 				try
 				{
@@ -87,7 +75,7 @@ namespace SpeckleGSA
 			}, Environment.ProcessorCount);
 
 			// Generate which GSA object to cast for each type
-			TypeCastPriority = GSA.TypePrerequisites.ToList();
+			TypeCastPriority = FilteredTypePrerequisites.ToList();
 			TypeCastPriority.Sort((x, y) => x.Value.Count().CompareTo(y.Value.Count()));
 
 			Status.ChangeStatus("Ready to receive");
@@ -150,7 +138,7 @@ namespace SpeckleGSA
       var traversedTypes = new List<Type>();
       do
       {
-        currentBatch = GSA.TypePrerequisites.Where(i => i.Value.Count(x => !traversedTypes.Contains(x)) == 0).Select(i => i.Key).ToList();
+        currentBatch = FilteredTypePrerequisites.Where(i => i.Value.Count(x => !traversedTypes.Contains(x)) == 0).Select(i => i.Key).ToList();
         currentBatch.RemoveAll(i => traversedTypes.Contains(i));
 
         foreach (Type t in currentBatch)
@@ -195,9 +183,10 @@ namespace SpeckleGSA
       }
     }
 
-    public void DeleteSpeckleObjects()
+
+		public void DeleteSpeckleObjects()
     {
-      var assemblies = SpeckleCore.SpeckleInitializer.GetAssemblies();
+      var assemblies = SpeckleInitializer.GetAssemblies();
       foreach (var ass in assemblies)
       {
         var types = ass.GetTypes();
