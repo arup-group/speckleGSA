@@ -37,7 +37,7 @@ namespace SpeckleGSA
 
       mySender = new SpeckleApiClient() { BaseUrl = serverAddress.ToString() };
 
-      SpeckleInitializer.Initialize();
+      //SpeckleInitializer.Initialize();
       LocalContext.Init();
     }
 

@@ -38,7 +38,7 @@ namespace SpeckleGSA
 
       myReceiver = new SpeckleApiClient() { BaseUrl = serverAddress.ToString() };
 
-      SpeckleInitializer.Initialize();
+      //SpeckleInitializer.Initialize();
       LocalContext.Init();
     }
 
@@ -56,7 +56,7 @@ namespace SpeckleGSA
       {
 				var task = myReceiver.ClientCreateAsync(new AppClient()
 				{
-					DocumentName = Path.GetFileNameWithoutExtension(((GSAInterfacer)GSA.Interfacer).FilePath),
+					DocumentName = Path.GetFileNameWithoutExtension(GSA.Interfacer.FilePath),
 					DocumentType = "GSA",
 					Role = "Receiver",
 					StreamId = streamID,
@@ -71,7 +71,7 @@ namespace SpeckleGSA
       {
 				var task = myReceiver.ClientUpdateAsync(clientID, new AppClient()
 				{
-					DocumentName = Path.GetFileNameWithoutExtension(((GSAInterfacer)GSA.Interfacer).FilePath),
+					DocumentName = Path.GetFileNameWithoutExtension(GSA.Interfacer.FilePath),
 					Online = true,
 				});
 				await task;
@@ -86,11 +86,53 @@ namespace SpeckleGSA
       myReceiver.OnWsMessage += OnWsMessage;
     }
 
-    /// <summary>
-    /// Return a list of SpeckleObjects from the stream.
-    /// </summary>
-    /// <returns>List of SpeckleObjects</returns>
-    public List<SpeckleObject> GetObjects()
+		/// <summary>
+		/// Initializes receiver.
+		/// </summary>
+		/// <param name="streamID">Stream ID of stream</param>
+		/// <returns>Task</returns>
+		public void InitialiseReceiver2(string streamID, string clientID = "")
+		{
+			myReceiver.StreamId = streamID;
+			myReceiver.AuthToken = apiToken;
+
+			if (string.IsNullOrEmpty(clientID))
+			{
+				var task = myReceiver.ClientCreateAsync(new AppClient()
+				{
+					DocumentName = Path.GetFileNameWithoutExtension(GSA.Interfacer.FilePath),
+					DocumentType = "GSA",
+					Role = "Receiver",
+					StreamId = streamID,
+					Online = true,
+				});
+				var clientResponse = task.Result;
+
+				myReceiver.ClientId = clientResponse.Resource._id;
+			}
+			else
+			{
+				var task = myReceiver.ClientUpdateAsync(clientID, new AppClient()
+				{
+					DocumentName = Path.GetFileNameWithoutExtension(GSA.Interfacer.FilePath),
+					Online = true,
+				});
+				var clientResponse = task.Result;
+
+				myReceiver.ClientId = clientID;
+			}
+
+			myReceiver.SetupWebsocket();
+			myReceiver.JoinRoom("stream", streamID);
+
+			myReceiver.OnWsMessage += OnWsMessage;
+		}
+
+		/// <summary>
+		/// Return a list of SpeckleObjects from the stream.
+		/// </summary>
+		/// <returns>List of SpeckleObjects</returns>
+		public List<SpeckleObject> GetObjects()
     {
       UpdateGlobal();
 

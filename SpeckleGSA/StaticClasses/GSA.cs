@@ -19,27 +19,22 @@ namespace SpeckleGSA
   /// </summary>
   public static class GSA
   {
-		public static IGSASettings Settings = new Settings();
-		public static IGSAInterfacer Interfacer = new GSAInterfacer
+		public static Settings Settings = new Settings();
+		public static GSAInterfacer Interfacer = new GSAInterfacer
 		{
 			Indexer = new Indexer()
 		};
 
-		//public static ComAuto GSAObject;
-
-    //public static string FilePath;
-
     public static bool IsInit;
-
-    //public static string Units { get; private set; }
 
     public static Dictionary<string, Tuple<string, string>> Senders { get; set; }
     public static List<Tuple<string, string>> Receivers { get; set; }
 
-    public static void Init()
+		public static Dictionary<Type, List<Type>> TypePrerequisites = new Dictionary<Type, List<Type>>();
+
+		public static void Init()
     {
-      if (IsInit)
-        return;
+      if (IsInit) return;
 
       Senders = new Dictionary<string, Tuple<string, string>>();
       Receivers = new List<Tuple<string, string>>();
@@ -47,42 +42,89 @@ namespace SpeckleGSA
       IsInit = true;
 
       Status.AddMessage("Linked to GSA.");
-    }
 
-    #region File Operations
-    /// <summary>
-    /// Creates a new GSA file. Email address and server address is needed for logging purposes.
-    /// </summary>
-    /// <param name="emailAddress">User email address</param>
-    /// <param name="serverAddress">Speckle server address</param>
-    public static void NewFile(string emailAddress, string serverAddress, bool showWindow = true)
+			InitialiseKits(out List<string> statusMessages);
+
+			if (statusMessages.Count() > 0)
+			{
+				foreach (var msg in statusMessages)
+				{
+					Status.AddMessage(msg);
+				}
+			}
+		}
+
+		private static void InitialiseKits(out List<string> statusMessages)
+		{
+			statusMessages = new List<string>();
+
+			var attributeType = typeof(GSAObject);
+			var interfaceType = typeof(IGSASpeckleContainer);
+
+			SpeckleInitializer.Initialize();
+
+			// Run initialize receiver method in interfacer
+			var assemblies = SpeckleInitializer.GetAssemblies().Where(a => a.GetTypes().Any(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer))));
+
+			foreach (var ass in assemblies)
+			{
+				var types = ass.GetTypes();
+
+				try
+				{
+					var gsaStatic = types.FirstOrDefault(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer)) && t.GetProperties().Any(p => p.PropertyType == typeof(IGSAInterfacer)));
+					if (gsaStatic == null)
+					{
+						continue;
+					}
+
+					gsaStatic.GetProperty("Interface").SetValue(null, GSA.Interfacer);
+					gsaStatic.GetProperty("Settings").SetValue(null, GSA.Settings);
+				}
+				catch(Exception e)
+				{
+					//The kits could throw an exception due to an app-specific library not being linked in (e.g.: the Revit SDK).  These libraries aren't of the kind that
+					//would contain the static properties searched for anyway, so just continue.
+					continue;
+				}
+
+				var objTypesMatchingLayer = types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType && ObjectTypeMatchesLayer(t, attributeType));
+
+				//Pass one: for each type who has the correct layer attribute, record its prerequisites (some of which might not be the correct layer)
+				foreach (var t in objTypesMatchingLayer)
+				{
+					TypePrerequisites[t] = (t.GetAttribute("WritePrerequisite", attributeType) == null)
+						? new List<Type>()
+						: ((Type[])t.GetAttribute("WritePrerequisite", attributeType)).Where(prereqT => ObjectTypeMatchesLayer(prereqT, attributeType)).ToList();
+				}
+			}
+		}
+
+		private static bool ObjectTypeMatchesLayer(Type t, Type attributeType)
+		{
+			var analysisLayerAttribute = t.GetAttribute("AnalysisLayer", attributeType);
+			var designLayerAttribute = t.GetAttribute("DesignLayer", attributeType);
+
+			//If an object type has a layer attribute exists and its boolean value doesn't match the settings target layer, then it doesn't match.  This could be reviewed and simplified.
+			if ((analysisLayerAttribute != null && GSA.Settings.TargetAnalysisLayer && !(bool)analysisLayerAttribute)
+				|| (designLayerAttribute != null && GSA.Settings.TargetDesignLayer && !(bool)designLayerAttribute))
+			{
+				return false;
+			}
+			return true;
+		}
+
+		#region File Operations
+		/// <summary>
+		/// Creates a new GSA file. Email address and server address is needed for logging purposes.
+		/// </summary>
+		/// <param name="emailAddress">User email address</param>
+		/// <param name="serverAddress">Speckle server address</param>
+		public static void NewFile(string emailAddress, string serverAddress, bool showWindow = true)
     {
-      if (!IsInit)
-        return;
-			/*
-      if (GSAObject != null)
-      {
-        try
-        {
-          GSAObject.Close();
-        }
-        catch { }
-        GSAObject = null;
-      }
+			if (!IsInit) return;
 
-			GSAObject = new ComAuto();
-
-      GSAObject.LogFeatureUsage("api::specklegsa::" +
-          FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
-              .ProductVersion + "::GSA " + GSAObject.VersionString()
-              .Split(new char[] { '\n' })[0]
-              .Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries)[1]);
-
-      GSAObject.NewFile();
-      GSAObject.SetLocale(Locale.LOC_EN_GB);
-
-			*/
-			((GSAInterfacer)Interfacer).NewFile(emailAddress, serverAddress, showWindow);
+			Interfacer.NewFile(emailAddress, serverAddress, showWindow);
 
 			GetSpeckleClients(emailAddress, serverAddress);
 
@@ -97,34 +139,9 @@ namespace SpeckleGSA
     /// <param name="serverAddress">Speckle server address</param>
     public static void OpenFile(string path, string emailAddress, string serverAddress, bool showWindow = true)
     {
-      if (!IsInit)
-        return;
+			if (!IsInit) return;
 
-			/*
-      if (GSAObject != null)
-      {
-        try
-        {
-          GSAObject.Close();
-        }
-        catch { }
-        GSAObject = null;
-      }
-
-      GSAObject = new ComAuto();
-
-      GSAObject.LogFeatureUsage("api::specklegsa::" +
-        FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
-          .ProductVersion + "::GSA " + GSAObject.VersionString()
-          .Split(new char[] { '\n' })[0]
-          .Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries)[1]);
-
-      GSAObject.Open(path);
-      FilePath = path;
-      GSAObject.SetLocale(Locale.LOC_EN_GB);
-
-			*/
-			((GSAInterfacer)Interfacer).OpenFile(path, emailAddress, serverAddress, showWindow);
+			Interfacer.OpenFile(path, emailAddress, serverAddress, showWindow);
 			GetSpeckleClients(emailAddress, serverAddress);
 
 			Status.AddMessage("Opened new file.");
@@ -136,14 +153,8 @@ namespace SpeckleGSA
     public static void Close()
     {
       if (!IsInit) return;
-			/*
-      try
-      {
-        GSAObject.Close();
-      }
-      catch { }
-			*/
-			((GSAInterfacer)Interfacer).Close();
+
+			Interfacer.Close();
 			Senders.Clear();
       Receivers.Clear();
     }
@@ -210,7 +221,7 @@ namespace SpeckleGSA
     public static void SetSpeckleClients(string emailAddress, string serverAddress)
     {
       string key = emailAddress + "&" + serverAddress.Replace(':', '&');
-			string res = ((GSAInterfacer)Interfacer).GetSID();
+			string res = Interfacer.GetSID();
 
 			List<string[]> sids = Regex.Matches(res, @"(?<={).*?(?=})").Cast<Match>()
               .Select(m => m.Value.Split(new char[] { ':' }))
@@ -241,21 +252,11 @@ namespace SpeckleGSA
       foreach (string[] s in sids)
         sidRecord += "{" + s[0] + ":" + s[1] + "}";
 
-			((GSAInterfacer)GSA.Interfacer).SetSID(sidRecord);
+			Interfacer.SetSID(sidRecord);
     }
     #endregion
 
     #region Document Properties
-		/*
-    /// <summary>
-    /// Extract the title of the GSA model.
-    /// </summary>
-    /// <returns>GSA model title</returns>
-    public static string Title()
-    {
-      string res = ((GSAInterfacer)GSA.Interfacer).GetTitle();
-    }
-		*/
 
     /// <summary>
     /// Extracts the base properties of the Speckle stream.
@@ -268,15 +269,15 @@ namespace SpeckleGSA
       baseProps["units"] = Settings.Units.LongUnitName();
       // TODO: Add other units
 
-      var tolerances = ((GSAInterfacer)GSA.Interfacer).GetTolerances();
+      var tolerances = Interfacer.GetTolerances();
 
-      List<double> lengthTolerances = new List<double>() {
-                Convert.ToDouble(tolerances[3]), // edge
+			var lengthTolerances = new List<double>() {
+								Convert.ToDouble(tolerances[3]), // edge
                 Convert.ToDouble(tolerances[5]), // leg_length
                 Convert.ToDouble(tolerances[7])  // memb_cl_dist
             };
 
-      List<double> angleTolerances = new List<double>(){
+      var angleTolerances = new List<double>(){
                 Convert.ToDouble(tolerances[4]), // angle
                 Convert.ToDouble(tolerances[6]), // meemb_orient
             };
@@ -287,13 +288,6 @@ namespace SpeckleGSA
       return baseProps;
     }
 
-    /// <summary>
-    /// Updates the GSA unit stored in SpeckleGSA.
-    /// </summary>
-    public static void UpdateUnits()
-    {
-			Settings.Units = ((GSAInterfacer)Interfacer).GetUnits();
-    }
     #endregion
 
     #region Views
@@ -303,7 +297,7 @@ namespace SpeckleGSA
     /// </summary>
     public static void UpdateCasesAndTasks()
     {
-			((GSAInterfacer)GSA.Interfacer).UpdateCasesAndTasks();
+			Interfacer.UpdateCasesAndTasks();
     }
     #endregion
   }

@@ -2,8 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Interop.Gsa_10_0;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
@@ -36,7 +34,6 @@ namespace SpeckleGSAProxy
 		public void InitializeReceiver()
 		{
 			FullClearCache();
-			//this.GSAObject = new ComAuto();
 		}
 
 		public void PreReceiving()

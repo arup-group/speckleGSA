@@ -1,4 +1,5 @@
 ﻿using SpeckleCore;
+using SpeckleGSAInterfaces;
 using SpeckleGSAProxy;
 using System;
 using System.Collections;
@@ -38,10 +39,10 @@ namespace SpeckleGSA
         Status.AddError("GSA link not found.");
         return;
       }
+			var gsaInterfacer = (GSAInterfacer)GSA.Interfacer;
 
-			
-      // Run initialize sender method in interfacer
-      var assemblies = SpeckleCore.SpeckleInitializer.GetAssemblies();
+			// Run initialize sender method in interfacer
+			var assemblies = SpeckleInitializer.GetAssemblies();
 			/*
       foreach (var ass in assemblies)
       {
@@ -67,40 +68,23 @@ namespace SpeckleGSA
         }
       }
 			*/
-			((GSAInterfacer)GSA.Interfacer).InitializeSender();
+			gsaInterfacer.InitializeSender();
 
-      // Grab GSA interface type
-      Type interfaceType = null;
-      Type attributeType = null;
-      foreach (var ass in assemblies)
-      {
-        var types = ass.GetTypes();
-        foreach (var type in types)
-        {
-          if (type.FullName.Contains("IGSASpeckleContainer"))
-            interfaceType = type;
-
-          if (type.FullName.Contains("GSAObject"))
-            attributeType = type;
-        }
-      }
-
-      if (interfaceType == null)
-        return;
+			// Grab GSA interface type
+			var attributeType = typeof(GSAObject);
+			var interfaceType = typeof(IGSASpeckleContainer);
 
       // Grab all GSA related object
       Status.ChangeStatus("Preparing to read GSA Objects");
 
-      List<Type> objTypes = new List<Type>();
+      var objTypes = new List<Type>();
       foreach (var ass in assemblies)
       {
         var types = ass.GetTypes();
-        foreach (var type in types)
-          if (interfaceType.IsAssignableFrom(type) && type != interfaceType)
-            objTypes.Add(type);
+				objTypes.AddRange(types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType));
       }
 
-      foreach (Type t in objTypes)
+      foreach (var t in objTypes)
       {
         if (t.GetAttribute("Stream", attributeType) != null)
           StreamMap[t] = (string)t.GetAttribute("Stream", attributeType);
@@ -179,11 +163,12 @@ namespace SpeckleGSA
     /// </summary>
     public void Trigger()
     {
-      if (IsBusy) return;
-      if (!IsInit) return;
+      if ((IsBusy) || (!IsInit)) return;
 
       IsBusy = true;
-      GSA.UpdateUnits();
+			var gsaInterfacer = (GSAInterfacer)GSA.Interfacer;
+			var gsaSettings = (Settings)GSA.Settings;
+			gsaSettings.Units = gsaInterfacer.GetUnits();
 
 			/*
       // Run pre sending method and inject!!!!
@@ -254,11 +239,11 @@ namespace SpeckleGSA
         }
       }
 			*/
-			((GSAInterfacer)GSA.Interfacer).PreSending();
+			gsaInterfacer.PreSending();
 
 			// Read objects
-			List<Type> currentBatch = new List<Type>();
-      List<Type> traversedTypes = new List<Type>();
+			var currentBatch = new List<Type>();
+      var traversedTypes = new List<Type>();
 
       bool changeDetected = false;
       do
@@ -289,11 +274,11 @@ namespace SpeckleGSA
       }
 
       // Separate objects into streams
-      Dictionary<string, Dictionary<string, List<object>>> streamBuckets = new Dictionary<string, Dictionary<string, List<object>>>();
+      var streamBuckets = new Dictionary<string, Dictionary<string, List<object>>>();
 
-      foreach (KeyValuePair<Type, List<object>> kvp in SenderObjects)
+      foreach (var kvp in SenderObjects)
       {
-        string targetStream = ((Settings)GSA.Settings).SeparateStreams ? StreamMap[kvp.Key] : "Full Model";
+        var targetStream = gsaSettings.SeparateStreams ? StreamMap[kvp.Key] : "Full Model";
 
         foreach (object obj in kvp.Value)
         {
@@ -319,45 +304,19 @@ namespace SpeckleGSA
       // Send package
       Status.ChangeStatus("Sending to Server");
 
-      foreach (KeyValuePair<string, Dictionary<string, List<object>>> kvp in streamBuckets)
+      foreach (var kvp in streamBuckets)
       {
         Status.ChangeStatus("Sending to stream: " + Senders[kvp.Key].StreamID);
 
-        string streamName = "";
-				string title = ((GSAInterfacer)GSA.Interfacer).GetTitle();
-				streamName = (((Settings)GSA.Settings).SeparateStreams) ? title + "." + kvp.Key : title;
+        var streamName = "";
+				var title = gsaInterfacer.GetTitle();
+				streamName = gsaSettings.SeparateStreams ? title + "." + kvp.Key : title;
 
         Senders[kvp.Key].UpdateName(streamName);
         Senders[kvp.Key].SendGSAObjects(kvp.Value);
       }
 
-			/*
-			// Run post sending method
-			foreach (var ass in assemblies)
-      {
-        var types = ass.GetTypes();
-        foreach (var type in types)
-        {
-          if (type.GetInterfaces().Contains(typeof(SpeckleCore.ISpeckleInitializer)))
-          {
-            if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
-            {
-              try
-              {
-                var gsaInterface = type.GetProperty("GSA").GetValue(null);
-                gsaInterface.GetType().GetMethod("PostSending").Invoke(gsaInterface, new object[] { });
-              }
-              catch
-              {
-                Status.AddError("Unable to access kit. Try updating Speckle installation to a later release.");
-                throw new Exception("Unable to trigger");
-              }
-            }
-          }
-        }
-      }
-			*/
-			((GSAInterfacer)GSA.Interfacer).PostSending();
+			gsaInterfacer.PostSending();
 
 			IsBusy = false;
       Status.ChangeStatus("Finished sending", 100);
