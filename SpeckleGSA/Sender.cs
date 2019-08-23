@@ -99,16 +99,53 @@ namespace SpeckleGSA
           if (changeDetected) // This will skip the first read but it avoids flickering
             Status.ChangeStatus("Reading " + t.Name);
 
+					//The SpeckleStructural kit actually does serialisation (calling of ToSpeckle()) by type, not individual object.  This is due to
+					//GSA offering bulk GET based on type.
+					//So if the ToSpeckle() call for the type is successful it does all the objects of that type and returns SpeckleObject.
+					//If there is an error, then the SpeckleCore Converter.Serialise will return SpeckleNull.  
+					//The converted objects are stored in the kit in its own collection, not returned by Serialise() here.
           var dummyObject = Activator.CreateInstance(t);
           var result = Converter.Serialise(dummyObject);
 
-          if (!(result is SpeckleNull)) changeDetected = true;
+					if (!(result is SpeckleNull))
+					{
+						changeDetected = true;
+					}
 
-          traversedTypes.Add(t);
+					traversedTypes.Add(t);
         }
       } while (currentBatch.Count > 0);
 
-      if (!changeDetected)
+			var assemblies = SpeckleInitializer.GetAssemblies().Where(a => a.GetTypes().Any(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer))));
+
+			//Now obtain the serialised (inheriting from SpeckleObject) objects
+			foreach (var ass in assemblies)
+			{
+				var types = ass.GetTypes();
+
+				try
+				{
+					var gsaStatic = types.FirstOrDefault(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer)) && t.GetProperties().Any(p => p.PropertyType == typeof(IGSAInterfacer)));
+					if (gsaStatic == null)
+					{
+						continue;
+					}
+					var typeSenderObjects = (Dictionary<Type, List<object>>)gsaStatic.GetProperty("GSASenderObjects").GetValue(null);
+					foreach (var t in typeSenderObjects.Keys)
+					{
+						if (!SenderObjects.ContainsKey(t))
+						{
+							SenderObjects[t] = new List<object>();
+						}
+						SenderObjects[t].AddRange(typeSenderObjects[t]);
+					}
+				}
+				catch (Exception e)
+				{
+				}
+			}
+
+			if (!changeDetected)
       {
         Status.ChangeStatus("Finished sending", 100);
         IsBusy = false;
