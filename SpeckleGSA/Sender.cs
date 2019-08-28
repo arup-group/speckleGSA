@@ -26,21 +26,47 @@ namespace SpeckleGSA
     {
 			var statusMessages = new List<string>();
 
-			if (!Initialise(GSA.Settings.SendOnlyResults ? "results" : null)) return statusMessages;
+			if (IsInit) return statusMessages;
 
-			// Run initialize sender method in interfacer
-			var assemblies = SpeckleInitializer.GetAssemblies();
+			if (!GSA.IsInit)
+			{
+				Status.AddError("GSA link not found.");
+				return statusMessages;
+			}
+
+			var attributeType = typeof(GSAObject);
+
+			//Filter out prerequisites that are excluded by the layer selection
+			// Remove wrong layer objects from prerequisites
+			if (GSA.Settings.SendOnlyResults)
+			{
+				var stream = GSA.Settings.SendOnlyResults ? "results" : null;
+				var resultsKeys = GSA.ReadTypePrerequisites.Where(t => (string)t.Key.GetAttribute("Stream", attributeType) == stream);
+				foreach (var kvp in resultsKeys)
+				{
+					FilteredTypePrerequisites[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, attributeType)
+						&& (string)l.GetAttribute("Stream", attributeType) == stream).ToList();
+				}
+			}
+			else
+			{
+				foreach (var kvp in GSA.ReadTypePrerequisites)
+				{
+					FilteredTypePrerequisites[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, attributeType)).ToList();
+				}
+			}
 
 			GSA.Interfacer.InitializeSender();
 
 			// Grab GSA interface type
-			var attributeType = typeof(GSAObject);
 			var interfaceType = typeof(IGSASpeckleContainer);
 
       // Grab all GSA related object
       Status.ChangeStatus("Preparing to read GSA Objects");
 
-      var objTypes = new List<Type>();
+			// Run initialize sender method in interfacer
+			var assemblies = SpeckleInitializer.GetAssemblies();
+			var objTypes = new List<Type>();
       foreach (var ass in assemblies)
       {
         var types = ass.GetTypes();

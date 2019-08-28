@@ -28,13 +28,27 @@ namespace SpeckleGSA
 		{
 			var statusMessages = new List<string>();
 
-			if (!base.Initialise()) return statusMessages;
+			if (IsInit) return statusMessages;
+
+			if (!GSA.IsInit)
+			{
+				Status.AddError("GSA link not found.");
+				return statusMessages;
+			}
+
+			var attributeType = typeof(GSAObject);
+
+			//Filter out prerequisites that are excluded by the layer selection
+			// Remove wrong layer objects from prerequisites
+			foreach (var kvp in GSA.WriteTypePrerequisites)
+			{
+				FilteredTypePrerequisites[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, attributeType)).ToList();
+			}
 
 			Status.AddMessage("Initialising receivers");
 
 			GSA.Interfacer.InitializeReceiver();
 
-			var attributeType = typeof(GSAObject);
 
 			foreach (var kvp in FilteredTypePrerequisites)
 			{

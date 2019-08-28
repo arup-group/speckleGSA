@@ -146,7 +146,7 @@ namespace SpeckleGSA
     #region Miscellanious
     public static void InvokeGSAInterfaceMethod(string methodName, object[] parameters = null)
     {
-      var assemblies = SpeckleCore.SpeckleInitializer.GetAssemblies();
+      var assemblies = SpeckleInitializer.GetAssemblies();
       foreach (var ass in assemblies)
       {
         var types = ass.GetTypes();

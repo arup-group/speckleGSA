@@ -30,7 +30,8 @@ namespace SpeckleGSA
     public static Dictionary<string, Tuple<string, string>> Senders { get; set; }
     public static List<Tuple<string, string>> Receivers { get; set; }
 
-		public static Dictionary<Type, List<Type>> TypePrerequisites = new Dictionary<Type, List<Type>>();
+		public static Dictionary<Type, List<Type>> WriteTypePrerequisites = new Dictionary<Type, List<Type>>();
+		public static Dictionary<Type, List<Type>> ReadTypePrerequisites = new Dictionary<Type, List<Type>>();
 
 		public static void Init()
     {
@@ -78,8 +79,8 @@ namespace SpeckleGSA
 						continue;
 					}
 
-					gsaStatic.GetProperty("Interface").SetValue(null, GSA.Interfacer);
-					gsaStatic.GetProperty("Settings").SetValue(null, GSA.Settings);
+					gsaStatic.GetProperty("Interface").SetValue(null, Interfacer);
+					gsaStatic.GetProperty("Settings").SetValue(null, Settings);
 				}
 				catch(Exception e)
 				{
@@ -93,7 +94,10 @@ namespace SpeckleGSA
 				foreach (var t in objTypes)
 				{
 					var prereq = t.GetAttribute("WritePrerequisite", attributeType);
-					TypePrerequisites[t] = (prereq != null) ? ((Type[])prereq).ToList() : new List<Type>();
+					WriteTypePrerequisites[t] = (prereq != null) ? ((Type[])prereq).ToList() : new List<Type>();
+
+					prereq = t.GetAttribute("ReadPrerequisite", attributeType);
+					ReadTypePrerequisites[t] = (prereq != null) ? ((Type[])prereq).ToList() : new List<Type>();
 				}
 			}
 		}

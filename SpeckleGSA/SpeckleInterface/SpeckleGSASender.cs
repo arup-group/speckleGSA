@@ -60,7 +60,7 @@ namespace SpeckleGSA
 
         var clientResponse = mySender.ClientCreateAsync(new AppClient()
         {
-          DocumentName = Path.GetFileNameWithoutExtension(((GSAInterfacer)GSA.Interfacer).FilePath),
+          DocumentName = Path.GetFileNameWithoutExtension(GSA.Interfacer.FilePath),
           DocumentType = "GSA",
           Role = "Sender",
           StreamId = this.StreamID,
@@ -78,7 +78,7 @@ namespace SpeckleGSA
 
         var clientResponse = mySender.ClientUpdateAsync(clientID, new AppClient()
         {
-          DocumentName = Path.GetFileNameWithoutExtension(((GSAInterfacer)GSA.Interfacer).FilePath),
+          DocumentName = Path.GetFileNameWithoutExtension(GSA.Interfacer.FilePath),
           Online = true,
         }).Result;
 
@@ -119,7 +119,7 @@ namespace SpeckleGSA
         if (kvp.Value.Count() == 0)
           continue;
 
-        List<SpeckleObject> convertedObjects = SpeckleCore.Converter.Serialise(kvp.Value).Where(o => o != null).ToList();
+        List<SpeckleObject> convertedObjects = Converter.Serialise(kvp.Value).Where(o => o != null).ToList();
 
         layers.Add(new Layer()
         {
