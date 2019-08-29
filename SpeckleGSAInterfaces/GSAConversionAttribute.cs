@@ -10,7 +10,7 @@ namespace SpeckleGSAInterfaces
 	/// Attribute containing read and write information for the object.
 	/// </summary>
 	[AttributeUsage(AttributeTargets.Class)]
-	public class GSAObject : Attribute
+	public class GSAConversionAttribute : Attribute
 	{
 		/// <summary>
 		/// GSA Keyword
@@ -47,7 +47,7 @@ namespace SpeckleGSAInterfaces
 		/// </summary>
 		private Type[] writePrerequisite;
 
-		public GSAObject(string gsaKeyword, string[] subGsaKeywords, string stream, bool analysisLayer, bool designLayer, Type[] readPrerequisite, Type[] writePrerequisite)
+		public GSAConversionAttribute(string gsaKeyword, string[] subGsaKeywords, string stream, bool analysisLayer, bool designLayer, Type[] readPrerequisite, Type[] writePrerequisite)
 		{
 			this.gsaKeyword = gsaKeyword;
 			this.subGsaKeywords = subGsaKeywords;

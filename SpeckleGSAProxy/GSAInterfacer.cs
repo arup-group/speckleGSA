@@ -49,7 +49,6 @@ namespace SpeckleGSAProxy
 		public void InitializeSender()
 		{
 			FullClearCache();
-			//this.GSAObject = new ComAuto();
 		}
 
 		public void PreSending()
@@ -658,7 +657,16 @@ namespace SpeckleGSAProxy
 
 		public string GetSID()
 		{
-			return (string)GSAObject.GwaCommand("GET\tSID");
+			string sid = "";
+			try
+			{
+				sid = (string)GSAObject.GwaCommand("GET\tSID");
+			}
+			catch
+			{
+				//File doesn't have SID
+			}
+			return sid;
 		}
 		#endregion
 

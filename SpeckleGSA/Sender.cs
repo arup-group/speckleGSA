@@ -34,25 +34,25 @@ namespace SpeckleGSA
 				return statusMessages;
 			}
 
-			var attributeType = typeof(GSAObject);
+			var attributeType = typeof(GSAConversionAttribute);
 
 			//Filter out prerequisites that are excluded by the layer selection
 			// Remove wrong layer objects from prerequisites
 			if (GSA.Settings.SendOnlyResults)
 			{
 				var stream = GSA.Settings.SendOnlyResults ? "results" : null;
-				var resultsKeys = GSA.ReadTypePrerequisites.Where(t => (string)t.Key.GetAttribute("Stream", attributeType) == stream);
+				var resultsKeys = GSA.ReadTypePrerequisites.Where(t => (string)t.Key.GetAttribute("Stream") == stream);
 				foreach (var kvp in resultsKeys)
 				{
-					FilteredTypePrerequisites[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, attributeType)
-						&& (string)l.GetAttribute("Stream", attributeType) == stream).ToList();
+					FilteredTypePrerequisites[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l)
+						&& (string)l.GetAttribute("Stream") == stream).ToList();
 				}
 			}
 			else
 			{
 				foreach (var kvp in GSA.ReadTypePrerequisites)
 				{
-					FilteredTypePrerequisites[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, attributeType)).ToList();
+					FilteredTypePrerequisites[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l)).ToList();
 				}
 			}
 
@@ -73,10 +73,19 @@ namespace SpeckleGSA
 				objTypes.AddRange(types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType));
       }
 
-      // Create the streams
-      Status.ChangeStatus("Creating streams");
+			foreach (Type t in objTypes)
+			{
+				var streamAttribute = t.GetAttribute("Stream");
+				if (streamAttribute != null)
+				{
+					StreamMap[t] = (string)streamAttribute;
+				}
+			}
 
-			var streamNames = (GSA.Settings.SeparateStreams) ? objTypes.Select(t => (string)t.GetAttribute("Stream", attributeType)).Distinct().ToList() : new List<string>() { "Full Model" };
+			// Create the streams
+			Status.ChangeStatus("Creating streams");
+
+			var streamNames = (GSA.Settings.SeparateStreams) ? objTypes.Select(t => (string)t.GetAttribute("Stream")).Distinct().ToList() : new List<string>() { "Full Model" };
 
       foreach (string streamName in streamNames)
       {
@@ -142,32 +151,19 @@ namespace SpeckleGSA
         }
       } while (currentBatch.Count > 0);
 
-			var assemblies = SpeckleInitializer.GetAssemblies().Where(a => a.GetTypes().Any(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer))));
+			var gsaStaticObjects = GetAssembliesStaticTypes();
 
-			//Now obtain the serialised (inheriting from SpeckleObject) objects
-			foreach (var ass in assemblies)
+			foreach (var tuple in gsaStaticObjects)
 			{
-				var types = ass.GetTypes();
-
-				try
+				//this item is the list of sender objects by type
+				var typeSenderObjects = tuple.Item4;
+				foreach (var t in typeSenderObjects.Keys)
 				{
-					var gsaStatic = types.FirstOrDefault(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer)) && t.GetProperties().Any(p => p.PropertyType == typeof(IGSAInterfacer)));
-					if (gsaStatic == null)
+					if (!SenderObjects.ContainsKey(t))
 					{
-						continue;
+						SenderObjects[t] = new List<object>();
 					}
-					var typeSenderObjects = (Dictionary<Type, List<object>>)gsaStatic.GetProperty("GSASenderObjects").GetValue(null);
-					foreach (var t in typeSenderObjects.Keys)
-					{
-						if (!SenderObjects.ContainsKey(t))
-						{
-							SenderObjects[t] = new List<object>();
-						}
-						SenderObjects[t].AddRange(typeSenderObjects[t]);
-					}
-				}
-				catch (Exception e)
-				{
+					SenderObjects[t].AddRange(typeSenderObjects[t]);
 				}
 			}
 

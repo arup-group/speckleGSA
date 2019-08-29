@@ -4,15 +4,13 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SpeckleGSA
 {
-  /// <summary>
-  /// Static class to store settings.
-  /// </summary>
-  public class Settings : IGSASettings
+	/// <summary>
+	/// Static class to store settings.
+	/// </summary>
+	public class Settings : IGSASettings
 	{
     public bool SendOnlyMeaningfulNodes = true;
     public bool SeparateStreams = false;
@@ -27,32 +25,14 @@ namespace SpeckleGSA
 		public bool SendResults = false;
 
 		public Dictionary<string, Tuple<int, int, List<string>>> NodalResults { get; set; } = new Dictionary<string, Tuple<int, int, List<string>>>();
-
 		public Dictionary<string, Tuple<int, int, List<string>>> Element1DResults { get; set; } = new Dictionary<string, Tuple<int, int, List<string>>>();
-
 		public Dictionary<string, Tuple<int, int, List<string>>> Element2DResults { get; set; } = new Dictionary<string, Tuple<int, int, List<string>>>();
-
 		public Dictionary<string, Tuple<string, int, int, List<string>>> MiscResults { get; set; } = new Dictionary<string, Tuple<string, int, int, List<string>>>();
 
 		public List<string> ResultCases { get; set; } = new List<string>();
-
 		public bool ResultInLocalAxis { get; set; } = false;
-
 		public int Result1DNumPosition { get; set; } = 3;
-
 		public bool EmbedResults { get; set; } = true;
-
-		/*
-		public Dictionary<string, Tuple<int, int, List<string>>> ChosenNodalResult = new Dictionary<string, Tuple<int, int, List<string>>>();
-    public Dictionary<string, Tuple<int, int, List<string>>> ChosenElement1DResult = new Dictionary<string, Tuple<int, int, List<string>>>();
-		public Dictionary<string, Tuple<int, int, List<string>>> ChosenElement2DResult = new Dictionary<string, Tuple<int, int, List<string>>>();
-    public Dictionary<string, Tuple<string, int, int, List<string>>> ChosenMiscResult = new Dictionary<string, Tuple<string, int, int, List<string>>>();
-		
-    public bool EmbedResults = true;
-    public List<string> ResultCases = new List<string>();
-    public bool ResultInLocalAxis = false;
-    public int Result1DNumPosition = 3;
-		*/
 
 		public void SetFieldOrPropValue(string fieldOrPropName, object value)
 		{

@@ -1,23 +1,17 @@
-﻿using Interop.Gsa_10_0;
-using SpeckleCore;
-using SQLite;
+﻿using SpeckleCore;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using SpeckleGSAInterfaces;
 using SpeckleGSAProxy;
 
 namespace SpeckleGSA
 {
-  /// <summary>
-  /// Static class which interfaces with GSA
-  /// </summary>
-  public static class GSA
+	/// <summary>
+	/// Static class which interfaces with GSA
+	/// </summary>
+	public static class GSA
   {
 		public static Settings Settings = new Settings();
 		public static GSAInterfacer Interfacer = new GSAInterfacer
@@ -59,7 +53,7 @@ namespace SpeckleGSA
 		{
 			statusMessages = new List<string>();
 
-			var attributeType = typeof(GSAObject);
+			var attributeType = typeof(GSAConversionAttribute);
 			var interfaceType = typeof(IGSASpeckleContainer);
 
 			SpeckleInitializer.Initialize();
@@ -93,10 +87,10 @@ namespace SpeckleGSA
 
 				foreach (var t in objTypes)
 				{
-					var prereq = t.GetAttribute("WritePrerequisite", attributeType);
+					var prereq = t.GetAttribute("WritePrerequisite");
 					WriteTypePrerequisites[t] = (prereq != null) ? ((Type[])prereq).ToList() : new List<Type>();
 
-					prereq = t.GetAttribute("ReadPrerequisite", attributeType);
+					prereq = t.GetAttribute("ReadPrerequisite");
 					ReadTypePrerequisites[t] = (prereq != null) ? ((Type[])prereq).ToList() : new List<Type>();
 				}
 			}
@@ -163,7 +157,7 @@ namespace SpeckleGSA
       { 
         string key = emailAddress + "&" + serverAddress.Replace(':', '&');
 				
-        string res = ((GSAInterfacer)Interfacer).GetSID();
+        string res = Interfacer.GetSID();
 
         if (res == "")
           return;

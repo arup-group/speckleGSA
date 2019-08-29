@@ -36,13 +36,13 @@ namespace SpeckleGSA
 				return statusMessages;
 			}
 
-			var attributeType = typeof(GSAObject);
+			var attributeType = typeof(GSAConversionAttribute);
 
 			//Filter out prerequisites that are excluded by the layer selection
 			// Remove wrong layer objects from prerequisites
 			foreach (var kvp in GSA.WriteTypePrerequisites)
 			{
-				FilteredTypePrerequisites[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, attributeType)).ToList();
+				FilteredTypePrerequisites[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l)).ToList();
 			}
 
 			Status.AddMessage("Initialising receivers");
@@ -54,8 +54,8 @@ namespace SpeckleGSA
 			{
 				try
 				{
-					var keywords = new List<string>() { (string)kvp.Key.GetAttribute("GSAKeyword", attributeType) };
-					keywords.AddRange((string[])kvp.Key.GetAttribute("SubGSAKeywords", attributeType));
+					var keywords = new List<string>() { (string)kvp.Key.GetAttribute("GSAKeyword") };
+					keywords.AddRange((string[])kvp.Key.GetAttribute("SubGSAKeywords"));
 
 					foreach (string k in keywords)
 					{
@@ -200,30 +200,7 @@ namespace SpeckleGSA
 
 		public void DeleteSpeckleObjects()
     {
-      var assemblies = SpeckleInitializer.GetAssemblies();
-      foreach (var ass in assemblies)
-      {
-        var types = ass.GetTypes();
-        foreach (var type in types)
-        {
-          if (type.GetInterfaces().Contains(typeof(SpeckleCore.ISpeckleInitializer)))
-          {
-            if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
-            {
-              try
-              {
-                var gsaInterface = type.GetProperty("GSA").GetValue(null);
-                gsaInterface.GetType().GetMethod("DeleteSpeckleObjects").Invoke(gsaInterface, new object[0]);
-              }
-              catch
-              {
-                Status.AddError("Unable to access kit. Try updating Speckle installation to a later release.");
-                throw new Exception("Unable to delete expired objects");
-              }
-            }
-          }
-        }
-      }
+			GSA.Interfacer.DeleteSpeckleObjects();
 
 			GSA.Interfacer.UpdateViews();
     }

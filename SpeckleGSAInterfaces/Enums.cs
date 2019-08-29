@@ -1,10 +1,5 @@
-﻿using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SpeckleGSAInterfaces
+﻿namespace SpeckleGSAInterfaces
 {
-
 	public enum GSATargetLayer
 	{
 		Design,
