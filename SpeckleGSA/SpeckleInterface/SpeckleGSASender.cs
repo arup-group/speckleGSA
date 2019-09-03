@@ -1,21 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 using SpeckleCore;
-using SpeckleGSAProxy;
 
 namespace SpeckleGSA
 {
-  /// <summary>
-  /// Packages and sends objects as a stream.
-  /// </summary>
-  public class SpeckleGSASender
+	/// <summary>
+	/// Packages and sends objects as a stream.
+	/// </summary>
+	public class SpeckleGSASender
   {
     const double MAX_BUCKET_SIZE = 5e5;
 
@@ -192,13 +187,15 @@ namespace SpeckleGSA
       foreach (string id in objectsInStream)
         placeholders.Add(new SpecklePlaceholder() { _id = id });
 
-      SpeckleStream updateStream = new SpeckleStream();
-      updateStream.Layers = layers;
-      updateStream.Objects = placeholders;
-      updateStream.Name = StreamName;
-      updateStream.BaseProperties = GSA.GetBaseProperties();
+			SpeckleStream updateStream = new SpeckleStream
+			{
+				Layers = layers,
+				Objects = placeholders,
+				Name = StreamName,
+				BaseProperties = GSA.GetBaseProperties()
+			};
 
-      try
+			try
       {
         var response = mySender.StreamUpdateAsync(StreamID, updateStream).Result;
         mySender.Stream.Layers = updateStream.Layers.ToList();

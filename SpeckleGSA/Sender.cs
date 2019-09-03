@@ -41,8 +41,8 @@ namespace SpeckleGSA
 			if (GSA.Settings.SendOnlyResults)
 			{
 				var stream = GSA.Settings.SendOnlyResults ? "results" : null;
-				var resultsKeys = GSA.ReadTypePrerequisites.Where(t => (string)t.Key.GetAttribute("Stream") == stream);
-				foreach (var kvp in resultsKeys)
+				var streamLayerPrerequisites = GSA.ReadTypePrerequisites.Where(t => (string)t.Key.GetAttribute("Stream") == stream && ObjectTypeMatchesLayer(t.Key));
+				foreach (var kvp in streamLayerPrerequisites)
 				{
 					FilteredTypePrerequisites[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l)
 						&& (string)l.GetAttribute("Stream") == stream).ToList();
@@ -50,7 +50,8 @@ namespace SpeckleGSA
 			}
 			else
 			{
-				foreach (var kvp in GSA.ReadTypePrerequisites)
+				var layerPrerequisites = GSA.ReadTypePrerequisites.Where(t => ObjectTypeMatchesLayer(t.Key));
+				foreach (var kvp in layerPrerequisites)
 				{
 					FilteredTypePrerequisites[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l)).ToList();
 				}

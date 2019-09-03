@@ -2,17 +2,15 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 using SpeckleCore;
-using SpeckleGSAProxy;
 
 namespace SpeckleGSA
 {
-  /// <summary>
-  /// Receive objects from a stream.
-  /// </summary>
-  public class SpeckleGSAReceiver
+	/// <summary>
+	/// Receive objects from a stream.
+	/// </summary>
+	public class SpeckleGSAReceiver
   {
 		//This was chosen to cause typical message payloads of round 100-300k to be sent from the server
     const int MAX_OBJ_REQUEST_COUNT = 1000;
@@ -36,7 +34,7 @@ namespace SpeckleGSA
     public SpeckleGSAReceiver(string serverAddress, string apiToken)
     {
       this.apiToken = apiToken;
-
+			this.serverAddress = serverAddress;
       myReceiver = new SpeckleApiClient() { BaseUrl = serverAddress.ToString() };
 
       //SpeckleInitializer.Initialize();

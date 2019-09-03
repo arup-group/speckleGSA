@@ -40,7 +40,8 @@ namespace SpeckleGSA
 
 			//Filter out prerequisites that are excluded by the layer selection
 			// Remove wrong layer objects from prerequisites
-			foreach (var kvp in GSA.WriteTypePrerequisites)
+			var layerPrerequisites = GSA.WriteTypePrerequisites.Where(t => ObjectTypeMatchesLayer(t.Key));
+			foreach (var kvp in layerPrerequisites)
 			{
 				FilteredTypePrerequisites[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l)).ToList();
 			}
