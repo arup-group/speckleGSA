@@ -106,7 +106,7 @@ namespace SpeckleGSA
     {
 			if (!IsInit) return;
 
-			Interfacer.NewFile(emailAddress, serverAddress, showWindow);
+			Interfacer.NewFile(showWindow);
 
 			GetSpeckleClients(emailAddress, serverAddress);
 
@@ -123,7 +123,7 @@ namespace SpeckleGSA
     {
 			if (!IsInit) return;
 
-			Interfacer.OpenFile(path, emailAddress, serverAddress, showWindow);
+			Interfacer.OpenFile(path, showWindow);
 			GetSpeckleClients(emailAddress, serverAddress);
 
 			Status.AddMessage("Opened new file.");
