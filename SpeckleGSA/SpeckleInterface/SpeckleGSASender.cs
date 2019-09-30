@@ -1,20 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 using SpeckleCore;
 
 namespace SpeckleGSA
 {
-  /// <summary>
-  /// Packages and sends objects as a stream.
-  /// </summary>
-  public class SpeckleGSASender
+	/// <summary>
+	/// Packages and sends objects as a stream.
+	/// </summary>
+	public class SpeckleGSASender
   {
     const double MAX_BUCKET_SIZE = 5e5;
 
@@ -36,7 +32,7 @@ namespace SpeckleGSA
 
       mySender = new SpeckleApiClient() { BaseUrl = serverAddress.ToString() };
 
-      SpeckleInitializer.Initialize();
+      //SpeckleInitializer.Initialize();
       LocalContext.Init();
     }
 
@@ -59,7 +55,7 @@ namespace SpeckleGSA
 
         var clientResponse = mySender.ClientCreateAsync(new AppClient()
         {
-          DocumentName = Path.GetFileNameWithoutExtension(GSA.FilePath),
+          DocumentName = Path.GetFileNameWithoutExtension(GSA.Interfacer.FilePath),
           DocumentType = "GSA",
           Role = "Sender",
           StreamId = this.StreamID,
@@ -77,7 +73,7 @@ namespace SpeckleGSA
 
         var clientResponse = mySender.ClientUpdateAsync(clientID, new AppClient()
         {
-          DocumentName = Path.GetFileNameWithoutExtension(GSA.FilePath),
+          DocumentName = Path.GetFileNameWithoutExtension(GSA.Interfacer.FilePath),
           Online = true,
         }).Result;
 
@@ -118,7 +114,7 @@ namespace SpeckleGSA
         if (kvp.Value.Count() == 0)
           continue;
 
-        List<SpeckleObject> convertedObjects = SpeckleCore.Converter.Serialise(kvp.Value).Where(o => o != null).ToList();
+        List<SpeckleObject> convertedObjects = Converter.Serialise(kvp.Value).Where(o => o != null).ToList();
 
         layers.Add(new Layer()
         {
@@ -191,13 +187,15 @@ namespace SpeckleGSA
       foreach (string id in objectsInStream)
         placeholders.Add(new SpecklePlaceholder() { _id = id });
 
-      SpeckleStream updateStream = new SpeckleStream();
-      updateStream.Layers = layers;
-      updateStream.Objects = placeholders;
-      updateStream.Name = StreamName;
-      updateStream.BaseProperties = GSA.GetBaseProperties();
+			SpeckleStream updateStream = new SpeckleStream
+			{
+				Layers = layers,
+				Objects = placeholders,
+				Name = StreamName,
+				BaseProperties = GSA.GetBaseProperties()
+			};
 
-      try
+			try
       {
         var response = mySender.StreamUpdateAsync(StreamID, updateStream).Result;
         mySender.Stream.Layers = updateStream.Layers.ToList();

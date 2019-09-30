@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Collections;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
+using SpeckleGSAInterfaces;
 
 namespace SpeckleGSA
 {
@@ -141,50 +142,24 @@ namespace SpeckleGSA
           return unit;
       }
     }
-    #endregion
+		#endregion
 
-    #region Miscellanious
-    public static void InvokeGSAInterfaceMethod(string methodName, object[] parameters = null)
-    {
-      var assemblies = SpeckleCore.SpeckleInitializer.GetAssemblies();
-      foreach (var ass in assemblies)
-      {
-        var types = ass.GetTypes();
-        foreach (var type in types)
-        {
-          if (type.GetInterfaces().Contains(typeof(SpeckleCore.ISpeckleInitializer)))
-          {
-            if (type.GetProperties().Select(p => p.Name).Contains("GSA"))
-            {
-              var gsaInterface = type.GetProperty("GSA").GetValue(null);
-              gsaInterface.GetType().GetMethod(methodName).Invoke(gsaInterface, parameters == null ? new object[0] : parameters);
-            }
-          }
-        }
-      }
-    }
+		#region Miscellanious
 
-    /// <summary>
-    /// Extract attribute from GSAObject objects or type.
-    /// </summary>
-    /// <param name="t">GSAObject objects or type</param>
-    /// <param name="attribute">Attribute to extract</param>
-    /// <returns>Attribute value</returns>
-    public static object GetAttribute(this object t, string attribute, Type attributeType)
+		/// <summary>
+		/// Extract attribute from attribute type.
+		/// </summary>
+		/// <param name="t">GSAObject objects or type</param>
+		/// <param name="attribute">Attribute to extract</param>
+		/// <returns>Attribute value</returns>
+		public static object GetAttribute(this object t, string attribute)
     {
+			var attributeType = typeof(GSAConversionAttribute);
       try
       {
-        if (t is Type)
-        {
-          var attObj = Attribute.GetCustomAttribute((Type)t, attributeType);
-          return attributeType.GetProperty(attribute).GetValue(attObj);
-        }
-        else
-        {
-          var attObj = Attribute.GetCustomAttribute(t.GetType(), attributeType);
-          return attributeType.GetProperty(attribute).GetValue(attObj);
-        }
-      }
+				var attObj = (t is Type) ? Attribute.GetCustomAttribute((Type)t, attributeType) : Attribute.GetCustomAttribute(t.GetType(), attributeType);
+				return attributeType.GetProperty(attribute).GetValue(attObj);
+			}
       catch { return null; }
     }
     #endregion
