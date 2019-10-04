@@ -458,6 +458,7 @@ namespace SpeckleGSAProxy
     {
       if (!SidCache.ContainsKey(keyword + "\t" + id.ToString()))
       {
+        var sidValue = "";
         try
         {
           // Look in GET cache first
@@ -466,20 +467,25 @@ namespace SpeckleGSAProxy
             var command = (string)GSAGetCache["GET\t" + keyword + "\t" + id.ToString()];
             var match = Regex.Match(command, "(?<={" + SID_TAG + ":).*?(?=})");
             if (!string.IsNullOrEmpty(match.Value))
-              SidCache[keyword + "\t" + id.ToString()] = match.Value;
+            {
+              sidValue = match.Value;
+            }
             else
-              SidCache[keyword + "\t" + id.ToString()] = "gsa/" + keyword + "_" + id.ToString();
+            {
+              //It has been observed that sometimes GET commands don't include the SID despite there being one.  For some (but not all)
+              //of these instances, the SID is available through an explicit call for the SID, so try that next
+              sidValue = GSAObject.GetSidTagValue(keyword, id, SID_TAG);
+            }
           }
           else
           {
-            SidCache[keyword + "\t" + id.ToString()] = GSAObject.GetSidTagValue(keyword, id, SID_TAG);
-            if (string.IsNullOrEmpty(SidCache[keyword + "\t" + id.ToString()]))
-              SidCache[keyword + "\t" + id.ToString()] = "gsa/" + keyword + "_" + id.ToString();
+            sidValue = GSAObject.GetSidTagValue(keyword, id, SID_TAG);
           }
         }
-        catch
+        catch { }
+        finally
         {
-          SidCache[keyword + "\t" + id.ToString()] = "gsa/" + keyword + "_" + id.ToString();
+          SidCache[keyword + "\t" + id.ToString()] = (sidValue == "") ? ("gsa/" + keyword + "_" + id.ToString()) : sidValue;
         }
       }
 
