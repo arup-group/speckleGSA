@@ -53,7 +53,7 @@ namespace SpeckleGSA
 		{
 			statusMessages = new List<string>();
 
-			var attributeType = typeof(GSAConversionAttribute);
+			var attributeType = typeof(GSAObject);
 			var interfaceType = typeof(IGSASpeckleContainer);
 
 			SpeckleInitializer.Initialize();

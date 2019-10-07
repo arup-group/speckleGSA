@@ -154,7 +154,7 @@ namespace SpeckleGSA
 		/// <returns>Attribute value</returns>
 		public static object GetAttribute(this object t, string attribute)
     {
-			var attributeType = typeof(GSAConversionAttribute);
+			var attributeType = typeof(GSAObject);
       try
       {
 				var attObj = (t is Type) ? Attribute.GetCustomAttribute((Type)t, attributeType) : Attribute.GetCustomAttribute(t.GetType(), attributeType);

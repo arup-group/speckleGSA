@@ -15,7 +15,7 @@ namespace SpeckleGSA
 
 		protected bool ObjectTypeMatchesLayer(Type t)
 		{
-			var attributeType = typeof(GSAConversionAttribute);
+			var attributeType = typeof(GSAObject);
 			var analysisLayerAttribute = t.GetAttribute("AnalysisLayer");
 			var designLayerAttribute = t.GetAttribute("DesignLayer");
 
