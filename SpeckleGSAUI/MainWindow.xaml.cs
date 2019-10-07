@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Deployment.Application;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -55,6 +57,8 @@ namespace SpeckleGSAUI
     public MainWindow()
     {
       InitializeComponent();
+
+      mainWindow.Title = mainWindow.Title + " - " + getRunningVersion();
 
       DataContext = this;
 
@@ -909,6 +913,18 @@ namespace SpeckleGSAUI
         GSA.Receivers.Remove(GSA.Receivers.First(x => x.Item1 == (string)streamID));
         GSA.SetSpeckleClients(EmailAddress, RestApi);
         UpdateClientLists();
+      }
+    }
+
+    private Version getRunningVersion()
+    {
+      try
+      {
+        return ApplicationDeployment.CurrentDeployment.CurrentVersion;
+      }
+      catch (Exception)
+      {
+        return Assembly.GetExecutingAssembly().GetName().Version;
       }
     }
     #endregion
