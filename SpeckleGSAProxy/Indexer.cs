@@ -23,7 +23,7 @@ namespace SpeckleGSAProxy
 			return false;
 		}
 
-		public int? LookupIndex(string keywordGSA, string applicationId, string type = "")
+		public int? LookupIndex(string keywordGSA, string type, string applicationId)
 		{
 			if (applicationId == null || applicationId == string.Empty)
 				return null;
@@ -36,9 +36,9 @@ namespace SpeckleGSAProxy
 			return indexMap[key];
 		}
 
-		public List<int?> LookupIndices(string keyword, IEnumerable<string> applicationIds)
+		public List<int?> LookupIndices(string keyword, string type, IEnumerable<string> applicationIds)
 		{
-			return applicationIds.Select(s => LookupIndex(keyword, s)).ToList();
+			return applicationIds.Select(s => LookupIndex(keyword, type, s)).ToList();
 		}
 
 		public void ReserveIndices(string keyword, IEnumerable<int> indices)
@@ -72,7 +72,7 @@ namespace SpeckleGSAProxy
 				indexUsed[kvp.Key] = new List<int>(kvp.Value);
 			}
 		}
-		public int ResolveIndex(string keyword, string applicationId, string type = "")
+		public int ResolveIndex(string keyword, string type, string applicationId = null)
 		{
 			// If no ID set, return next one but do not store.
 			if (applicationId == null || applicationId == string.Empty)
@@ -90,9 +90,9 @@ namespace SpeckleGSAProxy
 			return indexMap[key];
 		}
 
-		public List<int> ResolveIndices(string keyword, IEnumerable<string> applicationIds)
+		public List<int> ResolveIndices(string keyword, string type, IEnumerable<string> applicationIds = null)
 		{
-			return applicationIds.Select(s => ResolveIndex(keyword, s)).ToList();
+			return applicationIds.Select(s => ResolveIndex(keyword, type, s)).ToList();
 		}
 
 		public void SetBaseline()
