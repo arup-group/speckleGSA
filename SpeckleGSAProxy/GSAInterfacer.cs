@@ -225,6 +225,7 @@ namespace SpeckleGSAProxy
     public void DeleteSpeckleObjects()
     {
       BlankDepreciatedGWASetCommands();
+      //The Set cache would be clear by now, so it will come across to the method below as equivalent to an empty stream, so all objects will need to be removed.      
       ClearCache();
       BlankDepreciatedGWASetCommands();
     }

@@ -51,7 +51,9 @@ namespace SpeckleGSA
 			GSA.Interfacer.InitializeReceiver();
 
 
-			foreach (var kvp in FilteredTypePrerequisites)
+      //Clear all indices first before creating a new baseline - this is to take in all the changes between the last reception and now
+      GSA.Interfacer.Indexer.Reset();
+      foreach (var kvp in FilteredTypePrerequisites)
 			{
 				try
 				{
