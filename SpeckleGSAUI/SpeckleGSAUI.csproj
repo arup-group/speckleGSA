@@ -8,7 +8,7 @@
     <OutputType>WinExe</OutputType>
     <RootNamespace>SpeckleGSAUI</RootNamespace>
     <AssemblyName>SpeckleGSAUI</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <WarningLevel>4</WarningLevel>
@@ -77,11 +77,11 @@
     <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.12.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
-    <Reference Include="SpeckleCore, Version=1.5.1.326, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\packages\SpeckleCore.1.5.1.326\lib\net45\SpeckleCore.dll</HintPath>
+    <Reference Include="SpeckleCore, Version=1.5.2.343, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\packages\SpeckleCore.1.5.2.343\lib\net45\SpeckleCore.dll</HintPath>
     </Reference>
-    <Reference Include="SpecklePopup, Version=1.5.1.9, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\SpecklePopup.1.5.1.9\lib\net45\SpecklePopup.dll</HintPath>
+    <Reference Include="SpecklePopup, Version=1.6.8.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\SpecklePopup.1.6.8\lib\net45\SpecklePopup.dll</HintPath>
     </Reference>
     <Reference Include="SQLite-net, Version=1.5.231.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\sqlite-net-pcl.1.5.231\lib\netstandard1.1\SQLite-net.dll</HintPath>
@@ -100,6 +100,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Numerics" />
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Core" />
@@ -165,6 +166,14 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\SpeckleGSAInterfaces\SpeckleGSAInterfaces.csproj">
+      <Project>{5ca1bffe-f623-4677-8412-9d20f0017523}</Project>
+      <Name>SpeckleGSAInterfaces</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SpeckleGSAProxy\SpeckleGSAProxy.csproj">
+      <Project>{88AE85C3-1966-4B71-8C91-242C80DCE6D4}</Project>
+      <Name>SpeckleGSAProxy</Name>
+    </ProjectReference>
     <ProjectReference Include="..\SpeckleGSA\SpeckleGSA.csproj">
       <Project>{6d8ca3ad-e530-4cda-af79-9715a7583f4f}</Project>
       <Name>SpeckleGSA</Name>

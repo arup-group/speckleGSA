@@ -2,18 +2,18 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 using SpeckleCore;
 
 namespace SpeckleGSA
 {
-  /// <summary>
-  /// Receive objects from a stream.
-  /// </summary>
-  public class SpeckleGSAReceiver
+	/// <summary>
+	/// Receive objects from a stream.
+	/// </summary>
+	public class SpeckleGSAReceiver
   {
-    const int MAX_OBJ_REQUEST_COUNT = 20;
+		//This was chosen to cause typical message payloads of round 100-300k to be sent from the server
+    const int MAX_OBJ_REQUEST_COUNT = 1000;
 
     private SpeckleApiClient myReceiver;
 
@@ -34,10 +34,10 @@ namespace SpeckleGSA
     public SpeckleGSAReceiver(string serverAddress, string apiToken)
     {
       this.apiToken = apiToken;
-
+			this.serverAddress = serverAddress;
       myReceiver = new SpeckleApiClient() { BaseUrl = serverAddress.ToString() };
 
-      SpeckleInitializer.Initialize();
+      //SpeckleInitializer.Initialize();
       LocalContext.Init();
     }
 
@@ -55,7 +55,7 @@ namespace SpeckleGSA
       {
 				var task = myReceiver.ClientCreateAsync(new AppClient()
 				{
-					DocumentName = Path.GetFileNameWithoutExtension(GSA.FilePath),
+					DocumentName = Path.GetFileNameWithoutExtension(GSA.Interfacer.FilePath),
 					DocumentType = "GSA",
 					Role = "Receiver",
 					StreamId = streamID,
@@ -70,7 +70,7 @@ namespace SpeckleGSA
       {
 				var task = myReceiver.ClientUpdateAsync(clientID, new AppClient()
 				{
-					DocumentName = Path.GetFileNameWithoutExtension(GSA.FilePath),
+					DocumentName = Path.GetFileNameWithoutExtension(GSA.Interfacer.FilePath),
 					Online = true,
 				});
 				await task;
@@ -85,11 +85,11 @@ namespace SpeckleGSA
       myReceiver.OnWsMessage += OnWsMessage;
     }
 
-    /// <summary>
-    /// Return a list of SpeckleObjects from the stream.
-    /// </summary>
-    /// <returns>List of SpeckleObjects</returns>
-    public List<SpeckleObject> GetObjects()
+		/// <summary>
+		/// Return a list of SpeckleObjects from the stream.
+		/// </summary>
+		/// <returns>List of SpeckleObjects</returns>
+		public List<SpeckleObject> GetObjects()
     {
       UpdateGlobal();
 
@@ -128,76 +128,76 @@ namespace SpeckleGSA
       myReceiver.Stream.Children = result.Resource.Children;
     }
 
-    /// <summary>
-    /// Force client to update to stream.
-    /// </summary>
-    public void UpdateGlobal()
-    {
-      // Try to get stream
-      ResponseStream streamGetResult = myReceiver.StreamGetAsync(myReceiver.StreamId, null).Result;
+		/// <summary>
+		/// Force client to update to stream.
+		/// </summary>
+		public void UpdateGlobal()
+		{
+			// Try to get stream
+			ResponseStream streamGetResult = myReceiver.StreamGetAsync(myReceiver.StreamId, null).Result;
 
-      if (streamGetResult.Success == false)
-      {
-        Status.AddError("Failed to receive " + myReceiver.Stream.Name + "stream.");
-      }
-      else
-      {
-        myReceiver.Stream = streamGetResult.Resource;
+			if (streamGetResult.Success == false)
+			{
+				Status.AddError("Failed to receive " + myReceiver.Stream.Name + "stream.");
+			}
+			else
+			{
+				myReceiver.Stream = streamGetResult.Resource;
 
-        // Store stream data in local DB
-        try
-        {
-          LocalContext.AddOrUpdateStream(myReceiver.Stream, myReceiver.BaseUrl);
-        }
-        catch { }
+				// Store stream data in local DB
+				try
+				{
+					LocalContext.AddOrUpdateStream(myReceiver.Stream, myReceiver.BaseUrl);
+				}
+				catch { }
 
-        // Get cached objects
-        try
-        {
-          LocalContext.GetCachedObjects(myReceiver.Stream.Objects, myReceiver.BaseUrl);
-        }
-        catch { }
+				// Get cached objects
+				try
+				{
+					LocalContext.GetCachedObjects(myReceiver.Stream.Objects, myReceiver.BaseUrl);
+				}
+				catch { }
 
-        string[] payload = myReceiver.Stream.Objects.Where(o => o.Type == "Placeholder").Select(o => o._id).ToArray();
+				string[] payload = myReceiver.Stream.Objects.Where(o => o.Type == "Placeholder").Select(o => o._id).ToArray();
 
-        List<SpeckleObject> receivedObjects = new List<SpeckleObject>();
+				List<SpeckleObject> receivedObjects = new List<SpeckleObject>();
 
-        // Get remaining objects from server
-        for (int i = 0; i < payload.Length; i += MAX_OBJ_REQUEST_COUNT)
-        {
-          string[] partialPayload = payload.Skip(i).Take(MAX_OBJ_REQUEST_COUNT).ToArray();
+				// Get remaining objects from server
+				for (int i = 0; i < payload.Length; i += MAX_OBJ_REQUEST_COUNT)
+				{
+					string[] partialPayload = payload.Skip(i).Take(MAX_OBJ_REQUEST_COUNT).ToArray();
 
-          ResponseObject response = myReceiver.ObjectGetBulkAsync(partialPayload, "omit=displayValue").Result;
+					ResponseObject response = myReceiver.ObjectGetBulkAsync(partialPayload, "omit=displayValue").Result;
 
-          receivedObjects.AddRange(response.Resources);
-        }
+					receivedObjects.AddRange(response.Resources);
+				}
 
-        foreach (SpeckleObject obj in receivedObjects)
-        {
-          int streamLoc = myReceiver.Stream.Objects.FindIndex(o => o._id == obj._id);
-          try
-          {
-            myReceiver.Stream.Objects[streamLoc] = obj;
-          }
-          catch
-          { }
-        }
+				foreach (SpeckleObject obj in receivedObjects)
+				{
+					int streamLoc = myReceiver.Stream.Objects.FindIndex(o => o._id == obj._id);
+					try
+					{
+						myReceiver.Stream.Objects[streamLoc] = obj;
+					}
+					catch
+					{ }
+				}
 
-        Task.Run(() =>
-       {
-         foreach (SpeckleObject obj in receivedObjects)
-         {
-           try
-           {
-             LocalContext.AddCachedObject(obj, myReceiver.BaseUrl);
-           }
-           catch { }
-         }
-       });
+				Task.Run(() =>
+				{
+					foreach (SpeckleObject obj in receivedObjects)
+					{
+						try
+						{
+							LocalContext.AddCachedObject(obj, myReceiver.BaseUrl);
+						}
+						catch { }
+					 }
+				 });
 
-        Status.AddMessage("Received " + myReceiver.Stream.Name + " stream with " + myReceiver.Stream.Objects.Count() + " objects.");
-      }
-    }
+				Status.AddMessage("Received " + myReceiver.Stream.Name + " stream with " + myReceiver.Stream.Objects.Count() + " objects.");
+			}
+		}
 
     /// <summary>
     /// Dispose the receiver.
