@@ -36,7 +36,7 @@ namespace SpeckleGSA
 				return statusMessages;
 			}
 
-			var attributeType = typeof(GSAConversionAttribute);
+			var attributeType = typeof(GSAObject);
 
 			//Filter out prerequisites that are excluded by the layer selection
 			// Remove wrong layer objects from prerequisites
@@ -51,7 +51,9 @@ namespace SpeckleGSA
 			GSA.Interfacer.InitializeReceiver();
 
 
-			foreach (var kvp in FilteredTypePrerequisites)
+      //Clear all indices first before creating a new baseline - this is to take in all the changes between the last reception and now
+      GSA.Interfacer.Indexer.Reset();
+      foreach (var kvp in FilteredTypePrerequisites)
 			{
 				try
 				{

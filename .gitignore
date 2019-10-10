@@ -340,3 +340,6 @@ ASALocalRun/
 
 # BeatPulse healthcheck temp database 
 healthchecksdb
+
+# Exclude files created by of previous merges
+*.orig

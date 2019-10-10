@@ -34,7 +34,7 @@ namespace SpeckleGSA
 				return statusMessages;
 			}
 
-			var attributeType = typeof(GSAConversionAttribute);
+			var attributeType = typeof(GSAObject);
 
 			//Filter out prerequisites that are excluded by the layer selection
 			// Remove wrong layer objects from prerequisites

@@ -9,11 +9,18 @@ namespace SpeckleGSAProxy
 {
 	public class Indexer : IGSAIndexer
 	{
+    //Dictionary of composite keys (keyword + type + application ID) and the GSA record ID
 		private static Dictionary<string, int> indexMap = new Dictionary<string, int>();
+
+    //Highest record ID used for each GSA keyword
 		private static Dictionary<string, int> counter = new Dictionary<string, int>();
+
+    //Memory of all record IDs used, whether by external actors or by Speckle so ar
 		private static Dictionary<string, List<int>> indexUsed = new Dictionary<string, List<int>>();
 
-		private static Dictionary<string, List<int>> baseLine = new Dictionary<string, List<int>>();
+    //Memory of only the record IDs set by actions outside SpeckleGSA - the world as it was before reception from Speckle
+    private static Dictionary<string, List<int>> baseLine = new Dictionary<string, List<int>>();
+
 		public bool InBaseline(string keywordGSA, int index)
 		{
 			if (baseLine.ContainsKey(keywordGSA))
@@ -72,7 +79,16 @@ namespace SpeckleGSAProxy
 				indexUsed[kvp.Key] = new List<int>(kvp.Value);
 			}
 		}
-		public int ResolveIndex(string keyword, string type, string applicationId = null)
+
+    public void Reset()
+    {
+      indexUsed.Clear();
+      indexMap.Clear();
+      counter.Clear();
+      baseLine.Clear();
+    }
+
+    public int ResolveIndex(string keyword, string type, string applicationId = null)
 		{
 			// If no ID set, return next one but do not store.
 			if (applicationId == null || applicationId == string.Empty)

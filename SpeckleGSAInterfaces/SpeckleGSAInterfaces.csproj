@@ -43,7 +43,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="GSAConversionAttribute.cs" />
+    <Compile Include="GSAObject.cs" />
     <Compile Include="IGSAIndexer.cs" />
     <Compile Include="IGSAInterfacer.cs" />
     <Compile Include="Enums.cs" />
