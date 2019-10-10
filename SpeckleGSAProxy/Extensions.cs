@@ -9,14 +9,24 @@ namespace SpeckleGSAProxy
 {
 	public static class Extensions
 	{
-		#region Lists
-		/// <summary>
-		/// Splits lists, keeping entities encapsulated by "" together.
-		/// </summary>
-		/// <param name="list">String to split</param>
-		/// <param name="delimiter">Delimiter</param>
-		/// <returns>Array of strings containing list entries</returns>
-		public static string[] ListSplit(this string list, string delimiter)
+    #region general
+    public static List<T> AddIfNotContains<T>(this List<T> list, T val)
+    {
+      if (val != null && list != null && !list.Contains(val))
+      {
+        list.Add(val);
+      }
+      return list;
+    }
+    #endregion
+    #region Lists
+    /// <summary>
+    /// Splits lists, keeping entities encapsulated by "" together.
+    /// </summary>
+    /// <param name="list">String to split</param>
+    /// <param name="delimiter">Delimiter</param>
+    /// <returns>Array of strings containing list entries</returns>
+    public static string[] ListSplit(this string list, string delimiter)
 		{
 			return Regex.Split(list, delimiter + "(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
 		}

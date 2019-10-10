@@ -5,6 +5,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using SpeckleCore;
 using SpeckleGSAInterfaces;
+//Referenced just for the general extension methods
+using SpeckleGSAProxy;
 
 namespace SpeckleGSA
 {
@@ -50,28 +52,38 @@ namespace SpeckleGSA
 
 			GSA.Interfacer.InitializeReceiver();
 
-
       //Clear all indices first before creating a new baseline - this is to take in all the changes between the last reception and now
       GSA.Interfacer.Indexer.Reset();
+
+      var keywords = new List<string>();
       foreach (var kvp in FilteredTypePrerequisites)
-			{
-				try
-				{
-					var keywords = new List<string>() { (string)kvp.Key.GetAttribute("GSAKeyword") };
-					keywords.AddRange((string[])kvp.Key.GetAttribute("SubGSAKeywords"));
+      {
+        try
+        {
+          var keyword = (string)kvp.Key.GetAttribute("GSAKeyword");
+          keywords.AddIfNotContains(keyword);
+          var subKeywords = (string[])kvp.Key.GetAttribute("SubGSAKeywords");
+          if (subKeywords.Length > 0)
+          {
+            foreach (var skw in subKeywords)
+            {
+              keywords.AddIfNotContains(skw);
+            }
+          }
+        }
+        catch { }
+      }
 
-					foreach (string k in keywords)
-					{
-						int highestRecord = GSA.Interfacer.HighestIndex(k);
+      foreach (string k in keywords)
+      {
+        int highestRecord = GSA.Interfacer.HighestIndex(k);
 
-						if (highestRecord > 0)
-						{
-							GSA.Interfacer.Indexer.ReserveIndices(k, Enumerable.Range(1, highestRecord));
-						}
-					}
-				}
-				catch { }
-			}
+        if (highestRecord > 0)
+        {
+          GSA.Interfacer.Indexer.ReserveIndices(k, Enumerable.Range(1, highestRecord));
+        }
+      }
+
 			GSA.Interfacer.Indexer.SetBaseline();
 
 			// Create receivers
