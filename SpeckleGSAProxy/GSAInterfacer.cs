@@ -24,8 +24,6 @@ namespace SpeckleGSAProxy
 
     private const string SID_TAG = "speckle_app_id";
 
-    private string PreviousGSAResultInit = "";
-
     private IComAuto GSAObject;
 
     public string FilePath;
