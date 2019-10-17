@@ -2,25 +2,17 @@
 using SpeckleGSA;
 using SpeckleGSAInterfaces;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
+using System.Deployment.Application;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Interop;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using System.Windows.Threading;
 
 namespace SpeckleGSAUI
@@ -55,6 +47,8 @@ namespace SpeckleGSAUI
     public MainWindow()
     {
       InitializeComponent();
+
+      mainWindow.Title = mainWindow.Title + " - " + getRunningVersion();
 
       DataContext = this;
 
@@ -322,10 +316,18 @@ namespace SpeckleGSAUI
         SenderLayerToggle.IsEnabled = false;
         SenderContinuousToggle.IsEnabled = false;
 
-        GSA.GetSpeckleClients(EmailAddress, RestApi);
-        gsaSender = new Sender();
-        await gsaSender.Initialize(RestApi, ApiToken);
-        GSA.SetSpeckleClients(EmailAddress, RestApi);
+        try
+        {
+          GSA.GetSpeckleClients(EmailAddress, RestApi);
+          gsaSender = new Sender();
+          await gsaSender.Initialize(RestApi, ApiToken);
+          GSA.SetSpeckleClients(EmailAddress, RestApi);
+        }
+        catch (Exception ex)
+        {
+          Status.AddError(ex.Message);
+          return;
+        }
 
         status = UIStatus.SENDING;
         if (SenderContinuousToggle.IsChecked.Value)
@@ -348,7 +350,7 @@ namespace SpeckleGSAUI
           catch (Exception ex)
           {
             Status.AddError(ex.Message);
-            SendStream(sender, e);
+            //SendStream(sender, e);
           }
         }
         else
@@ -393,8 +395,7 @@ namespace SpeckleGSAUI
       catch (Exception ex)
       {
         Status.AddError(ex.Message);
-
-        SendStream(null, null);
+        //SendStream(null, null);
       }
     }
     #endregion
@@ -663,15 +664,6 @@ namespace SpeckleGSAUI
           propertyName = (sender as CheckBox).Name;
           propertyValue = (sender as CheckBox).IsChecked;
 
-					/*
-          var fieldInfo = typeof(Settings).GetField(propertyName);
-          Type fieldType = fieldInfo.FieldType;
-
-					if (fieldType == typeof(bool))
-          {
-            fieldInfo.SetValue(null, propertyValue);
-          }
-					*/
 					GSA.Settings.SetFieldOrPropValue(propertyName, propertyValue);
 				}
         else if (sender is TextBox)
@@ -680,24 +672,6 @@ namespace SpeckleGSAUI
           propertyValue = (sender as TextBox).Text;
 
 					GSA.Settings.SetFieldOrPropValue(propertyName, propertyValue);
-					/*
-					var fieldInfo = typeof(Settings).GetField(propertyName);
-          Type fieldType = fieldInfo.FieldType;
-
-          if (typeof(IEnumerable).IsAssignableFrom(fieldType))
-          {
-            string[] pieces = ((string)propertyValue).Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-            Type subType = fieldType.GetGenericArguments()[0];
-
-            var newList = Activator.CreateInstance(fieldType);
-            foreach (string p in pieces)
-              newList.GetType().GetMethod("Add").Invoke(newList, new object[] { Convert.ChangeType(p, newList.GetType().GetGenericArguments().Single()) });
-
-            fieldInfo.SetValue(null, newList);
-          }
-          else
-            fieldInfo.SetValue(null, Convert.ChangeType(propertyValue, fieldType));
-					*/
         }
       }
       catch (Exception exception)
@@ -909,6 +883,18 @@ namespace SpeckleGSAUI
         GSA.Receivers.Remove(GSA.Receivers.First(x => x.Item1 == (string)streamID));
         GSA.SetSpeckleClients(EmailAddress, RestApi);
         UpdateClientLists();
+      }
+    }
+
+    private Version getRunningVersion()
+    {
+      try
+      {
+        return ApplicationDeployment.CurrentDeployment.CurrentVersion;
+      }
+      catch (Exception)
+      {
+        return Assembly.GetExecutingAssembly().GetName().Version;
       }
     }
     #endregion
