@@ -82,14 +82,14 @@ namespace SpeckleGSAProxy
         if (split[1].IsDigits())
         {
           // Uses SET
-          if (!Indexer.InBaseline(split[0], Convert.ToInt32(split[1])))
+          //if (!Indexer.InBaseline(split[0], Convert.ToInt32(split[1])))
             RunGWACommand("BLANK\t" + split[0] + "\t" + split[1], false);
         }
         else if (split[0].IsDigits())
         {
 
           // Uses SET_AT
-          if (!Indexer.InBaseline(split[1], Convert.ToInt32(split[0])))
+          //if (!Indexer.InBaseline(split[1], Convert.ToInt32(split[0])))
           {
             RunGWACommand("DELETE\t" + split[1] + "\t" + split[0], false);
             int idxShifter = Convert.ToInt32(split[0]) + 1;
@@ -142,7 +142,7 @@ namespace SpeckleGSAProxy
       GSAGetCache.Clear();
       PreviousGSASetCache = new Dictionary<string, object>(GSASetCache);
       GSASetCache.Clear();
-      SidCache.Clear();
+      //SidCache.Clear();
     }
 
     public int[] ConvertGSAList(string list, GSAEntity type)
@@ -192,6 +192,11 @@ namespace SpeckleGSAProxy
       }
 
       return items.ToArray();
+    }
+
+    public bool ExistsInModel(string applicationId)
+    {
+      return SidCache.Any(kvp => kvp.Value.Equals(applicationId, StringComparison.InvariantCultureIgnoreCase));
     }
 
     public int[] ConvertNamedGSAList(string list, GSAEntity type)
@@ -495,15 +500,15 @@ namespace SpeckleGSAProxy
     {
       int idx = GSAObject.Gen_NodeAt(x, y, z, coincidentNodeAllowance);
 
-      if (applicationId != null)
-        Indexer.ReserveIndicesAndMap(keyword, typeName, new List<int>() { idx }, new List<string>() { applicationId });
-      else
-        Indexer.ReserveIndices(keyword, new List<int>() { idx });
+      //if (applicationId != null)
+        //Indexer.ReserveIndicesAndMap(keyword, typeName, new List<int>() { idx }, new List<string>() { applicationId });
+      //else
+        //Indexer.ReserveIndices(keyword, new List<int>() { idx });
 
       // Add artificial cache
-      string cacheKey = "SET\t" + keyword + "\t" + idx.ToString() + "\t";
-      if (!GSASetCache.ContainsKey(cacheKey))
-        GSASetCache[cacheKey] = 0;
+      //string cacheKey = "SET\t" + keyword + "\t" + idx.ToString() + "\t";
+      //if (!GSASetCache.ContainsKey(cacheKey))
+      //  GSASetCache[cacheKey] = 0;
 
       return idx;
     }
@@ -512,7 +517,7 @@ namespace SpeckleGSAProxy
     {
       if (cache)
       {
-        if (command.StartsWith("GET"))
+        if (command.StartsWith("GET")) 
         {
           if (!GSAGetCache.ContainsKey(command))
           {
@@ -527,7 +532,13 @@ namespace SpeckleGSAProxy
             foreach (string rec in allRecords)
             {
               var recPieces = rec.Split(new char[] { '\t' });
-              GSAGetCache["GET\t" + commandPieces[1] + "\t" + recPieces[1]] = rec;
+              var keyword = commandPieces[1];
+              GSAGetCache["GET\t" + keyword + "\t" + recPieces[1]] = rec;
+              if (int.TryParse(recPieces[1], out int index))
+              {
+                //Insert into the SID cache
+                GetSID(keyword, index);
+              }
             }
           }
 
@@ -545,14 +556,13 @@ namespace SpeckleGSAProxy
           return GSASetCache[command];
         }
       }
-
       return GSAObject.GwaCommand(command);
     }
 
     /// <summary>
     /// Checks if the load case exists in the GSA file
     /// </summary>
-    /// <param name="loadCase">GSA load case description</param>
+    /// <param name="loadCase">GSA load case description</param>"
     /// <returns>True if load case exists</returns>
     public bool CaseExist(string loadCase)
     {

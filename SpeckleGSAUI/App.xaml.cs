@@ -145,7 +145,7 @@ namespace SpeckleGSAUI
       else
       {
         GSA.NewFile(EmailAddress, RestApi, false);
-				GSA.Interfacer.SaveAs(arguments["file"]);
+				GSA.gsaProxy.SaveAs(arguments["file"]);
       }
 
       // We will receive all the things!
@@ -192,7 +192,7 @@ namespace SpeckleGSAUI
       gsaReceiver.Trigger(null, null);
       gsaReceiver.Dispose();
 
-			GSA.Interfacer.SaveAs(arguments["file"]);
+			GSA.gsaProxy.SaveAs(arguments["file"]);
 			GSA.Close();
 
       Console.WriteLine("Receiving complete");
@@ -259,7 +259,7 @@ namespace SpeckleGSAUI
       gsaSender.Trigger();
       gsaSender.Dispose();
 
-			GSA.Interfacer.SaveAs(arguments["file"]);
+			GSA.gsaProxy.SaveAs(arguments["file"]);
 			GSA.Close();
 
       Console.WriteLine("Sending complete");

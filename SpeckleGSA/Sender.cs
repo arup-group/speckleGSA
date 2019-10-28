@@ -57,7 +57,7 @@ namespace SpeckleGSA
 				}
 			}
 
-			GSA.Interfacer.InitializeSender();
+			//GSA.Interfacer.InitializeSender();
 
 			// Grab GSA interface type
 			var interfaceType = typeof(IGSASpeckleContainer);
@@ -116,9 +116,9 @@ namespace SpeckleGSA
       if ((IsBusy) || (!IsInit)) return;
 
       IsBusy = true;
-			GSA.Settings.Units = GSA.Interfacer.GetUnits();
+			GSA.Settings.Units = GSA.gsaProxy.GetUnits();
 
-			GSA.Interfacer.PreSending();
+			//GSA.Interfacer.PreSending();
 
 			// Read objects
 			var currentBatch = new List<Type>();
@@ -211,14 +211,14 @@ namespace SpeckleGSA
         Status.ChangeStatus("Sending to stream: " + Senders[kvp.Key].StreamID);
 
         var streamName = "";
-				var title = GSA.Interfacer.GetTitle();
+				var title = GSA.gsaProxy.GetTitle();
 				streamName = GSA.Settings.SeparateStreams ? title + "." + kvp.Key : title;
 
         Senders[kvp.Key].UpdateName(streamName);
         Senders[kvp.Key].SendGSAObjects(kvp.Value);
       }
 
-			GSA.Interfacer.PostSending();
+			//GSA.Interfacer.PostSending();
 
 			IsBusy = false;
       Status.ChangeStatus("Finished sending", 100);

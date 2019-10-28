@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using SpeckleGSAInterfaces;
 using SpeckleGSAProxy;
+using SpeckleUtil;
 
 namespace SpeckleGSA
 {
@@ -14,10 +15,17 @@ namespace SpeckleGSA
 	public static class GSA
   {
 		public static Settings Settings = new Settings();
+    /*
 		public static GSAInterfacer Interfacer = new GSAInterfacer
 		{
 			Indexer = new Indexer()
 		};
+    */
+
+    public static ISpeckleObjectMerger Merger = new SpeckleObjectMerger();
+    //public static SpeckleObjectCache speckleObjectCache = new SpeckleObjectCache();
+    public static GSAProxy gsaProxy = new GSAProxy();
+    public static GSACache gsaCache = new GSACache();
 
     public static bool IsInit;
 
@@ -73,9 +81,11 @@ namespace SpeckleGSA
 						continue;
 					}
 
-					gsaStatic.GetProperty("Interface").SetValue(null, Interfacer);
+					gsaStatic.GetProperty("Interface").SetValue(null, gsaProxy);
 					gsaStatic.GetProperty("Settings").SetValue(null, Settings);
-				}
+          gsaStatic.GetProperty("Indexer").SetValue(null, gsaCache);
+
+        }
 				catch(Exception e)
 				{
 					//The kits could throw an exception due to an app-specific library not being linked in (e.g.: the Revit SDK).  These libraries aren't of the kind that
@@ -106,7 +116,7 @@ namespace SpeckleGSA
     {
 			if (!IsInit) return;
 
-			Interfacer.NewFile(showWindow);
+			gsaProxy.NewFile(showWindow);
 
 			GetSpeckleClients(emailAddress, serverAddress);
 
@@ -123,7 +133,7 @@ namespace SpeckleGSA
     {
 			if (!IsInit) return;
 
-			Interfacer.OpenFile(path, showWindow);
+			gsaProxy.OpenFile(path, showWindow);
 			GetSpeckleClients(emailAddress, serverAddress);
 
 			Status.AddMessage("Opened new file.");
@@ -136,7 +146,7 @@ namespace SpeckleGSA
     {
       if (!IsInit) return;
 
-			Interfacer.Close();
+			gsaProxy.Close();
 			Senders.Clear();
       Receivers.Clear();
     }
@@ -157,7 +167,7 @@ namespace SpeckleGSA
       { 
         string key = emailAddress + "&" + serverAddress.Replace(':', '&');
 				
-        string res = Interfacer.GetSID();
+        string res = gsaProxy.GetSID();
 
         if (res == "")
           return;
@@ -203,7 +213,7 @@ namespace SpeckleGSA
     public static void SetSpeckleClients(string emailAddress, string serverAddress)
     {
       string key = emailAddress + "&" + serverAddress.Replace(':', '&');
-			string res = Interfacer.GetSID();
+			string res = gsaProxy.GetSID();
 
 			List<string[]> sids = Regex.Matches(res, @"(?<={).*?(?=})").Cast<Match>()
               .Select(m => m.Value.Split(new char[] { ':' }))
@@ -234,7 +244,7 @@ namespace SpeckleGSA
       foreach (string[] s in sids)
         sidRecord += "{" + s[0] + ":" + s[1] + "}";
 
-			Interfacer.SetSID(sidRecord);
+			gsaProxy.SetSID(sidRecord);
     }
     #endregion
 
@@ -251,7 +261,7 @@ namespace SpeckleGSA
       baseProps["units"] = Settings.Units.LongUnitName();
       // TODO: Add other units
 
-      var tolerances = Interfacer.GetTolerances();
+      var tolerances = gsaProxy.GetTolerances();
 
 			var lengthTolerances = new List<double>() {
 								Convert.ToDouble(tolerances[3]), // edge
@@ -279,7 +289,7 @@ namespace SpeckleGSA
     /// </summary>
     public static void UpdateCasesAndTasks()
     {
-			Interfacer.UpdateCasesAndTasks();
+			gsaProxy.UpdateCasesAndTasks();
     }
     #endregion
   }

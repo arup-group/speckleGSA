@@ -473,7 +473,16 @@ namespace SpeckleGSAUI
 
         GSA.GetSpeckleClients(EmailAddress, RestApi);
         gsaReceiver = new Receiver();
-				await gsaReceiver.Initialize(RestApi, ApiToken);
+        try
+        {
+          await gsaReceiver.Initialize(RestApi, ApiToken);
+        }
+        catch(Exception ex)
+        {
+          Status.AddError(ex.Message);
+          return;
+        }
+
 				GSA.SetSpeckleClients(EmailAddress, RestApi);
         status = UIStatus.RECEIVING;
         if (ReceiverContinuousToggle.IsChecked.Value)

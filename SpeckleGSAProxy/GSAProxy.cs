@@ -1,0 +1,552 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
+using Interop.Gsa_10_0;
+using SpeckleGSAInterfaces;
+
+namespace SpeckleGSAProxy
+{
+  public class GSAProxy : IGSAProxy
+  {
+    //Hardwired values for interacting with the GSA instance
+    //----
+    private const string SID_TAG = "speckle_app_id";
+
+    //These don't need to be the entire keywords - e.g. LOAD_BEAM covers LOAD_BEAM_UDL, LOAD_BEAM_LINE, LOAD_BEAM_PATCH and LOAD_BEAM_TRILIN
+    private readonly string[] SetAtKeywordBeginnings = new string[] { "LOAD_NODE", "LOAD_BEAM", "LOAD_GRID_LINE", "LOAD_2D_FACE", "LOAD_GRID_AREA", "LOAD_2D_THERMAL", "LOAD_GRAVITY", "INF_BEAM", "INF_NODE", "RIGID", "GEN_REST" };
+    //----
+
+    private IComAuto GSAObject;
+
+    private List<string> batchSetGwa = new List<string>();
+    private List<string> batchBlankGwa = new List<string>();
+
+    public string FilePath;
+
+    #region File Operations
+    /// <summary>
+    /// Creates a new GSA file. Email address and server address is needed for logging purposes.
+    /// </summary>
+    /// <param name="emailAddress">User email address</param>
+    /// <param name="serverAddress">Speckle server address</param>
+    public void NewFile(bool showWindow = true, IComAuto gsaInstance = null)
+    {
+      if (GSAObject != null)
+      {
+        try
+        {
+          GSAObject.Close();
+        }
+        catch { }
+        GSAObject = null;
+      }
+
+      GSAObject = gsaInstance ?? new ComAuto();
+
+
+      GSAObject.LogFeatureUsage("api::specklegsa::" +
+          FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
+              .ProductVersion + "::GSA " + GSAObject.VersionString()
+              .Split(new char[] { '\n' })[0]
+              .Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries)[1]);
+
+      GSAObject.NewFile();
+      GSAObject.SetLocale(Locale.LOC_EN_GB);
+      if (showWindow)
+      {
+        GSAObject.DisplayGsaWindow(true);
+      }
+    }
+
+    /// <summary>
+    /// Opens an existing GSA file. Email address and server address is needed for logging purposes.
+    /// </summary>
+    /// <param name="path">Absolute path to GSA file</param>
+    /// <param name="emailAddress">User email address</param>
+    /// <param name="serverAddress">Speckle server address</param>
+    public void OpenFile(string path, bool showWindow = true, IComAuto gsaInstance = null)
+    {
+
+      if (GSAObject != null)
+      {
+        try
+        {
+          GSAObject.Close();
+        }
+        catch { }
+        GSAObject = null;
+      }
+
+      GSAObject = gsaInstance ?? new ComAuto();
+
+      GSAObject.LogFeatureUsage("api::specklegsa::" +
+        FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
+          .ProductVersion + "::GSA " + GSAObject.VersionString()
+          .Split(new char[] { '\n' })[0]
+          .Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries)[1]);
+
+      GSAObject.Open(path);
+      FilePath = path;
+      GSAObject.SetLocale(Locale.LOC_EN_GB);
+
+      if (showWindow)
+      {
+        GSAObject.DisplayGsaWindow(true);
+      }
+    }
+
+    public int SaveAs(string filePath)
+    {
+      return GSAObject.SaveAs(filePath);
+    }
+
+    /// <summary>
+    /// Close GSA file.
+    /// </summary>
+    public void Close()
+    {
+      try
+      {
+        GSAObject.Close();
+      }
+      catch { }
+
+    }
+    #endregion
+
+    //Tuple: keyword | index | Application ID | GWA command | Set or Set At
+    public List<Tuple<string, int, string, string, GwaSetCommandType>> GetGWAData(IEnumerable<string> keywords)
+    {
+      var data = new List<Tuple<string, int, string, string, GwaSetCommandType>>();
+      var setKeywords = new List<string>();
+      var setAtKeywords = new List<string>();
+      foreach (var keyword in keywords)
+      {
+        if (SetAtKeywordBeginnings.Any(b => keyword.StartsWith(b)))
+        {
+          setAtKeywords.Add(keyword);
+        }
+        else
+        {
+          setKeywords.Add(keyword);
+        }
+      }
+
+      for (int i = 0; i < setKeywords.Count(); i++)
+      {
+        var newCommand = "GET_ALL\t" + setKeywords[i];
+        var gwaRecords = ((string)GSAObject.GwaCommand(newCommand)).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+        for (int j = 0; j < gwaRecords.Length; j++)
+        {
+          var index = ExtractGwaIndex(gwaRecords[j]);
+          gwaRecords[j].ExtractKeywordApplicationId(out string keyword, out string applicationId);
+          applicationId = FormatApplicationId(keyword, index, applicationId);
+
+          data.Add(new Tuple<string, int, string, string, GwaSetCommandType>(setKeywords[i], index, applicationId, gwaRecords[j], GwaSetCommandType.Set));
+        }
+      }
+
+      for (int i = 0; i < setAtKeywords.Count(); i++)
+      {
+        var highestIndex = GSAObject.GwaCommand("HIGHEST\t" + setAtKeywords[i]);
+
+        for (int j = 1; j <= highestIndex; j++)
+        {
+          var newCommand = string.Join("\t", new[] { "GET", setAtKeywords[i], j.ToString() });
+
+          var gwaRecord = "";
+          try
+          {
+            gwaRecord = (string)GSAObject.GwaCommand(newCommand);
+          }
+          catch { }
+
+          if (gwaRecord != "")
+          {
+            gwaRecord.ExtractKeywordApplicationId(out string keyword, out string applicationId);
+            applicationId = FormatApplicationId(keyword, j, applicationId);
+
+            data.Add(new Tuple<string, int, string, string, GwaSetCommandType>(setAtKeywords[i], j, applicationId, gwaRecord, GwaSetCommandType.SetAt));
+          }
+        }
+      }
+
+      return data;
+    }
+
+    private string FormatApplicationId(string keyword, int index, string applicationId)
+    {
+      //It has been observed that sometimes GET commands don't include the SID despite there being one.  For some (but not all)
+      //of these instances, the SID is available through an explicit call for the SID, so try that next
+      return (string.IsNullOrEmpty(applicationId)) ? GSAObject.GetSidTagValue(keyword, index, SID_TAG) : applicationId;
+    }
+
+    private int ExtractGwaIndex(string gwaRecord)
+    {
+      var pieces = gwaRecord.Split(new[] { '\t' });
+      return (int.TryParse(pieces[1], out int index)) ? index : 0;
+    }
+
+
+    //Assumed to be the full SET or SET_AT command
+    public void SetGWA(string gwaCommand)
+    {
+      batchSetGwa.Add(gwaCommand);
+    }
+
+    public void Sync()
+    {
+      var batchSetCommand = string.Join("\r\n", batchSetGwa.Select(g => "SET\t" + g));
+      var setCommandResult = GSAObject.GwaCommand(batchSetCommand);
+      batchSetGwa.Clear();
+
+      var batchBlankCommand = string.Join("\r\n", batchBlankGwa.Select(g => "BLANK\t" + g));
+      var blankCommandResult = GSAObject.GwaCommand(batchBlankCommand);
+      batchBlankGwa.Clear();
+    }
+
+    public void GetGSATotal2DElementOffset(int index, double insertionPointOffset, out double offset, out string offsetRec)
+    {
+      double materialInsertionPointOffset = 0;
+      double zMaterialOffset = 0;
+
+      object result = GSAObject.GwaCommand("GET\tPROP_2D\t" + index.ToString());
+      string[] newPieces = ((string)result).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries).Select((s, idx) => idx.ToString() + ":" + s).ToArray();
+
+      string res = newPieces.FirstOrDefault();
+
+      if (res == null || res == "")
+      {
+        offset = insertionPointOffset;
+        offsetRec = res;
+        return;
+      }
+
+      string[] pieces = res.ListSplit("\t");
+
+      zMaterialOffset = -Convert.ToDouble(pieces[12]);
+      offset = insertionPointOffset + zMaterialOffset + materialInsertionPointOffset;
+      offsetRec = res;
+      return;
+    }
+
+    public int NodeAt(double x, double y, double z, double coincidenceTol)
+    {
+      //Note: the outcome of this might need to be added to the caches!
+      return GSAObject.Gen_NodeAt(x, y, z, coincidenceTol);
+    }
+
+    public int[] ConvertGSAList(string list, GSAEntity type)
+    {
+      if (list == null) return new int[0];
+
+      string[] pieces = list.ListSplit(" ");
+      pieces = pieces.Where(s => !string.IsNullOrEmpty(s)).ToArray();
+
+      List<int> items = new List<int>();
+      for (int i = 0; i < pieces.Length; i++)
+      {
+        if (pieces[i].IsDigits())
+          items.Add(Convert.ToInt32(pieces[i]));
+        else if (pieces[i].Contains('"'))
+        {
+          items.AddRange(ConvertNamedGSAList(pieces[i], type));
+        }
+        else if (pieces[i] == "to")
+        {
+          int lowerRange = Convert.ToInt32(pieces[i - 1]);
+          int upperRange = Convert.ToInt32(pieces[i + 1]);
+
+          for (int j = lowerRange + 1; j <= upperRange; j++)
+            items.Add(j);
+
+          i++;
+        }
+        else
+        {
+          try
+          {
+            int[] itemTemp;
+            GSAObject.EntitiesInList(pieces[i], (GsaEntity)type, out itemTemp);
+
+            if (itemTemp == null)
+              GSAObject.EntitiesInList("\"" + list + "\"", (GsaEntity)type, out itemTemp);
+
+            if (itemTemp == null)
+              continue;
+
+            items.AddRange((int[])itemTemp);
+          }
+          catch
+          { }
+        }
+      }
+
+      return items.ToArray();
+    }
+
+    public Dictionary<string, object> GetGSAResult(int id, int resHeader, int flags, List<string> keys, string loadCase, string axis = "local", int num1DPoints = 2)
+    {
+      var ret = new Dictionary<string, object>();
+      GsaResults[] res = null;
+      bool exists = false;
+
+      int returnCode = -1;
+
+      try
+      {
+        int num;
+
+        // The 2nd condition here is a special case for assemblies
+        if (Enum.IsDefined(typeof(ResHeader), resHeader) || resHeader == 18002000)
+        {
+          returnCode = GSAObject.Output_Init_Arr(flags, axis, loadCase, (ResHeader)resHeader, num1DPoints);
+
+          try
+          {
+            var existsResult = GSAObject.Output_DataExist(id);
+            exists = (existsResult == 1);
+          }
+          catch (Exception e)
+          {
+            return null;
+          }
+
+          if (exists)
+          {
+            var extracted = false;
+            try
+            {
+              returnCode = GSAObject.Output_Extract_Arr(id, out var outputExtractResults, out num);
+              res = (GsaResults[])outputExtractResults;
+              extracted = true;
+            }
+            catch (Exception e) { }
+
+            if (!extracted)
+            {
+              // Try individual extract
+              for (var i = 1; i <= keys.Count; i++)
+              {
+                var indivResHeader = resHeader + i;
+
+                try
+                {
+                  GSAObject.Output_Init(flags, axis, loadCase, indivResHeader, num1DPoints);
+                }
+                catch (Exception e)
+                {
+                  return null;
+                }
+
+                var numPos = 1;
+
+                try
+                {
+                  numPos = GSAObject.Output_NumElemPos(id);
+                }
+                catch { }
+
+                if (i == 1)
+                {
+                  res = new GsaResults[numPos];
+                  for (var j = 0; j < res.Length; j++)
+                  {
+                    res[j] = new GsaResults() { dynaResults = new double[keys.Count] };
+                  }
+                }
+
+                for (var j = 0; j < numPos; j++)
+                {
+                  res[j].dynaResults[i - 1] = (double)GSAObject.Output_Extract(id, j);
+                }
+              }
+            }
+
+          }
+          else
+          {
+            return null;
+          }
+        }
+        else
+        {
+          returnCode = GSAObject.Output_Init(flags, axis, loadCase, resHeader, num1DPoints);
+
+          try
+          {
+            var existsResult = GSAObject.Output_DataExist(id);
+            exists = (existsResult == 1);
+          }
+          catch (Exception e)
+          {
+            return null;
+          }
+
+          if (exists)
+          {
+            var numPos = GSAObject.Output_NumElemPos(id);
+            res = new GsaResults[numPos];
+
+            try
+            {
+              for (var i = 0; i < numPos; i++)
+              {
+                res[i] = new GsaResults() { dynaResults = new double[] { (double)GSAObject.Output_Extract(id, i) } };
+              }
+            }
+            catch
+            {
+              return null;
+            }
+          }
+          else
+          {
+            return null;
+          }
+        }
+
+        var numColumns = res[0].dynaResults.Count();
+
+        for (var i = 0; i < numColumns; i++)
+        {
+          ret[keys[i]] = res.Select(x => (double)x.dynaResults.GetValue(i)).ToList();
+        }
+
+        return ret;
+      }
+      catch
+      {
+        return null;
+      }
+    }
+
+    public bool CaseExist(string loadCase)
+    {
+      try
+      {
+        string[] pieces = loadCase.Split(new char[] { 'p' }, StringSplitOptions.RemoveEmptyEntries);
+
+        if (pieces.Length == 1)
+          return GSAObject.CaseExist(loadCase[0].ToString(), Convert.ToInt32(loadCase.Substring(1))) == 1;
+        else if (pieces.Length == 2)
+          return GSAObject.CaseExist(loadCase[0].ToString(), Convert.ToInt32(pieces[0].Substring(1))) == 1;
+        else
+          return false;
+      }
+      catch { return false; }
+    }
+
+    #region private_methods
+    private int[] ConvertNamedGSAList(string list, GSAEntity type)
+    {
+      list = list.Trim(new char[] { '"', ' ' });
+
+      try
+      {
+        object result = GSAObject.GwaCommand("GET\tLIST\t" + list);
+        string[] newPieces = ((string)result).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries).Select((s, idx) => idx.ToString() + ":" + s).ToArray();
+
+        string res = newPieces.FirstOrDefault();
+
+        string[] pieces = res.Split(new char[] { '\t' });
+
+        return ConvertGSAList(pieces[pieces.Length - 1], type);
+      }
+      catch
+      {
+        try
+        {
+          GSAObject.EntitiesInList("\"" + list + "\"", (GsaEntity)type, out int[] itemTemp);
+          if (itemTemp == null)
+            return new int[0];
+          else
+            return (int[])itemTemp;
+        }
+        catch { return new int[0]; }
+      }
+    }
+    #endregion
+
+    //
+    public void DeleteGWA(string keyword, int index, GwaSetCommandType gwaSetCommandType)
+    {
+      var gwaReturnObj = GSAObject.GwaCommand(string.Join("\t", new[] { (gwaSetCommandType == GwaSetCommandType.Set) ? "BLANK" : "DELETE", keyword, index.ToString() }));
+    }
+
+    //----
+    #region Speckle Client
+    /// <summary>
+    /// Writes sender and receiver streams associated with the account.
+    /// </summary>
+    /// <param name="emailAddress">User email address</param>
+    /// <param name="serverAddress">Speckle server address</param>
+    public void SetSID(string sidRecord)
+    {
+      GSAObject.GwaCommand("SET\tSID\t" + sidRecord);
+    }
+    #endregion
+
+    #region Document Properties
+    /// <summary>
+    /// Extract the title of the GSA model.
+    /// </summary>
+    /// <returns>GSA model title</returns>
+    public string GetTitle()
+    {
+      string res = (string)GSAObject.GwaCommand("GET\tTITLE");
+
+      string[] pieces = res.ListSplit("\t");
+
+      return pieces.Length > 1 ? pieces[1] : "My GSA Model";
+    }
+
+    public string[] GetTolerances()
+    {
+      return ((string)GSAObject.GwaCommand("GET\tTOL")).ListSplit("\t");
+    }
+
+    /// <summary>
+    /// Updates the GSA unit stored in SpeckleGSA.
+    /// </summary>
+    public string GetUnits()
+    {
+      return ((string)GSAObject.GwaCommand("GET\tUNIT_DATA.1\tLENGTH")).ListSplit("\t")[2];
+    }
+    #endregion
+
+    #region Views
+    /// <summary>
+    /// Update GSA viewer. This should be called at the end of changes.
+    /// </summary>
+    public void UpdateViews()
+    {
+      GSAObject.UpdateViews();
+    }
+
+    /// <summary>
+    /// Update GSA case and task links. This should be called at the end of changes.
+    /// </summary>
+    public void UpdateCasesAndTasks()
+    {
+      GSAObject.ReindexCasesAndTasks();
+    }
+
+    public string GetSID()
+    {
+      string sid = "";
+      try
+      {
+        sid = (string)GSAObject.GwaCommand("GET\tSID");
+      }
+      catch
+      {
+        //File doesn't have SID
+      }
+      return sid;
+    }
+    #endregion
+  }
+}

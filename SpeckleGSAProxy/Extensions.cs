@@ -105,5 +105,31 @@ namespace SpeckleGSAProxy
 			else
 				return value.ConvertUnit(originalDimension, "m").ConvertUnit("m", targetDimension);
 		}
-	}
+
+    public static void ExtractKeywordApplicationId(this string fullGwa, out string keyword, out string applicationId)
+    {
+      var pieces = fullGwa.ListSplit("\t").ToList();
+      keyword = "";
+      applicationId = "";
+
+      if (pieces.Count() < 2)
+      {
+        return;
+      }
+
+      //Remove the Set for the purpose of this method
+      if (pieces[0].StartsWith("set", StringComparison.InvariantCultureIgnoreCase))
+      {
+        pieces.Remove(pieces[0]);
+      }
+
+      var delimIndex = pieces[0].IndexOf(':');
+      keyword = pieces[0].Substring(0, delimIndex);
+      var sid = pieces[0].Substring(delimIndex);
+      var match = Regex.Match(sid, "(?<={" + "speckle_app_id" + ":).*?(?=})");
+      applicationId = (!string.IsNullOrEmpty(match.Value)) ? match.Value : "";
+
+      return;
+    }
+  }
 }

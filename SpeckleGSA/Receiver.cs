@@ -5,8 +5,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using SpeckleCore;
 using SpeckleGSAInterfaces;
-//Referenced just for the general extension methods
-using SpeckleGSAProxy;
 
 namespace SpeckleGSA
 {
@@ -48,30 +46,22 @@ namespace SpeckleGSA
 				FilteredTypePrerequisites[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l)).ToList();
 			}
 
+      //GSA.speckleObjectCache.ClearCache();
+
 			Status.AddMessage("Initialising receivers");
 
-			GSA.Interfacer.InitializeReceiver();
+			//GSA.Interfacer.InitializeReceiver();
 
       //Clear all indices first before creating a new baseline - this is to take in all the changes between the last reception and now
-      GSA.Interfacer.Indexer.Reset();
+      //GSA.Interfacer.Indexer.Reset();
 
-      var keywords = new List<string>();
-      foreach (var kvp in FilteredTypePrerequisites)
+      //Get references to each assembly's sender objects dictionary
+      var keywords = GetFilteredKeywords();
+
+      /*
+      foreach (string k in keywords)
       {
-        try
-        {
-          var keyword = (string)kvp.Key.GetAttribute("GSAKeyword");
-          keywords.AddIfNotContains(keyword);
-          var subKeywords = (string[])kvp.Key.GetAttribute("SubGSAKeywords");
-          if (subKeywords.Length > 0)
-          {
-            foreach (var skw in subKeywords)
-            {
-              keywords.AddIfNotContains(skw);
-            }
-          }
-        }
-        catch { }
+        GSA.Interfacer.RunGWACommand("GET_All\t" + k);
       }
 
       foreach (string k in keywords)
@@ -83,8 +73,22 @@ namespace SpeckleGSA
           GSA.Interfacer.Indexer.ReserveIndices(k, Enumerable.Range(1, highestRecord));
         }
       }
+      */
 
-			GSA.Interfacer.Indexer.SetBaseline();
+      GSA.gsaCache.Clear();
+      var data = GSA.gsaProxy.GetGWAData(keywords);
+      for (int i = 0; i < data.Count(); i++)
+      {
+        // <keyword, index, Application ID, GWA command (without SET or SET_AT), Set|Set At> tuples
+        var keyword = data[i].Item1;
+        var index = data[i].Item2;
+        var applicationId = data[i].Item3;
+        var gwa = data[i].Item4;
+        var gwaSetCommandType = data[i].Item5;
+        GSA.gsaCache.Upsert(keyword, index, gwa, applicationId, currentSession: false, gwaSetCommandType: gwaSetCommandType);
+      }
+
+      //GSA.Interfacer.Indexer.SetBaseline();
 
 			// Create receivers
 			Status.ChangeStatus("Accessing streams");
@@ -122,11 +126,12 @@ namespace SpeckleGSA
 
       IsBusy = true;
 
-			GSA.Settings.Units = GSA.Interfacer.GetUnits();
+      //GSA.Settings.Units = GSA.Interfacer.GetUnits();
+      GSA.Settings.Units = GSA.gsaProxy.GetUnits();
 
-			GSA.Interfacer.PreReceiving();
+      //GSA.Interfacer.PreReceiving();
 
-			var objects = new List<SpeckleObject>();
+      var objects = new List<SpeckleObject>();
 
 			// Read objects
 			Status.ChangeStatus("Receiving streams");
@@ -160,10 +165,19 @@ namespace SpeckleGSA
 				}
 			}
 
-			GSA.Interfacer.Indexer.ResetToBaseline();
+      //GSA.Interfacer.Indexer.ResetToBaseline();
 
-			// Write objects
-			var currentBatch = new List<Type>();
+      GSA.gsaCache.Snapshot();
+
+      var senderDictionaries = new List<Dictionary<Type, List<object>>>();
+      var gsaStaticObjects = GetAssembliesStaticTypes();
+      foreach (var tuple in gsaStaticObjects)
+      {
+        senderDictionaries.Add(tuple.Item4);
+      }
+
+      // Write objects
+      var currentBatch = new List<Type>();
       var traversedTypes = new List<Type>();
       do
       {
@@ -177,27 +191,178 @@ namespace SpeckleGSA
           var dummyObject = Activator.CreateInstance(t);
 
           var valueType = t.GetProperty("Value").GetValue(dummyObject).GetType();
-          var targetObjects = objects.Where(o => o.GetType() == valueType);
+          var speckleType = ((object)((IGSASpeckleContainer)dummyObject).Value).GetType();
 
-          Converter.Deserialise(targetObjects);
+          var targetObjects = objects.Where(o => o.GetType() == valueType).ToList();
 
-          objects.RemoveAll(x => targetObjects.Any(o => x == o));
+          for (int i = 0; i < targetObjects.Count(); i++)
+          {
+            var applicationId = targetObjects[i].ApplicationId;
+            //Check if this application appears in the cache at all
+            if (string.IsNullOrEmpty(applicationId)) continue;
+
+            try
+            {
+              //if (GSA.Interfacer.ExistsInModel(applicationId))
+              if (GSA.gsaCache.Exists(applicationId))
+              {
+                //if (!GSA.speckleObjectCache.ContainsType(speckleType))
+                if (!GSA.gsaCache.ContainsType(speckleType))
+                {
+                  //This ensures the sender objects are filled within the assembly which contains the corresponding "ToSpeckle" method
+                  var result = Converter.Serialise(dummyObject);
+                  var serialisedObjects = CollateSerialisedObjects(senderDictionaries);
+
+                  //For these serialised objects, there should already be a match in the cache, as it was read during initialisation and updated
+                  //during previous reception Trigger calls
+
+                  foreach (var serialisedType in serialisedObjects.Keys)
+                  {
+                    //GSA.speckleObjectCache.AddList(type, serialisedObjects[type]);
+                    for (int j = 0; j < serialisedObjects[serialisedType].Count; j++)
+                    {
+                      GSA.gsaCache.AssignSpeckleObject(serialisedType, serialisedObjects[serialisedType][j].ApplicationId, serialisedObjects[serialisedType][j]);
+                    }
+                  }
+                }
+
+                //If so but the type doesn't appear alongside it as one that was loaded, then load it now by calling ToSpeckle with a dummy version of the GSA corresponding type
+                //var existing = GSA.speckleObjectCache.GetCachedSpeckleObject(speckleType, applicationId);
+                var existing = GSA.gsaCache.GetSpeckleObjects(speckleType, applicationId);
+
+                if (existing != null && existing.Count() > 0)
+                {
+                  //Merge objects to form the resulting one
+                  targetObjects[i] = GSA.Merger.Merge(targetObjects[i], existing.First());
+
+                  //Add merged object back into the Speckle Objects cache
+                  //GSA.speckleObjectCache.Add(targetObjects[i], speckleType);
+                }
+              }
+              else
+              {
+                //The application Id doesn't exist yet in the model - but the deserialisation will add it in
+              }
+
+              var gwaCommand = (string)Converter.Deserialise(targetObjects[i]);
+
+              ProcessDeserialiseReturnObject(gwaCommand, out string keyword, out int index, out string gwa, out GwaSetCommandType gwaSetCommandType);
+
+              GSA.gsaProxy.SetGWA(gwaCommand);
+              GSA.gsaCache.Upsert(keyword, index, gwa, applicationId, targetObjects[i]);
+            }
+            catch (Exception ex)
+            {
+              // TO DO:
+            }
+            finally
+            {
+              objects.RemoveAll(x => targetObjects.Any(o => x == o));
+            }
+          }
 
           traversedTypes.Add(t);
         }
       } while (currentBatch.Count > 0);
 
       // Write leftover
-      Converter.Deserialise(objects);
+      if (objects.Count() > 0)
+      {
+        var targetObjects = objects.ToList();        
+        for (int i = 0; i < objects.Count(); i++)
+        {
+          var applicationId = targetObjects[i].ApplicationId;
+          if (string.IsNullOrEmpty(applicationId)) continue;
+
+          var gwaCommand = (string)Converter.Deserialise(targetObjects[i]);
+          ProcessDeserialiseReturnObject(gwaCommand, out string keyword, out int index, out string gwa, out GwaSetCommandType gwaSetCommandType);
+
+          GSA.gsaProxy.SetGWA(gwaCommand);
+          GSA.gsaCache.Upsert(keyword, index, gwa, applicationId, targetObjects[i]);
+        }
+      }
+      //Converter.Deserialise(objects);
 
 			// Run post receiving method
-			GSA.Interfacer.PostReceiving();
+			//GSA.Interfacer.PostReceiving();
 
-			GSA.UpdateCasesAndTasks();
-			GSA.Interfacer.UpdateViews();
+			GSA.gsaProxy.UpdateCasesAndTasks();
+			GSA.gsaProxy.UpdateViews();
 
       IsBusy = false;
       Status.ChangeStatus("Finished receiving", 100);
+    }
+
+    private void ProcessDeserialiseReturnObject(object deserialiseReturnObject, out string keyword, out int index, out string gwa, out GwaSetCommandType gwaSetCommandType)
+    {
+      keyword = "";
+      index = 0;
+      gwa = "";
+      gwaSetCommandType = GwaSetCommandType.Set;
+
+      if (!(deserialiseReturnObject is string))
+      {
+        return;
+      }
+
+      var fullGwa = (string) deserialiseReturnObject;
+
+      var pieces = fullGwa.ListSplit("\t").ToList();
+      if (pieces.Count() < 2)
+      {
+        return;
+      }
+
+      if (pieces[0].StartsWith("set_at", StringComparison.InvariantCultureIgnoreCase))
+      {
+        gwaSetCommandType = GwaSetCommandType.SetAt;
+        pieces.Remove(pieces[0]);
+      }
+      else if (pieces[0].StartsWith("set", StringComparison.InvariantCultureIgnoreCase))
+      {
+        gwaSetCommandType = GwaSetCommandType.Set;
+        pieces.Remove(pieces[0]);
+      }
+
+        int.TryParse(pieces[1], out index);
+
+      gwa = string.Join("\t", pieces);
+
+      return;
+    }
+
+    private List<SpeckleObject> ExtractSenderObjects(List<Dictionary<Type, List<object>>> dictionaryList, Type type, string applicationId)
+    {
+      var matchingList = new List<SpeckleObject>();
+      for (int i = 0; i < dictionaryList.Count(); i++)
+      {
+        if (dictionaryList[i].ContainsKey(type))
+        {
+          var speckleObjects = dictionaryList[i][type].Select(o => (SpeckleObject)o).Where(so => so.ApplicationId == applicationId).ToList();
+          if (speckleObjects.Count() > 0)
+          {
+            matchingList.AddRange(speckleObjects);
+          }
+        }
+      }
+      return matchingList;
+    }
+
+    private Dictionary<Type, List<SpeckleObject>> CollateSerialisedObjects(List<Dictionary<Type, List<object>>> dictionaryList)
+    {
+      var serialisedDict = new Dictionary<Type, List<SpeckleObject>>();
+      for (int i = 0; i < dictionaryList.Count(); i++)
+      {
+        foreach (var key in dictionaryList[i].Keys)
+        {
+          if (!serialisedDict.ContainsKey(key))
+          {
+            serialisedDict[key] = new List<SpeckleObject>();
+          }
+          serialisedDict[key].AddRange(dictionaryList[i][key].Select(o => (SpeckleObject)((IGSASpeckleContainer)o).Value));
+        }        
+      }
+      return serialisedDict;
     }
 
     /// <summary>
@@ -215,9 +380,11 @@ namespace SpeckleGSA
 
 		public void DeleteSpeckleObjects()
     {
-			GSA.Interfacer.DeleteSpeckleObjects();
+			var gwaToDelete = GSA.gsaCache.GetCurrentSessionGwa();
 
-			GSA.Interfacer.UpdateViews();
+      //TO DO: blank or delete each line
+
+			GSA.gsaProxy.UpdateViews();
     }
 	}
 }
