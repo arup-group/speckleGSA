@@ -108,7 +108,7 @@ namespace SpeckleGSA
       switch ((string)e.EventObject.args.eventType)
       {
         case "update-global":
-          UpdateGlobalTrigger(null, null);
+          UpdateGlobalTrigger?.Invoke(null, null);
           break;
         case "update-children":
           UpdateChildren();

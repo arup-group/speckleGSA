@@ -188,7 +188,7 @@ namespace SpeckleGSA
             {
               //This check is intended to match objects in the GSA model that were loaded into the cache previously, not any other matches within this same
               //reception event
-              if (GSA.gsaCache.Exists(applicationId, keyword, true, false))
+              if (GSA.gsaCache.Exists(keyword, applicationId, true, false))
               {
                 if (!GSA.gsaCache.ContainsType(speckleTypeName))
                 {
