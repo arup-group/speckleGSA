@@ -81,5 +81,13 @@ namespace SpeckleGSAInterfaces
     void UpdateViews();
 
     void DeleteGWA(string keyword, int index, GwaSetCommandType gwaSetCommandType);
+
+    string GetGwaForNode(int index);
+
+    string SetApplicationId(string gwa, string applicationId);
+
+    void GetGridPlaneData(int gridPlaneRef, out int gridPlaneAxisIndex, out double gridPlaneElevation, out string gwa);
+    void GetGridPlaneRef(int gridSurfaceRef, out int gridPlaneIndex, out string gwa);
+    void GetPolylineDesc(int polylineRef, out string desc, out string gwa);
   }
 }

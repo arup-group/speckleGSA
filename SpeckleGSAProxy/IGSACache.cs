@@ -9,26 +9,23 @@ namespace SpeckleGSAProxy
   {
     bool Upsert(string keyword, int index, string gwa, string applicationId = "", SpeckleObject speckleObject = null, bool currentSession = true, GwaSetCommandType gwaSetCommandType = GwaSetCommandType.Set);
 
-    bool AssignSpeckleObject(Type type, string ApplicationId, SpeckleObject so);
+    bool AssignSpeckleObject(string keyword, string applicationId, SpeckleObject so);
 
     void Snapshot();
 
-    bool Exists(string applicationId);
+    bool Exists(string keyword, string applicationId, bool prev = false, bool latest = true);
 
-    bool ContainsType(Type t);
+    bool ContainsType(string speckleTypeName);
 
-    List<SpeckleObject> GetSpeckleObjects(Type t, string applicationId);
+    List<SpeckleObject> GetSpeckleObjects(string speckleTypeName, string applicationId);
 
     List<string> GetCurrentSessionGwa();
 
     void Clear();
 
-    //Indexing
-    /*
-    int ResolveIndex(string keyword, string type, string applicationId = "");
-    //List<int> ResolveIndices(string keyword, string type, IEnumerable<string> applicationIds = null);
-    int? LookupIndex(string keyword, string type, string applicationId);
-    List<int?> LookupIndices(string keyword, string type, IEnumerable<string> applicationIds);
-    */
+    List<string> GetNewlyAddedGwa();
+
+    List<Tuple<string, int, string, GwaSetCommandType>> GetToBeDeletedGwa();
+
   }
 }

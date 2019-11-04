@@ -55,7 +55,7 @@ namespace SpeckleGSA
 					Status.AddMessage(msg);
 				}
 			}
-		}
+    }
 
 		private static void InitialiseKits(out List<string> statusMessages)
 		{
@@ -75,7 +75,7 @@ namespace SpeckleGSA
 
 				try
 				{
-					var gsaStatic = types.FirstOrDefault(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer)) && t.GetProperties().Any(p => p.PropertyType == typeof(IGSAInterfacer)));
+					var gsaStatic = types.FirstOrDefault(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer)) && t.GetProperties().Any(p => p.PropertyType == typeof(IGSACacheForKit)));
 					if (gsaStatic == null)
 					{
 						continue;
@@ -93,7 +93,8 @@ namespace SpeckleGSA
 					continue;
 				}
 
-				var objTypes = types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType);
+				var objTypes = types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType).ToList();
+        objTypes = objTypes.Distinct().ToList();
 
 				foreach (var t in objTypes)
 				{
@@ -103,7 +104,26 @@ namespace SpeckleGSA
 					prereq = t.GetAttribute("ReadPrerequisite");
 					ReadTypePrerequisites[t] = (prereq != null) ? ((Type[])prereq).ToList() : new List<Type>();
 				}
-			}
+
+        var mappingTypes = new List<Type>();
+        for (int i = 0; i < objTypes.Count(); i++)
+        {
+          var mappingType = (Type)((IGSASpeckleContainer)Activator.CreateInstance(objTypes[i])).Value.GetType();
+          if (!mappingTypes.Contains(mappingType))
+          {
+            mappingTypes.Add(mappingType);
+          }
+
+          if (mappingType.BaseType != null)
+          {
+            if (!mappingTypes.Contains(mappingType.BaseType))
+            {
+              mappingTypes.Add(mappingType.BaseType);
+            }
+          }
+        }
+        Merger.Initialise(mappingTypes);
+      }
 		}
 
 		#region File Operations

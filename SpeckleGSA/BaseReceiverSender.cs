@@ -52,35 +52,31 @@ namespace SpeckleGSA
 			return true;
 		}
 
-		protected List<Tuple<string, IGSAInterfacer, IGSASettings, Dictionary<Type, List<object>>>> GetAssembliesStaticTypes()
-		{
-			var assemblies = SpeckleInitializer.GetAssemblies().Where(a => a.GetTypes().Any(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer))));
-			var staticObjects = new List<Tuple<string, IGSAInterfacer, IGSASettings, Dictionary<Type, List<object>>>>();
+    protected List<Dictionary<Type, List<object>>> GetAssembliesStaticTypes()
+    {
+      var assemblies = SpeckleInitializer.GetAssemblies().Where(a => a.GetTypes().Any(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer))));
+      var staticObjects = new List<Dictionary<Type, List<object>>>();
 
-			//Now obtain the serialised (inheriting from SpeckleObject) objects
-			foreach (var ass in assemblies)
-			{
-				var types = ass.GetTypes();
+      //Now obtain the serialised (inheriting from SpeckleObject) objects
+      foreach (var ass in assemblies)
+      {
+        var types = ass.GetTypes();
 
-				try
-				{
-					var gsaStatic = types.FirstOrDefault(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer)) && t.GetProperties().Any(p => p.PropertyType == typeof(IGSAInterfacer)));
-					if (gsaStatic != null)
-					{
+        try
+        {
+          var gsaStatic = types.FirstOrDefault(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer)) && t.GetProperties().Any(p => p.PropertyType == typeof(IGSACacheForKit)));
+          if (gsaStatic != null)
+          {
+            var dict = (Dictionary<Type, List<object>>)gsaStatic.GetProperties().FirstOrDefault(p => p.PropertyType == typeof(Dictionary<Type, List<object>>)).GetValue(null);
             //This is how SpeckleGSA finds the objects in the GSASenderObjects dictionary - by finding the first property in ISpeckleInitializer which is of the specific dictionary type
-						staticObjects.Add(new Tuple<string, IGSAInterfacer, IGSASettings, Dictionary<Type, List<object>>>(
-							ass.GetName().ToString(),
-							(IGSAInterfacer)gsaStatic.GetProperties().FirstOrDefault(p => p.PropertyType == typeof(IGSAInterfacer)).GetValue(null),
-							(IGSASettings)gsaStatic.GetProperties().FirstOrDefault(p => p.PropertyType == typeof(IGSASettings)).GetValue(null),
-							(Dictionary<Type, List<object>>)gsaStatic.GetProperties().FirstOrDefault(p => p.PropertyType == typeof(Dictionary<Type, List<object>>)).GetValue(null))
-							);
-					}
-				}
-				catch (Exception e)
-				{
-				}
-			}
-			return staticObjects;
-		}
-	}
+            staticObjects.Add(dict);
+          }
+        }
+        catch (Exception e)
+        {
+        }
+      }
+      return staticObjects;
+    }
+  }
 }

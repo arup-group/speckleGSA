@@ -7,7 +7,8 @@ namespace SpeckleUtil
   {
     public object Resolve(object source, object destination, object sourceMember, object destinationMember, ResolutionContext context)
     {
-      if (sourceMember is Enum && sourceMember.Equals(GetDefaultValue(sourceMember.GetType())))
+      if ((sourceMember is Enum && sourceMember.Equals(GetDefaultValue(sourceMember.GetType())))
+        || (sourceMember is Array && ((Array)sourceMember).Length == 0))
       {
         return destinationMember;
       }

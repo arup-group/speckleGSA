@@ -36,9 +36,9 @@ namespace SpeckleGSA
 
 			var attributeType = typeof(GSAObject);
 
-			//Filter out prerequisites that are excluded by the layer selection
-			// Remove wrong layer objects from prerequisites
-			if (GSA.Settings.SendOnlyResults)
+      //Filter out prerequisites that are excluded by the layer selection
+      // Remove wrong layer objects from prerequisites
+      if (GSA.Settings.SendOnlyResults)
 			{
 				var stream = GSA.Settings.SendOnlyResults ? "results" : null;
 				var streamLayerPrerequisites = GSA.ReadTypePrerequisites.Where(t => (string)t.Key.GetAttribute("Stream") == stream && ObjectTypeMatchesLayer(t.Key));
@@ -57,10 +57,22 @@ namespace SpeckleGSA
 				}
 			}
 
-			//GSA.Interfacer.InitializeSender();
+      var keywords = GetFilteredKeywords();
+      GSA.gsaCache.Clear();
+      var data = GSA.gsaProxy.GetGWAData(keywords);
+      for (int i = 0; i < data.Count(); i++)
+      {
+        // <keyword, index, Application ID, GWA command (without SET or SET_AT), Set|Set At> tuples
+        var keyword = data[i].Item1;
+        var index = data[i].Item2;
+        var applicationId = data[i].Item3;
+        var gwa = data[i].Item4;
+        var gwaSetCommandType = data[i].Item5;
+        GSA.gsaCache.Upsert(keyword, index, gwa, applicationId, currentSession: false, gwaSetCommandType: gwaSetCommandType);
+      }
 
-			// Grab GSA interface type
-			var interfaceType = typeof(IGSASpeckleContainer);
+      // Grab GSA interface type
+      var interfaceType = typeof(IGSASpeckleContainer);
 
       // Grab all GSA related object
       Status.ChangeStatus("Preparing to read GSA Objects");
@@ -83,8 +95,8 @@ namespace SpeckleGSA
 				}
 			}
 
-			// Create the streams
-			Status.ChangeStatus("Creating streams");
+      // Create the streams
+      Status.ChangeStatus("Creating streams");
 
 			var streamNames = (GSA.Settings.SeparateStreams) ? objTypes.Select(t => (string)t.GetAttribute("Stream")).Distinct().ToList() : new List<string>() { "Full Model" };
 
@@ -118,8 +130,6 @@ namespace SpeckleGSA
       IsBusy = true;
 			GSA.Settings.Units = GSA.gsaProxy.GetUnits();
 
-			//GSA.Interfacer.PreSending();
-
 			// Read objects
 			var currentBatch = new List<Type>();
       var traversedTypes = new List<Type>();
@@ -133,7 +143,9 @@ namespace SpeckleGSA
         foreach (var t in currentBatch)
         {
           if (changeDetected) // This will skip the first read but it avoids flickering
+          {
             Status.ChangeStatus("Reading " + t.Name);
+          }
 
 					//The SpeckleStructural kit actually does serialisation (calling of ToSpeckle()) by type, not individual object.  This is due to
 					//GSA offering bulk GET based on type.
@@ -154,17 +166,17 @@ namespace SpeckleGSA
 
 			var gsaStaticObjects = GetAssembliesStaticTypes();
 
-			foreach (var tuple in gsaStaticObjects)
+			foreach (var dict in gsaStaticObjects)
 			{
 				//this item is the list of sender objects by type
-				var typeSenderObjects = tuple.Item4;
-				foreach (var t in typeSenderObjects.Keys)
+				//var typeSenderObjects = tuple.Item4;
+				foreach (var t in dict.Keys)
 				{
 					if (!SenderObjects.ContainsKey(t))
 					{
 						SenderObjects[t] = new List<object>();
 					}
-					SenderObjects[t].AddRange(typeSenderObjects[t]);
+					SenderObjects[t].AddRange(dict[t]);
 				}
 			}
 

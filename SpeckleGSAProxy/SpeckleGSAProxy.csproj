@@ -96,7 +96,7 @@
     <Compile Include="GSAInterfacer.cs" />
     <Compile Include="GSAProxy.cs" />
     <Compile Include="IGSACache.cs" />
-    <Compile Include="IGSACacheForKit.cs" />
+    <Compile Include="IGSACacheForTesting.cs" />
     <Compile Include="Indexer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Settings.cs" />

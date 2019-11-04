@@ -20,6 +20,21 @@ namespace SpeckleGSAProxy.Test
 
     private string testDataDirectory { get => AppDomain.CurrentDomain.BaseDirectory.TrimEnd(new[] { '\\' }) + @"\..\..\TestData\"; }
 
+    [TestCase("SET\tMEMB.7:{speckle_app_id:gh/a}\t5\tTheRest", "MEMB.7", 5, "gh/a", "MEMB.7:{speckle_app_id:gh/a}\t5\tTheRest")]
+    [TestCase("MEMB.7:{speckle_app_id:gh/a}\t5\tTheRest", "MEMB.7", 5, "gh/a", "MEMB.7:{speckle_app_id:gh/a}\t5\tTheRest")]
+    [TestCase("SET_AT\t2\tLOAD_2D_THERMAL.2:{speckle_app_id:gh/a}\tTheRest", "LOAD_2D_THERMAL.2", 2, "gh/a", "LOAD_2D_THERMAL.2:{speckle_app_id:gh/a}\tTheRest")]
+    [TestCase("LOAD_2D_THERMAL.2:{speckle_app_id:gh/a}\tTheRest", "LOAD_2D_THERMAL.2", 0, "gh/a", "LOAD_2D_THERMAL.2:{speckle_app_id:gh/a}\tTheRest")]
+    public void ParseGwaCommandTests(string gwa, string expKeyword, int expIndex, string expAppId, string expGwaWithoutSet)
+    {
+      gwa.ExtractKeywordApplicationId(out string keyword, out int? foundIndex, out string applicationId, out string gwaWithoutSet);
+      var index = foundIndex ?? 0;
+
+      Assert.AreEqual(expKeyword, keyword);
+      Assert.AreEqual(expIndex, index);
+      Assert.AreEqual(expAppId, applicationId);
+      Assert.AreEqual(expGwaWithoutSet, gwaWithoutSet);
+    }
+
     [Test]
     public void TestProxy()
     {

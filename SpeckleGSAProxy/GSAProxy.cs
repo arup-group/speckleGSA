@@ -140,11 +140,18 @@ namespace SpeckleGSAProxy
         var gwaRecords = ((string)GSAObject.GwaCommand(newCommand)).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
         for (int j = 0; j < gwaRecords.Length; j++)
         {
-          var index = ExtractGwaIndex(gwaRecords[j]);
-          gwaRecords[j].ExtractKeywordApplicationId(out string keyword, out string applicationId);
+          //var index = ExtractGwaIndex(gwaRecords[j]);
+          gwaRecords[j].ExtractKeywordApplicationId(out string keyword, out int? foundIndex, out string applicationId, out string gwaWithoutSet);
+          var index = foundIndex ?? 0;
           applicationId = FormatApplicationId(keyword, index, applicationId);
 
-          data.Add(new Tuple<string, int, string, string, GwaSetCommandType>(setKeywords[i], index, applicationId, gwaRecords[j], GwaSetCommandType.Set));
+          //If the GWA line doesn't include the SID (one of GSA's quirks is that it sometimes can leave it out despite it being there), then add it back in
+          if (!gwaWithoutSet.Contains(applicationId))
+          {
+            gwaWithoutSet = gwaRecords[j].Replace(keyword, keyword + ":{" + SID_TAG + ":" + applicationId + "}");
+          }
+
+          data.Add(new Tuple<string, int, string, string, GwaSetCommandType>(setKeywords[i], index, applicationId, gwaWithoutSet, GwaSetCommandType.Set));
         }
       }
 
@@ -165,10 +172,15 @@ namespace SpeckleGSAProxy
 
           if (gwaRecord != "")
           {
-            gwaRecord.ExtractKeywordApplicationId(out string keyword, out string applicationId);
+            gwaRecord.ExtractKeywordApplicationId(out string keyword, out int? foundIndex, out string applicationId, out string gwaWithoutSet);
             applicationId = FormatApplicationId(keyword, j, applicationId);
 
-            data.Add(new Tuple<string, int, string, string, GwaSetCommandType>(setAtKeywords[i], j, applicationId, gwaRecord, GwaSetCommandType.SetAt));
+            if (gwaWithoutSet.Contains(applicationId))
+            {
+              gwaWithoutSet = gwaWithoutSet.Replace(keyword, keyword + ":{" + SID_TAG + ":" + applicationId + "}");
+            }
+
+            data.Add(new Tuple<string, int, string, string, GwaSetCommandType>(setAtKeywords[i], j, applicationId, gwaWithoutSet, GwaSetCommandType.SetAt));
           }
         }
       }
@@ -198,13 +210,13 @@ namespace SpeckleGSAProxy
 
     public void Sync()
     {
-      var batchSetCommand = string.Join("\r\n", batchSetGwa.Select(g => "SET\t" + g));
-      var setCommandResult = GSAObject.GwaCommand(batchSetCommand);
-      batchSetGwa.Clear();
-
-      var batchBlankCommand = string.Join("\r\n", batchBlankGwa.Select(g => "BLANK\t" + g));
+      var batchBlankCommand = string.Join("\r\n", batchBlankGwa);
       var blankCommandResult = GSAObject.GwaCommand(batchBlankCommand);
       batchBlankGwa.Clear();
+
+      var batchSetCommand = string.Join("\r\n", batchSetGwa);
+      var setCommandResult = GSAObject.GwaCommand(batchSetCommand);
+      batchSetGwa.Clear();      
     }
 
     public void GetGSATotal2DElementOffset(int index, double insertionPointOffset, out double offset, out string offsetRec)
@@ -235,7 +247,31 @@ namespace SpeckleGSAProxy
     public int NodeAt(double x, double y, double z, double coincidenceTol)
     {
       //Note: the outcome of this might need to be added to the caches!
-      return GSAObject.Gen_NodeAt(x, y, z, coincidenceTol);
+      var index = GSAObject.Gen_NodeAt(x, y, z, coincidenceTol);
+
+      /*
+      gwaCommand = "SET\tNODE.2\t" + index.ToString() + ((applicationId == "") ? "" : ":{" + SID_TAG + ":" + applicationId + "}";
+      var commandResult = GSAObject.GwaCommand(gwaCommand);
+      */
+      return index;
+    }
+
+    public string GetGwaForNode(int index)
+    {
+      var gwaCommand = "GET\tNODE.2\t" + index.ToString();
+      return (string) GSAObject.GwaCommand(gwaCommand);
+    }
+
+    public string SetApplicationId(string gwa, string applicationId)
+    {
+      gwa.ExtractKeywordApplicationId(out string keyword, out int? foundIndex, out string foundApplicationId, out string gwaWithoutSet);
+
+      if (foundApplicationId == "" && applicationId != "")
+      {
+        gwa = gwa.Replace(keyword, keyword + ":{" + SID_TAG + ":" + applicationId + "}");
+        GSAObject.GwaCommand("SET\t" + gwa);
+      }
+      return gwa;
     }
 
     public int[] ConvertGSAList(string list, GSAEntity type)
@@ -533,7 +569,6 @@ namespace SpeckleGSAProxy
     {
       GSAObject.ReindexCasesAndTasks();
     }
-
     public string GetSID()
     {
       string sid = "";
@@ -547,6 +582,32 @@ namespace SpeckleGSAProxy
       }
       return sid;
     }
+
+    public void GetGridPlaneData(int gridPlaneRef, out int gridPlaneAxisIndex, out double gridPlaneElevation, out string gwa)
+    {
+      gwa = GSAObject.GwaCommand("GET\tGRID_PLANE.4\t" + gridPlaneRef.ToString());
+      var pieces = gwa.ListSplit("\t");
+      gridPlaneAxisIndex = Convert.ToInt32(pieces[4]);
+      gridPlaneElevation = Convert.ToDouble(pieces[5]);
+      return;
+    }
+
+    public void GetGridPlaneRef(int gridSurfaceRef, out int gridPlaneIndex, out string gwa)
+    {
+      gwa = GSAObject.GwaCommand("GET\tGRID_SURFACE.1\t" + gridSurfaceRef.ToString());
+      var pieces = gwa.ListSplit("\t");
+      gridPlaneIndex = Convert.ToInt32(pieces[3]);
+    }
+
+    public void GetPolylineDesc(int polylineRef, out string desc, out string gwa)
+    {
+      gwa = GSAObject.GwaCommand("GET\tPOLYLINE.1\t" + polylineRef.ToString());
+      var pieces = gwa.ListSplit("\t");
+
+      desc = pieces[6];
+    }
+
+   
     #endregion
   }
 }
