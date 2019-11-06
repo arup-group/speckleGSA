@@ -69,7 +69,21 @@ namespace SpeckleGSA
 			// Run initialize receiver method in interfacer
 			var assemblies = SpeckleInitializer.GetAssemblies().Where(a => a.GetTypes().Any(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer))));
 
-			foreach (var ass in assemblies)
+      var speckleTypes = new List<Type>();
+      foreach (var assembly in assemblies)
+      {
+        var types = assembly.GetTypes();
+        foreach (var t in types)
+        {
+          if (typeof(SpeckleObject).IsAssignableFrom(t))
+          {
+            speckleTypes.Add(t);
+          }
+        }
+      }
+
+      var mappableTypes = new List<Type>();
+      foreach (var ass in assemblies)
 			{
 				var types = ass.GetTypes();
 
@@ -93,7 +107,7 @@ namespace SpeckleGSA
 					continue;
 				}
 
-				var objTypes = types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType).ToList();
+        var objTypes = types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType).ToList();
         objTypes = objTypes.Distinct().ToList();
 
 				foreach (var t in objTypes)
@@ -105,26 +119,25 @@ namespace SpeckleGSA
 					ReadTypePrerequisites[t] = (prereq != null) ? ((Type[])prereq).ToList() : new List<Type>();
 				}
 
-        var mappingTypes = new List<Type>();
-        for (int i = 0; i < objTypes.Count(); i++)
+        foreach (var t in speckleTypes)
         {
-          var mappingType = (Type)((IGSASpeckleContainer)Activator.CreateInstance(objTypes[i])).Value.GetType();
-          if (!mappingTypes.Contains(mappingType))
+          var methods = Helper.GetExtensionMethods(ass, t, "ToNative");
+          if (methods != null && methods.Count() > 0 && !mappableTypes.Contains(t))
           {
-            mappingTypes.Add(mappingType);
-          }
+            mappableTypes.Add(t);
 
-          if (mappingType.BaseType != null)
-          {
-            if (!mappingTypes.Contains(mappingType.BaseType))
+            if (t.BaseType != null && t.BaseType != typeof(SpeckleObject))
             {
-              mappingTypes.Add(mappingType.BaseType);
+              if (!mappableTypes.Contains(t.BaseType))
+              {
+                mappableTypes.Add(t.BaseType);
+              }
             }
           }
-        }
-        Merger.Initialise(mappingTypes);
+        }        
       }
-		}
+      Merger.Initialise(mappableTypes);
+    } 
 
 		#region File Operations
 		/// <summary>
