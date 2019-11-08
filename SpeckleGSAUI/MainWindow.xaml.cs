@@ -1,25 +1,18 @@
 ﻿using Microsoft.Win32;
 using SpeckleGSA;
+using SpeckleGSAInterfaces;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
+using System.Deployment.Application;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Interop;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using System.Windows.Threading;
 
 namespace SpeckleGSAUI
@@ -55,6 +48,8 @@ namespace SpeckleGSAUI
     {
       InitializeComponent();
 
+      mainWindow.Title = mainWindow.Title + " - " + getRunningVersion();
+
       DataContext = this;
 
       Messages = new ObservableCollection<string>();
@@ -67,53 +62,61 @@ namespace SpeckleGSAUI
       previousTabIndex = 0;
 
       //Default settings
-      SendOnlyMeaningfulNodes.IsChecked = Settings.SendOnlyMeaningfulNodes;
-      SeparateStreams.IsChecked = Settings.SeparateStreams;
-      PollingRate.Text = Settings.PollingRate.ToString();
-      CoincidentNodeAllowance.Text = Settings.CoincidentNodeAllowance.ToString();
-      SendOnlyResults.IsChecked = Settings.SendOnlyResults;
-      EmbedResults.IsChecked = Settings.EmbedResults;
-      ResultCases.Text = string.Join("\r\n", Settings.ResultCases);
-      ResultInLocalAxis.IsChecked = Settings.ResultInLocalAxis;
-      Result1DNumPosition.Text = Settings.Result1DNumPosition.ToString();
+      SendOnlyMeaningfulNodes.IsChecked = GSA.Settings.SendOnlyMeaningfulNodes;
+      SeparateStreams.IsChecked = GSA.Settings.SeparateStreams;
+      PollingRate.Text = GSA.Settings.PollingRate.ToString();
+      CoincidentNodeAllowance.Text = GSA.Settings.CoincidentNodeAllowance.ToString();
+      SendOnlyResults.IsChecked = GSA.Settings.SendOnlyResults;
+      EmbedResults.IsChecked = GSA.Settings.EmbedResults;
+      ResultCases.Text = string.Join("\r\n", GSA.Settings.ResultCases);
+      ResultInLocalAxis.IsChecked = GSA.Settings.ResultInLocalAxis;
+      Result1DNumPosition.Text = GSA.Settings.Result1DNumPosition.ToString();
 
       //Result List
       foreach (string s in Result.NodalResultMap.Keys)
       {
-        CheckBox chk = new CheckBox();
-        chk.Content = s;
-        chk.Tag = Result.NodalResultMap[s];
-        chk.Checked += UpdateNodalResult;
+				CheckBox chk = new CheckBox
+				{
+					Content = s,
+					Tag = Result.NodalResultMap[s]
+				};
+				chk.Checked += UpdateNodalResult;
         chk.Unchecked += UpdateNodalResult;
         ResultSelection.Children.Add(chk);
       }
 
       foreach (string s in Result.Element1DResultMap.Keys)
       {
-        CheckBox chk = new CheckBox();
-        chk.Content = s;
-        chk.Tag = Result.Element1DResultMap[s];
-        chk.Checked += UpdateElement1DResult;
+				CheckBox chk = new CheckBox
+				{
+					Content = s,
+					Tag = Result.Element1DResultMap[s]
+				};
+				chk.Checked += UpdateElement1DResult;
         chk.Unchecked += UpdateElement1DResult;
         ResultSelection.Children.Add(chk);
       }
 
       foreach (string s in Result.Element2DResultMap.Keys)
       {
-        CheckBox chk = new CheckBox();
-        chk.Content = s;
-        chk.Tag = Result.Element2DResultMap[s];
-        chk.Checked += UpdateElement2DResult;
+				CheckBox chk = new CheckBox
+				{
+					Content = s,
+					Tag = Result.Element2DResultMap[s]
+				};
+				chk.Checked += UpdateElement2DResult;
         chk.Unchecked += UpdateElement2DResult;
         ResultSelection.Children.Add(chk);
       }
 
       foreach (string s in Result.MiscResultMap.Keys)
       {
-        CheckBox chk = new CheckBox();
-        chk.Content = s;
-        chk.Tag = Result.MiscResultMap[s];
-        chk.Checked += UpdateMiscResult;
+				CheckBox chk = new CheckBox
+				{
+					Content = s,
+					Tag = Result.MiscResultMap[s]
+				};
+				chk.Checked += UpdateMiscResult;
         chk.Unchecked += UpdateMiscResult;
         ResultSelection.Children.Add(chk);
       }
@@ -140,10 +143,12 @@ namespace SpeckleGSAUI
     {
       var signInWindow = new SpecklePopup.SignInWindow(true);
 
-      var helper = new System.Windows.Interop.WindowInteropHelper(signInWindow);
-      helper.Owner = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+			var helper = new System.Windows.Interop.WindowInteropHelper(signInWindow)
+			{
+				Owner = new System.Windows.Interop.WindowInteropHelper(this).Handle
+			};
 
-      this.IsEnabled = false;
+			this.IsEnabled = false;
 
       signInWindow.ShowDialog();
       
@@ -280,41 +285,49 @@ namespace SpeckleGSAUI
         SendButtonPath.Data = Geometry.Parse(PAUSE_BUTTON);
         SendButtonPath.Fill = Brushes.DimGray;
 
-        if (Settings.ChosenNodalResult.Count > 0 || Settings.ChosenElement1DResult.Count > 0 || Settings.ChosenElement2DResult.Count > 0 || Settings.ChosenMiscResult.Count > 0)
+        if (GSA.Settings.NodalResults.Count > 0 || GSA.Settings.Element1DResults.Count > 0 
+					|| GSA.Settings.Element2DResults.Count > 0 || GSA.Settings.MiscResults.Count > 0)
         {
-          if (!SenderLayerToggle.IsChecked.Value)
+					//SenderLayerToggle is a boolean toggle, where zero is design layer
+					if (!SenderLayerToggle.IsChecked.Value)
           {
             MessageBox.Show("Results only supported for analysis layer.\r\nNo results will be sent.", "SpeckleGSA", MessageBoxButton.OK, MessageBoxImage.Warning);
-            Settings.SendResults = false;
+						GSA.Settings.SendResults = false;
           }
           else if (!SenderContinuousToggle.IsChecked.Value)
           {
             MessageBox.Show("Results only supported for single send mode.\r\nNo results will be sent.", "SpeckleGSA", MessageBoxButton.OK, MessageBoxImage.Warning);
-            Settings.SendResults = false;
+						GSA.Settings.SendResults = false;
           }
           else
-            Settings.SendResults = true;
+						GSA.Settings.SendResults = true;
         }
         else
-          Settings.SendResults = false;
+					GSA.Settings.SendResults = false;
 
         if (SenderLayerToggle.IsChecked.Value)
         {
-          Settings.TargetAnalysisLayer = true;
-          Settings.TargetDesignLayer = false;
-        }
+					GSA.Settings.TargetLayer = GSATargetLayer.Analysis;
+				}
         else
         {
-          Settings.TargetAnalysisLayer = false;
-          Settings.TargetDesignLayer = true;
-        }
+					GSA.Settings.TargetLayer = GSATargetLayer.Design;
+				}
         SenderLayerToggle.IsEnabled = false;
         SenderContinuousToggle.IsEnabled = false;
 
-        GSA.GetSpeckleClients(EmailAddress, RestApi);
-        gsaSender = new Sender();
-        await gsaSender.Initialize(RestApi, ApiToken);
-        GSA.SetSpeckleClients(EmailAddress, RestApi);
+        try
+        {
+          GSA.GetSpeckleClients(EmailAddress, RestApi);
+          gsaSender = new Sender();
+          await gsaSender.Initialize(RestApi, ApiToken);
+          GSA.SetSpeckleClients(EmailAddress, RestApi);
+        }
+        catch (Exception ex)
+        {
+          Status.AddError(ex.Message);
+          return;
+        }
 
         status = UIStatus.SENDING;
         if (SenderContinuousToggle.IsChecked.Value)
@@ -337,12 +350,12 @@ namespace SpeckleGSAUI
           catch (Exception ex)
           {
             Status.AddError(ex.Message);
-            SendStream(sender, e);
+            //SendStream(sender, e);
           }
         }
         else
         {
-          triggerTimer = new Timer(Settings.PollingRate);
+          triggerTimer = new Timer(GSA.Settings.PollingRate);
           triggerTimer.Elapsed += SenderTimerTrigger;
           triggerTimer.AutoReset = false;
           triggerTimer.Start();
@@ -382,8 +395,7 @@ namespace SpeckleGSAUI
       catch (Exception ex)
       {
         Status.AddError(ex.Message);
-
-        SendStream(null, null);
+        //SendStream(null, null);
       }
     }
     #endregion
@@ -448,23 +460,21 @@ namespace SpeckleGSAUI
 
         if (ReceiverLayerToggle.IsChecked.Value)
         {
-          Settings.TargetAnalysisLayer = true;
-          Settings.TargetDesignLayer = false;
-        }
+					GSA.Settings.TargetLayer = GSATargetLayer.Analysis;
+				}
         else
         {
 
-          Settings.TargetAnalysisLayer = false;
-          Settings.TargetDesignLayer = true;
-        }
+					GSA.Settings.TargetLayer = GSATargetLayer.Design;
+				}
         ReceiverLayerToggle.IsEnabled = false;
         ReceiverContinuousToggle.IsEnabled = false;
         ReceiverControlPanel.IsEnabled = false;
 
         GSA.GetSpeckleClients(EmailAddress, RestApi);
         gsaReceiver = new Receiver();
-        await gsaReceiver.Initialize(RestApi, ApiToken);
-        GSA.SetSpeckleClients(EmailAddress, RestApi);
+				await gsaReceiver.Initialize(RestApi, ApiToken);
+				GSA.SetSpeckleClients(EmailAddress, RestApi);
         status = UIStatus.RECEIVING;
         if (ReceiverContinuousToggle.IsChecked.Value)
         {
@@ -654,38 +664,17 @@ namespace SpeckleGSAUI
           propertyName = (sender as CheckBox).Name;
           propertyValue = (sender as CheckBox).IsChecked;
 
-          var fieldInfo = typeof(Settings).GetField(propertyName);
-          Type fieldType = fieldInfo.FieldType;
-
-          if (fieldType == typeof(bool))
-          {
-            fieldInfo.SetValue(null, propertyValue);
-          }
-        }
+					GSA.Settings.SetFieldOrPropValue(propertyName, propertyValue);
+				}
         else if (sender is TextBox)
         {
           propertyName = (sender as TextBox).Name;
           propertyValue = (sender as TextBox).Text;
 
-          var fieldInfo = typeof(Settings).GetField(propertyName);
-          Type fieldType = fieldInfo.FieldType;
-
-          if (typeof(IEnumerable).IsAssignableFrom(fieldType))
-          {
-            string[] pieces = ((string)propertyValue).Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-            Type subType = fieldType.GetGenericArguments()[0];
-
-            var newList = Activator.CreateInstance(fieldType);
-            foreach (string p in pieces)
-              newList.GetType().GetMethod("Add").Invoke(newList, new object[] { Convert.ChangeType(p, newList.GetType().GetGenericArguments().Single()) });
-
-            fieldInfo.SetValue(null, newList);
-          }
-          else
-            fieldInfo.SetValue(null, Convert.ChangeType(propertyValue, fieldType));
+					GSA.Settings.SetFieldOrPropValue(propertyName, propertyValue);
         }
       }
-      catch
+      catch (Exception exception)
       { }
     }
 
@@ -693,36 +682,36 @@ namespace SpeckleGSAUI
     {
       var chk = sender as CheckBox;
       if (chk.IsChecked.Value)
-        Settings.ChosenNodalResult[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
+				GSA.Settings.NodalResults[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
       else
-        Settings.ChosenNodalResult.Remove(chk.Content as string);
+				GSA.Settings.NodalResults.Remove(chk.Content as string);
     }
 
     private void UpdateElement1DResult(Object sender, RoutedEventArgs e)
     {
       var chk = sender as CheckBox;
       if (chk.IsChecked.Value)
-        Settings.ChosenElement1DResult[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
+				GSA.Settings.Element1DResults[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
       else
-        Settings.ChosenElement1DResult.Remove(chk.Content as string);
+				GSA.Settings.Element1DResults.Remove(chk.Content as string);
     }
 
     private void UpdateElement2DResult(Object sender, RoutedEventArgs e)
     {
       var chk = sender as CheckBox;
       if (chk.IsChecked.Value)
-        Settings.ChosenElement2DResult[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
+				GSA.Settings.Element2DResults[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
       else
-        Settings.ChosenElement2DResult.Remove(chk.Content as string);
+				GSA.Settings.Element2DResults.Remove(chk.Content as string);
     }
 
     private void UpdateMiscResult(Object sender, RoutedEventArgs e)
     {
       var chk = sender as CheckBox;
       if (chk.IsChecked.Value)
-        Settings.ChosenMiscResult[chk.Content as string] = chk.Tag as Tuple<string, int, int, List<string>>;
+				GSA.Settings.MiscResults[chk.Content as string] = chk.Tag as Tuple<string, int, int, List<string>>;
       else
-        Settings.ChosenMiscResult.Remove(chk.Content as string);
+				GSA.Settings.MiscResults.Remove(chk.Content as string);
     }
 
     private void StreamList_CopyStreamID(object sender, RoutedEventArgs e)
@@ -743,7 +732,7 @@ namespace SpeckleGSAUI
       {
         string streamID = (cell as Tuple<string, string>).Item2;
         string url = RestApi.Split(new string[] { "api" }, StringSplitOptions.RemoveEmptyEntries)[0];
-        System.Diagnostics.Process.Start(url + @"#/view/" + streamID);
+				Process.Start(url + @"#/view/" + streamID);
       }
     }
 
@@ -754,7 +743,7 @@ namespace SpeckleGSAUI
       if (cell.GetType() == typeof(Tuple<string, string>))
       {
         string streamID = (cell as Tuple<string, string>).Item2;
-        System.Diagnostics.Process.Start(RestApi + @"/streams/" + streamID);
+				Process.Start(RestApi + @"/streams/" + streamID);
       }
     }
 
@@ -765,7 +754,7 @@ namespace SpeckleGSAUI
       if (cell.GetType() == typeof(Tuple<string, string>))
       {
         string streamID = (cell as Tuple<string, string>).Item2;
-        System.Diagnostics.Process.Start(RestApi + @"/streams/" + streamID + @"/objects?omit=displayValue,base64");
+				Process.Start(RestApi + @"/streams/" + streamID + @"/objects?omit=displayValue,base64");
       }
     }
 
@@ -787,7 +776,7 @@ namespace SpeckleGSAUI
       {
         string streamID = (cell as Tuple<string, string>).Item2;
         string url = RestApi.Split(new string[] { "api" }, StringSplitOptions.RemoveEmptyEntries)[0];
-        System.Diagnostics.Process.Start(url + @"#/view/" + streamID);
+				Process.Start(url + @"#/view/" + streamID);
       }
     }
 
@@ -798,7 +787,7 @@ namespace SpeckleGSAUI
       if (cell.GetType() == typeof(Tuple<string, string>))
       {
         string streamID = (cell as Tuple<string, string>).Item2;
-        System.Diagnostics.Process.Start(RestApi + @"/streams/" + streamID);
+				Process.Start(RestApi + @"/streams/" + streamID);
       }
     }
 
@@ -809,7 +798,7 @@ namespace SpeckleGSAUI
       if (cell.GetType() == typeof(Tuple<string, string>))
       {
         string streamID = (cell as Tuple<string, string>).Item2;
-        System.Diagnostics.Process.Start(RestApi + @"/streams/" + streamID + @"/objects?omit=displayValue,base64");
+				Process.Start(RestApi + @"/streams/" + streamID + @"/objects?omit=displayValue,base64");
       }
     }
 
@@ -861,7 +850,7 @@ namespace SpeckleGSAUI
       if (streamID.GetType() == typeof(string))
       {
         string url = RestApi.Split(new string[] { "api" }, StringSplitOptions.RemoveEmptyEntries)[0];
-        System.Diagnostics.Process.Start(url + @"#/view/" + streamID);
+				Process.Start(url + @"#/view/" + streamID);
       }
     }
 
@@ -871,7 +860,7 @@ namespace SpeckleGSAUI
 
       if (streamID.GetType() == typeof(string))
       {
-        System.Diagnostics.Process.Start(RestApi + @"/streams/" + (string)streamID);
+				Process.Start(RestApi + @"/streams/" + (string)streamID);
       }
     }
 
@@ -881,7 +870,7 @@ namespace SpeckleGSAUI
 
       if (streamID.GetType() == typeof(string))
       {
-        System.Diagnostics.Process.Start(RestApi + @"/streams/" + (string)streamID + @"/objects?omit=displayValue,base64");
+				Process.Start(RestApi + @"/streams/" + (string)streamID + @"/objects?omit=displayValue,base64");
       }
     }
 
@@ -894,6 +883,18 @@ namespace SpeckleGSAUI
         GSA.Receivers.Remove(GSA.Receivers.First(x => x.Item1 == (string)streamID));
         GSA.SetSpeckleClients(EmailAddress, RestApi);
         UpdateClientLists();
+      }
+    }
+
+    private Version getRunningVersion()
+    {
+      try
+      {
+        return ApplicationDeployment.CurrentDeployment.CurrentVersion;
+      }
+      catch (Exception)
+      {
+        return Assembly.GetExecutingAssembly().GetName().Version;
       }
     }
     #endregion
