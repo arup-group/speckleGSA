@@ -28,7 +28,7 @@ namespace SpeckleGSAProxy
 
     public List<string> GetGwa(string keyword) => records.Where(r => r.Keyword.Equals(keyword, StringComparison.InvariantCultureIgnoreCase)).Select(r => r.Gwa).ToList();
 
-    public List<string> GetCurrentSessionGwa() => records.Where(r => !r.CurrentSession).Select(r => r.Gwa).ToList();
+    public List<string> GetCurrentGwa() => records.Where(r => r.Latest).Select(r => r.Gwa).ToList();
 
     public void Clear() => records.Clear();
 
@@ -50,7 +50,7 @@ namespace SpeckleGSAProxy
       return Upsert(keyword, foundIndex ?? 0, gwaWithoutSet, applicationId, gwaSetCommandType: commandType);
     }
 
-    public bool Upsert(string keyword, int index, string gwa, string applicationId = "", SpeckleObject so = null, bool currentSession = true, GwaSetCommandType gwaSetCommandType = GwaSetCommandType.Set)
+    public bool Upsert(string keyword, int index, string gwa, string applicationId = "", SpeckleObject so = null, GwaSetCommandType gwaSetCommandType = GwaSetCommandType.Set)
     {
       var sameKeywordRecords = records.Where(r => r.Keyword.Equals(keyword, StringComparison.InvariantCultureIgnoreCase)).ToList();
       var matchingRecords = sameKeywordRecords.Where(r => r.Index == index || r.Gwa.Equals(gwa, StringComparison.InvariantCultureIgnoreCase)).ToList();
@@ -80,7 +80,7 @@ namespace SpeckleGSAProxy
         }
       }
 
-      records.Add(new GSACacheRecord(keyword, index, gwa, applicationId, latest: true, so: so, currentSession: currentSession, gwaSetCommandType: gwaSetCommandType));
+      records.Add(new GSACacheRecord(keyword, index, gwa, applicationId, latest: true, so: so, gwaSetCommandType: gwaSetCommandType));
       return true;
     }
 

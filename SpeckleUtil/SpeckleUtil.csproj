@@ -91,7 +91,6 @@
     <Compile Include="IgnoreNullResolver.cs" />
     <Compile Include="ISpeckleObjectMerger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SpeckleObjectCache.cs" />
     <Compile Include="SpeckleObjectMerger.cs" />
   </ItemGroup>
   <ItemGroup>

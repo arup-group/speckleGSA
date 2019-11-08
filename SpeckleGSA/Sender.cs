@@ -68,7 +68,7 @@ namespace SpeckleGSA
         var applicationId = data[i].Item3;
         var gwa = data[i].Item4;
         var gwaSetCommandType = data[i].Item5;
-        GSA.gsaCache.Upsert(keyword, index, gwa, applicationId, currentSession: false, gwaSetCommandType: gwaSetCommandType);
+        GSA.gsaCache.Upsert(keyword, index, gwa, applicationId, gwaSetCommandType: gwaSetCommandType);
       }
 
       // Grab GSA interface type

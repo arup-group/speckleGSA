@@ -15,15 +15,8 @@ namespace SpeckleGSA
 	public static class GSA
   {
 		public static Settings Settings = new Settings();
-    /*
-		public static GSAInterfacer Interfacer = new GSAInterfacer
-		{
-			Indexer = new Indexer()
-		};
-    */
 
     public static ISpeckleObjectMerger Merger = new SpeckleObjectMerger();
-    //public static SpeckleObjectCache speckleObjectCache = new SpeckleObjectCache();
     public static GSAProxy gsaProxy = new GSAProxy();
     public static GSACache gsaCache = new GSACache();
 

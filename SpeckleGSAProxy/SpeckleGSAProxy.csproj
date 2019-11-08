@@ -93,7 +93,6 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="GSACache.cs" />
     <Compile Include="GSACacheRecord.cs" />
-    <Compile Include="GSAInterfacer.cs" />
     <Compile Include="GSAProxy.cs" />
     <Compile Include="IGSACache.cs" />
     <Compile Include="IGSACacheForTesting.cs" />

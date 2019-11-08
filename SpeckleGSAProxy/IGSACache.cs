@@ -7,7 +7,7 @@ namespace SpeckleGSAProxy
 {
   public interface IGSACache
   {
-    bool Upsert(string keyword, int index, string gwa, string applicationId = "", SpeckleObject speckleObject = null, bool currentSession = true, GwaSetCommandType gwaSetCommandType = GwaSetCommandType.Set);
+    bool Upsert(string keyword, int index, string gwa, string applicationId = "", SpeckleObject speckleObject = null, GwaSetCommandType gwaSetCommandType = GwaSetCommandType.Set);
 
     bool AssignSpeckleObject(string keyword, string applicationId, SpeckleObject so);
 
@@ -19,7 +19,7 @@ namespace SpeckleGSAProxy
 
     List<SpeckleObject> GetSpeckleObjects(string speckleTypeName, string applicationId);
 
-    List<string> GetCurrentSessionGwa();
+    List<string> GetCurrentGwa();
 
     void Clear();
 
