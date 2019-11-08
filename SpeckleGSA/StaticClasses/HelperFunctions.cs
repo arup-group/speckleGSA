@@ -33,19 +33,6 @@ namespace SpeckleGSA
     }
     #endregion
 
-    #region Lists
-    /// <summary>
-    /// Splits lists, keeping entities encapsulated by "" together.
-    /// </summary>
-    /// <param name="list">String to split</param>
-    /// <param name="delimiter">Delimiter</param>
-    /// <returns>Array of strings containing list entries</returns>
-    public static string[] ListSplit(this string list, string delimiter)
-    {
-      return Regex.Split(list, delimiter + "(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
-    }
-    #endregion
-
     #region Unit Conversion
     /// <summary>
     /// Converts value from one unit to another.
