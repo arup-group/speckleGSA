@@ -6,9 +6,11 @@ namespace SpeckleGSAInterfaces
   {
     List<string> GetGwa(string keyword, int index);
 
+    Dictionary<int, object> GetIndicesSpeckleObjects(string SpeckleType);
+
     List<string> GetGwa(string keyword);
 
-    List<string> GetGwaToSerialise(string keyword);
+    Dictionary<int, string> GetGwaToSerialise(string keyword);
 
     string GetApplicationId(string keyword, int index);
 

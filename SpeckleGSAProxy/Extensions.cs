@@ -171,6 +171,19 @@ namespace SpeckleGSAProxy
       return;
     }
 
+    public static bool SidValueCompare(this string a, string b)
+    {
+      if (a == null && b == null)
+      {
+        return true;
+      }
+      else if (b == null)
+      {
+        return false;
+      }
+      return a.Replace(" ", string.Empty).Equals(b.Replace(" ", string.Empty), StringComparison.InvariantCultureIgnoreCase);
+    }
+
     public static string ExtractApplicationId(this string fullGwa)
     {
       var pieces = fullGwa.ListSplit("\t").ToList();

@@ -44,7 +44,7 @@ namespace SpeckleGSA
 				var streamLayerPrerequisites = GSA.ReadTypePrerequisites.Where(t => (string)t.Key.GetAttribute("Stream") == stream && ObjectTypeMatchesLayer(t.Key));
 				foreach (var kvp in streamLayerPrerequisites)
 				{
-					FilteredTypePrerequisites[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l)
+					FilteredReadTypePrerequisites[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l)
 						&& (string)l.GetAttribute("Stream") == stream).ToList();
 				}
 			}
@@ -53,7 +53,7 @@ namespace SpeckleGSA
 				var layerPrerequisites = GSA.ReadTypePrerequisites.Where(t => ObjectTypeMatchesLayer(t.Key));
 				foreach (var kvp in layerPrerequisites)
 				{
-					FilteredTypePrerequisites[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l)).ToList();
+					FilteredReadTypePrerequisites[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l)).ToList();
 				}
 			}
 
@@ -137,7 +137,7 @@ namespace SpeckleGSA
       bool changeDetected = false;
       do
       {
-        currentBatch = FilteredTypePrerequisites.Where(i => i.Value.Count(x => !traversedTypes.Contains(x)) == 0).Select(i => i.Key).ToList();
+        currentBatch = FilteredReadTypePrerequisites.Where(i => i.Value.Count(x => !traversedTypes.Contains(x)) == 0).Select(i => i.Key).ToList();
         currentBatch.RemoveAll(i => traversedTypes.Contains(i));
 
         foreach (var t in currentBatch)

@@ -12,12 +12,22 @@ namespace SpeckleGSA
 		public bool IsInit = false;
 		public bool IsBusy = false;
 
-		protected Dictionary<Type, List<Type>> FilteredTypePrerequisites = new Dictionary<Type, List<Type>>();
-
+		protected Dictionary<Type, List<Type>> FilteredWriteTypePrerequisites = new Dictionary<Type, List<Type>>();
+    protected Dictionary<Type, List<Type>> FilteredReadTypePrerequisites = new Dictionary<Type, List<Type>>();
+    
     protected List<string> GetFilteredKeywords()
     {
       var keywords = new List<string>();
-      foreach (var kvp in FilteredTypePrerequisites)
+      keywords.AddRange(GetFilteredKeywords(FilteredWriteTypePrerequisites));
+      keywords.AddRange(GetFilteredKeywords(FilteredReadTypePrerequisites));
+
+      return keywords;
+    }
+
+    private List<string> GetFilteredKeywords(Dictionary<Type, List<Type>> prereqs)
+    {
+      var keywords = new List<string>();
+      foreach (var kvp in prereqs)
       {
         try
         {
@@ -36,6 +46,8 @@ namespace SpeckleGSA
       }
       return keywords;
     }
+
+
 
 		protected bool ObjectTypeMatchesLayer(Type t)
 		{

@@ -140,7 +140,6 @@ namespace SpeckleGSAProxy
         var gwaRecords = ((string)GSAObject.GwaCommand(newCommand)).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
         for (int j = 0; j < gwaRecords.Length; j++)
         {
-          //var index = ExtractGwaIndex(gwaRecords[j]);
           gwaRecords[j].ExtractKeywordApplicationId(out string keyword, out int? foundIndex, out string applicationId, out string gwaWithoutSet);
           var index = foundIndex ?? 0;
           applicationId = FormatApplicationId(keyword, index, applicationId);
@@ -151,7 +150,7 @@ namespace SpeckleGSAProxy
             gwaWithoutSet = gwaRecords[j].Replace(keyword, keyword + ":{" + SID_TAG + ":" + applicationId + "}");
           }
 
-          data.Add(new Tuple<string, int, string, string, GwaSetCommandType>(setKeywords[i], index, applicationId, gwaWithoutSet, GwaSetCommandType.Set));
+          data.Add(new Tuple<string, int, string, string, GwaSetCommandType>(keyword, index, applicationId, gwaWithoutSet, GwaSetCommandType.Set));
         }
       }
 
@@ -248,14 +247,8 @@ namespace SpeckleGSAProxy
     {
       //Note: the outcome of this might need to be added to the caches!
       var index = GSAObject.Gen_NodeAt(x, y, z, coincidenceTol);
-
-      /*
-      gwaCommand = "SET\tNODE.2\t" + index.ToString() + ((applicationId == "") ? "" : ":{" + SID_TAG + ":" + applicationId + "}";
-      var commandResult = GSAObject.GwaCommand(gwaCommand);
-      */
       return index;
     }
-
     public string GetGwaForNode(int index)
     {
       var gwaCommand = "GET\tNODE.2\t" + index.ToString();
