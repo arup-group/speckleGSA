@@ -37,7 +37,9 @@ namespace SpeckleGSA
 				return statusMessages;
 			}
 
-			var attributeType = typeof(GSAObject);
+      Status.AddMessage("Initialising receivers");
+
+      var attributeType = typeof(GSAObject);
 
 			//Filter out prerequisites that are excluded by the layer selection
 			// Remove wrong layer objects from prerequisites
@@ -53,10 +55,10 @@ namespace SpeckleGSA
         FilteredReadTypePrerequisites[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l)).ToList();
       }
 
-      Status.AddMessage("Initialising receivers");
-
       //Get references to each assembly's sender objects dictionary
       var keywords = GetFilteredKeywords();
+
+      Status.ChangeStatus("Reading GSA data into cache");
 
       GSA.gsaCache.Clear();
       var data = GSA.gsaProxy.GetGWAData(keywords);
@@ -72,9 +74,10 @@ namespace SpeckleGSA
         var gwaSetCommandType = data[i].Item5;
         GSA.gsaCache.Upsert(keyword, index, gwa, applicationId, gwaSetCommandType: gwaSetCommandType);
       }
+      Status.AddMessage("Read " + data.Count() + " GWA lines across " + keywords.Count()  + " keywords into cache");
 
-			// Create receivers
-			Status.ChangeStatus("Accessing streams");
+      // Create receivers
+      Status.ChangeStatus("Accessing streams");
 
 			var nonBlankReceivers = GSA.Receivers.Where(r => !string.IsNullOrEmpty(r.Item1)).ToList();
 
@@ -178,8 +181,8 @@ namespace SpeckleGSA
           Status.ChangeStatus("Writing " + t.Name);
 
           var dummyObject = Activator.CreateInstance(t);
-          var keyword = "";
-          keyword = dummyObject.GetAttribute("GSAKeyword").ToString();
+          var keyword = dummyObject.GetAttribute("GSAKeyword").ToString();
+
           var valueType = t.GetProperty("Value").GetValue(dummyObject).GetType();
           var targetObjects = objects.Where(o => o.GetType() == valueType).ToList();
 
@@ -198,16 +201,13 @@ namespace SpeckleGSA
               if (GSA.gsaCache.Exists(keyword, applicationId, true, false))
               {
                 if (!traversedSerialisedTypes.Contains(t))
-                //if (!GSA.gsaCache.ContainsType(speckleTypeName))
                 {
                   var readPrerequisites = GetPrerequisites(t, FilteredReadTypePrerequisites);
                   for (int j = 0; j < readPrerequisites.Count(); j++)
                   {
                     var prereqDummyObject = Activator.CreateInstance(readPrerequisites[j]);
                     var prereqKeyword = prereqDummyObject.GetAttribute("GSAKeyword").ToString();
-                    var prereqSpeckleTypeName = ((SpeckleObject)((IGSASpeckleContainer)prereqDummyObject).Value).Type;
 
-                    //if (!GSA.gsaCache.ContainsType(prereqSpeckleTypeName))
                     if (!traversedSerialisedTypes.Contains(readPrerequisites[j]))
                     {
                       var prereqResult = Converter.Serialise(prereqDummyObject);
@@ -270,7 +270,7 @@ namespace SpeckleGSA
             catch (Exception ex)
             {
               // TO DO:
-             Status.AddMessage(ex.Message);
+              Status.AddMessage(ex.Message);
             }
             finally
             {
@@ -300,7 +300,7 @@ namespace SpeckleGSA
         }
       }
 
-      var toBeDeletedGwa = GSA.gsaCache.GetToBeDeletedGwa();
+      var toBeDeletedGwa = GSA.gsaCache.GetExpiredData();
       for (int i = 0; i < toBeDeletedGwa.Count(); i++)
       {
         var keyword = toBeDeletedGwa[i].Item1;
@@ -418,11 +418,19 @@ namespace SpeckleGSA
 
 		public void DeleteSpeckleObjects()
     {
-			var gwaToDelete = GSA.gsaCache.GetCurrentGwa();
+			var gwaToDelete = GSA.gsaCache.GetDeletableData();
+      
+      for (int i = 0; i < gwaToDelete.Count(); i++)
+      {
+        var keyword = gwaToDelete[i].Item1;
+        var index = gwaToDelete[i].Item2;
+        var gwa = gwaToDelete[i].Item3;
+        var gwaSetCommandType = gwaToDelete[i].Item4;
 
-      //TO DO: blank or delete each line
+        GSA.gsaProxy.DeleteGWA(keyword, index, gwaSetCommandType);
+      }
 
-			GSA.gsaProxy.UpdateViews();
+      GSA.gsaProxy.UpdateViews();
     }
 	}
 }

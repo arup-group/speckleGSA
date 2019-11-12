@@ -106,7 +106,7 @@ namespace SpeckleGSAProxy
     {
       var indicesToRemove = new List<int>();
       //This needs to be reviewed.  Nodes are a special case as they are generated outside of Speckle feeds and these ones need to be preserved
-      var relevantRecords = records.Where(r => !(r.Keyword.Contains("NODE") && r.ApplicationId != null && r.ApplicationId.StartsWith("gsa"))).ToList();
+      var relevantRecords = records.Where(r => IsAlterable(r.Keyword, r.ApplicationId)).ToList();
       for (int i = 0; i < relevantRecords.Count(); i++)
       {
         if (relevantRecords[i].Latest == false)
@@ -187,9 +187,22 @@ namespace SpeckleGSAProxy
       return matchingRecords.Select(r => (int?)r.Index).ToList();
     }
 
-    public List<Tuple<string, int, string, GwaSetCommandType>> GetToBeDeletedGwa()
+    public List<Tuple<string, int, string, GwaSetCommandType>> GetExpiredData()
     {
-      var matchingRecords = records.Where(r => r.Previous == true && r.Latest == false).ToList();
+      var matchingRecords = records.Where(r => IsAlterable(r.Keyword, r.ApplicationId) && r.Previous == true && r.Latest == false).ToList();
+      var returnData = new List<Tuple<string, int, string, GwaSetCommandType>>();
+
+      for (int i = 0; i < matchingRecords.Count(); i++)
+      {
+        returnData.Add(new Tuple<string, int, string, GwaSetCommandType>(matchingRecords[i].Keyword, matchingRecords[i].Index, matchingRecords[i].Gwa, matchingRecords[i].GwaSetCommandType));
+      }
+
+      return returnData;
+    }
+
+    public List<Tuple<string, int, string, GwaSetCommandType>> GetDeletableData()
+    {
+      var matchingRecords = records.Where(r => IsAlterable(r.Keyword, r.ApplicationId) && r.Latest == true).ToList();
       var returnData = new List<Tuple<string, int, string, GwaSetCommandType>>();
 
       for (int i = 0; i < matchingRecords.Count(); i++)
@@ -203,6 +216,11 @@ namespace SpeckleGSAProxy
     private List<int> GetIndices(string keyword)
     {
       return records.Where(r => r.Keyword.Equals(keyword)).Select(r => r.Index).OrderBy(i => i).ToList();
+    }
+
+    private bool IsAlterable(string keyword, string applicationId)
+    {
+      return (!(keyword.Contains("NODE") && applicationId != null && (applicationId.StartsWith("gsa") || applicationId == "")));
     }
   }
 }
