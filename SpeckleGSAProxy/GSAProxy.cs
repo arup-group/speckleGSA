@@ -575,31 +575,6 @@ namespace SpeckleGSAProxy
       }
       return sid;
     }
-
-    public void GetGridPlaneData(int gridPlaneRef, out int gridPlaneAxisIndex, out double gridPlaneElevation, out string gwa)
-    {
-      gwa = GSAObject.GwaCommand("GET\tGRID_PLANE.4\t" + gridPlaneRef.ToString());
-      var pieces = gwa.ListSplit("\t");
-      gridPlaneAxisIndex = Convert.ToInt32(pieces[4]);
-      gridPlaneElevation = Convert.ToDouble(pieces[5]);
-      return;
-    }
-
-    public void GetGridPlaneRef(int gridSurfaceRef, out int gridPlaneIndex, out string gwa)
-    {
-      gwa = GSAObject.GwaCommand("GET\tGRID_SURFACE.1\t" + gridSurfaceRef.ToString());
-      var pieces = gwa.ListSplit("\t");
-      gridPlaneIndex = Convert.ToInt32(pieces[3]);
-    }
-
-    public void GetPolylineDesc(int polylineRef, out string desc, out string gwa)
-    {
-      gwa = GSAObject.GwaCommand("GET\tPOLYLINE.1\t" + polylineRef.ToString());
-      var pieces = gwa.ListSplit("\t");
-
-      desc = pieces[6];
-    }
-
    
     #endregion
   }

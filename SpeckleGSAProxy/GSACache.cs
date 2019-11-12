@@ -43,13 +43,9 @@ namespace SpeckleGSAProxy
       var matchingRecords = records.Where(r => r.Keyword.Equals(keyword, StringComparison.InvariantCultureIgnoreCase) && r.Index == index);
       return (matchingRecords == null || matchingRecords.Count() < 1) ? "" : matchingRecords.First().ApplicationId;
     }
-    public bool Upsert(string gwaCommand)
+    public bool Upsert(string keyword, int index, string gwaWithoutSet, string applicationId, GwaSetCommandType gwaSetCommandType)
     {
-      var commandType = (gwaCommand.StartsWith("set_at", StringComparison.InvariantCultureIgnoreCase)) ? GwaSetCommandType.SetAt : GwaSetCommandType.Set;
-
-      gwaCommand.ExtractKeywordApplicationId(out string keyword, out int? foundIndex, out string applicationId, out string gwaWithoutSet);
-
-      return Upsert(keyword, foundIndex ?? 0, gwaWithoutSet, applicationId, gwaSetCommandType: commandType);
+      return Upsert(keyword, index, gwaWithoutSet, applicationId, null, gwaSetCommandType);
     }
 
     public bool Upsert(string keyword, int index, string gwa, string applicationId = "", SpeckleObject so = null, GwaSetCommandType gwaSetCommandType = GwaSetCommandType.Set)
