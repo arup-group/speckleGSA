@@ -12,19 +12,7 @@ namespace SpeckleGSA
 		public bool IsInit = false;
 		public bool IsBusy = false;
 
-		protected Dictionary<Type, List<Type>> FilteredWriteTypePrerequisites = new Dictionary<Type, List<Type>>();
-    protected Dictionary<Type, List<Type>> FilteredReadTypePrerequisites = new Dictionary<Type, List<Type>>();
-    
-    protected List<string> GetFilteredKeywords()
-    {
-      var keywords = new List<string>();
-      keywords.AddRange(GetFilteredKeywords(FilteredWriteTypePrerequisites));
-      keywords.AddRange(GetFilteredKeywords(FilteredReadTypePrerequisites));
-
-      return keywords;
-    }
-
-    private List<string> GetFilteredKeywords(Dictionary<Type, List<Type>> prereqs)
+    protected List<string> GetFilteredKeywords(Dictionary<Type, List<Type>> prereqs)
     {
       var keywords = new List<string>();
       foreach (var kvp in prereqs)
@@ -47,17 +35,14 @@ namespace SpeckleGSA
       return keywords;
     }
 
-
-
-		protected bool ObjectTypeMatchesLayer(Type t)
+		protected bool ObjectTypeMatchesLayer(Type t, GSATargetLayer layer)
 		{
-			var attributeType = typeof(GSAObject);
 			var analysisLayerAttribute = t.GetAttribute("AnalysisLayer");
 			var designLayerAttribute = t.GetAttribute("DesignLayer");
 
 			//If an object type has a layer attribute exists and its boolean value doesn't match the settings target layer, then it doesn't match.  This could be reviewed and simplified.
-			if ((analysisLayerAttribute != null && GSA.Settings.TargetLayer == GSATargetLayer.Analysis && !(bool)analysisLayerAttribute)
-				|| (designLayerAttribute != null && GSA.Settings.TargetLayer == GSATargetLayer.Design && !(bool)designLayerAttribute))
+			if ((analysisLayerAttribute != null && layer == GSATargetLayer.Analysis && !(bool)analysisLayerAttribute)
+				|| (designLayerAttribute != null && layer == GSATargetLayer.Design && !(bool)designLayerAttribute))
 			{
 				return false;
 			}
