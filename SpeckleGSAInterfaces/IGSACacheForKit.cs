@@ -6,9 +6,11 @@ namespace SpeckleGSAInterfaces
   {
     List<string> GetGwa(string keyword, int index);
 
+    Dictionary<int, object> GetIndicesSpeckleObjects(string SpeckleType);
+
     List<string> GetGwa(string keyword);
 
-    List<string> GetGwaToSerialise(string keyword);
+    Dictionary<int, string> GetGwaToSerialise(string keyword);
 
     string GetApplicationId(string keyword, int index);
 
@@ -21,6 +23,6 @@ namespace SpeckleGSAInterfaces
     List<int?> LookupIndices(string keyword);
 
     //Used to update the cache with nodes created using NodeAt
-    bool Upsert(string gwaCommand);
+    bool Upsert(string keyword, int index, string gwaWithoutSet, string applicationId, GwaSetCommandType gwaSetCommandType);
   }
 }

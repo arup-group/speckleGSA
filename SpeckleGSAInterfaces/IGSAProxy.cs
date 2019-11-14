@@ -70,6 +70,7 @@ namespace SpeckleGSAInterfaces
     /// <param name="loadCase">GSA load case description</param>
     /// <returns>True if load case exists</returns>
     bool CaseExist(string loadCase);
+
     #endregion
 
     string GetUnits();
@@ -83,11 +84,8 @@ namespace SpeckleGSAInterfaces
     void DeleteGWA(string keyword, int index, GwaSetCommandType gwaSetCommandType);
 
     string GetGwaForNode(int index);
-
+    
+    //Used to update a node without having to BLANK then SET it - which is the case for all other types
     string SetApplicationId(string gwa, string applicationId);
-
-    void GetGridPlaneData(int gridPlaneRef, out int gridPlaneAxisIndex, out double gridPlaneElevation, out string gwa);
-    void GetGridPlaneRef(int gridSurfaceRef, out int gridPlaneIndex, out string gwa);
-    void GetPolylineDesc(int polylineRef, out string desc, out string gwa);
   }
 }

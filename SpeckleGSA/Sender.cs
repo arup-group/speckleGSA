@@ -16,6 +16,8 @@ namespace SpeckleGSA
     public Dictionary<string, SpeckleGSASender> Senders = new Dictionary<string, SpeckleGSASender>();
     public Dictionary<Type, string> StreamMap = new Dictionary<Type, string>();
 
+    private Dictionary<Type, List<Type>> FilteredReadTypePrereqs = new Dictionary<Type, List<Type>>();
+
     /// <summary>
     /// Initializes sender.
     /// </summary>
@@ -36,24 +38,24 @@ namespace SpeckleGSA
 
 			var attributeType = typeof(GSAObject);
 
-      //Filter out prerequisites that are excluded by the layer selection
-      // Remove wrong layer objects from prerequisites
+      //Filter out Prereqs that are excluded by the layer selection
+      // Remove wrong layer objects from Prereqs
       if (GSA.Settings.SendOnlyResults)
 			{
 				var stream = GSA.Settings.SendOnlyResults ? "results" : null;
-				var streamLayerPrerequisites = GSA.ReadTypePrerequisites.Where(t => (string)t.Key.GetAttribute("Stream") == stream && ObjectTypeMatchesLayer(t.Key));
-				foreach (var kvp in streamLayerPrerequisites)
+				var streamLayerPrereqs = GSA.ReadTypePrereqs.Where(t => (string)t.Key.GetAttribute("Stream") == stream && ObjectTypeMatchesLayer(t.Key, GSA.Settings.TargetLayer));
+				foreach (var kvp in streamLayerPrereqs)
 				{
-					FilteredTypePrerequisites[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l)
+					FilteredReadTypePrereqs[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, GSA.Settings.TargetLayer)
 						&& (string)l.GetAttribute("Stream") == stream).ToList();
 				}
 			}
 			else
 			{
-				var layerPrerequisites = GSA.ReadTypePrerequisites.Where(t => ObjectTypeMatchesLayer(t.Key));
-				foreach (var kvp in layerPrerequisites)
+				var layerPrereqs = GSA.ReadTypePrereqs.Where(t => ObjectTypeMatchesLayer(t.Key, GSA.Settings.TargetLayer));
+				foreach (var kvp in layerPrereqs)
 				{
-					FilteredTypePrerequisites[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l)).ToList();
+					FilteredReadTypePrereqs[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, GSA.Settings.TargetLayer)).ToList();
 				}
 			}
 
@@ -137,7 +139,7 @@ namespace SpeckleGSA
       bool changeDetected = false;
       do
       {
-        currentBatch = FilteredTypePrerequisites.Where(i => i.Value.Count(x => !traversedTypes.Contains(x)) == 0).Select(i => i.Key).ToList();
+        currentBatch = FilteredReadTypePrereqs.Where(i => i.Value.Count(x => !traversedTypes.Contains(x)) == 0).Select(i => i.Key).ToList();
         currentBatch.RemoveAll(i => traversedTypes.Contains(i));
 
         foreach (var t in currentBatch)
@@ -243,6 +245,14 @@ namespace SpeckleGSA
     {
       foreach (KeyValuePair<string, Tuple<string, string>> kvp in GSA.Senders)
         Senders[kvp.Key].Dispose();
+    }
+
+    protected List<string> GetFilteredKeywords()
+    {
+      var keywords = new List<string>();
+      keywords.AddRange(GetFilteredKeywords(FilteredReadTypePrereqs));
+
+      return keywords;
     }
   }
 }

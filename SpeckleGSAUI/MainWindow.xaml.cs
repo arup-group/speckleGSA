@@ -534,9 +534,14 @@ namespace SpeckleGSAUI
         ReceiverContinuousToggle.IsEnabled = true;
         ReceiverControlPanel.IsEnabled = true;
 
-        MessageBoxResult result = MessageBox.Show("Bake received objects permanently? ", "SpeckleGSA", MessageBoxButton.YesNo, MessageBoxImage.Question);
-        if (result != MessageBoxResult.Yes)
-          gsaReceiver.DeleteSpeckleObjects();
+        if (!ReceiverContinuousToggle.IsChecked.Value)
+        {
+          MessageBoxResult result = MessageBox.Show("Bake received objects permanently? ", "SpeckleGSA", MessageBoxButton.YesNo, MessageBoxImage.Question);
+          if (result != MessageBoxResult.Yes)
+          {
+            gsaReceiver.DeleteSpeckleObjects();
+          }
+        }
 
         gsaReceiver.Dispose();
       }

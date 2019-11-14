@@ -13,7 +13,7 @@ namespace SpeckleGSAProxy
 
     void Snapshot();
 
-    bool Exists(string keyword, string applicationId, bool prev = false, bool latest = true);
+    bool Exists(string keyword, string applicationId);
 
     bool ContainsType(string speckleTypeName);
 
@@ -25,7 +25,8 @@ namespace SpeckleGSAProxy
 
     List<string> GetNewlyAddedGwa();
 
-    List<Tuple<string, int, string, GwaSetCommandType>> GetToBeDeletedGwa();
+    List<Tuple<string, int, string, GwaSetCommandType>> GetExpiredData();
 
+    List<Tuple<string, int, string, GwaSetCommandType>> GetDeletableData();
   }
 }
