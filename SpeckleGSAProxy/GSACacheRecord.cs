@@ -14,7 +14,7 @@ namespace SpeckleGSAProxy
     public bool Previous { get; set; }
     public string Gwa { get; set; }
     public GwaSetCommandType GwaSetCommandType { get; set; }
-    public string SpeckleType => SpeckleObj.Type;
+    public string SpeckleType => SpeckleObj.Type.ChildType();
 
     public GSACacheRecord(string keyword, int index, string gwa, string applicationId = "", bool previous = false, bool latest = true, SpeckleObject so = null, 
       GwaSetCommandType gwaSetCommandType = GwaSetCommandType.Set)
@@ -24,7 +24,8 @@ namespace SpeckleGSAProxy
       Gwa = gwa;
       Latest = latest;
       Previous = previous;
-      ApplicationId = applicationId;
+      //Application ID cannot have spaces
+      ApplicationId = applicationId.Replace(" ","");
       SpeckleObj = so;
       GwaSetCommandType = gwaSetCommandType;
     }

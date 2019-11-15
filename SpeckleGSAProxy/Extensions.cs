@@ -184,6 +184,11 @@ namespace SpeckleGSAProxy
       return a.Replace(" ", string.Empty).Equals(b.Replace(" ", string.Empty), StringComparison.InvariantCultureIgnoreCase);
     }
 
+    public static string ChildType(this string fullTypeName)
+    {
+      return fullTypeName.Split(new[] { '/' }).Last();
+    }
+
     public static string ExtractApplicationId(this string fullGwa)
     {
       var pieces = fullGwa.ListSplit("\t").ToList();

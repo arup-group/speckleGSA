@@ -261,7 +261,13 @@ namespace SpeckleGSA
         //If so but the type doesn't appear alongside it as one that was loaded, then load it now by calling ToSpeckle with a dummy version of the GSA corresponding type
         var existingList = GSA.gsaCache.GetSpeckleObjects(speckleTypeName, targetObject.ApplicationId);
 
-        if (existingList != null && existingList.Count() > 0)
+        if (existingList == null || existingList.Count() == 0)
+        {
+          //The serialisation for this object didn't work (a notable example is ASSEMBLY when type is ELEMENT when Design layer is targeted)
+          //so mark it as previous as there is clearly an update from the stream.  For these cases, merging isn't possible.
+          GSA.gsaCache.MarkAsPrevious(keyword, targetObject.ApplicationId);
+        }
+        else
         {
           var existing = existingList.First();  //There should just be one instance of each Application ID per type
           targetObject = GSA.Merger.Merge(targetObject, existing);
@@ -310,7 +316,7 @@ namespace SpeckleGSA
       //This ensures the sender objects are filled within the assembly which contains the corresponding "ToSpeckle" method
       var result = Converter.Serialise(dummyObject);
       var serialisedObjects = CollateSerialisedObjects(senderDictionaries, t);
-
+      
       //For these serialised objects, there should already be a match in the cache, as it was read during initialisation and updated
       //during previous reception Trigger calls
 
