@@ -10,17 +10,27 @@ namespace SpeckleGSAProxy
   {
     private readonly List<GSACacheRecord> records = new List<GSACacheRecord>();
 
-    public Dictionary<int, object> GetIndicesSpeckleObjects(string speckleTypeName) 
-      => records.Where(r => r.SpeckleObj != null && r.SpeckleType == speckleTypeName).ToDictionary(v => v.Index, v => (object)v.SpeckleObj);
+    public Dictionary<int, object> GetIndicesSpeckleObjects(string speckleTypeName)
+    {
+      speckleTypeName = speckleTypeName.ChildType();
+      return records.Where(r => r.SpeckleObj != null && r.SpeckleType == speckleTypeName).ToDictionary(v => v.Index, v => (object)v.SpeckleObj);
+    }
 
-    public List<SpeckleObject> GetSpeckleObjects(string speckleTypeName, string applicationId, bool? latest = true) 
-      => records.Where(r => r.SpeckleObj != null && r.SpeckleType == speckleTypeName && r.ApplicationId.SidValueCompare(applicationId) 
+    public List<SpeckleObject> GetSpeckleObjects(string speckleTypeName, string applicationId, bool? latest = true)
+    {
+      speckleTypeName = speckleTypeName.ChildType();
+      return records.Where(r => r.SpeckleObj != null && r.SpeckleType == speckleTypeName && r.ApplicationId.SidValueCompare(applicationId)
         && ((latest.HasValue && latest.Value) || (!latest.HasValue))).Select(r => r.SpeckleObj).ToList();
+    }
 
     public bool Exists(string keyword, string applicationId) 
       => records.Any(r => r.Keyword.Equals(keyword, StringComparison.InvariantCultureIgnoreCase) && r.ApplicationId.SidValueCompare(applicationId) && r.Latest == true);
 
-    public bool ContainsType(string speckleTypeName) => records.Any(r => r.SpeckleObj != null && r.SpeckleType == speckleTypeName);
+    public bool ContainsType(string speckleTypeName)
+    {
+      speckleTypeName = speckleTypeName.ChildType();
+      return records.Any(r => r.SpeckleObj != null && r.SpeckleType == speckleTypeName);
+    }
 
     //Used by the ToSpeckle methods in the kit; either the previous needs to be serialised for merging purposes during reception, or newly-arrived GWA needs to be serialised for transmission
     public Dictionary<int, string> GetGwaToSerialise(string keyword) 
@@ -142,12 +152,12 @@ namespace SpeckleGSAProxy
       }
     }
 
-    public int ResolveIndex(string keyword, string type, string applicationId = "")
+    public int ResolveIndex(string keyword, string speckleTypeName, string applicationId = "")
     {
-
+      speckleTypeName = speckleTypeName.ChildType();
       var matchingRecords = records.Where(r => r.Keyword.Equals(keyword, StringComparison.InvariantCultureIgnoreCase) 
         && r.SpeckleObj != null 
-        && r.SpeckleObj.Type == type
+        && r.SpeckleType == speckleTypeName
         && r.ApplicationId.SidValueCompare(applicationId));
 
       if (matchingRecords.Count() == 0)
@@ -174,10 +184,11 @@ namespace SpeckleGSAProxy
       }
     }
 
-    public int? LookupIndex(string keyword, string type, string applicationId)
+    public int? LookupIndex(string keyword, string speckleTypeName, string applicationId)
     {
+      speckleTypeName = speckleTypeName.ChildType();
       var matchingRecords = records.Where(r => r.Keyword.Equals(keyword, StringComparison.InvariantCultureIgnoreCase) && r.Index > 0
-        && r.SpeckleObj != null && r.SpeckleType == type
+        && r.SpeckleObj != null && r.SpeckleType == speckleTypeName
         && r.ApplicationId.SidValueCompare(applicationId));
       if (matchingRecords.Count() == 0)
       {
@@ -185,10 +196,11 @@ namespace SpeckleGSAProxy
       }
       return matchingRecords.Select(r => r.Index).First();
     }
-    public List<int?> LookupIndices(string keyword, string type, IEnumerable<string> applicationIds)
+    public List<int?> LookupIndices(string keyword, string speckleTypeName, IEnumerable<string> applicationIds)
     {
+      speckleTypeName = speckleTypeName.ChildType();
       var matchingRecords = records.Where(r => r.Keyword.Equals(keyword, StringComparison.InvariantCultureIgnoreCase) && r.Index > 0
-        && r.SpeckleObj != null && r.SpeckleType == type
+        && r.SpeckleObj != null && r.SpeckleType == speckleTypeName
         && applicationIds.Any(ai => r.ApplicationId.SidValueCompare(ai)));
       if (matchingRecords.Count() == 0)
       {
