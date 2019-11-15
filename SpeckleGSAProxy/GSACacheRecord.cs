@@ -24,7 +24,8 @@ namespace SpeckleGSAProxy
       Gwa = gwa;
       Latest = latest;
       Previous = previous;
-      ApplicationId = applicationId;
+      //Application ID cannot have spaces
+      ApplicationId = applicationId.Replace(" ","");
       SpeckleObj = so;
       GwaSetCommandType = gwaSetCommandType;
     }
