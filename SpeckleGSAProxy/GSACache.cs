@@ -152,12 +152,9 @@ namespace SpeckleGSAProxy
       }
     }
 
-    public int ResolveIndex(string keyword, string speckleTypeName, string applicationId = "")
+    public int ResolveIndex(string keyword, string applicationId = "")
     {
-      speckleTypeName = speckleTypeName.ChildType();
       var matchingRecords = records.Where(r => r.Keyword.Equals(keyword, StringComparison.InvariantCultureIgnoreCase) 
-        && r.SpeckleObj != null 
-        && r.SpeckleType == speckleTypeName
         && r.ApplicationId.SidValueCompare(applicationId));
 
       if (matchingRecords.Count() == 0)
@@ -184,11 +181,9 @@ namespace SpeckleGSAProxy
       }
     }
 
-    public int? LookupIndex(string keyword, string speckleTypeName, string applicationId)
+    public int? LookupIndex(string keyword, string applicationId)
     {
-      speckleTypeName = speckleTypeName.ChildType();
       var matchingRecords = records.Where(r => r.Keyword.Equals(keyword, StringComparison.InvariantCultureIgnoreCase) && r.Index > 0
-        && r.SpeckleObj != null && r.SpeckleType == speckleTypeName
         && r.ApplicationId.SidValueCompare(applicationId));
       if (matchingRecords.Count() == 0)
       {
@@ -196,11 +191,9 @@ namespace SpeckleGSAProxy
       }
       return matchingRecords.Select(r => r.Index).First();
     }
-    public List<int?> LookupIndices(string keyword, string speckleTypeName, IEnumerable<string> applicationIds)
+    public List<int?> LookupIndices(string keyword, IEnumerable<string> applicationIds)
     {
-      speckleTypeName = speckleTypeName.ChildType();
       var matchingRecords = records.Where(r => r.Keyword.Equals(keyword, StringComparison.InvariantCultureIgnoreCase) && r.Index > 0
-        && r.SpeckleObj != null && r.SpeckleType == speckleTypeName
         && applicationIds.Any(ai => r.ApplicationId.SidValueCompare(ai)));
       if (matchingRecords.Count() == 0)
       {
