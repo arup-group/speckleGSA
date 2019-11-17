@@ -14,11 +14,11 @@ namespace SpeckleGSAInterfaces
 
     string GetApplicationId(string keyword, int index);
 
-    int ResolveIndex(string keyword, string type, string applicationId = "");
+    int ResolveIndex(string keyword, string applicationId = "");
 
-    int? LookupIndex(string keyword, string type, string applicationId);
+    int? LookupIndex(string keyword, string applicationId);
 
-    List<int?> LookupIndices(string keyword, string type, IEnumerable<string> applicationIds);
+    List<int?> LookupIndices(string keyword, IEnumerable<string> applicationIds);
 
     List<int?> LookupIndices(string keyword);
 
