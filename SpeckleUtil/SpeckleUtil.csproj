@@ -4,15 +4,14 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{88AE85C3-1966-4B71-8C91-242C80DCE6D4}</ProjectGuid>
+    <ProjectGuid>{C8C902F6-550A-4AC9-84E3-D4F9085260B1}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>SpeckleGSAProxy</RootNamespace>
-    <AssemblyName>SpeckleGSAProxy</AssemblyName>
+    <RootNamespace>SpeckleUtil</RootNamespace>
+    <AssemblyName>SpeckleUtil</AssemblyName>
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
-    <TargetFrameworkProfile />
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
   </PropertyGroup>
@@ -24,7 +23,6 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -35,15 +33,14 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="AutoMapper, Version=6.0.2.0, Culture=neutral, PublicKeyToken=be96cd2c38ef1005, processorArchitecture=MSIL">
+      <HintPath>..\packages\AutoMapper.6.0.2\lib\net45\AutoMapper.dll</HintPath>
+    </Reference>
     <Reference Include="Countly, Version=19.8.0.0, Culture=neutral, PublicKeyToken=30fd2b3d8bfe4882, processorArchitecture=MSIL">
       <HintPath>..\packages\Countly.19.8.0\lib\net40-client\Countly.dll</HintPath>
     </Reference>
     <Reference Include="DeviceId, Version=4.3.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\DeviceId.4.3.0\lib\net40\DeviceId.dll</HintPath>
-    </Reference>
-    <Reference Include="Interop.Gsa_10_0">
-      <HintPath>..\Resource\Interop.Gsa_10_0.dll</HintPath>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
     </Reference>
     <Reference Include="Microsoft.Threading.Tasks, Version=1.0.12.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Bcl.Async.1.0.168\lib\net40\Microsoft.Threading.Tasks.dll</HintPath>
@@ -90,20 +87,11 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Extensions.cs" />
-    <Compile Include="GSACache.cs" />
-    <Compile Include="GSACacheRecord.cs" />
-    <Compile Include="GSAProxy.cs" />
-    <Compile Include="IGSACache.cs" />
-    <Compile Include="IGSACacheForTesting.cs" />
-    <Compile Include="Indexer.cs" />
+    <Compile Include="Helper.cs" />
+    <Compile Include="IgnoreNullResolver.cs" />
+    <Compile Include="ISpeckleObjectMerger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\SpeckleGSAInterfaces\SpeckleGSAInterfaces.csproj">
-      <Project>{5ca1bffe-f623-4677-8412-9d20f0017523}</Project>
-      <Name>SpeckleGSAInterfaces</Name>
-    </ProjectReference>
+    <Compile Include="SpeckleObjectMerger.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

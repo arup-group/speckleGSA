@@ -15,4 +15,10 @@
 		AREA = 7,
 		REGION = 8
 	}
+
+  public enum GwaSetCommandType
+  {
+    Set,
+    SetAt
+  }
 }
