@@ -62,15 +62,13 @@ namespace SpeckleGSA
       var keywords = GetFilteredKeywords();
       GSA.gsaCache.Clear();
       var data = GSA.gsaProxy.GetGWAData(keywords);
+
       for (int i = 0; i < data.Count(); i++)
       {
-        // <keyword, index, Application ID, GWA command (without SET or SET_AT), Set|Set At> tuples
-        var keyword = data[i].Item1;
-        var index = data[i].Item2;
-        var applicationId = data[i].Item3;
-        var gwa = data[i].Item4;
-        var gwaSetCommandType = data[i].Item5;
-        GSA.gsaCache.Upsert(keyword, index, gwa, applicationId, gwaSetCommandType: gwaSetCommandType);
+        data[i].Sid.ParseSid(out string streamId, out string applicationId);
+        //This needs to be revised as this logic is in the kit too
+        applicationId = (string.IsNullOrEmpty(applicationId)) ? ("gsa/" + data[i].Keyword + "_" + data[i].Index.ToString()) : applicationId;
+        GSA.gsaCache.Upsert(data[i].Keyword, data[i].Index, data[i].GwaWithoutSet, applicationId: applicationId, gwaSetCommandType: data[i].GwaSetType, streamId: streamId);
       }
 
       // Grab GSA interface type

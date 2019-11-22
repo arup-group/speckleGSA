@@ -75,15 +75,10 @@ namespace SpeckleGSA
       var data = GSA.gsaProxy.GetGWAData(keywords);
       for (int i = 0; i < data.Count(); i++)
       {
-        // <keyword, index, Application ID, GWA command (without SET or SET_AT), Set|Set At> tuples
-        var keyword = data[i].Item1;
-        var index = data[i].Item2;
-        //var applicationId = data[i].Item3;
+        data[i].Sid.ParseSid(out string streamId, out string applicationId);
         //This needs to be revised as this logic is in the kit too
-        var applicationId = (string.IsNullOrEmpty(data[i].Item3)) ? ("gsa/" + keyword + "_" + index.ToString()) : data[i].Item3;
-        var gwa = data[i].Item4;
-        var gwaSetCommandType = data[i].Item5;
-        GSA.gsaCache.Upsert(keyword, index, gwa, applicationId, gwaSetCommandType: gwaSetCommandType);
+        applicationId = (string.IsNullOrEmpty(applicationId)) ? ("gsa/" + data[i].Keyword + "_" + data[i].Index.ToString()) : applicationId;
+        GSA.gsaCache.Upsert(data[i].Keyword, data[i].Index, data[i].GwaWithoutSet, applicationId: applicationId, gwaSetCommandType: data[i].GwaSetType, streamId: streamId);
       }
       Status.AddMessage("Read " + data.Count() + " GWA lines across " + keywords.Count()  + " keywords into cache");
 
@@ -121,17 +116,17 @@ namespace SpeckleGSA
 
       GSA.Settings.Units = GSA.gsaProxy.GetUnits();
 
-      var objects = new List<SpeckleObject>();
-
+      var objects = new SynchronizedCollection<Tuple<string, SpeckleObject>>();
+      
 			// Read objects
 			Status.ChangeStatus("Receiving streams");
 			var errors = new ConcurrentBag<string>();
-			Parallel.ForEach(Receivers, (kvp) =>
+			Parallel.ForEach(Receivers.Keys, key =>
 			{
 				try
 				{
-					var receivedObjects = Receivers[kvp.Key].GetObjects().Distinct();
-					double scaleFactor = (1.0).ConvertUnit(Receivers[kvp.Key].Units.ShortUnitName(), GSA.Settings.Units);
+					var receivedObjects = Receivers[key].GetObjects().Distinct();
+					double scaleFactor = (1.0).ConvertUnit(Receivers[key].Units.ShortUnitName(), GSA.Settings.Units);
 					foreach (var o in receivedObjects)
 					{
 						try
@@ -139,11 +134,12 @@ namespace SpeckleGSA
 							o.Scale(scaleFactor);
 						}
 						catch { }
-					}
-					objects.AddRange(receivedObjects);
+
+            objects.Add(new Tuple<string, SpeckleObject>(key, o));
+          }
 				}
 				catch {
-					errors.Add("Unable to get stream " + kvp.Key);
+					errors.Add("Unable to get stream " + key);
 				}
 			});
 
@@ -197,7 +193,7 @@ namespace SpeckleGSA
       Status.ChangeStatus("Finished receiving", 100);
     }
 
-    private void ProcessObjectsForLayer(GSATargetLayer layer, ref List<Type> traversedSerialisedTypes, ref List<SpeckleObject> objects, ref List<Dictionary<Type, List<object>>> senderDictionaries)
+    private void ProcessObjectsForLayer(GSATargetLayer layer, ref List<Type> traversedSerialisedTypes, ref SynchronizedCollection<Tuple<string, SpeckleObject>> objects, ref List<Dictionary<Type, List<object>>> senderDictionaries)
     {
       // Write objects
       var currentBatch = new List<Type>();
@@ -216,28 +212,30 @@ namespace SpeckleGSA
           var keyword = dummyObject.GetAttribute("GSAKeyword").ToString();
 
           var valueType = t.GetProperty("Value").GetValue(dummyObject).GetType();
-          var targetObjects = objects.Where(o => o.GetType() == valueType).ToList();
+          var targetObjects = objects.Where(o => o.Item2.GetType() == valueType).ToList();
 
           var speckleTypeName = ((SpeckleObject)((IGSASpeckleContainer)dummyObject).Value).Type;
 
           for (int i = 0; i < targetObjects.Count(); i++)
           {
-            var applicationId = targetObjects[i].ApplicationId;
+            var streamId = targetObjects[i].Item1;
+            var obj = targetObjects[i].Item2;
+            var applicationId = obj.ApplicationId;
             //Check if this application appears in the cache at all
             if (string.IsNullOrEmpty(applicationId)) continue;
 
             try
             {
-              targetObjects[i] = ProcessObject(targetObjects[i], speckleTypeName, keyword, t, dummyObject, layer, ref traversedSerialisedTypes, ref senderDictionaries);
+              ProcessObject(obj, speckleTypeName, keyword, t, dummyObject, streamId, layer, ref traversedSerialisedTypes, ref senderDictionaries);
             }
             catch (Exception ex)
             {
               // TO DO:
-              Status.AddMessage(ex.Message);
+              Status.AddMessage("Processing error for " + speckleTypeName + " with ApplicationId = " + applicationId + " - " + ex.Message);
             }
             finally
             {
-              objects.RemoveAll(x => targetObjects.Any(o => x.Type.Equals(o.Type) && x.ApplicationId.SidValueCompare(o.ApplicationId)));
+              objects.Remove(targetObjects[i]);
             }
           }
 
@@ -247,10 +245,13 @@ namespace SpeckleGSA
       } while (currentBatch.Count > 0);
     }
 
-    private SpeckleObject ProcessObject(SpeckleObject targetObject, string speckleTypeName, string keyword, Type t, object dummyObject, GSATargetLayer layer, ref List<Type> traversedSerialisedTypes, ref List<Dictionary<Type, List<object>>> senderDictionaries)
+    private SpeckleObject ProcessObject(SpeckleObject targetObject, string speckleTypeName, string keyword, Type t, object dummyObject, string streamId, GSATargetLayer layer, ref List<Type> traversedSerialisedTypes, ref List<Dictionary<Type, List<object>>> senderDictionaries)
     {
+      //Hold value for later upserting into cache
+      var applicationId = targetObject.ApplicationId;
+
       //Check if merging needs to be considered
-      if (GSA.gsaCache.Exists(keyword, targetObject.ApplicationId))
+      if (GSA.gsaCache.ApplicationIdExists(keyword, targetObject.ApplicationId))
       {
         if (!traversedSerialisedTypes.Contains(t))
         {
@@ -259,7 +260,7 @@ namespace SpeckleGSA
         }
 
         //If so but the type doesn't appear alongside it as one that was loaded, then load it now by calling ToSpeckle with a dummy version of the GSA corresponding type
-        var existingList = GSA.gsaCache.GetSpeckleObjects(speckleTypeName, targetObject.ApplicationId);
+        var existingList = GSA.gsaCache.GetSpeckleObjects(speckleTypeName, targetObject.ApplicationId, streamId: streamId);
 
         if (existingList == null || existingList.Count() == 0)
         {
@@ -282,13 +283,21 @@ namespace SpeckleGSA
 
       for (int j = 0; j < gwaCommands.Count(); j++)
       {
-        ProcessDeserialiseReturnObject(gwaCommands[j], out keyword, out int index, out string gwa, out GwaSetCommandType gwaSetCommandType);
-        var itemApplicationId = gwaCommands[j].ExtractApplicationId();
+        gwaCommands[j].ExtractKeywordApplicationId(out keyword, out int? foundIndex, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
+
+        //If the SID tag has been set then update it with the stream
+        if (!string.IsNullOrEmpty(foundApplicationId))
+        {
+          var sid = streamId + "|" + foundApplicationId;
+          gwaCommands[j] = gwaCommands[j].Replace(foundApplicationId + "}", sid + "}");
+          gwaWithoutSet = gwaWithoutSet.Replace(foundApplicationId + "}", sid + "}");
+        }
 
         GSA.gsaProxy.SetGWA(gwaCommands[j]);
 
-        //Only cache the object against, the top-level GWA command, not the sub-commands
-        GSA.gsaCache.Upsert(keyword, index, gwa, itemApplicationId, (itemApplicationId.SidValueCompare(targetObject.ApplicationId)) ? targetObject : null);
+        //Only cache the object against, the top-level GWA command, not the sub-commands - this is what the SID value comparision is there for
+        GSA.gsaCache.Upsert(keyword, foundIndex.Value, gwaWithoutSet, foundApplicationId, 
+          so: (foundApplicationId != null && targetObject.ApplicationId.SidValueCompare(foundApplicationId)) ? targetObject : null, streamId: streamId);
       }
       return targetObject;
     }
@@ -306,8 +315,17 @@ namespace SpeckleGSA
           var prereqSerialisedObjects = CollateSerialisedObjects(senderDictionaries, readPrereqs[j]);
           for (int k = 0; k < prereqSerialisedObjects.Count; k++)
           {
-            //The SpeckleTypeName of this cache entry is automatically created by the assignment of the object
-            GSA.gsaCache.AssignSpeckleObject(prereqKeyword, prereqSerialisedObjects[k].ApplicationId, prereqSerialisedObjects[k]);
+            //The GWA will contain stream ID, which needs to be stripped off for merging and sending purposes
+            var sid = prereqSerialisedObjects[k].ApplicationId;
+            //Only objects which have application IDs can be merged
+            if (!string.IsNullOrEmpty(sid))
+            {
+              sid.ParseSid(out string streamId, out string applicationId);
+              prereqSerialisedObjects[k].ApplicationId = applicationId;
+
+              //The SpeckleTypeName of this cache entry is automatically created by the assignment of the object
+              GSA.gsaCache.AssignSpeckleObject(prereqKeyword, applicationId, prereqSerialisedObjects[k], streamId);
+            }
           }
           traversedSerialisedTypes.Add(readPrereqs[j]);
         }
@@ -316,14 +334,24 @@ namespace SpeckleGSA
       //This ensures the sender objects are filled within the assembly which contains the corresponding "ToSpeckle" method
       var result = Converter.Serialise(dummyObject);
       var serialisedObjects = CollateSerialisedObjects(senderDictionaries, t);
-      
+
       //For these serialised objects, there should already be a match in the cache, as it was read during initialisation and updated
       //during previous reception Trigger calls
 
       for (int j = 0; j < serialisedObjects.Count; j++)
       {
-        //The SpeckleTypeName of this cache entry is automatically created by the assignment of the object
-        GSA.gsaCache.AssignSpeckleObject(keyword, serialisedObjects[j].ApplicationId, serialisedObjects[j]);
+        var sid = serialisedObjects[j].ApplicationId;
+
+        //Only objects which have application IDs can be merged
+        if (!string.IsNullOrEmpty(sid))
+        {
+          //The GWA will contain stream ID, which needs to be stripped off for merging and sending purposes
+          sid.ParseSid(out string streamId, out string applicationId);
+          serialisedObjects[j].ApplicationId = applicationId;
+
+          //The SpeckleTypeName of this cache entry is automatically created by the assignment of the object
+          GSA.gsaCache.AssignSpeckleObject(keyword, serialisedObjects[j].ApplicationId, serialisedObjects[j], streamId);
+        }
       }
 
       traversedSerialisedTypes.Add(t);
@@ -342,46 +370,6 @@ namespace SpeckleGSA
       }
 
       return prereqs;
-    }
-
-    private void ProcessDeserialiseReturnObject(object deserialiseReturnObject, out string keyword, out int index, out string gwa, out GwaSetCommandType gwaSetCommandType)
-    {
-      index = 0;
-      keyword = "";
-      gwa = "";
-      gwaSetCommandType = GwaSetCommandType.Set;
-
-      if (!(deserialiseReturnObject is string))
-      {
-        return;
-      }
-
-      var fullGwa = (string) deserialiseReturnObject;
-
-      var pieces = fullGwa.ListSplit("\t").ToList();
-      if (pieces.Count() < 2)
-      {
-        return;
-      }
-
-      if (pieces[0].StartsWith("set_at", StringComparison.InvariantCultureIgnoreCase))
-      {
-        gwaSetCommandType = GwaSetCommandType.SetAt;
-        pieces.Remove(pieces[0]);
-      }
-      else if (pieces[0].StartsWith("set", StringComparison.InvariantCultureIgnoreCase))
-      {
-        gwaSetCommandType = GwaSetCommandType.Set;
-        pieces.Remove(pieces[0]);
-      }
-
-      gwa = string.Join("\t", pieces);
-      gwa.ExtractKeywordApplicationId(out keyword, out int? foundIndex, out string applicationId, out string gwaWithoutSet);
-      if (foundIndex.HasValue)
-      {
-        index = foundIndex.Value;
-      }
-      return;
     }
 
     private List<SpeckleObject> CollateSerialisedObjects(List<Dictionary<Type, List<object>>> dictionaryList, Type t)

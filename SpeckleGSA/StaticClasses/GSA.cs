@@ -270,7 +270,7 @@ namespace SpeckleGSA
       foreach (string[] s in sids)
         sidRecord += "{" + s[0] + ":" + s[1] + "}";
 
-			gsaProxy.SetSID(sidRecord);
+			gsaProxy.SetTopLevelSid(sidRecord);
     }
     #endregion
 

@@ -3,6 +3,15 @@ using System.Collections.Generic;
 
 namespace SpeckleGSAInterfaces
 {
+  public struct ProxyGwaLine
+  {
+    public string Keyword;
+    public int Index;
+    public string Sid;
+    public string GwaWithoutSet;
+    public GwaSetCommandType GwaSetType;
+  }
+
   //Interface class
   public interface IGSAProxy
   {
@@ -21,7 +30,7 @@ namespace SpeckleGSAInterfaces
     /// </summary>
     /// <param name="command">GET GWA command</param>
     /// <returns>Array of GWA records</returns>
-    List<Tuple<string, int, string, string, GwaSetCommandType>> GetGWAData(IEnumerable<string> keywords);
+    List<ProxyGwaLine> GetGWAData(IEnumerable<string> keywords);
 
     //Queueing up a new addition to the model
     //Assumed to be the full SET or SET_AT command
@@ -84,8 +93,8 @@ namespace SpeckleGSAInterfaces
     void DeleteGWA(string keyword, int index, GwaSetCommandType gwaSetCommandType);
 
     string GetGwaForNode(int index);
-    
+
     //Used to update a node without having to BLANK then SET it - which is the case for all other types
-    string SetApplicationId(string gwa, string applicationId);
+    string SetSid(string gwa, string sid);
   }
 }

@@ -12,7 +12,7 @@ namespace SpeckleGSAInterfaces
 
     Dictionary<int, string> GetGwaToSerialise(string keyword);
 
-    string GetApplicationId(string keyword, int index);
+    string GetSid(string keyword, int index);
 
     int ResolveIndex(string keyword, string applicationId = "");
 

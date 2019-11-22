@@ -117,11 +117,12 @@ namespace SpeckleGSAProxy
     #endregion
 
     //Tuple: keyword | index | Application ID | GWA command | Set or Set At
-    public List<Tuple<string, int, string, string, GwaSetCommandType>> GetGWAData(IEnumerable<string> keywords)
+    public List<ProxyGwaLine> GetGWAData(IEnumerable<string> keywords)
     {
-      var data = new List<Tuple<string, int, string, string, GwaSetCommandType>>();
+      var data = new List<ProxyGwaLine>();
       var setKeywords = new List<string>();
       var setAtKeywords = new List<string>();
+
       foreach (var keyword in keywords)
       {
         if (SetAtKeywordBeginnings.Any(b => keyword.StartsWith(b)))
@@ -140,17 +141,21 @@ namespace SpeckleGSAProxy
         var gwaRecords = ((string)GSAObject.GwaCommand(newCommand)).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
         for (int j = 0; j < gwaRecords.Length; j++)
         {
-          gwaRecords[j].ExtractKeywordApplicationId(out string keyword, out int? foundIndex, out string applicationId, out string gwaWithoutSet);
+          gwaRecords[j].ExtractKeywordApplicationId(out string keyword, out int? foundIndex, out string sid, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
           var index = foundIndex ?? 0;
-          applicationId = FormatApplicationId(keyword, index, applicationId);
-
-          //If the GWA line doesn't include the SID (one of GSA's quirks is that it sometimes can leave it out despite it being there), then add it back in
-          if (!gwaWithoutSet.Contains(applicationId))
+          if (string.IsNullOrEmpty(sid))
           {
-            gwaWithoutSet = gwaRecords[j].Replace(keyword, keyword + ":{" + SID_TAG + ":" + applicationId + "}");
+            sid = GSAObject.GetSidTagValue(keyword, index, SID_TAG);
           }
 
-          data.Add(new Tuple<string, int, string, string, GwaSetCommandType>(keyword, index, applicationId, gwaWithoutSet, GwaSetCommandType.Set));
+          //If the GWA line doesn't include the SID (one of GSA's quirks is that it sometimes can leave it out despite it being there), then add it back in
+          if (!string.IsNullOrEmpty(sid) && !gwaWithoutSet.Contains(sid))
+          {
+            gwaWithoutSet = gwaRecords[j].Replace(keyword, keyword + ":{" + SID_TAG + ":" + sid + "}");
+          }
+
+          var line = new ProxyGwaLine() { Keyword = keyword, Index = index, Sid = sid, GwaWithoutSet = gwaWithoutSet, GwaSetType = GwaSetCommandType.Set };
+          data.Add(line);
         }
       }
 
@@ -171,15 +176,20 @@ namespace SpeckleGSAProxy
 
           if (gwaRecord != "")
           {
-            gwaRecord.ExtractKeywordApplicationId(out string keyword, out int? foundIndex, out string applicationId, out string gwaWithoutSet);
-            applicationId = FormatApplicationId(keyword, j, applicationId);
+            gwaRecord.ExtractKeywordApplicationId(out string keyword, out int? foundIndex, out string sid, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
 
-            if (gwaWithoutSet.Contains(applicationId))
+            if (string.IsNullOrEmpty(sid))
             {
-              gwaWithoutSet = gwaWithoutSet.Replace(keyword, keyword + ":{" + SID_TAG + ":" + applicationId + "}");
+              sid = GSAObject.GetSidTagValue(keyword, j, SID_TAG);
             }
 
-            data.Add(new Tuple<string, int, string, string, GwaSetCommandType>(setAtKeywords[i], j, applicationId, gwaWithoutSet, GwaSetCommandType.SetAt));
+            if (!gwaWithoutSet.Contains(sid))
+            {
+              gwaWithoutSet = gwaWithoutSet.Replace(keyword, keyword + ":{" + SID_TAG + ":" + sid + "}");
+            }
+
+            var line = new ProxyGwaLine() { Keyword = setAtKeywords[i], Index = j, Sid = sid, GwaWithoutSet = gwaWithoutSet, GwaSetType = GwaSetCommandType.SetAt };
+            data.Add(line);
           }
         }
       }
@@ -255,13 +265,13 @@ namespace SpeckleGSAProxy
       return (string) GSAObject.GwaCommand(gwaCommand);
     }
 
-    public string SetApplicationId(string gwa, string applicationId)
+    public string SetSid(string gwa, string sid)
     {
-      gwa.ExtractKeywordApplicationId(out string keyword, out int? foundIndex, out string foundApplicationId, out string gwaWithoutSet);
+      gwa.ExtractKeywordApplicationId(out string keyword, out int? foundIndex, out string foundSid, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
 
-      if (foundApplicationId == "" && applicationId != "")
+      if (foundSid == "" && sid != "")
       {
-        gwa = gwa.Replace(keyword, keyword + ":{" + SID_TAG + ":" + applicationId + "}");
+        gwa = gwa.Replace(keyword, keyword + ":{" + SID_TAG + ":" + sid + "}");
         GSAObject.GwaCommand("SET\t" + gwa);
       }
       return gwa;
@@ -512,7 +522,7 @@ namespace SpeckleGSAProxy
     /// </summary>
     /// <param name="emailAddress">User email address</param>
     /// <param name="serverAddress">Speckle server address</param>
-    public void SetSID(string sidRecord)
+    public void SetTopLevelSid(string sidRecord)
     {
       GSAObject.GwaCommand("SET\tSID\t" + sidRecord);
     }

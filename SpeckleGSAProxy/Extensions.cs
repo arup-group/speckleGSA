@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SpeckleGSAInterfaces;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -106,13 +107,14 @@ namespace SpeckleGSAProxy
 				return value.ConvertUnit(originalDimension, "m").ConvertUnit("m", targetDimension);
 		}
 
-    public static void ExtractKeywordApplicationId(this string fullGwa, out string keyword, out int? index, out string applicationId, out string gwaWithoutSet)
+    public static void ExtractKeywordApplicationId(this string fullGwa, out string keyword, out int? index, out string sidValue, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType)
     {
       var pieces = fullGwa.ListSplit("\t").ToList();
       keyword = "";
-      applicationId = null;
+      sidValue = "";
       index = null;
       gwaWithoutSet = fullGwa;
+      gwaSetCommandType = null;
 
       if (pieces.Count() < 2)
       {
@@ -124,6 +126,8 @@ namespace SpeckleGSAProxy
       {
         if (pieces[0].StartsWith("set_at", StringComparison.InvariantCultureIgnoreCase))
         {
+          gwaSetCommandType = GwaSetCommandType.SetAt;
+
           if (int.TryParse(pieces[1], out int foundIndex))
           {
             index = foundIndex;
@@ -135,6 +139,7 @@ namespace SpeckleGSAProxy
         }
         else
         {
+          gwaSetCommandType = GwaSetCommandType.Set;
           if (int.TryParse(pieces[2], out int foundIndex))
           {
             index = foundIndex;
@@ -158,9 +163,9 @@ namespace SpeckleGSAProxy
       {
         //An SID has been found
         keyword = pieces[0].Substring(0, delimIndex);
-        var sid = pieces[0].Substring(delimIndex);
-        var match = Regex.Match(sid, "(?<={" + "speckle_app_id" + ":).*?(?=})");
-        applicationId = (!string.IsNullOrEmpty(match.Value)) ? match.Value : "";
+        var sidTag = pieces[0].Substring(delimIndex);
+        var match = Regex.Match(sidTag, "(?<={" + "speckle_app_id" + ":).*?(?=})");
+        sidValue = (!string.IsNullOrEmpty(match.Value)) ? match.Value : "";
       }
       else
       {
@@ -187,35 +192,6 @@ namespace SpeckleGSAProxy
     public static string ChildType(this string fullTypeName)
     {
       return fullTypeName.Split(new[] { '/' }).Last();
-    }
-
-    public static string ExtractApplicationId(this string fullGwa)
-    {
-      var pieces = fullGwa.ListSplit("\t").ToList();
-
-      if (pieces.Count() < 2)
-      {
-        return "";
-      }
-
-      //Remove the Set for the purpose of this method
-      if (pieces[0].StartsWith("set", StringComparison.InvariantCultureIgnoreCase))
-      {
-        pieces.Remove(pieces[0]);
-      }
-
-      var delimIndex = pieces[0].IndexOf(':');
-      if (delimIndex > 0)
-      {
-        //An SID has been found
-        var match = Regex.Match(pieces[0].Substring(delimIndex), "(?<={" + "speckle_app_id" + ":).*?(?=})");
-
-        return (!string.IsNullOrEmpty(match.Value)) ? match.Value : "";
-      }
-      else
-      {
-        return "";
-      }
     }
   }
 }

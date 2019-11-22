@@ -149,6 +149,33 @@ namespace SpeckleGSA
 			}
       catch { return null; }
     }
+
+    public static bool ParseSid(this string sid, out string streamId, out string applicationId)
+    {
+      //Stream IDs are treated as nullable to represent the concept that a stream might not be relevant (i.e. for manually-added objects)
+      //but application IDs are always relevant (because each object is created within of the apps of the world) but might be blank
+      streamId = null;
+      applicationId = "";
+      if (string.IsNullOrEmpty(sid))
+      {
+        return false;
+      }
+
+      if (!sid.Contains("|"))
+      {
+        applicationId = sid;
+        return true;
+      }
+
+      var sidPieces = sid.Split(new[] { '|' });
+      if (sidPieces.Count() == 2)
+      {
+        streamId = sidPieces.First();
+        applicationId = sidPieces.Last();
+        return true;
+      }
+      return false;
+    }
     #endregion
   }
 }
