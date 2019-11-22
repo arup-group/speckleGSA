@@ -82,7 +82,7 @@ namespace SpeckleGSAProxy
 
     public bool Upsert(string keyword, int index, string gwaWithoutSet, string applicationId, GwaSetCommandType gwaSetCommandType)
     {
-      return Upsert(keyword, index, gwaWithoutSet, ("|" + applicationId), null, gwaSetCommandType);
+      return Upsert(keyword, index, gwaWithoutSet, applicationId, null, gwaSetCommandType);
     }
 
     //Not every record as stream IDs (like generated nodes)

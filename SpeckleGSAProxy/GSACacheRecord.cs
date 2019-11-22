@@ -10,7 +10,7 @@ namespace SpeckleGSAProxy
     public int Index { get; private set; }
     public string ApplicationId { get; private set; }
     public string StreamId { get; private set; }
-    public string Sid => StreamId + "|" + ApplicationId;
+    public string Sid => (string.IsNullOrEmpty(StreamId)) ? ApplicationId : (StreamId + "|" + ApplicationId);
     public SpeckleObject SpeckleObj { get; set; }
     public bool Latest { get; set; }
     public bool Previous { get; set; }
