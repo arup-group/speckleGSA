@@ -14,7 +14,7 @@ namespace SpeckleGSA
 	/// </summary>
 	public class Receiver : BaseReceiverSender
 	{
-    public Dictionary<string, SpeckleGSAReceiver> Receivers = new Dictionary<string, SpeckleGSAReceiver>();
+    public Dictionary<string, ISpeckleGSAReceiver> Receivers = new Dictionary<string, ISpeckleGSAReceiver>();
 
     private Dictionary<GSATargetLayer, Dictionary<Type, List<Type>>> FilteredWriteTypePrereqs = new Dictionary<GSATargetLayer, Dictionary<Type, List<Type>>>();
     private Dictionary<GSATargetLayer, Dictionary<Type, List<Type>>> FilteredReadTypePrereqs = new Dictionary<GSATargetLayer, Dictionary<Type, List<Type>>>();
@@ -85,15 +85,18 @@ namespace SpeckleGSA
       // Create receivers
       Status.ChangeStatus("Accessing streams");
 
+      
 			var nonBlankReceivers = GSA.Receivers.Where(r => !string.IsNullOrEmpty(r.Item1)).ToList();
 
+      /*
 			foreach (var streamInfo in nonBlankReceivers)
 			{
 				Status.AddMessage("Creating receiver " + streamInfo.Item1);
 				Receivers[streamInfo.Item1] = new SpeckleGSAReceiver(restApi, apiToken);
 			}
+      */
 
-			await nonBlankReceivers.ForEachAsync(async (streamInfo) =>
+      await nonBlankReceivers.ForEachAsync(async (streamInfo) =>
 			{
 				await Receivers[streamInfo.Item1].InitializeReceiver(streamInfo.Item1, streamInfo.Item2);
 				Receivers[streamInfo.Item1].UpdateGlobalTrigger += Trigger;

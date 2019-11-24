@@ -35,6 +35,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="AutoMapper, Version=6.0.2.0, Culture=neutral, PublicKeyToken=be96cd2c38ef1005, processorArchitecture=MSIL">
+      <HintPath>..\packages\AutoMapper.6.0.2\lib\net45\AutoMapper.dll</HintPath>
+    </Reference>
     <Reference Include="Countly, Version=19.8.0.0, Culture=neutral, PublicKeyToken=30fd2b3d8bfe4882, processorArchitecture=MSIL">
       <HintPath>..\packages\Countly.19.8.0\lib\net40-client\Countly.dll</HintPath>
     </Reference>
@@ -66,8 +69,8 @@
     <Reference Include="SpeckleCoreGeometryClasses, Version=1.2.8.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\SpeckleCoreGeometry.1.2.8\lib\net461\SpeckleCoreGeometryClasses.dll</HintPath>
     </Reference>
-    <Reference Include="SpeckleStructuralClasses, Version=1.0.14.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\SpeckleStructuralClasses.1.0.14\lib\net471\SpeckleStructuralClasses.dll</HintPath>
+    <Reference Include="SpeckleStructuralClasses, Version=1.0.17.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\SpeckleStructuralClasses.1.0.17\lib\net471\SpeckleStructuralClasses.dll</HintPath>
     </Reference>
     <Reference Include="SpeckleUtil">
       <HintPath>..\Resource\SpeckleUtil.dll</HintPath>
@@ -106,6 +109,7 @@
     <Compile Include="Helper.cs" />
     <Compile Include="ProxyTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TestReceiver.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
@@ -119,6 +123,10 @@
     <ProjectReference Include="..\SpeckleGSAProxy\SpeckleGSAProxy.csproj">
       <Project>{88ae85c3-1966-4b71-8c91-242c80dce6d4}</Project>
       <Name>SpeckleGSAProxy</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SpeckleGSA\SpeckleGSA.csproj">
+      <Project>{6D8CA3AD-E530-4CDA-AF79-9715A7583F4F}</Project>
+      <Name>SpeckleGSA</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

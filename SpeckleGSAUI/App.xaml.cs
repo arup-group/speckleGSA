@@ -187,6 +187,16 @@ namespace SpeckleGSAUI
 
       GSA.GetSpeckleClients(EmailAddress, RestApi);
       var gsaReceiver = new Receiver();
+      Task.Run(() =>
+      {
+        var nonBlankReceivers = GSA.Receivers.Where(r => !string.IsNullOrEmpty(r.Item1)).ToList();
+
+        foreach (var streamInfo in nonBlankReceivers)
+        {
+          Status.AddMessage("Creating receiver " + streamInfo.Item1);
+          gsaReceiver.Receivers[streamInfo.Item1] = new SpeckleGSAReceiver(RestApi, ApiToken);
+        }
+      });
       Task.Run(() => gsaReceiver.Initialize(RestApi, ApiToken)).Wait();
       GSA.SetSpeckleClients(EmailAddress, RestApi);
       gsaReceiver.Trigger(null, null);
