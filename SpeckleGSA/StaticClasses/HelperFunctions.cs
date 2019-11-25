@@ -150,6 +150,11 @@ namespace SpeckleGSA
       catch { return null; }
     }
 
+    public static string FormatSidValue(string streamId, string applicationId)
+    {
+      return (streamId == null) ? applicationId : streamId + "|" + applicationId;
+    }
+
     public static bool ParseSid(this string sid, out string streamId, out string applicationId)
     {
       //Stream IDs are treated as nullable to represent the concept that a stream might not be relevant (i.e. for manually-added objects)

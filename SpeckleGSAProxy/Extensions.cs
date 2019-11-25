@@ -107,7 +107,7 @@ namespace SpeckleGSAProxy
 				return value.ConvertUnit(originalDimension, "m").ConvertUnit("m", targetDimension);
 		}
 
-    public static void ExtractKeywordApplicationId(this string fullGwa, out string keyword, out int? index, out string sidValue, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType)
+    public static void ParseGeneralGwa(this string fullGwa, out string keyword, out int? index, out string sidValue, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType)
     {
       var pieces = fullGwa.ListSplit("\t").ToList();
       keyword = "";

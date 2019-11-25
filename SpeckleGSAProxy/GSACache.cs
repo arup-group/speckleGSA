@@ -103,7 +103,7 @@ namespace SpeckleGSAProxy
           //There should just be one matching record
 
           //There is no change to the GWA but it clearly means it's part of the latest
-          matchingGwaRecords[0].Latest = true;
+          matchingGwaRecords.First().Latest = true;
 
           return true;
         }
@@ -137,11 +137,11 @@ namespace SpeckleGSAProxy
       return true;
     }
 
-    public void Snapshot()
+    public void Snapshot(string streamId)
     {
       var indicesToRemove = new List<int>();
       //This needs to be reviewed.  Nodes are a special case as they are generated outside of Speckle feeds and these ones need to be preserved
-      var relevantRecords = records.Where(r => IsAlterable(r.Keyword, r.Sid)).ToList();
+      var relevantRecords = records.Where(r => r.StreamId != null && r.StreamId == streamId && IsAlterable(r.Keyword, r.Sid)).ToList();
       for (int i = 0; i < relevantRecords.Count(); i++)
       {
         if (relevantRecords[i].Latest == false)
@@ -157,6 +157,7 @@ namespace SpeckleGSAProxy
       for (int i = 0; i < relevantRecords.Count(); i++)
       {
         relevantRecords[i].Previous = true;
+        relevantRecords[i].Latest = false;
       }
     }
 
@@ -255,5 +256,8 @@ namespace SpeckleGSAProxy
     {
       return (!(keyword.Contains("NODE") && applicationId != null && (applicationId.StartsWith("gsa") || applicationId == "")));
     }
+
+    //For testing
+    List<GSACacheRecord> IGSACacheForTesting.Records => records;
   }
 }

@@ -17,8 +17,8 @@ namespace SpeckleGSA
 		public static Settings Settings = new Settings();
 
     public static ISpeckleObjectMerger Merger = new SpeckleObjectMerger();
-    public static GSAProxy gsaProxy = new GSAProxy();
-    public static GSACache gsaCache = new GSACache();
+    public static IGSAProxy gsaProxy = new GSAProxy();
+    public static IGSACache gsaCache = new GSACache();
 
     public static bool IsInit;
 

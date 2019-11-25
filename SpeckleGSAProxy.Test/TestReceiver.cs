@@ -16,6 +16,7 @@ namespace SpeckleGSAProxy.Test
 
     public void Dispose()
     {
+      Objects.Clear();
     }
 
     public List<SpeckleObject> GetObjects()

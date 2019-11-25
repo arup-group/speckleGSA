@@ -94,7 +94,23 @@ namespace SpeckleGSAInterfaces
 
     string GetGwaForNode(int index);
 
+    string FilePath { get; set; }
+
+    void NewFile(bool showWindow = true, object gsaInstance = null);
+
+    void OpenFile(string path, bool showWindow = true, object gsaInstance = null);
+
     //Used to update a node without having to BLANK then SET it - which is the case for all other types
     string SetSid(string gwa, string sid);
+
+    int SaveAs(string filePath);
+
+    string[] GetTolerances();
+
+    void SetTopLevelSid(string sidRecord);
+
+    string GetSID();
+
+    void Close();
   }
 }

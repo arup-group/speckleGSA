@@ -11,7 +11,7 @@ namespace SpeckleGSAProxy
 
     bool AssignSpeckleObject(string keyword, string sid, SpeckleObject so, string streamId = null);
 
-    void Snapshot();
+    void Snapshot(string streamId);
 
     bool ApplicationIdExists(string keyword, string applicationId);
 
