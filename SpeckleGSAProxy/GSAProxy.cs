@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Interop.Gsa_10_0;
 using SpeckleGSAInterfaces;
 
@@ -12,7 +13,8 @@ namespace SpeckleGSAProxy
   {
     //Hardwired values for interacting with the GSA instance
     //----
-    private static string SID_TAG = "speckle_app_id";
+    private static string SID_APPID_TAG = "speckle_app_id";
+    private static string SID_STRID_TAG = "speckle_stream_id";
 
     //These don't need to be the entire keywords - e.g. LOAD_BEAM covers LOAD_BEAM_UDL, LOAD_BEAM_LINE, LOAD_BEAM_PATCH and LOAD_BEAM_TRILIN
     public static string[] SetAtKeywordBeginnings = new string[] { "LOAD_NODE", "LOAD_BEAM", "LOAD_GRID_LINE", "LOAD_2D_FACE", "LOAD_GRID_AREA", "LOAD_2D_THERMAL", "LOAD_GRAVITY", "INF_BEAM", "INF_NODE", "RIGID", "GEN_REST" };
@@ -116,13 +118,95 @@ namespace SpeckleGSAProxy
     }
     #endregion
 
-    public static string FormatSidTag(string value)
+    public static string FormatApplicationIdSidTag(string value)
     {
-      return "{" + SID_TAG + ":" + value + "}";
+      return (string.IsNullOrEmpty(value) ? "" : "{" + SID_APPID_TAG + ":" + value + "}");
+    }
+
+    public static string FormatStreamIdSidTag(string value)
+    {
+      return (string.IsNullOrEmpty(value) ? "" : "{" + SID_STRID_TAG + ":" + value + "}");
+    }
+
+    public static string FormatSidTags(string streamId = "", string applicationId = "")
+    {
+      return FormatStreamIdSidTag(streamId) + FormatApplicationIdSidTag(applicationId);
+    }
+
+    public static void ParseGeneralGwa(string fullGwa, out string keyword, out int? index, out string streamId, out string applicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType)
+    {
+      var pieces = fullGwa.ListSplit("\t").ToList();
+      keyword = "";
+      streamId = "";
+      applicationId = "";
+      index = null;
+      gwaWithoutSet = fullGwa;
+      gwaSetCommandType = null;
+
+      if (pieces.Count() < 2)
+      {
+        return;
+      }
+
+      //Remove the Set for the purpose of this method
+      if (pieces[0].StartsWith("set", StringComparison.InvariantCultureIgnoreCase))
+      {
+        if (pieces[0].StartsWith("set_at", StringComparison.InvariantCultureIgnoreCase))
+        {
+          gwaSetCommandType = GwaSetCommandType.SetAt;
+
+          if (int.TryParse(pieces[1], out int foundIndex))
+          {
+            index = foundIndex;
+          }
+
+          //For SET_ATs the format is SET_AT <index> <keyword> .., so remove the first two
+          pieces.Remove(pieces[1]);
+          pieces.Remove(pieces[0]);
+        }
+        else
+        {
+          gwaSetCommandType = GwaSetCommandType.Set;
+          if (int.TryParse(pieces[2], out int foundIndex))
+          {
+            index = foundIndex;
+          }
+
+          index = foundIndex;
+
+          pieces.Remove(pieces[0]);
+        }
+      }
+      else
+      {
+        if (int.TryParse(pieces[1], out int foundIndex))
+        {
+          index = foundIndex;
+        }
+      }
+
+      var delimIndex = pieces[0].IndexOf(':');
+      if (delimIndex > 0)
+      {
+        //An SID has been found
+        keyword = pieces[0].Substring(0, delimIndex);
+        var sidTags = pieces[0].Substring(delimIndex);
+        var match = Regex.Match(sidTags, "(?<={" + SID_STRID_TAG + ":).*?(?=})");
+        streamId = (!string.IsNullOrEmpty(match.Value)) ? match.Value : "";
+        match = Regex.Match(sidTags, "(?<={" + SID_APPID_TAG + ":).*?(?=})");
+        applicationId = (!string.IsNullOrEmpty(match.Value)) ? match.Value : "";
+      }
+      else
+      {
+        keyword = pieces[0];
+      }
+
+      gwaWithoutSet = string.Join("\t", pieces);
+      return;
     }
 
     //Tuple: keyword | index | Application ID | GWA command | Set or Set At
-    public List<ProxyGwaLine> GetGWAData(IEnumerable<string> keywords)
+    public List<ProxyGwaLine> GetGwaData(IEnumerable<string> keywords)
     {
       var data = new List<ProxyGwaLine>();
       var setKeywords = new List<string>();
@@ -146,20 +230,48 @@ namespace SpeckleGSAProxy
         var gwaRecords = ((string)GSAObject.GwaCommand(newCommand)).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
         for (int j = 0; j < gwaRecords.Length; j++)
         {
-          gwaRecords[j].ParseGeneralGwa(out string keyword, out int? foundIndex, out string sid, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
+          ParseGeneralGwa(gwaRecords[j], out string keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
           var index = foundIndex ?? 0;
-          if (string.IsNullOrEmpty(sid))
+          var originalSid = "";
+
+          if (string.IsNullOrEmpty(foundStreamId))
           {
-            sid = GSAObject.GetSidTagValue(keyword, index, SID_TAG);
+            //Slight hardcoding for optimisation here: the biggest source of GetSidTagValue calls would be from nodes, and knowing
+            //(at least in GSA v10 build 63) that GET_ALL NODE does return SID tags, the call is avoided for NODE keyword
+            if (!keyword.Contains("NODE"))
+            {
+              foundStreamId = GSAObject.GetSidTagValue(keyword, index, SID_STRID_TAG);
+            }
+          }
+          else
+          {
+            originalSid += FormatStreamIdSidTag(foundStreamId);
+          }
+          if (string.IsNullOrEmpty(foundApplicationId))
+          {
+            foundApplicationId = GSAObject.GetSidTagValue(keyword, index, SID_APPID_TAG);
+          }
+          else
+          {
+            originalSid += FormatStreamIdSidTag(foundApplicationId);
           }
 
-          //If the GWA line doesn't include the SID (one of GSA's quirks is that it sometimes can leave it out despite it being there), then add it back in
-          if (!string.IsNullOrEmpty(sid) && !gwaWithoutSet.Contains(sid))
+          var newSid = FormatStreamIdSidTag(foundStreamId) + FormatApplicationIdSidTag(foundApplicationId);
+          if (!string.IsNullOrEmpty(originalSid) && !string.IsNullOrEmpty(newSid))
           {
-            gwaWithoutSet = gwaRecords[j].Replace(keyword, keyword + ":" + FormatSidTag(sid));
+            gwaWithoutSet.Replace(originalSid, newSid);
           }
 
-          var line = new ProxyGwaLine() { Keyword = keyword, Index = index, Sid = sid, GwaWithoutSet = gwaWithoutSet, GwaSetType = GwaSetCommandType.Set };
+          var line = new ProxyGwaLine()
+          {
+            Keyword = keyword,
+            Index = index,
+            StreamId = foundStreamId,
+            ApplicationId = foundApplicationId,
+            GwaWithoutSet = gwaWithoutSet,
+            GwaSetType = GwaSetCommandType.Set
+          };
+
           data.Add(line);
         }
       }
@@ -181,19 +293,42 @@ namespace SpeckleGSAProxy
 
           if (gwaRecord != "")
           {
-            gwaRecord.ParseGeneralGwa(out string keyword, out int? foundIndex, out string sid, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
+            ParseGeneralGwa(gwaRecord, out string keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
 
-            if (string.IsNullOrEmpty(sid))
+            var originalSid = "";
+            if (string.IsNullOrEmpty(foundStreamId))
             {
-              sid = GSAObject.GetSidTagValue(keyword, j, SID_TAG);
+              foundStreamId = GSAObject.GetSidTagValue(keyword, j, SID_STRID_TAG);
+            }
+            else
+            {
+              originalSid += FormatStreamIdSidTag(foundStreamId);
+            }
+            if (string.IsNullOrEmpty(foundApplicationId))
+            {
+              foundApplicationId = GSAObject.GetSidTagValue(keyword, j, SID_APPID_TAG);
+            }
+            else
+            {
+              originalSid += FormatStreamIdSidTag(foundApplicationId);
             }
 
-            if (!gwaWithoutSet.Contains(sid))
+            var newSid = FormatStreamIdSidTag(foundStreamId) + FormatApplicationIdSidTag(foundApplicationId);
+            if (!string.IsNullOrEmpty(originalSid) && !string.IsNullOrEmpty(newSid))
             {
-              gwaWithoutSet = gwaWithoutSet.Replace(keyword, keyword + ":" + FormatSidTag(sid));
+              gwaWithoutSet.Replace(originalSid, newSid);
             }
 
-            var line = new ProxyGwaLine() { Keyword = setAtKeywords[i], Index = j, Sid = sid, GwaWithoutSet = gwaWithoutSet, GwaSetType = GwaSetCommandType.SetAt };
+            var line = new ProxyGwaLine()
+            {
+              Keyword = setAtKeywords[i],
+              Index = j,
+              StreamId = foundStreamId,
+              ApplicationId = foundApplicationId,
+              GwaWithoutSet = gwaWithoutSet,
+              GwaSetType = GwaSetCommandType.SetAt
+            };
+
             data.Add(line);
           }
         }
@@ -206,7 +341,7 @@ namespace SpeckleGSAProxy
     {
       //It has been observed that sometimes GET commands don't include the SID despite there being one.  For some (but not all)
       //of these instances, the SID is available through an explicit call for the SID, so try that next
-      return (string.IsNullOrEmpty(applicationId)) ? GSAObject.GetSidTagValue(keyword, index, SID_TAG) : applicationId;
+      return (string.IsNullOrEmpty(applicationId)) ? GSAObject.GetSidTagValue(keyword, index, SID_APPID_TAG) : applicationId;
     }
 
     private int ExtractGwaIndex(string gwaRecord)
@@ -217,7 +352,7 @@ namespace SpeckleGSAProxy
 
 
     //Assumed to be the full SET or SET_AT command
-    public void SetGWA(string gwaCommand)
+    public void SetGwa(string gwaCommand)
     {
       batchSetGwa.Add(gwaCommand);
     }
@@ -271,15 +406,41 @@ namespace SpeckleGSAProxy
       return (string) GSAObject.GwaCommand(gwaCommand);
     }
 
-    public string SetSid(string gwa, string sid)
+    public string SetSid(string gwa, string streamId, string applicationId)
     {
-      gwa.ParseGeneralGwa(out string keyword, out int? foundIndex, out string foundSid, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
+      ParseGeneralGwa(gwa, out string keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
 
+      var streamIdToWrite = (string.IsNullOrEmpty(streamId) ? foundStreamId : streamId);
+      var applicationIdToWrite = (string.IsNullOrEmpty(applicationId) ? foundApplicationId : applicationId);
+
+      if (!string.IsNullOrEmpty(streamIdToWrite))
+      {
+        GSAObject.WriteSidTagValue(keyword, foundIndex.Value, SID_STRID_TAG, streamIdToWrite);
+      }
+      if (!string.IsNullOrEmpty(applicationIdToWrite))
+      {
+        GSAObject.WriteSidTagValue(keyword, foundIndex.Value, SID_APPID_TAG, applicationIdToWrite);
+      }
+
+      var newSid = FormatStreamIdSidTag(streamIdToWrite) + FormatApplicationIdSidTag(applicationIdToWrite);
+      if (!string.IsNullOrEmpty(foundStreamId) || !string.IsNullOrEmpty(foundApplicationId))
+      {
+        var originalSid = FormatStreamIdSidTag(foundStreamId) + FormatApplicationIdSidTag(foundApplicationId);
+        gwa = gwa.Replace(originalSid, newSid);
+      }
+      else
+      {
+        gwa = gwa.Replace(keyword, keyword + ":" + newSid);
+      }
+      
+      /*
       if (foundSid == "" && sid != "")
       {
-        gwa = gwa.Replace(keyword, keyword + ":" + FormatSidTag(sid));
+        gwa = gwa.Replace(keyword, keyword + ":" + FormatApplicationIdSidTag(sid));
         GSAObject.GwaCommand("SET\t" + gwa);
+        GSAObject.WriteSidTagValue()
       }
+      */
       return gwa;
     }
 
@@ -578,7 +739,8 @@ namespace SpeckleGSAProxy
     {
       GSAObject.ReindexCasesAndTasks();
     }
-    public string GetSID()
+
+    public string GetTopLevelSid()
     {
       string sid = "";
       try

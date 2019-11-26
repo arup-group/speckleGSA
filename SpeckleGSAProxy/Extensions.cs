@@ -107,76 +107,7 @@ namespace SpeckleGSAProxy
 				return value.ConvertUnit(originalDimension, "m").ConvertUnit("m", targetDimension);
 		}
 
-    public static void ParseGeneralGwa(this string fullGwa, out string keyword, out int? index, out string sidValue, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType)
-    {
-      var pieces = fullGwa.ListSplit("\t").ToList();
-      keyword = "";
-      sidValue = "";
-      index = null;
-      gwaWithoutSet = fullGwa;
-      gwaSetCommandType = null;
-
-      if (pieces.Count() < 2)
-      {
-        return;
-      }
-
-      //Remove the Set for the purpose of this method
-      if (pieces[0].StartsWith("set", StringComparison.InvariantCultureIgnoreCase))
-      {
-        if (pieces[0].StartsWith("set_at", StringComparison.InvariantCultureIgnoreCase))
-        {
-          gwaSetCommandType = GwaSetCommandType.SetAt;
-
-          if (int.TryParse(pieces[1], out int foundIndex))
-          {
-            index = foundIndex;
-          }
-
-          //For SET_ATs the format is SET_AT <index> <keyword> .., so remove the first two
-          pieces.Remove(pieces[1]);
-          pieces.Remove(pieces[0]);
-        }
-        else
-        {
-          gwaSetCommandType = GwaSetCommandType.Set;
-          if (int.TryParse(pieces[2], out int foundIndex))
-          {
-            index = foundIndex;
-          }
-          
-          index = foundIndex;
-
-          pieces.Remove(pieces[0]);
-        }
-      }
-      else
-      {
-        if (int.TryParse(pieces[1], out int foundIndex))
-        {
-          index = foundIndex;
-        }
-      }
-
-      var delimIndex = pieces[0].IndexOf(':');
-      if (delimIndex > 0)
-      {
-        //An SID has been found
-        keyword = pieces[0].Substring(0, delimIndex);
-        var sidTag = pieces[0].Substring(delimIndex);
-        var match = Regex.Match(sidTag, "(?<={" + "speckle_app_id" + ":).*?(?=})");
-        sidValue = (!string.IsNullOrEmpty(match.Value)) ? match.Value : "";
-      }
-      else
-      {
-        keyword = pieces[0];
-      }
-
-      gwaWithoutSet = string.Join("\t", pieces);
-      return;
-    }
-
-    public static bool SidValueCompare(this string a, string b)
+    public static bool EqualsWithoutSpaces(this string a, string b)
     {
       if (a == null && b == null)
       {

@@ -7,7 +7,8 @@ namespace SpeckleGSAInterfaces
   {
     public string Keyword;
     public int Index;
-    public string Sid;
+    public string StreamId;
+    public string ApplicationId;
     public string GwaWithoutSet;
     public GwaSetCommandType GwaSetType;
   }
@@ -30,11 +31,11 @@ namespace SpeckleGSAInterfaces
     /// </summary>
     /// <param name="command">GET GWA command</param>
     /// <returns>Array of GWA records</returns>
-    List<ProxyGwaLine> GetGWAData(IEnumerable<string> keywords);
+    List<ProxyGwaLine> GetGwaData(IEnumerable<string> keywords);
 
     //Queueing up a new addition to the model
     //Assumed to be the full SET or SET_AT command
-    void SetGWA(string gwaCommand);
+    void SetGwa(string gwaCommand);
 
     //Applying the queued changes to the model
     void Sync();
@@ -101,7 +102,7 @@ namespace SpeckleGSAInterfaces
     void OpenFile(string path, bool showWindow = true, object gsaInstance = null);
 
     //Used to update a node without having to BLANK then SET it - which is the case for all other types
-    string SetSid(string gwa, string sid);
+    string SetSid(string gwa, string streamId, string applicationId);
 
     int SaveAs(string filePath);
 
@@ -109,7 +110,7 @@ namespace SpeckleGSAInterfaces
 
     void SetTopLevelSid(string sidRecord);
 
-    string GetSID();
+    string GetTopLevelSid();
 
     void Close();
   }

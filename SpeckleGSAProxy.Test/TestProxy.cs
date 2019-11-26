@@ -45,13 +45,13 @@ namespace SpeckleGSAProxy.Test
       return ResolveIndex(x, y, z, coincidenceTol);
     }
 
-    public void AddDataLine(string keyword, int index, string sid, string gwaWithoutSet, GwaSetCommandType gwaSetType)
+    public void AddDataLine(string keyword, int index, string streamId, string applicationId, string gwaWithoutSet, GwaSetCommandType gwaSetType)
     {
-      var line = new ProxyGwaLine() { Keyword = keyword, Index = index, Sid = sid, GwaWithoutSet = gwaWithoutSet, GwaSetType = gwaSetType };
+      var line = new ProxyGwaLine() { Keyword = keyword, Index = index, StreamId = streamId, ApplicationId = applicationId, GwaWithoutSet = gwaWithoutSet, GwaSetType = gwaSetType };
       data.Add(line);
     }
 
-    public new List<ProxyGwaLine> GetGWAData(IEnumerable<string> keywords)
+    public new List<ProxyGwaLine> GetGwaData(IEnumerable<string> keywords)
     {
       return data;
     }

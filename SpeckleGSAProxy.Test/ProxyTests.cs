@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using SpeckleGSAInterfaces;
+using System.IO;
 
 namespace SpeckleGSAProxy.Test
 {
@@ -14,9 +15,6 @@ namespace SpeckleGSAProxy.Test
   public class ProxyTests
   {
     public static string[] savedJsonFileNames = new[] { "U7ntEJkzdZ.json", "lfsaIEYkR.json", "NaJD7d5kq.json", "UNg87ieJG.json" };
-    //private string expectedGwaPerIdsFileName = "TestGwaRecords.json";
-    //private string savedGwaFileName = "Structural Demo 191010.gwa";
-    //private string savedKeywordsFileName = "Keywords 191010.txt";
 
     private string testDataDirectory { get => AppDomain.CurrentDomain.BaseDirectory.TrimEnd(new[] { '\\' }) + @"\..\..\TestData\"; }
 
@@ -43,7 +41,8 @@ namespace SpeckleGSAProxy.Test
 
       //Check cache to see if object have been received
       var records = ((IGSACacheForTesting)GSA.gsaCache).Records;
-      Assert.AreEqual(99, records.Where(r => r.Latest).Count());
+      var latestGwaAfter1 = new List<string>(records.Where(r => r.Latest).Select(r => r.Gwa));
+      Assert.AreEqual(100, records.Where(r => r.Latest).Count());
       Assert.AreEqual(0, records.Where(r => string.IsNullOrEmpty(r.StreamId)).Count());
       Assert.IsTrue(records.All(r => r.Gwa.Contains(r.StreamId)));
 
@@ -54,7 +53,10 @@ namespace SpeckleGSAProxy.Test
       receiver.Trigger(null, null);
 
       //Check cache to see if object have been merged correctly and no extraneous calls to GSA is created
-      Assert.AreEqual(99, records.Where(r => r.Latest).Count());
+      var latestGwaAfter2 = new List<string>(records.Where(r => r.Latest).Select(r => r.Gwa));
+      var diff = latestGwaAfter2.Where(a2 => !latestGwaAfter1.Any(a1 => string.Equals(a1, a2, StringComparison.InvariantCultureIgnoreCase))).ToList();
+      Assert.AreEqual(100, records.Where(r => r.Latest).Count());
+      Assert.AreEqual(110, records.Count());
 
       GSA.gsaProxy.Close();
     }
@@ -113,7 +115,7 @@ namespace SpeckleGSAProxy.Test
       receiver.Trigger(null, null);
 
       //Check the other streams aren't affected by only having some active
-      Assert.AreEqual(97, records.Where(r => r.Latest).Count());
+      Assert.AreEqual(98, records.Where(r => r.Latest).Count());
       //-------
 
       GSA.gsaProxy.Close();
@@ -127,7 +129,7 @@ namespace SpeckleGSAProxy.Test
     [TestCase("LOAD_2D_THERMAL.2:{speckle_app_id:gh/a}\tTheRest", "LOAD_2D_THERMAL.2", 0, "gh/a", "LOAD_2D_THERMAL.2:{speckle_app_id:gh/a}\tTheRest")]
     public void ParseGwaCommandTests(string gwa, string expKeyword, int expIndex, string expAppId, string expGwaWithoutSet)
     {
-      gwa.ParseGeneralGwa(out string keyword, out int? foundIndex, out string applicationId, out string gwaWithoutSet, out SpeckleGSAInterfaces.GwaSetCommandType? gwaSetCommandType);
+      GSAProxy.ParseGeneralGwa(gwa, out string keyword, out int? foundIndex, out string streamId, out string applicationId, out string gwaWithoutSet, out SpeckleGSAInterfaces.GwaSetCommandType? gwaSetCommandType);
       var index = foundIndex ?? 0;
 
       Assert.AreEqual(expKeyword, keyword);
@@ -137,11 +139,12 @@ namespace SpeckleGSAProxy.Test
     }
 
     [Test]
-    public void TestProxy()
+    public void TestProxyGetDataForCache()
     {
       var proxy = new GSAProxy();
-      proxy.OpenFile(@"C:\Nicolaas\Repo\SpeckleStructural\SpeckleStructuralGSA.Test\TestData\Structural Demo 191004.gwb");
-      var data = proxy.GetGWAData(DesignLayerKeywords);
+      proxy.OpenFile(Path.Combine(testDataDirectory, "Structural Demo 191010.gwb"));
+      var data = proxy.GetGwaData(DesignLayerKeywords);
+      Assert.AreEqual(195, data.Count());
       proxy.Close();
     }
 
@@ -159,7 +162,7 @@ namespace SpeckleGSAProxy.Test
     private void CopyCacheToTestProxy()
     {
       var latestRecords = ((IGSACacheForTesting)GSA.gsaCache).Records.Where(r => r.Latest).ToList();
-      latestRecords.ForEach(r => ((TestProxy)GSA.gsaProxy).AddDataLine(r.Keyword, r.Index, r.Sid, r.Gwa, r.GwaSetCommandType));
+      latestRecords.ForEach(r => ((TestProxy)GSA.gsaProxy).AddDataLine(r.Keyword, r.Index, r.StreamId, r.ApplicationId, r.Gwa, r.GwaSetCommandType));
     }
 
     private List<Tuple<string, SpeckleObject>> ExtractObjects(string[] fileNames, string directory)

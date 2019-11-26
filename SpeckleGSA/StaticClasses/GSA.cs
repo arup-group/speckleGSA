@@ -193,7 +193,7 @@ namespace SpeckleGSA
       { 
         string key = emailAddress + "&" + serverAddress.Replace(':', '&');
 				
-        string res = gsaProxy.GetSID();
+        string res = gsaProxy.GetTopLevelSid();
 
         if (res == "")
           return;
@@ -239,7 +239,7 @@ namespace SpeckleGSA
     public static void SetSpeckleClients(string emailAddress, string serverAddress)
     {
       string key = emailAddress + "&" + serverAddress.Replace(':', '&');
-			string res = gsaProxy.GetSID();
+			string res = gsaProxy.GetTopLevelSid();
 
 			List<string[]> sids = Regex.Matches(res, @"(?<={).*?(?=})").Cast<Match>()
               .Select(m => m.Value.Split(new char[] { ':' }))

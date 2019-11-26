@@ -21,15 +21,15 @@ namespace SpeckleGSAProxy
       speckleTypeName = speckleTypeName.ChildType();
       var matchingRecords = records.Where(r => r.SpeckleObj != null
         && r.SpeckleType == speckleTypeName
-        && r.ApplicationId.SidValueCompare(applicationId)
-        && (string.IsNullOrEmpty(streamId) || r.StreamId.SidValueCompare(streamId))
+        && r.ApplicationId.EqualsWithoutSpaces(applicationId)
+        && (string.IsNullOrEmpty(streamId) || r.StreamId.EqualsWithoutSpaces(streamId))
         && ((latest.HasValue && latest.Value) || (!latest.HasValue)));
       
       return matchingRecords.Select(r => r.SpeckleObj).ToList();
     }
 
     public bool ApplicationIdExists(string keyword, string applicationId) 
-      => records.Any(r => r.Keyword.Equals(keyword, StringComparison.InvariantCultureIgnoreCase) && r.ApplicationId.SidValueCompare(applicationId) && r.Latest == true);
+      => records.Any(r => r.Keyword.Equals(keyword, StringComparison.InvariantCultureIgnoreCase) && r.ApplicationId.EqualsWithoutSpaces(applicationId));
 
     public bool ContainsType(string speckleTypeName)
     {
@@ -61,9 +61,10 @@ namespace SpeckleGSAProxy
     public List<string> GetGwaSetCommands() => records.Select(r => (r.GwaSetCommandType == GwaSetCommandType.Set) ? "SET\t" + r.Gwa
       : string.Join("\t", new[] { "SET_AT", r.Index.ToString(), r.Gwa })).ToList();
 
-    public void MarkAsPrevious(string keyword, string sid)
+    public void MarkAsPrevious(string keyword, string applicationId)
     {
-      var matchingRecords = records.Where(r => r.Keyword.Equals(keyword, StringComparison.InvariantCultureIgnoreCase) && r.Sid.SidValueCompare(sid) && r.Latest).ToList();
+      var matchingRecords = records.Where(r => r.Keyword.Equals(keyword, StringComparison.InvariantCultureIgnoreCase) 
+        && r.ApplicationId.EqualsWithoutSpaces(applicationId) && r.Latest).ToList();
       if (matchingRecords != null && matchingRecords.Count() > 0)
       {
         for (int i = 0; i < matchingRecords.Count(); i++)
@@ -74,22 +75,21 @@ namespace SpeckleGSAProxy
       }
     }
 
-    public string GetSid(string keyword, int index)
+    public string GetApplicationId(string keyword, int index)
     {
       var matchingRecords = records.Where(r => r.Keyword.Equals(keyword, StringComparison.InvariantCultureIgnoreCase) && r.Index == index);
-      return (matchingRecords == null || matchingRecords.Count() < 1) ? "" : matchingRecords.First().Sid;
+      return (matchingRecords == null || matchingRecords.Count() < 1) ? "" : matchingRecords.First().ApplicationId;
     }
 
-    public bool Upsert(string keyword, int index, string gwaWithoutSet, string applicationId, GwaSetCommandType gwaSetCommandType)
+    public bool Upsert(string keyword, int index, string gwaWithoutSet, string streamId, string applicationId, GwaSetCommandType gwaSetCommandType)
     {
-      return Upsert(keyword, index, gwaWithoutSet, applicationId, null, gwaSetCommandType);
+      return Upsert(keyword, index, gwaWithoutSet, applicationId, null, gwaSetCommandType, streamId: streamId);
     }
 
     //Not every record as stream IDs (like generated nodes)
     public bool Upsert(string keyword, int index, string gwa, string applicationId = "", SpeckleObject so = null, GwaSetCommandType gwaSetCommandType = GwaSetCommandType.Set, bool? latest = true, string streamId = null)
     {
-      var sameKeywordRecords = records.Where(r => r.Keyword.Equals(keyword, StringComparison.InvariantCultureIgnoreCase)
-        && (!latest.HasValue || (latest.HasValue && r.Latest == latest))).ToList();
+      var sameKeywordRecords = records.Where(r => r.Keyword.Equals(keyword, StringComparison.InvariantCultureIgnoreCase)).ToList();
       var matchingRecords = sameKeywordRecords.Where(r => r.Index == index || r.Gwa.Equals(gwa, StringComparison.InvariantCultureIgnoreCase)).ToList();
       if (matchingRecords.Count() > 0)
       {
@@ -103,7 +103,10 @@ namespace SpeckleGSAProxy
           //There should just be one matching record
 
           //There is no change to the GWA but it clearly means it's part of the latest
-          matchingGwaRecords.First().Latest = true;
+          if (latest.HasValue)
+          {
+            matchingGwaRecords.First().Latest = latest.Value;
+          }
 
           return true;
         }
@@ -124,7 +127,7 @@ namespace SpeckleGSAProxy
     public bool AssignSpeckleObject(string keyword, string applicationId, SpeckleObject so, string streamId = null)
     {
       var matchingRecords = records.Where(r => r.Keyword.Equals(keyword, StringComparison.InvariantCultureIgnoreCase)
-        && !string.IsNullOrEmpty(r.ApplicationId) && r.ApplicationId.SidValueCompare(applicationId)
+        && !string.IsNullOrEmpty(r.ApplicationId) && r.ApplicationId.EqualsWithoutSpaces(applicationId)
         && (string.IsNullOrEmpty(streamId) || (!string.IsNullOrEmpty(r.StreamId) && r.StreamId.Equals(streamId ?? "")))
         && r.SpeckleObj == null);
 
@@ -141,7 +144,7 @@ namespace SpeckleGSAProxy
     {
       var indicesToRemove = new List<int>();
       //This needs to be reviewed.  Nodes are a special case as they are generated outside of Speckle feeds and these ones need to be preserved
-      var relevantRecords = records.Where(r => r.StreamId != null && r.StreamId == streamId && IsAlterable(r.Keyword, r.Sid)).ToList();
+      var relevantRecords = records.Where(r => r.StreamId != null && r.StreamId == streamId && IsAlterable(r.Keyword, r.ApplicationId)).ToList();
       for (int i = 0; i < relevantRecords.Count(); i++)
       {
         if (relevantRecords[i].Latest == false)
@@ -163,12 +166,8 @@ namespace SpeckleGSAProxy
 
     public int ResolveIndex(string keyword, string applicationId = "")
     {
-      var matchingRecords = records.Where(r => r.Keyword.Equals(keyword, StringComparison.InvariantCultureIgnoreCase) 
-        && r.ApplicationId.SidValueCompare(applicationId));
-
-      if (matchingRecords.Count() == 0)
+      if (applicationId == "")
       {
-        //No matches in either previous or latest
         var indices = GetIndices(keyword);
         var highestIndex = (indices.Count() == 0) ? 0 : indices.Last();
         for (int i = 1; i <= highestIndex; i++)
@@ -182,18 +181,38 @@ namespace SpeckleGSAProxy
       }
       else
       {
-        //There should be only at most one previous and one latest for this type and applicationID
-        var existingPrevious = matchingRecords.Where(r => r.Previous && !r.Latest);
-        var existingLatest = matchingRecords.Where(r => r.Latest);
+        var matchingRecords = records.Where(r => r.Keyword.Equals(keyword, StringComparison.InvariantCultureIgnoreCase)
+          && r.ApplicationId.EqualsWithoutSpaces(applicationId));
 
-        return (existingLatest.Count() > 0) ? existingLatest.First().Index : existingPrevious.First().Index;
+        if (matchingRecords.Count() == 0)
+        {
+          //No matches in either previous or latest
+          var indices = GetIndices(keyword);
+          var highestIndex = (indices.Count() == 0) ? 0 : indices.Last();
+          for (int i = 1; i <= highestIndex; i++)
+          {
+            if (!indices.Contains(i))
+            {
+              return i;
+            }
+          }
+          return highestIndex + 1;
+        }
+        else
+        {
+          //There should be only at most one previous and one latest for this type and applicationID
+          var existingPrevious = matchingRecords.Where(r => r.Previous && !r.Latest);
+          var existingLatest = matchingRecords.Where(r => r.Latest);
+
+          return (existingLatest.Count() > 0) ? existingLatest.First().Index : existingPrevious.First().Index;
+        }
       }
     }
 
     public int? LookupIndex(string keyword, string applicationId)
     {
       var matchingRecords = records.Where(r => r.Keyword.Equals(keyword, StringComparison.InvariantCultureIgnoreCase) && r.Index > 0
-        && r.ApplicationId.SidValueCompare(applicationId));
+        && r.ApplicationId.EqualsWithoutSpaces(applicationId));
       if (matchingRecords.Count() == 0)
       {
         return null;
@@ -203,7 +222,7 @@ namespace SpeckleGSAProxy
     public List<int?> LookupIndices(string keyword, IEnumerable<string> applicationIds)
     {
       var matchingRecords = records.Where(r => r.Keyword.Equals(keyword, StringComparison.InvariantCultureIgnoreCase) && r.Index > 0
-        && applicationIds.Any(id => r.ApplicationId.SidValueCompare(id)));
+        && applicationIds.Any(id => r.ApplicationId.EqualsWithoutSpaces(id)));
       if (matchingRecords.Count() == 0)
       {
         return new List<int?>();
@@ -223,7 +242,7 @@ namespace SpeckleGSAProxy
 
     public List<Tuple<string, int, string, GwaSetCommandType>> GetExpiredData()
     {
-      var matchingRecords = records.Where(r => IsAlterable(r.Keyword, r.Sid) && r.Previous == true && r.Latest == false).ToList();
+      var matchingRecords = records.Where(r => IsAlterable(r.Keyword, r.ApplicationId) && r.Previous == true && r.Latest == false).ToList();
       var returnData = new List<Tuple<string, int, string, GwaSetCommandType>>();
 
       for (int i = 0; i < matchingRecords.Count(); i++)
@@ -236,7 +255,7 @@ namespace SpeckleGSAProxy
 
     public List<Tuple<string, int, string, GwaSetCommandType>> GetDeletableData()
     {
-      var matchingRecords = records.Where(r => IsAlterable(r.Keyword, r.Sid) && r.Latest == true).ToList();
+      var matchingRecords = records.Where(r => IsAlterable(r.Keyword, r.ApplicationId) && r.Latest == true).ToList();
       var returnData = new List<Tuple<string, int, string, GwaSetCommandType>>();
 
       for (int i = 0; i < matchingRecords.Count(); i++)
