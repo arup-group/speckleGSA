@@ -3,6 +3,16 @@ using System.Collections.Generic;
 
 namespace SpeckleGSAInterfaces
 {
+  public struct ProxyGwaLine
+  {
+    public string Keyword;
+    public int Index;
+    public string StreamId;
+    public string ApplicationId;
+    public string GwaWithoutSet;
+    public GwaSetCommandType GwaSetType;
+  }
+
   //Interface class
   public interface IGSAProxy
   {
@@ -21,11 +31,11 @@ namespace SpeckleGSAInterfaces
     /// </summary>
     /// <param name="command">GET GWA command</param>
     /// <returns>Array of GWA records</returns>
-    List<Tuple<string, int, string, string, GwaSetCommandType>> GetGWAData(IEnumerable<string> keywords);
+    List<ProxyGwaLine> GetGwaData(IEnumerable<string> keywords);
 
     //Queueing up a new addition to the model
     //Assumed to be the full SET or SET_AT command
-    void SetGWA(string gwaCommand);
+    void SetGwa(string gwaCommand);
 
     //Applying the queued changes to the model
     void Sync();
@@ -84,8 +94,32 @@ namespace SpeckleGSAInterfaces
     void DeleteGWA(string keyword, int index, GwaSetCommandType gwaSetCommandType);
 
     string GetGwaForNode(int index);
-    
+
+    string FilePath { get; set; }
+
+    void NewFile(bool showWindow = true, object gsaInstance = null);
+
+    void OpenFile(string path, bool showWindow = true, object gsaInstance = null);
+
     //Used to update a node without having to BLANK then SET it - which is the case for all other types
-    string SetApplicationId(string gwa, string applicationId);
+    string SetSid(string gwa, string streamId, string applicationId);
+
+    int SaveAs(string filePath);
+
+    string[] GetTolerances();
+
+    void SetTopLevelSid(string sidRecord);
+
+    string GetTopLevelSid();
+
+    void Close();
+
+    string FormatApplicationIdSidTag(string value);
+
+    string FormatStreamIdSidTag(string value);
+
+    string FormatSidTags(string streamId = "", string applicationId = "");
+
+    void ParseGeneralGwa(string fullGwa, out string keyword, out int? index, out string streamId, out string applicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
   }
 }

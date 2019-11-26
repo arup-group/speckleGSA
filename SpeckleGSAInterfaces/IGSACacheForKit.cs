@@ -23,6 +23,6 @@ namespace SpeckleGSAInterfaces
     List<int?> LookupIndices(string keyword);
 
     //Used to update the cache with nodes created using NodeAt
-    bool Upsert(string keyword, int index, string gwaWithoutSet, string applicationId, GwaSetCommandType gwaSetCommandType);
+    bool Upsert(string keyword, int index, string gwaWithoutSet, string streamId, string applicationId, GwaSetCommandType gwaSetCommandType);
   }
 }

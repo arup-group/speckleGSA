@@ -7,17 +7,17 @@ namespace SpeckleGSAProxy
 {
   public interface IGSACache
   {
-    bool Upsert(string keyword, int index, string gwa, string applicationId = "", SpeckleObject speckleObject = null, GwaSetCommandType gwaSetCommandType = GwaSetCommandType.Set, bool? latest = true);
+    bool Upsert(string keyword, int index, string gwa, string applicationId = "", SpeckleObject so = null, GwaSetCommandType gwaSetCommandType = GwaSetCommandType.Set, bool? latest = true, string streamId = null);
 
-    bool AssignSpeckleObject(string keyword, string applicationId, SpeckleObject so);
+    bool AssignSpeckleObject(string keyword, string sid, SpeckleObject so, string streamId = null);
 
-    void Snapshot();
+    void Snapshot(string streamId);
 
-    bool Exists(string keyword, string applicationId);
+    bool ApplicationIdExists(string keyword, string applicationId);
 
     bool ContainsType(string speckleTypeName);
 
-    List<SpeckleObject> GetSpeckleObjects(string speckleTypeName, string applicationId, bool? latest = true);
+    List<SpeckleObject> GetSpeckleObjects(string speckleTypeName, string applicationId, bool? latest = true, string streamId = null);
 
     List<string> GetCurrentGwa();
 
@@ -29,6 +29,6 @@ namespace SpeckleGSAProxy
 
     List<Tuple<string, int, string, GwaSetCommandType>> GetDeletableData();
 
-    void MarkAsPrevious(string keyword, string applicationId);
+    void MarkAsPrevious(string keyword, string sid);
   }
 }
