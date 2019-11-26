@@ -28,6 +28,10 @@ namespace SpeckleUtil
 
     public SpeckleObject Merge(SpeckleObject src, SpeckleObject dest)
     {
+      if (src == dest)
+      {
+        return dest;
+      }
       var resultingObject = mapper.Map(src, dest);
       return resultingObject;
     }

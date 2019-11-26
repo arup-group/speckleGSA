@@ -12,6 +12,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleGSAInterfaces", "SpeckleGSAInterfaces\SpeckleGSAInterfaces.csproj", "{5CA1BFFE-F623-4677-8412-9D20F0017523}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleGSAProxy.Test", "SpeckleGSAProxy.Test\SpeckleGSAProxy.Test.csproj", "{0D6BEB52-A505-43C3-A954-8DBC05575A31}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C8C902F6-550A-4AC9-84E3-D4F9085260B1} = {C8C902F6-550A-4AC9-84E3-D4F9085260B1}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleUtil", "SpeckleUtil\SpeckleUtil.csproj", "{C8C902F6-550A-4AC9-84E3-D4F9085260B1}"
 EndProject

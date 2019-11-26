@@ -10,7 +10,7 @@ namespace SpeckleGSA
 	/// <summary>
 	/// Receive objects from a stream.
 	/// </summary>
-	public class SpeckleGSAReceiver
+	public class SpeckleGSAReceiver : ISpeckleGSAReceiver
   {
 		//This was chosen to cause typical message payloads of round 100-300k to be sent from the server
     const int MAX_OBJ_REQUEST_COUNT = 1000;
@@ -22,8 +22,9 @@ namespace SpeckleGSA
 
     public event EventHandler<EventArgs> UpdateGlobalTrigger;
 
-    public string StreamID { get => myReceiver == null ? null : myReceiver.StreamId; }
-    public string StreamName { get => myReceiver == null ? null : myReceiver.Stream.Name; }
+    //public string StreamID { get => myReceiver == null ? null : myReceiver.StreamId; }
+    //public string StreamName { get => myReceiver == null ? null : myReceiver.Stream.Name; }
+
     public string Units { get => myReceiver == null ? null : myReceiver.Stream.BaseProperties["units"]; }
 
     /// <summary>

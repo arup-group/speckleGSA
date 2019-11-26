@@ -17,8 +17,8 @@ namespace SpeckleGSA
 		public static Settings Settings = new Settings();
 
     public static ISpeckleObjectMerger Merger = new SpeckleObjectMerger();
-    public static GSAProxy gsaProxy = new GSAProxy();
-    public static GSACache gsaCache = new GSACache();
+    public static IGSAProxy gsaProxy = new GSAProxy();
+    public static IGSACache gsaCache = new GSACache();
 
     public static bool IsInit;
 
@@ -193,7 +193,7 @@ namespace SpeckleGSA
       { 
         string key = emailAddress + "&" + serverAddress.Replace(':', '&');
 				
-        string res = gsaProxy.GetSID();
+        string res = gsaProxy.GetTopLevelSid();
 
         if (res == "")
           return;
@@ -239,7 +239,7 @@ namespace SpeckleGSA
     public static void SetSpeckleClients(string emailAddress, string serverAddress)
     {
       string key = emailAddress + "&" + serverAddress.Replace(':', '&');
-			string res = gsaProxy.GetSID();
+			string res = gsaProxy.GetTopLevelSid();
 
 			List<string[]> sids = Regex.Matches(res, @"(?<={).*?(?=})").Cast<Match>()
               .Select(m => m.Value.Split(new char[] { ':' }))
@@ -270,7 +270,7 @@ namespace SpeckleGSA
       foreach (string[] s in sids)
         sidRecord += "{" + s[0] + ":" + s[1] + "}";
 
-			gsaProxy.SetSID(sidRecord);
+			gsaProxy.SetTopLevelSid(sidRecord);
     }
     #endregion
 
