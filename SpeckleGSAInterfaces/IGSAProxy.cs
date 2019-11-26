@@ -113,5 +113,13 @@ namespace SpeckleGSAInterfaces
     string GetTopLevelSid();
 
     void Close();
+
+    string FormatApplicationIdSidTag(string value);
+
+    string FormatStreamIdSidTag(string value);
+
+    string FormatSidTags(string streamId = "", string applicationId = "");
+
+    void ParseGeneralGwa(string fullGwa, out string keyword, out int? index, out string streamId, out string applicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
   }
 }

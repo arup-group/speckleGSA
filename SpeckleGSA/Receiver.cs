@@ -288,10 +288,10 @@ namespace SpeckleGSA
       for (int j = 0; j < gwaCommands.Count(); j++)
       {
         //At this point the SID will be filled with the application ID
-        GSAProxy.ParseGeneralGwa(gwaCommands[j], out keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
+        GSA.gsaProxy.ParseGeneralGwa(gwaCommands[j], out keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
 
-        var originalSid = GSAProxy.FormatStreamIdSidTag(foundStreamId) + GSAProxy.FormatApplicationIdSidTag(foundApplicationId);
-        var newSid = GSAProxy.FormatStreamIdSidTag(streamId) + GSAProxy.FormatApplicationIdSidTag(foundApplicationId);
+        var originalSid = GSA.gsaProxy.FormatSidTags(foundStreamId,foundApplicationId);
+        var newSid = GSA.gsaProxy.FormatSidTags(streamId, foundApplicationId);
 
         //If the SID tag has been set then update it with the stream
         if (string.IsNullOrEmpty(originalSid))

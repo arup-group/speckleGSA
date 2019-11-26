@@ -129,7 +129,8 @@ namespace SpeckleGSAProxy.Test
     [TestCase("LOAD_2D_THERMAL.2:{speckle_app_id:gh/a}\tTheRest", "LOAD_2D_THERMAL.2", 0, "gh/a", "LOAD_2D_THERMAL.2:{speckle_app_id:gh/a}\tTheRest")]
     public void ParseGwaCommandTests(string gwa, string expKeyword, int expIndex, string expAppId, string expGwaWithoutSet)
     {
-      GSAProxy.ParseGeneralGwa(gwa, out string keyword, out int? foundIndex, out string streamId, out string applicationId, out string gwaWithoutSet, out SpeckleGSAInterfaces.GwaSetCommandType? gwaSetCommandType);
+      var gsaProxy = new GSAProxy();
+      gsaProxy.ParseGeneralGwa(gwa, out string keyword, out int? foundIndex, out string streamId, out string applicationId, out string gwaWithoutSet, out SpeckleGSAInterfaces.GwaSetCommandType? gwaSetCommandType);
       var index = foundIndex ?? 0;
 
       Assert.AreEqual(expKeyword, keyword);
