@@ -383,6 +383,8 @@ namespace SpeckleGSA
         latestGen = latestGen.SelectMany(lg => allPrereqs[lg]).ToList();
       }
 
+      prereqs.Reverse();
+
       return prereqs;
     }
 
