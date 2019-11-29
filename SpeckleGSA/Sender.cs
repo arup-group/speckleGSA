@@ -16,6 +16,8 @@ namespace SpeckleGSA
     public Dictionary<string, SpeckleGSASender> Senders = new Dictionary<string, SpeckleGSASender>();
     public Dictionary<Type, string> StreamMap = new Dictionary<Type, string>();
 
+    private Dictionary<Type, List<Type>> FilteredReadTypePrereqs = new Dictionary<Type, List<Type>>();
+
     /// <summary>
     /// Initializes sender.
     /// </summary>
@@ -36,31 +38,44 @@ namespace SpeckleGSA
 
 			var attributeType = typeof(GSAObject);
 
-			//Filter out prerequisites that are excluded by the layer selection
-			// Remove wrong layer objects from prerequisites
-			if (GSA.Settings.SendOnlyResults)
+      //Filter out Prereqs that are excluded by the layer selection
+      // Remove wrong layer objects from Prereqs
+      if (GSA.Settings.SendOnlyResults)
 			{
 				var stream = GSA.Settings.SendOnlyResults ? "results" : null;
-				var streamLayerPrerequisites = GSA.ReadTypePrerequisites.Where(t => (string)t.Key.GetAttribute("Stream") == stream && ObjectTypeMatchesLayer(t.Key));
-				foreach (var kvp in streamLayerPrerequisites)
+				var streamLayerPrereqs = GSA.ReadTypePrereqs.Where(t => (string)t.Key.GetAttribute("Stream") == stream && ObjectTypeMatchesLayer(t.Key, GSA.Settings.TargetLayer));
+				foreach (var kvp in streamLayerPrereqs)
 				{
-					FilteredTypePrerequisites[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l)
+					FilteredReadTypePrereqs[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, GSA.Settings.TargetLayer)
 						&& (string)l.GetAttribute("Stream") == stream).ToList();
 				}
 			}
 			else
 			{
-				var layerPrerequisites = GSA.ReadTypePrerequisites.Where(t => ObjectTypeMatchesLayer(t.Key));
-				foreach (var kvp in layerPrerequisites)
+				var layerPrereqs = GSA.ReadTypePrereqs.Where(t => ObjectTypeMatchesLayer(t.Key, GSA.Settings.TargetLayer));
+				foreach (var kvp in layerPrereqs)
 				{
-					FilteredTypePrerequisites[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l)).ToList();
+					FilteredReadTypePrereqs[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, GSA.Settings.TargetLayer)).ToList();
 				}
 			}
 
-			GSA.Interfacer.InitializeSender();
+      var keywords = GetFilteredKeywords();
+      GSA.gsaCache.Clear();
+      var data = GSA.gsaProxy.GetGwaData(keywords);
 
-			// Grab GSA interface type
-			var interfaceType = typeof(IGSASpeckleContainer);
+      for (int i = 0; i < data.Count(); i++)
+      {
+        GSA.gsaCache.Upsert(
+          data[i].Keyword, 
+          data[i].Index, data[i].GwaWithoutSet,
+          //This needs to be revised as this logic is in the kit too
+          applicationId: (string.IsNullOrEmpty(data[i].ApplicationId)) ? ("gsa/" + data[i].Keyword + "_" + data[i].Index.ToString()) : data[i].ApplicationId, 
+          gwaSetCommandType: data[i].GwaSetType, 
+          streamId: data[i].StreamId);
+      }
+
+      // Grab GSA interface type
+      var interfaceType = typeof(IGSASpeckleContainer);
 
       // Grab all GSA related object
       Status.ChangeStatus("Preparing to read GSA Objects");
@@ -83,8 +98,8 @@ namespace SpeckleGSA
 				}
 			}
 
-			// Create the streams
-			Status.ChangeStatus("Creating streams");
+      // Create the streams
+      Status.ChangeStatus("Creating streams");
 
 			var streamNames = (GSA.Settings.SeparateStreams) ? objTypes.Select(t => (string)t.GetAttribute("Stream")).Distinct().ToList() : new List<string>() { "Full Model" };
 
@@ -116,9 +131,7 @@ namespace SpeckleGSA
       if ((IsBusy) || (!IsInit)) return;
 
       IsBusy = true;
-			GSA.Settings.Units = GSA.Interfacer.GetUnits();
-
-			GSA.Interfacer.PreSending();
+			GSA.Settings.Units = GSA.gsaProxy.GetUnits();
 
 			// Read objects
 			var currentBatch = new List<Type>();
@@ -127,13 +140,15 @@ namespace SpeckleGSA
       bool changeDetected = false;
       do
       {
-        currentBatch = FilteredTypePrerequisites.Where(i => i.Value.Count(x => !traversedTypes.Contains(x)) == 0).Select(i => i.Key).ToList();
+        currentBatch = FilteredReadTypePrereqs.Where(i => i.Value.Count(x => !traversedTypes.Contains(x)) == 0).Select(i => i.Key).ToList();
         currentBatch.RemoveAll(i => traversedTypes.Contains(i));
 
         foreach (var t in currentBatch)
         {
           if (changeDetected) // This will skip the first read but it avoids flickering
+          {
             Status.ChangeStatus("Reading " + t.Name);
+          }
 
 					//The SpeckleStructural kit actually does serialisation (calling of ToSpeckle()) by type, not individual object.  This is due to
 					//GSA offering bulk GET based on type.
@@ -154,17 +169,17 @@ namespace SpeckleGSA
 
 			var gsaStaticObjects = GetAssembliesStaticTypes();
 
-			foreach (var tuple in gsaStaticObjects)
+			foreach (var dict in gsaStaticObjects)
 			{
 				//this item is the list of sender objects by type
-				var typeSenderObjects = tuple.Item4;
-				foreach (var t in typeSenderObjects.Keys)
+				//var typeSenderObjects = tuple.Item4;
+				foreach (var t in dict.Keys)
 				{
 					if (!SenderObjects.ContainsKey(t))
 					{
 						SenderObjects[t] = new List<object>();
 					}
-					SenderObjects[t].AddRange(typeSenderObjects[t]);
+					SenderObjects[t].AddRange(dict[t]);
 				}
 			}
 
@@ -211,14 +226,14 @@ namespace SpeckleGSA
         Status.ChangeStatus("Sending to stream: " + Senders[kvp.Key].StreamID);
 
         var streamName = "";
-				var title = GSA.Interfacer.GetTitle();
+				var title = GSA.gsaProxy.GetTitle();
 				streamName = GSA.Settings.SeparateStreams ? title + "." + kvp.Key : title;
 
         Senders[kvp.Key].UpdateName(streamName);
         Senders[kvp.Key].SendGSAObjects(kvp.Value);
       }
 
-			GSA.Interfacer.PostSending();
+			//GSA.Interfacer.PostSending();
 
 			IsBusy = false;
       Status.ChangeStatus("Finished sending", 100);
@@ -231,6 +246,14 @@ namespace SpeckleGSA
     {
       foreach (KeyValuePair<string, Tuple<string, string>> kvp in GSA.Senders)
         Senders[kvp.Key].Dispose();
+    }
+
+    protected List<string> GetFilteredKeywords()
+    {
+      var keywords = new List<string>();
+      keywords.AddRange(GetFilteredKeywords(FilteredReadTypePrereqs));
+
+      return keywords;
     }
   }
 }

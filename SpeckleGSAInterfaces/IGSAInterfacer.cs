@@ -50,7 +50,7 @@ namespace SpeckleGSAInterfaces
 		int NodeAt(string keyword, string typeName, double x, double y, double z, double coincidentNodeAllowance, string applicationId = null);
 		#endregion
 
-
+    /*
 		#region Polyline and Grids
 		(string, string) GetPolylineDesc(int polylineRef);
 
@@ -58,6 +58,7 @@ namespace SpeckleGSAInterfaces
 
 		(int, double, string) GetGridPlaneData(int gridPlaneRef);
 		#endregion
+  */
 
 		#region Elements
 		(double, string) GetGSATotal2DElementOffset(int propIndex, double insertionPointOffset);

@@ -10,7 +10,7 @@ namespace SpeckleGSA
 	/// <summary>
 	/// Receive objects from a stream.
 	/// </summary>
-	public class SpeckleGSAReceiver
+	public class SpeckleGSAReceiver : ISpeckleGSAReceiver
   {
 		//This was chosen to cause typical message payloads of round 100-300k to be sent from the server
     const int MAX_OBJ_REQUEST_COUNT = 1000;
@@ -22,8 +22,9 @@ namespace SpeckleGSA
 
     public event EventHandler<EventArgs> UpdateGlobalTrigger;
 
-    public string StreamID { get => myReceiver == null ? null : myReceiver.StreamId; }
-    public string StreamName { get => myReceiver == null ? null : myReceiver.Stream.Name; }
+    //public string StreamID { get => myReceiver == null ? null : myReceiver.StreamId; }
+    //public string StreamName { get => myReceiver == null ? null : myReceiver.Stream.Name; }
+
     public string Units { get => myReceiver == null ? null : myReceiver.Stream.BaseProperties["units"]; }
 
     /// <summary>
@@ -55,7 +56,7 @@ namespace SpeckleGSA
       {
 				var task = myReceiver.ClientCreateAsync(new AppClient()
 				{
-					DocumentName = Path.GetFileNameWithoutExtension(GSA.Interfacer.FilePath),
+					DocumentName = Path.GetFileNameWithoutExtension(GSA.gsaProxy.FilePath),
 					DocumentType = "GSA",
 					Role = "Receiver",
 					StreamId = streamID,
@@ -70,7 +71,7 @@ namespace SpeckleGSA
       {
 				var task = myReceiver.ClientUpdateAsync(clientID, new AppClient()
 				{
-					DocumentName = Path.GetFileNameWithoutExtension(GSA.Interfacer.FilePath),
+					DocumentName = Path.GetFileNameWithoutExtension(GSA.gsaProxy.FilePath),
 					Online = true,
 				});
 				await task;
@@ -108,7 +109,7 @@ namespace SpeckleGSA
       switch ((string)e.EventObject.args.eventType)
       {
         case "update-global":
-          UpdateGlobalTrigger(null, null);
+          UpdateGlobalTrigger?.Invoke(null, null);
           break;
         case "update-children":
           UpdateChildren();

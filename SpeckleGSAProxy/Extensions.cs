@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SpeckleGSAInterfaces;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,14 +10,24 @@ namespace SpeckleGSAProxy
 {
 	public static class Extensions
 	{
-		#region Lists
-		/// <summary>
-		/// Splits lists, keeping entities encapsulated by "" together.
-		/// </summary>
-		/// <param name="list">String to split</param>
-		/// <param name="delimiter">Delimiter</param>
-		/// <returns>Array of strings containing list entries</returns>
-		public static string[] ListSplit(this string list, string delimiter)
+    #region general
+    public static List<T> AddIfNotContains<T>(this List<T> list, T val)
+    {
+      if (val != null && list != null && !list.Contains(val))
+      {
+        list.Add(val);
+      }
+      return list;
+    }
+    #endregion
+    #region Lists
+    /// <summary>
+    /// Splits lists, keeping entities encapsulated by "" together.
+    /// </summary>
+    /// <param name="list">String to split</param>
+    /// <param name="delimiter">Delimiter</param>
+    /// <returns>Array of strings containing list entries</returns>
+    public static string[] ListSplit(this string list, string delimiter)
 		{
 			return Regex.Split(list, delimiter + "(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
 		}
@@ -95,5 +106,23 @@ namespace SpeckleGSAProxy
 			else
 				return value.ConvertUnit(originalDimension, "m").ConvertUnit("m", targetDimension);
 		}
-	}
+
+    public static bool EqualsWithoutSpaces(this string a, string b)
+    {
+      if (a == null && b == null)
+      {
+        return true;
+      }
+      else if (b == null)
+      {
+        return false;
+      }
+      return a.Replace(" ", string.Empty).Equals(b.Replace(" ", string.Empty), StringComparison.InvariantCultureIgnoreCase);
+    }
+
+    public static string ChildType(this string fullTypeName)
+    {
+      return fullTypeName.Split(new[] { '/' }).Last();
+    }
+  }
 }

@@ -473,7 +473,26 @@ namespace SpeckleGSAUI
 
         GSA.GetSpeckleClients(EmailAddress, RestApi);
         gsaReceiver = new Receiver();
-				await gsaReceiver.Initialize(RestApi, ApiToken);
+        try
+        {
+          await Task.Run(() =>
+           {
+             var nonBlankReceivers = GSA.Receivers.Where(r => !string.IsNullOrEmpty(r.Item1)).ToList();
+
+             foreach (var streamInfo in nonBlankReceivers)
+             {
+               Status.AddMessage("Creating receiver " + streamInfo.Item1);
+               gsaReceiver.Receivers[streamInfo.Item1] = new SpeckleGSAReceiver(RestApi, ApiToken);
+             }
+           });
+          await gsaReceiver.Initialize(RestApi, ApiToken);
+        }
+        catch(Exception ex)
+        {
+          Status.AddError(ex.Message);
+          return;
+        }
+
 				GSA.SetSpeckleClients(EmailAddress, RestApi);
         status = UIStatus.RECEIVING;
         if (ReceiverContinuousToggle.IsChecked.Value)
@@ -525,9 +544,14 @@ namespace SpeckleGSAUI
         ReceiverContinuousToggle.IsEnabled = true;
         ReceiverControlPanel.IsEnabled = true;
 
-        MessageBoxResult result = MessageBox.Show("Bake received objects permanently? ", "SpeckleGSA", MessageBoxButton.YesNo, MessageBoxImage.Question);
-        if (result != MessageBoxResult.Yes)
-          gsaReceiver.DeleteSpeckleObjects();
+        if (!ReceiverContinuousToggle.IsChecked.Value)
+        {
+          MessageBoxResult result = MessageBox.Show("Bake received objects permanently? ", "SpeckleGSA", MessageBoxButton.YesNo, MessageBoxImage.Question);
+          if (result != MessageBoxResult.Yes)
+          {
+            gsaReceiver.DeleteSpeckleObjects();
+          }
+        }
 
         gsaReceiver.Dispose();
       }
