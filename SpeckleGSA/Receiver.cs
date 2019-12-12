@@ -16,8 +16,8 @@ namespace SpeckleGSA
 	{
     public Dictionary<string, ISpeckleGSAReceiver> Receivers = new Dictionary<string, ISpeckleGSAReceiver>();
 
-    private Dictionary<GSATargetLayer, Dictionary<Type, List<Type>>> FilteredWriteTypePrereqs = new Dictionary<GSATargetLayer, Dictionary<Type, List<Type>>>();
-    private Dictionary<GSATargetLayer, Dictionary<Type, List<Type>>> FilteredReadTypePrereqs = new Dictionary<GSATargetLayer, Dictionary<Type, List<Type>>>();
+    private readonly Dictionary<GSATargetLayer, Dictionary<Type, List<Type>>> FilteredWriteTypePrereqs = new Dictionary<GSATargetLayer, Dictionary<Type, List<Type>>>();
+    private readonly Dictionary<GSATargetLayer, Dictionary<Type, List<Type>>> FilteredReadTypePrereqs = new Dictionary<GSATargetLayer, Dictionary<Type, List<Type>>>();
 
     /// <summary>
     /// Initializes receiver.
@@ -71,22 +71,9 @@ namespace SpeckleGSA
 
       Status.ChangeStatus("Reading GSA data into cache");
 
-      GSA.gsaCache.Clear();
-      var data = GSA.gsaProxy.GetGwaData(keywords);
-      for (int i = 0; i < data.Count(); i++)
-      {
-        GSA.gsaCache.Upsert(
-          data[i].Keyword, 
-          data[i].Index, 
-          data[i].GwaWithoutSet, 
-          streamId: data[i].StreamId,
-          //This needs to be revised as this logic is in the kit too
-          applicationId: (string.IsNullOrEmpty(data[i].ApplicationId)) 
-            ? ("gsa/" + data[i].Keyword + "_" + data[i].Index.ToString()) 
-            : data[i].ApplicationId, 
-          gwaSetCommandType: data[i].GwaSetType);
-      }
-      Status.AddMessage("Read " + data.Count() + " GWA lines across " + keywords.Count()  + " keywords into cache");
+      var numRowsupdated = await UpdateCache(keywords);
+      
+      Status.AddMessage("Read " + numRowsupdated + " GWA lines across " + keywords.Count()  + " keywords into cache");
 
       // Create receivers
       Status.ChangeStatus("Accessing streams");
@@ -121,6 +108,7 @@ namespace SpeckleGSA
 			// Read objects
 			Status.ChangeStatus("Receiving streams");
 			var errors = new ConcurrentBag<string>();
+
 			Parallel.ForEach(Receivers.Keys, key =>
 			{
 				try
@@ -171,13 +159,13 @@ namespace SpeckleGSA
       }
 
       var traversedSerialisedTypes = new List<Type>();
-      
+
       //Process on the basis of writing to the chosen layer first.  After this call, the only objects left are those which can only be written to the other layer
-      ProcessObjectsForLayer(GSA.Settings.TargetLayer, ref traversedSerialisedTypes, ref objects, ref senderDictionaries);
+      await ProcessObjectsForLayer(GSA.Settings.TargetLayer, ref traversedSerialisedTypes, ref objects, ref senderDictionaries);
 
       //For any objects still left in the collection, process on the basis of writing to the other layer
       var otherLayer = GSA.Settings.TargetLayer == GSATargetLayer.Design ? GSATargetLayer.Analysis : GSATargetLayer.Design;
-      ProcessObjectsForLayer(otherLayer, ref traversedSerialisedTypes, ref objects, ref senderDictionaries);
+      await ProcessObjectsForLayer(otherLayer, ref traversedSerialisedTypes, ref objects, ref senderDictionaries);
 
       var toBeDeletedGwa = GSA.gsaCache.GetExpiredData();
       for (int i = 0; i < toBeDeletedGwa.Count(); i++)
@@ -197,7 +185,27 @@ namespace SpeckleGSA
       Status.ChangeStatus("Finished receiving", 100);
     }
 
-    private void ProcessObjectsForLayer(GSATargetLayer layer, ref List<Type> traversedSerialisedTypes, ref SynchronizedCollection<Tuple<string, SpeckleObject>> objects, ref List<Dictionary<Type, List<object>>> senderDictionaries)
+    private Task<int> UpdateCache(List<string> keywords)
+    {
+      GSA.gsaCache.Clear();
+      var data = GSA.gsaProxy.GetGwaData(keywords);
+      for (int i = 0; i < data.Count(); i++)
+      {
+        GSA.gsaCache.Upsert(
+          data[i].Keyword,
+          data[i].Index,
+          data[i].GwaWithoutSet,
+          streamId: data[i].StreamId,
+          //This needs to be revised as this logic is in the kit too
+          applicationId: (string.IsNullOrEmpty(data[i].ApplicationId))
+            ? ("gsa/" + data[i].Keyword + "_" + data[i].Index.ToString())
+            : data[i].ApplicationId,
+          gwaSetCommandType: data[i].GwaSetType);
+      }
+      return Task.FromResult(data.Count());
+    }
+
+    private Task ProcessObjectsForLayer(GSATargetLayer layer, ref List<Type> traversedSerialisedTypes, ref SynchronizedCollection<Tuple<string, SpeckleObject>> objects, ref List<Dictionary<Type, List<object>>> senderDictionaries)
     {
       // Write objects
       var currentBatch = new List<Type>();
@@ -247,6 +255,8 @@ namespace SpeckleGSA
         }
 
       } while (currentBatch.Count > 0);
+
+      return Task.CompletedTask;
     }
 
     private SpeckleObject ProcessObject(SpeckleObject targetObject, string speckleTypeName, string keyword, Type t, object dummyObject, string streamId, GSATargetLayer layer, ref List<Type> traversedSerialisedTypes, ref List<Dictionary<Type, List<object>>> senderDictionaries)
