@@ -60,19 +60,12 @@ namespace SpeckleGSA
 			}
 
       var keywords = GetFilteredKeywords();
-      GSA.gsaCache.Clear();
-      var data = GSA.gsaProxy.GetGwaData(keywords);
 
-      for (int i = 0; i < data.Count(); i++)
-      {
-        GSA.gsaCache.Upsert(
-          data[i].Keyword, 
-          data[i].Index, data[i].GwaWithoutSet,
-          //This needs to be revised as this logic is in the kit too
-          applicationId: (string.IsNullOrEmpty(data[i].ApplicationId)) ? ("gsa/" + data[i].Keyword + "_" + data[i].Index.ToString()) : data[i].ApplicationId, 
-          gwaSetCommandType: data[i].GwaSetType, 
-          streamId: data[i].StreamId);
-      }
+      Status.ChangeStatus("Reading GSA data into cache");
+
+      var numRowsupdated = await UpdateCache(keywords);
+
+      Status.AddMessage("Read " + numRowsupdated + " GWA lines across " + keywords.Count() + " keywords into cache");
 
       // Grab GSA interface type
       var interfaceType = typeof(IGSASpeckleContainer);
@@ -133,8 +126,13 @@ namespace SpeckleGSA
       IsBusy = true;
 			GSA.Settings.Units = GSA.gsaProxy.GetUnits();
 
-			// Read objects
-			var currentBatch = new List<Type>();
+      var gsaStaticObjects = GetAssembliesStaticTypes();
+
+      //Clear previously-sent objects
+      gsaStaticObjects.ForEach(dict => dict.Clear());
+
+      // Read objects
+      var currentBatch = new List<Type>();
       var traversedTypes = new List<Type>();
 
       bool changeDetected = false;
@@ -166,8 +164,6 @@ namespace SpeckleGSA
 					traversedTypes.Add(t);
         }
       } while (currentBatch.Count > 0);
-
-			var gsaStaticObjects = GetAssembliesStaticTypes();
 
 			foreach (var dict in gsaStaticObjects)
 			{
@@ -254,6 +250,26 @@ namespace SpeckleGSA
       keywords.AddRange(GetFilteredKeywords(FilteredReadTypePrereqs));
 
       return keywords;
+    }
+
+    private Task<int> UpdateCache(List<string> keywords)
+    {
+      GSA.gsaCache.Clear();
+      var data = GSA.gsaProxy.GetGwaData(keywords);
+      for (int i = 0; i < data.Count(); i++)
+      {
+        GSA.gsaCache.Upsert(
+          data[i].Keyword,
+          data[i].Index,
+          data[i].GwaWithoutSet,
+          streamId: data[i].StreamId,
+          //This needs to be revised as this logic is in the kit too
+          applicationId: (string.IsNullOrEmpty(data[i].ApplicationId))
+            ? ("gsa/" + data[i].Keyword + "_" + data[i].Index.ToString())
+            : data[i].ApplicationId,
+          gwaSetCommandType: data[i].GwaSetType);
+      }
+      return Task.FromResult(data.Count());
     }
   }
 }

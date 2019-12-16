@@ -53,14 +53,14 @@ namespace SpeckleGSA
         mySender.Stream = streamResponse.Resource;
         mySender.StreamId = streamResponse.Resource.StreamId;
 
-        var clientResponse = mySender.ClientCreateAsync(new AppClient()
+        var clientResponse = await mySender.ClientCreateAsync(new AppClient()
         {
           DocumentName = Path.GetFileNameWithoutExtension(GSA.gsaProxy.FilePath),
           DocumentType = "GSA",
           Role = "Sender",
           StreamId = this.StreamID,
           Online = true,
-        }).Result;
+        });
 
         mySender.ClientId = clientResponse.Resource._id;
       }
@@ -71,11 +71,11 @@ namespace SpeckleGSA
         mySender.Stream = streamResponse.Resource;
         mySender.StreamId = streamResponse.Resource.StreamId;
 
-        var clientResponse = mySender.ClientUpdateAsync(clientID, new AppClient()
+        var clientResponse = await mySender.ClientUpdateAsync(clientID, new AppClient()
         {
           DocumentName = Path.GetFileNameWithoutExtension(GSA.gsaProxy.FilePath),
           Online = true,
-        }).Result;
+        });
 
         mySender.ClientId = clientID;
       }
