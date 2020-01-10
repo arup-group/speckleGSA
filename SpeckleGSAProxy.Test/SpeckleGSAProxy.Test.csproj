@@ -112,6 +112,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CacheTests.cs" />
     <Compile Include="GwaRecord.cs" />
     <Compile Include="Helper.cs" />
     <Compile Include="ProxyTests.cs" />
