@@ -36,24 +36,31 @@ SpeckleGSA is still currently under development which can cause many quick chang
 
 ### Requirements
 
-- Visual Studio 2017
-- .NET Framework 4.6.1
+- Visual Studio 2019
+- .NET Framework 4.7.1
 
 ### Dev Notes
 
 The SpeckleGSA repo is currently made up of the following projects:
 - SpeckleGSA: main project with receiver and sender and GSA class objects
 - SpeckleGSAUI: user interface
-- SpeckleCore: submodule
 
 ### Building Process
 
-SpeckleGSA depends on Speckle being installed. Install Speckle using the Speckle  installer [here](https://speckle.works/builds/).
+SpeckleGSA depends on Speckle being installed. Install Speckle using the Speckle installer [here](https://speckle.works/builds/).
 
 - Clone/fork the repo
 - Restore all Nuget package missing on the solution
-- If submodules haven't been cloned, run `git submodule update --remote`
 - Set SpeckleGSAUI as start project and rebuild all
+
+### Release process
+
+This process is just to prepare this prerequisite artifact for inclusion in the SpeckleStructuralSuite-installer release process.  When the release process for SpeckleStructuralSuite-installer is invoked, it will include the latest SpeckleGSA artifact resulting from the process below:
+
+- Update versions in AssemblyInfo.cs for both SpeckleGSA and SpeckleGSAUI projects to incremented version
+- Merge into master and push - (test if a build is triggered)
+- Trigger a build at https://gitlab.arup.com/speckle/SpeckleGSA/pipelines by clicking "Run Pipeline"
+- Check that the build artefacts can be downloaded
 
 ## About Speckle
 
@@ -61,4 +68,4 @@ Speckle reimagines the design process from the Internet up: an open source (MIT)
 
 ## Notes
 
-SpeckleGSA is written and maintained by [Mishael Nuh](https://gitlab.arup.com/Mishael.Nuh).
+SpeckleGSA is maintained by [Nic Burgers](https://gitlab.arup.com/Nic.Burgers).
