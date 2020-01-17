@@ -16,6 +16,11 @@ namespace SpeckleGSAProxy
     private static string SID_APPID_TAG = "speckle_app_id";
     private static string SID_STRID_TAG = "speckle_stream_id";
 
+    //These are the exceptions to the rule that, in GSA, all records that relate to each table (i.e. the set with mutually-exclusive indices) have the same keyword
+    public static Dictionary<string, string[]> IrregularKeywordGroups = new Dictionary<string, string[]> { 
+      { "LOAD_BEAM", new string[] { "LOAD_BEAM_POINT", "LOAD_BEAM_UDL", "LOAD_BEAM_LINE", "LOAD_BEAM_PATCH", "LOAD_BEAM_TRILIN" } } 
+    };
+
     //These don't need to be the entire keywords - e.g. LOAD_BEAM covers LOAD_BEAM_UDL, LOAD_BEAM_LINE, LOAD_BEAM_PATCH and LOAD_BEAM_TRILIN
     public static string[] SetAtKeywordBeginnings = new string[] { "LOAD_NODE", "LOAD_BEAM", "LOAD_GRID_LINE", "LOAD_2D_FACE", "LOAD_GRID_AREA", "LOAD_2D_THERMAL", "LOAD_GRAVITY", "INF_BEAM", "INF_NODE", "RIGID", "GEN_REST" };
     //----
@@ -199,6 +204,15 @@ namespace SpeckleGSAProxy
       else
       {
         keyword = pieces[0];
+      }
+
+      foreach (var groupKeyword in IrregularKeywordGroups.Keys)
+      {
+        if (IrregularKeywordGroups[groupKeyword].Contains(keyword))
+        {
+          keyword = groupKeyword;
+          break;
+        }
       }
 
       gwaWithoutSet = string.Join("\t", pieces);
