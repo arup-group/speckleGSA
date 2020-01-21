@@ -9,9 +9,9 @@ namespace SpeckleGSAProxy
     public string Keyword { get; private set; }
     public int Index { get; private set; }
     public string ApplicationId { get; private set; }
-    public string StreamId { get; private set; }
-    //public string Sid => (string.IsNullOrEmpty(StreamId)) ? ApplicationId : (StreamId + "|" + ApplicationId);
+    public string StreamId { get; private set; }    
     public SpeckleObject SpeckleObj { get; set; }
+    //Note: these booleans can't be merged into one state property because records could be both previous and latest, or only one of them
     public bool Latest { get; set; }
     public bool Previous { get; set; }
     public string Gwa { get; private set; }

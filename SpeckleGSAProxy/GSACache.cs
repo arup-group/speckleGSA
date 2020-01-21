@@ -9,6 +9,8 @@ namespace SpeckleGSAProxy
   public class GSACache : IGSACache, IGSACacheForKit, IGSACacheForTesting
   {
     private readonly List<GSACacheRecord> records = new List<GSACacheRecord>();
+    // < keyword , { < index, app_id >, < index, app_id >, ... } >
+    private readonly Dictionary<string, Dictionary<int, string>> provisionals = new Dictionary<string, Dictionary<int, string>>();
 
     public Dictionary<int, object> GetIndicesSpeckleObjects(string speckleTypeName)
     {
@@ -120,6 +122,7 @@ namespace SpeckleGSAProxy
         }
       }
 
+      RemoveFromProvisional(keyword, index);
       records.Add(new GSACacheRecord(keyword, index, gwa, streamId: streamId, applicationId: applicationId, latest: true, so: so, gwaSetCommandType: gwaSetCommandType));
       return true;
     }
@@ -169,14 +172,18 @@ namespace SpeckleGSAProxy
       if (applicationId == "")
       {
         var indices = GetIndices(keyword);
-        var highestIndex = (indices.Count() == 0) ? 0 : indices.Last();
+        var highestProvisional = HighestProvisional(keyword);
+        var highestIndex = Math.Max((indices.Count() == 0) ? 0 : indices.Last(), highestProvisional ?? 0);
         for (int i = 1; i <= highestIndex; i++)
         {
-          if (!indices.Contains(i))
+          if (!indices.Contains(i) && !ProvisionalContains(keyword, i))
           {
+            UpsertProvisional(keyword, i, applicationId);
             return i;
           }
         }
+
+        UpsertProvisional(keyword, highestIndex + 1, applicationId);
         return highestIndex + 1;
       }
       else
@@ -186,16 +193,23 @@ namespace SpeckleGSAProxy
 
         if (matchingRecords.Count() == 0)
         {
+          if (FindProvisionalIndex(keyword, applicationId, out int? provisionalIndex))
+          {
+            return provisionalIndex.Value;
+          }
           //No matches in either previous or latest
           var indices = GetIndices(keyword);
-          var highestIndex = (indices.Count() == 0) ? 0 : indices.Last();
+          var highestProvisional = HighestProvisional(keyword);
+          var highestIndex = Math.Max((indices.Count() == 0) ? 0 : indices.Last(), highestProvisional ?? 0);
           for (int i = 1; i <= highestIndex; i++)
           {
-            if (!indices.Contains(i))
+            if (!indices.Contains(i) && !ProvisionalContains(keyword, i))
             {
+              UpsertProvisional(keyword, i, applicationId);
               return i;
             }
           }
+          UpsertProvisional(keyword, highestIndex + 1, applicationId);
           return highestIndex + 1;
         }
         else
@@ -274,6 +288,64 @@ namespace SpeckleGSAProxy
     private bool IsAlterable(string keyword, string applicationId)
     {
       return (!(keyword.Contains("NODE") && applicationId != null && (applicationId.StartsWith("gsa") || applicationId == "")));
+    }
+
+    private void UpsertProvisional(string keyword, int index, string applicationId = "")
+    {
+      if (!provisionals.ContainsKey(keyword))
+      {
+        provisionals.Add(keyword, new Dictionary<int, string>());
+      }
+      provisionals[keyword].Add(index, applicationId);
+    }
+
+    private bool ProvisionalContains(string keyword, int index)
+    {
+      if (!provisionals.ContainsKey(keyword) || provisionals[keyword] == null || provisionals[keyword].Count() == 0)
+      {
+        return false;
+      }
+      return provisionals[keyword].ContainsKey(index);
+    }
+
+    private int? HighestProvisional(string keyword)
+    {
+      if (!provisionals.ContainsKey(keyword) || provisionals[keyword] == null || provisionals[keyword].Count() == 0)
+      {
+        return null;
+      }
+
+      return provisionals[keyword].Keys.Max();
+    }
+
+    private void RemoveFromProvisional(string keyword, int index)
+    {
+      if (provisionals.ContainsKey(keyword))
+      {
+        if (provisionals[keyword].ContainsKey(index))
+        {
+          provisionals[keyword].Remove(index);
+        }
+        if (provisionals[keyword].Count() == 0)
+        {
+          provisionals.Remove(keyword);
+        }
+      }
+    }
+
+    private bool FindProvisionalIndex(string keyword, string applicationId, out int? provisionalIndex)
+    {
+      provisionalIndex = null;
+      if (provisionals.ContainsKey(keyword))
+      {
+        var matching = provisionals[keyword].Where(kvp => kvp.Value.Equals(applicationId));
+        if (matching.Count() > 0)
+        {
+          provisionalIndex = matching.First().Key;
+          return true;
+        }
+      }
+      return false;
     }
 
     //For testing
