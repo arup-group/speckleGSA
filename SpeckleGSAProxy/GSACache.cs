@@ -114,7 +114,7 @@ namespace SpeckleGSAProxy
       {
         recordsByKeyword.Add(keyword, new List<GSACacheRecord>());
       }
-      var matchingRecords = recordsByKeyword[keyword].Where(r => r.Index == index || r.Gwa.Equals(gwa, StringComparison.InvariantCultureIgnoreCase)).ToList();
+      var matchingRecords = recordsByKeyword[keyword].Where(r => r.Index == index);
       if (matchingRecords.Count() > 0)
       {
         var matchingGwaRecords = matchingRecords.Where(r => r.Gwa.Equals(gwa, StringComparison.InvariantCultureIgnoreCase)).ToList();
@@ -137,9 +137,9 @@ namespace SpeckleGSAProxy
         else
         {
           //These will be return at the next call to GetToBeDeletedGwa() and removed at the next call to Snapshot()
-          for (int i = 0; i < matchingRecords.Count(); i++)
+          foreach (var r in matchingRecords)
           {
-            matchingRecords[i].Latest = false;
+            r.Latest = false;
           }
         }
       }
@@ -182,19 +182,20 @@ namespace SpeckleGSAProxy
         
         for (int i = 0; i < recordsByKeyword[keyword].Count(); i++)
         {
-          if (recordsByKeyword[keyword][i].StreamId == null || recordsByKeyword[keyword][i].StreamId != streamId)
+          if (recordsByKeyword[keyword][i].StreamId == null || recordsByKeyword[keyword][i].StreamId != streamId || !IsAlterable(keyword, recordsByKeyword[keyword][i].ApplicationId))
           {
             continue;
           }
 
           // The use and function of IsAlterable needs to be reviewed.  Nodes are a special case as they are generated outside of Speckle feeds 
           // and these ones need to be preserved
-          if (recordsByKeyword[keyword][i].Latest == false && IsAlterable(keyword, recordsByKeyword[keyword][i].ApplicationId))
+          if (recordsByKeyword[keyword][i].Latest == false)
           {
             indicesToRemove.Add(i);
           }
           else
           {
+            recordsByKeyword[keyword][i].Latest = false;
             recordsByKeyword[keyword][i].Previous = true;
           }
         }
@@ -330,7 +331,11 @@ namespace SpeckleGSAProxy
 
     private bool IsAlterable(string keyword, string applicationId)
     {
-      return (!(keyword.Contains("NODE") && applicationId != null && (applicationId.StartsWith("gsa") || applicationId == "")));
+      if (keyword.Contains("NODE") && (applicationId == "" || (applicationId != null && applicationId.StartsWith("gsa"))))
+      {
+        return false;
+      }
+      return true;
     }
 
     private void UpsertProvisional(string keyword, int index, string applicationId = "")
