@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace SpeckleGSAProxy
 {
@@ -6,6 +7,6 @@ namespace SpeckleGSAProxy
   {
     List<string> GetGwaSetCommands();
 
-    List<GSACacheRecord> Records { get; }
+    ReadOnlyCollection<GSACacheRecord> Records { get; }
   }
 }

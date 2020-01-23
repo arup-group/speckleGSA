@@ -261,9 +261,14 @@ namespace SpeckleGSAProxy
           {
             originalSid += FormatStreamIdSidTag(foundStreamId);
           }
+
           if (string.IsNullOrEmpty(foundApplicationId))
           {
-            foundApplicationId = GSAObject.GetSidTagValue(keyword, index, SID_APPID_TAG);
+            //Again, the same optimisation as explained above
+            if (!keyword.Contains("NODE"))
+            {
+              foundApplicationId = GSAObject.GetSidTagValue(keyword, index, SID_APPID_TAG);
+            }
           }
           else
           {
