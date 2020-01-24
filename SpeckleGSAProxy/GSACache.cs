@@ -284,7 +284,7 @@ namespace SpeckleGSAProxy
     public List<int?> LookupIndices(string keyword, IEnumerable<string> applicationIds)
     {
       var matchingRecords = new List<GSACacheRecord>();
-      if (recordsByKeyword.ContainsKey(keyword))
+      if (recordsByKeyword.ContainsKey(keyword) && applicationIds != null)
       {
         matchingRecords.AddRange(recordsByKeyword[keyword].Where(r => r.Index > 0 && applicationIds.Any(id => r.ApplicationId.EqualsWithoutSpaces(id))));
       }
