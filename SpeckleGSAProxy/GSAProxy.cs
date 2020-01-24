@@ -252,7 +252,7 @@ namespace SpeckleGSAProxy
           {
             //Slight hardcoding for optimisation here: the biggest source of GetSidTagValue calls would be from nodes, and knowing
             //(at least in GSA v10 build 63) that GET_ALL NODE does return SID tags, the call is avoided for NODE keyword
-            if (!keyword.Contains("NODE"))
+            if (!keyword.Contains("NODE") && !keyword.StartsWith("EL."))
             {
               foundStreamId = GSAObject.GetSidTagValue(keyword, index, SID_STRID_TAG);
             }
@@ -265,7 +265,7 @@ namespace SpeckleGSAProxy
           if (string.IsNullOrEmpty(foundApplicationId))
           {
             //Again, the same optimisation as explained above
-            if (!keyword.Contains("NODE"))
+            if (!keyword.Contains("NODE") && !keyword.StartsWith("EL."))
             {
               foundApplicationId = GSAObject.GetSidTagValue(keyword, index, SID_APPID_TAG);
             }
