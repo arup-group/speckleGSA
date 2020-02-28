@@ -145,6 +145,7 @@
                 x:Name="SenderContinuousToggle"
                 Margin="5"
                 Content="Streaming Method:"
+							  IsChecked="True"
                 Style="{StaticResource ContinuousSingleToggle}"/>
             </StackPanel>
             <materialDesign:Card Grid.Row="4" Margin="5">
@@ -213,6 +214,7 @@
               <ToggleButton
                 x:Name="ReceiverContinuousToggle"
                 Margin="5"
+								IsChecked="true"
                 Content="Streaming Method:"
                 Style="{StaticResource ContinuousSingleToggle}"/>
             </StackPanel>

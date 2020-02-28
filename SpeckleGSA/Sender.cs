@@ -229,8 +229,6 @@ namespace SpeckleGSA
         Senders[kvp.Key].SendGSAObjects(kvp.Value);
       }
 
-			//GSA.Interfacer.PostSending();
-
 			IsBusy = false;
       Status.ChangeStatus("Finished sending", 100);
     }
