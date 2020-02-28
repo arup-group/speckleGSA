@@ -55,6 +55,7 @@ namespace SpeckleGSAProxy.Test
       //Check cache to see if object have been merged correctly and no extraneous calls to GSA is created
       var latestGwaAfter2 = new List<string>(records.Where(r => r.Latest).Select(r => r.Gwa));
       var diff = latestGwaAfter2.Where(a2 => !latestGwaAfter1.Any(a1 => string.Equals(a1, a2, StringComparison.InvariantCultureIgnoreCase))).ToList();
+      records = ((IGSACacheForTesting)GSA.gsaCache).Records;
       Assert.AreEqual(100, records.Where(r => r.Latest).Count());
       Assert.AreEqual(110, records.Count());
 
@@ -115,6 +116,7 @@ namespace SpeckleGSAProxy.Test
       receiver.Trigger(null, null);
 
       //Check the other streams aren't affected by only having some active
+      records = ((IGSACacheForTesting)GSA.gsaCache).Records;
       Assert.AreEqual(98, records.Where(r => r.Latest).Count());
       //-------
 
