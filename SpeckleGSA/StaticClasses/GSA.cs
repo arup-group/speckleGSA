@@ -144,7 +144,10 @@ namespace SpeckleGSA
 
 			gsaProxy.NewFile(showWindow);
 
-			GetSpeckleClients(emailAddress, serverAddress);
+      if (emailAddress != null && serverAddress != null)
+      {
+        GetSpeckleClients(emailAddress, serverAddress);
+      }
 
       Status.AddMessage("Created new file.");
     }
@@ -160,7 +163,10 @@ namespace SpeckleGSA
 			if (!IsInit) return;
 
 			gsaProxy.OpenFile(path, showWindow);
-			GetSpeckleClients(emailAddress, serverAddress);
+      if (emailAddress != null && serverAddress != null)
+      {
+        GetSpeckleClients(emailAddress, serverAddress);
+      }
 
 			Status.AddMessage("Opened new file.");
     }

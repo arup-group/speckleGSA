@@ -44,6 +44,9 @@ namespace SpeckleGSAUI
 
     private int previousTabIndex;
 
+    private bool FileOpened;
+    private bool LoggedIn => (!string.IsNullOrEmpty(EmailAddress) && !string.IsNullOrEmpty(RestApi));
+
     public MainWindow()
     {
       InitializeComponent();
@@ -160,12 +163,11 @@ namespace SpeckleGSAUI
 
         Status.AddMessage("Login successful");
 
-        GSA.Close();
-        (SenderTab.Content as Grid).IsEnabled = false;
-        (ReceiverTab.Content as Grid).IsEnabled = false;
         EmailAddress = account.Email;
         RestApi = account.RestApi;
         ApiToken = account.Token;
+        (SenderTab.Content as Grid).IsEnabled = FileOpened && LoggedIn;
+        (ReceiverTab.Content as Grid).IsEnabled = FileOpened && LoggedIn;
         UpdateClientLists();
       }
       else
@@ -217,13 +219,14 @@ namespace SpeckleGSAUI
           {
             try
             {
+              FileOpened = true;
               Application.Current.Dispatcher.BeginInvoke(
                         DispatcherPriority.Background,
                         new Action(() =>
                         {
                           UpdateClientLists();
-                          (SenderTab.Content as Grid).IsEnabled = true;
-                          (ReceiverTab.Content as Grid).IsEnabled = true;
+                          (SenderTab.Content as Grid).IsEnabled = FileOpened && LoggedIn;
+                          (ReceiverTab.Content as Grid).IsEnabled = FileOpened && LoggedIn;
                           Status.ChangeStatus("Ready", 0);
                         }
                         ));
@@ -249,13 +252,14 @@ namespace SpeckleGSAUI
             {
               try
               {
+                FileOpened = true;
                 Application.Current.Dispatcher.BeginInvoke(
                   DispatcherPriority.Background,
                   new Action(() =>
                   {
                     UpdateClientLists();
-                    (SenderTab.Content as Grid).IsEnabled = true;
-                    (ReceiverTab.Content as Grid).IsEnabled = true;
+                    (SenderTab.Content as Grid).IsEnabled = FileOpened && LoggedIn;
+                    (ReceiverTab.Content as Grid).IsEnabled = FileOpened && LoggedIn;
                     Status.ChangeStatus("Ready", 0);
                   }
                   ));
@@ -281,29 +285,34 @@ namespace SpeckleGSAUI
 
       if (status == UIStatus.IDLE)
       {
+        Status.AddMessage("Preparing to send ...");
+        Application.Current.DoEvents();
+
         status = UIStatus.BUSY;
         SendButtonPath.Data = Geometry.Parse(PAUSE_BUTTON);
         SendButtonPath.Fill = Brushes.DimGray;
 
-        if (GSA.Settings.NodalResults.Count > 0 || GSA.Settings.Element1DResults.Count > 0 
-					|| GSA.Settings.Element2DResults.Count > 0 || GSA.Settings.MiscResults.Count > 0)
+        if (GSA.Settings.NodalResults.Count > 0 || GSA.Settings.Element1DResults.Count > 0
+          || GSA.Settings.Element2DResults.Count > 0 || GSA.Settings.MiscResults.Count > 0)
         {
-					//SenderLayerToggle is a boolean toggle, where zero is design layer
-					if (!SenderLayerToggle.IsChecked.Value)
+          //SenderLayerToggle is a boolean toggle, where zero is design layer
+          if (!SenderLayerToggle.IsChecked.Value)
           {
             MessageBox.Show("Results only supported for analysis layer.\r\nNo results will be sent.", "SpeckleGSA", MessageBoxButton.OK, MessageBoxImage.Warning);
-						GSA.Settings.SendResults = false;
+            GSA.Settings.SendResults = false;
           }
           else if (!SenderContinuousToggle.IsChecked.Value)
           {
             MessageBox.Show("Results only supported for single send mode.\r\nNo results will be sent.", "SpeckleGSA", MessageBoxButton.OK, MessageBoxImage.Warning);
-						GSA.Settings.SendResults = false;
+            GSA.Settings.SendResults = false;
           }
           else
-						GSA.Settings.SendResults = true;
+            GSA.Settings.SendResults = true;
         }
         else
-					GSA.Settings.SendResults = false;
+        {
+          GSA.Settings.SendResults = false;
+        }
 
         if (SenderLayerToggle.IsChecked.Value)
         {
@@ -315,6 +324,9 @@ namespace SpeckleGSAUI
 				}
         SenderLayerToggle.IsEnabled = false;
         SenderContinuousToggle.IsEnabled = false;
+
+        SenderButton.IsEnabled = false;
+        Application.Current.DoEvents();
 
         try
         {
@@ -362,6 +374,7 @@ namespace SpeckleGSAUI
 
           SendButtonPath.Fill = (SolidColorBrush)FindResource("SecondaryAccentBrush");// (new BrushConverter().ConvertFrom("#0080ff"));
         }
+        SenderButton.IsEnabled = true;
       }
       else if (status == UIStatus.SENDING)
       {
@@ -454,6 +467,9 @@ namespace SpeckleGSAUI
 
       if (status == UIStatus.IDLE)
       {
+        Status.AddMessage("Preparing to receive ...");
+        Application.Current.DoEvents();
+
         status = UIStatus.BUSY;
         ReceiveButtonPath.Data = Geometry.Parse(PAUSE_BUTTON);
         ReceiveButtonPath.Fill = Brushes.DimGray;
@@ -470,6 +486,9 @@ namespace SpeckleGSAUI
         ReceiverLayerToggle.IsEnabled = false;
         ReceiverContinuousToggle.IsEnabled = false;
         ReceiverControlPanel.IsEnabled = false;
+        ReceiveButton.IsEnabled = false;
+
+        Application.Current.DoEvents();
 
         GSA.GetSpeckleClients(EmailAddress, RestApi);
         gsaReceiver = new Receiver();
@@ -533,6 +552,7 @@ namespace SpeckleGSAUI
           }
           ReceiveButtonPath.Fill = (SolidColorBrush)FindResource("SecondaryAccentBrush");// (SolidColorBrush)(new BrushConverter().ConvertFrom("#0080ff"));
         }
+        ReceiveButton.IsEnabled = true;
       }
       else if (status == UIStatus.RECEIVING)
       {
