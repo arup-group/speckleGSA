@@ -331,9 +331,16 @@ namespace SpeckleGSAUI
         try
         {
           GSA.GetSpeckleClients(EmailAddress, RestApi);
+          if (!GSA.SetSpeckleClients(EmailAddress, RestApi))
+          {
+            Status.AddError("Error in communicating GSA - please check if the GSA file has been closed down");
+            status = UIStatus.SENDING;
+            SendStream(sender, e);
+            return;
+          }
+
           gsaSender = new Sender();
-          await gsaSender.Initialize(RestApi, ApiToken);
-          GSA.SetSpeckleClients(EmailAddress, RestApi);
+          var statusMessages = await gsaSender.Initialize(RestApi, ApiToken);
         }
         catch (Exception ex)
         {
@@ -374,7 +381,6 @@ namespace SpeckleGSAUI
 
           SendButtonPath.Fill = (SolidColorBrush)FindResource("SecondaryAccentBrush");// (new BrushConverter().ConvertFrom("#0080ff"));
         }
-        SenderButton.IsEnabled = true;
       }
       else if (status == UIStatus.SENDING)
       {
@@ -385,6 +391,7 @@ namespace SpeckleGSAUI
 
         SenderLayerToggle.IsEnabled = true;
         SenderContinuousToggle.IsEnabled = true;
+        SenderButton.IsEnabled = true;
       }
     }
 
@@ -422,7 +429,11 @@ namespace SpeckleGSAUI
       if (ReceiverTextbox.Text != "")
       {
         GSA.Receivers.Add(new Tuple<string, string>(ReceiverTextbox.Text, null));
-        GSA.SetSpeckleClients(EmailAddress, RestApi);
+        if (!GSA.SetSpeckleClients(EmailAddress, RestApi))
+        {
+          Status.AddError("Error in communicating GSA - please check if the GSA file has been closed down");
+          return;
+        }
         UpdateClientLists();
 
         ReceiverTextbox.Clear();
@@ -437,9 +448,14 @@ namespace SpeckleGSAUI
       string[] paste = Clipboard.GetText(TextDataFormat.Text).Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
 
       foreach (string p in paste)
+      {
         GSA.Receivers.Add(new Tuple<string, string>(p, null));
-
-      GSA.SetSpeckleClients(EmailAddress, RestApi);
+      }
+      if (!GSA.SetSpeckleClients(EmailAddress, RestApi))
+      {
+        Status.AddError("Error in communicating GSA - please check if the GSA file has been closed down");
+        return;
+      }
       UpdateClientLists();
     }
 
@@ -449,7 +465,11 @@ namespace SpeckleGSAUI
     private void ClearReceiver(object sender, RoutedEventArgs e)
     {
       GSA.Receivers.Clear();
-      GSA.SetSpeckleClients(EmailAddress, RestApi);
+      if (!GSA.SetSpeckleClients(EmailAddress, RestApi))
+      {
+        Status.AddError("Error in communicating GSA - please check if the GSA file has been closed down");
+        return;
+      }
 
       UpdateClientLists();
     }
@@ -491,6 +511,14 @@ namespace SpeckleGSAUI
         Application.Current.DoEvents();
 
         GSA.GetSpeckleClients(EmailAddress, RestApi);
+        if (!GSA.SetSpeckleClients(EmailAddress, RestApi))
+        {
+          Status.AddError("Error in communicating GSA - please check if the GSA file has been closed down");
+          status = UIStatus.RECEIVING;
+          ReceiveStream(sender, e);
+          return;
+        }
+
         gsaReceiver = new Receiver();
         try
         {
@@ -512,7 +540,6 @@ namespace SpeckleGSAUI
           return;
         }
 
-				GSA.SetSpeckleClients(EmailAddress, RestApi);
         status = UIStatus.RECEIVING;
         if (ReceiverContinuousToggle.IsChecked.Value)
         {
@@ -552,7 +579,6 @@ namespace SpeckleGSAUI
           }
           ReceiveButtonPath.Fill = (SolidColorBrush)FindResource("SecondaryAccentBrush");// (SolidColorBrush)(new BrushConverter().ConvertFrom("#0080ff"));
         }
-        ReceiveButton.IsEnabled = true;
       }
       else if (status == UIStatus.RECEIVING)
       {
@@ -575,6 +601,7 @@ namespace SpeckleGSAUI
 
         gsaReceiver.Dispose();
       }
+      ReceiveButton.IsEnabled = true;
     }
     #endregion
 
@@ -925,7 +952,11 @@ namespace SpeckleGSAUI
       if (streamID.GetType() == typeof(string))
       {
         GSA.Receivers.Remove(GSA.Receivers.First(x => x.Item1 == (string)streamID));
-        GSA.SetSpeckleClients(EmailAddress, RestApi);
+        if (!GSA.SetSpeckleClients(EmailAddress, RestApi))
+        {
+          Status.AddError("Error in communicating GSA - please check if the GSA file has been closed down");
+          return;
+        }
         UpdateClientLists();
       }
     }

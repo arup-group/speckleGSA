@@ -699,9 +699,17 @@ namespace SpeckleGSAProxy
     /// </summary>
     /// <param name="emailAddress">User email address</param>
     /// <param name="serverAddress">Speckle server address</param>
-    public void SetTopLevelSid(string sidRecord)
+    public bool SetTopLevelSid(string sidRecord)
     {
-      GSAObject.GwaCommand("SET\tSID\t" + sidRecord);
+      try
+      {
+        GSAObject.GwaCommand("SET\tSID\t" + sidRecord);
+        return true;
+      }
+      catch
+      {
+        return false;
+      }
     }
     #endregion
 
@@ -737,17 +745,33 @@ namespace SpeckleGSAProxy
     /// <summary>
     /// Update GSA viewer. This should be called at the end of changes.
     /// </summary>
-    public void UpdateViews()
+    public bool UpdateViews()
     {
-      GSAObject.UpdateViews();
+      try
+      {
+        GSAObject.UpdateViews();
+        return true;
+      }
+      catch
+      {
+        return false;
+      }
     }
 
     /// <summary>
     /// Update GSA case and task links. This should be called at the end of changes.
     /// </summary>
-    public void UpdateCasesAndTasks()
+    public bool UpdateCasesAndTasks()
     {
-      GSAObject.ReindexCasesAndTasks();
+      try
+      {
+        GSAObject.ReindexCasesAndTasks();
+        return true;
+      }
+      catch
+      {
+        return false;
+      }
     }
 
     public string GetTopLevelSid()
