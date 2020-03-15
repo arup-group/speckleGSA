@@ -190,7 +190,7 @@ namespace SpeckleGSA
     /// </summary>
     /// <param name="emailAddress">User email address</param>
     /// <param name="serverAddress">Speckle server address</param>
-    public static void GetSpeckleClients(string emailAddress, string serverAddress)
+    public static bool GetSpeckleClients(string emailAddress, string serverAddress)
     {
       Senders.Clear();
       Receivers.Clear();
@@ -202,7 +202,9 @@ namespace SpeckleGSA
         string res = gsaProxy.GetTopLevelSid();
 
         if (res == "")
-          return;
+        {
+          return true;
+        }
 
         List<string[]> sids = Regex.Matches(res, @"(?<={).*?(?=})").Cast<Match>()
                 .Select(m => m.Value.Split(new char[] { ':' }))
@@ -227,13 +229,14 @@ namespace SpeckleGSA
           for (int i = 0; i < receivers.Length; i += 2)
             Receivers.Add(new Tuple<string, string>(receivers[i], receivers[i + 1]));
         }
+        return true;
       }
       catch
       {
         // If fail to read, clear client SIDs
         Senders.Clear();
         Receivers.Clear();
-        SetSpeckleClients(emailAddress, serverAddress);
+        return SetSpeckleClients(emailAddress, serverAddress);
       }
     }
 
@@ -242,7 +245,7 @@ namespace SpeckleGSA
     /// </summary>
     /// <param name="emailAddress">User email address</param>
     /// <param name="serverAddress">Speckle server address</param>
-    public static void SetSpeckleClients(string emailAddress, string serverAddress)
+    public static bool SetSpeckleClients(string emailAddress, string serverAddress)
     {
       string key = emailAddress + "&" + serverAddress.Replace(':', '&');
 			string res = gsaProxy.GetTopLevelSid();
@@ -276,7 +279,7 @@ namespace SpeckleGSA
       foreach (string[] s in sids)
         sidRecord += "{" + s[0] + ":" + s[1] + "}";
 
-			gsaProxy.SetTopLevelSid(sidRecord);
+      return gsaProxy.SetTopLevelSid(sidRecord);
     }
     #endregion
 

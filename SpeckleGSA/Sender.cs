@@ -63,9 +63,15 @@ namespace SpeckleGSA
 
       Status.ChangeStatus("Reading GSA data into cache");
 
-      var numRowsupdated = await UpdateCache(keywords);
+      int numRowsUpdated = 0;
+      var updatedCache = await Task.Run(() => UpdateCache(keywords, out numRowsUpdated));
+      if (!updatedCache)
+      {
+        Status.AddError("Error in communicating GSA - please check if the GSA file has been closed down");
+        return statusMessages;
+      }
 
-      Status.AddMessage("Read " + numRowsupdated + " GWA lines across " + keywords.Count() + " keywords into cache");
+      Status.AddMessage("Read " + numRowsUpdated + " GWA lines across " + keywords.Count() + " keywords into cache");
 
       // Grab GSA interface type
       var interfaceType = typeof(IGSASpeckleContainer);
@@ -250,24 +256,34 @@ namespace SpeckleGSA
       return keywords;
     }
 
-    private Task<int> UpdateCache(List<string> keywords)
+    private bool UpdateCache(List<string> keywords, out int numUpdated)
     {
       GSA.gsaCache.Clear();
-      var data = GSA.gsaProxy.GetGwaData(keywords);
-      for (int i = 0; i < data.Count(); i++)
+      try
       {
-        GSA.gsaCache.Upsert(
-          data[i].Keyword,
-          data[i].Index,
-          data[i].GwaWithoutSet,
-          streamId: data[i].StreamId,
-          //This needs to be revised as this logic is in the kit too
-          applicationId: (string.IsNullOrEmpty(data[i].ApplicationId))
-            ? ("gsa/" + data[i].Keyword + "_" + data[i].Index.ToString())
-            : data[i].ApplicationId,
-          gwaSetCommandType: data[i].GwaSetType);
+        var data = GSA.gsaProxy.GetGwaData(keywords);
+        for (int i = 0; i < data.Count(); i++)
+        {
+          GSA.gsaCache.Upsert(
+            data[i].Keyword,
+            data[i].Index,
+            data[i].GwaWithoutSet,
+            streamId: data[i].StreamId,
+            //This needs to be revised as this logic is in the kit too
+            applicationId: (string.IsNullOrEmpty(data[i].ApplicationId))
+              ? ("gsa/" + data[i].Keyword + "_" + data[i].Index.ToString())
+              : data[i].ApplicationId,
+            gwaSetCommandType: data[i].GwaSetType);
+        }
+        numUpdated = data.Count();
+        return true;
       }
-      return Task.FromResult(data.Count());
+      catch
+      {
+        numUpdated = 0;
+        return false;
+      }
+
     }
   }
 }
