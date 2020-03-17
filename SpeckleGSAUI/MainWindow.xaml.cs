@@ -285,34 +285,46 @@ namespace SpeckleGSAUI
 
       if (status == UIStatus.IDLE)
       {
-        Status.AddMessage("Preparing to send ...");
-        Application.Current.DoEvents();
-
-        status = UIStatus.BUSY;
-        SendButtonPath.Data = Geometry.Parse(PAUSE_BUTTON);
-        SendButtonPath.Fill = Brushes.DimGray;
-
         if (GSA.Settings.NodalResults.Count > 0 || GSA.Settings.Element1DResults.Count > 0
           || GSA.Settings.Element2DResults.Count > 0 || GSA.Settings.MiscResults.Count > 0)
         {
           //SenderLayerToggle is a boolean toggle, where zero is design layer
           if (!SenderLayerToggle.IsChecked.Value)
           {
-            MessageBox.Show("Results only supported for analysis layer.\r\nNo results will be sent.", "SpeckleGSA", MessageBoxButton.OK, MessageBoxImage.Warning);
+            var dialogResult = MessageBox.Show("Results only supported for analysis layer.\r\nNo results will be sent.  Do you still wish to proceed?", 
+              "SpeckleGSA", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (dialogResult == MessageBoxResult.No)
+            {
+              return;
+            }
             GSA.Settings.SendResults = false;
           }
           else if (!SenderContinuousToggle.IsChecked.Value)
           {
-            MessageBox.Show("Results only supported for single send mode.\r\nNo results will be sent.", "SpeckleGSA", MessageBoxButton.OK, MessageBoxImage.Warning);
+            var dialogResult = MessageBox.Show("Results only supported for single send mode.\r\nNo results will be sent.  Do you still wish to proceed?", 
+              "SpeckleGSA", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (dialogResult == MessageBoxResult.No)
+            {
+              return;
+            }
             GSA.Settings.SendResults = false;
           }
           else
+          {
             GSA.Settings.SendResults = true;
+          }
         }
         else
         {
           GSA.Settings.SendResults = false;
         }
+
+        Status.AddMessage("Preparing to send ...");
+        Application.Current.DoEvents();
+
+        status = UIStatus.BUSY;
+        SendButtonPath.Data = Geometry.Parse(PAUSE_BUTTON);
+        SendButtonPath.Fill = Brushes.DimGray;
 
         if (SenderLayerToggle.IsChecked.Value)
         {
