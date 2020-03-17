@@ -80,6 +80,7 @@ namespace SpeckleGSAProxy
     {
       recordsByKeyword.Clear();
       applicationIdLookup.Clear();
+      provisionals.Clear();
     }
 
     //For testing
@@ -107,7 +108,7 @@ namespace SpeckleGSAProxy
       return Upsert(keyword, index, gwaWithoutSet, applicationId, null, gwaSetCommandType, streamId: streamId);
     }
 
-    //Not every record as stream IDs (like generated nodes)
+    //Not every record has stream IDs (like generated nodes)
     public bool Upsert(string keyword, int index, string gwa, string applicationId = "", SpeckleObject so = null, GwaSetCommandType gwaSetCommandType = GwaSetCommandType.Set, bool? latest = true, string streamId = null)
     {
       if (!recordsByKeyword.ContainsKey(keyword))
@@ -302,6 +303,8 @@ namespace SpeckleGSAProxy
     public List<Tuple<string, int, string, GwaSetCommandType>> GetExpiredData()
     {
       var matchingRecords = records.Where(r => IsAlterable(r.Keyword, r.ApplicationId) && r.Previous == true && r.Latest == false).ToList();
+      //Order by index as for some keywords (like LOAD_2D_FACE.2) the records do actually move indices when one is deleted
+      matchingRecords = matchingRecords.OrderByDescending(r => r.Index).ToList();
       var returnData = new List<Tuple<string, int, string, GwaSetCommandType>>();
 
       for (int i = 0; i < matchingRecords.Count(); i++)
@@ -384,9 +387,9 @@ namespace SpeckleGSAProxy
     private bool FindProvisionalIndex(string keyword, string applicationId, out int? provisionalIndex)
     {
       provisionalIndex = null;
-      if (provisionals.ContainsKey(keyword))
+      if (applicationId != null && provisionals.ContainsKey(keyword))
       {
-        var matching = provisionals[keyword].Where(kvp => kvp.Value.Equals(applicationId));
+        var matching = provisionals[keyword].Where(kvp => kvp.Value != null && kvp.Value.Equals(applicationId));
         if (matching.Count() > 0)
         {
           provisionalIndex = matching.First().Key;
