@@ -19,6 +19,7 @@ namespace SpeckleGSA
     public static ISpeckleObjectMerger Merger = new SpeckleObjectMerger();
     public static IGSAProxy gsaProxy = new GSAProxy();
     public static IGSACache gsaCache = new GSACache();
+    public static ISpeckleGSAAppUI appUi = new SpeckleAppUI();
 
     public static bool IsInit;
 
@@ -80,25 +81,34 @@ namespace SpeckleGSA
 			{
 				var types = ass.GetTypes();
 
+        Type gsaStatic;
 				try
 				{
-					var gsaStatic = types.FirstOrDefault(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer)) && t.GetProperties().Any(p => p.PropertyType == typeof(IGSACacheForKit)));
+					gsaStatic = types.FirstOrDefault(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer)) && t.GetProperties().Any(p => p.PropertyType == typeof(IGSACacheForKit)));
 					if (gsaStatic == null)
 					{
 						continue;
 					}
-
-					gsaStatic.GetProperty("Interface").SetValue(null, gsaProxy);
-					gsaStatic.GetProperty("Settings").SetValue(null, Settings);
-          gsaStatic.GetProperty("Cache").SetValue(null, gsaCache);
-
         }
-				catch(Exception e)
+				catch
 				{
 					//The kits could throw an exception due to an app-specific library not being linked in (e.g.: the Revit SDK).  These libraries aren't of the kind that
 					//would contain the static properties searched for anyway, so just continue.
 					continue;
 				}
+
+        try
+        {
+          gsaStatic.GetProperty("Interface").SetValue(null, gsaProxy);
+          gsaStatic.GetProperty("Settings").SetValue(null, Settings);
+          gsaStatic.GetProperty("Cache").SetValue(null, gsaCache);
+          gsaStatic.GetProperty("AppUI").SetValue(null, appUi);
+        }
+        catch
+        {
+          Status.AddError($"Unable to fully connect to {ass.GetName().Name}.dll. Please check the versions of the kit you have installed.");
+        }
+
 
         var objTypes = types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType).ToList();
         objTypes = objTypes.Distinct().ToList();
