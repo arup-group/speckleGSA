@@ -349,10 +349,21 @@
           Grid.Row="1"
           x:Name="MessagePane"
           Height="100"
+					KeyDown="MessagePane_KeyDown"
+					SelectionMode="Extended"
           Background="{DynamicResource MaterialDesignPaper}">
 					<ListBox.Resources>
 						<DataTemplate x:Key="MessageItem">
-							<Label x:Name="MessageLine" Margin="0" Padding="0"  Content="{Binding}"/>
+							<!--<Label x:Name="MessageLine" Margin="0" Padding="0"  Content="{Binding}"/>-->
+							<TextBox x:Name="MessageLine" Text="{Binding}">
+								<TextBox.Style>
+									<Style TargetType="TextBox">
+										<Setter Property="IsReadOnly" Value="True" />
+										<Setter Property="BorderThickness" Value="0" />
+										<Setter Property="TextWrapping" Value="Wrap" />
+									</Style>
+								</TextBox.Style>
+							</TextBox>
 						</DataTemplate>
 					</ListBox.Resources>
 				</ListBox>

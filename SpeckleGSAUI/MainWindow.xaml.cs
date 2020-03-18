@@ -14,6 +14,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
+using SpeckleGSAProxy;
 
 namespace SpeckleGSAUI
 {
@@ -78,48 +79,48 @@ namespace SpeckleGSAUI
       //Result List
       foreach (string s in Result.NodalResultMap.Keys)
       {
-				CheckBox chk = new CheckBox
-				{
-					Content = s,
-					Tag = Result.NodalResultMap[s]
-				};
-				chk.Checked += UpdateNodalResult;
+        CheckBox chk = new CheckBox
+        {
+          Content = s,
+          Tag = Result.NodalResultMap[s]
+        };
+        chk.Checked += UpdateNodalResult;
         chk.Unchecked += UpdateNodalResult;
         ResultSelection.Children.Add(chk);
       }
 
       foreach (string s in Result.Element1DResultMap.Keys)
       {
-				CheckBox chk = new CheckBox
-				{
-					Content = s,
-					Tag = Result.Element1DResultMap[s]
-				};
-				chk.Checked += UpdateElement1DResult;
+        CheckBox chk = new CheckBox
+        {
+          Content = s,
+          Tag = Result.Element1DResultMap[s]
+        };
+        chk.Checked += UpdateElement1DResult;
         chk.Unchecked += UpdateElement1DResult;
         ResultSelection.Children.Add(chk);
       }
 
       foreach (string s in Result.Element2DResultMap.Keys)
       {
-				CheckBox chk = new CheckBox
-				{
-					Content = s,
-					Tag = Result.Element2DResultMap[s]
-				};
-				chk.Checked += UpdateElement2DResult;
+        CheckBox chk = new CheckBox
+        {
+          Content = s,
+          Tag = Result.Element2DResultMap[s]
+        };
+        chk.Checked += UpdateElement2DResult;
         chk.Unchecked += UpdateElement2DResult;
         ResultSelection.Children.Add(chk);
       }
 
       foreach (string s in Result.MiscResultMap.Keys)
       {
-				CheckBox chk = new CheckBox
-				{
-					Content = s,
-					Tag = Result.MiscResultMap[s]
-				};
-				chk.Checked += UpdateMiscResult;
+        CheckBox chk = new CheckBox
+        {
+          Content = s,
+          Tag = Result.MiscResultMap[s]
+        };
+        chk.Checked += UpdateMiscResult;
         chk.Unchecked += UpdateMiscResult;
         ResultSelection.Children.Add(chk);
       }
@@ -130,8 +131,9 @@ namespace SpeckleGSAUI
       ReceiveButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
       ReceiveButtonPath.Fill = (SolidColorBrush)FindResource("PrimaryHueMidBrush");
 
-      GSA.Init();
       Status.Init(this.AddMessage, this.AddError, this.ChangeStatus);
+      GSA.Init();
+//      Status.Init(this.AddMessage, this.AddError, this.ChangeStatus);
       MessagePane.ItemsSource = Messages;
 
       SpeckleCore.SpeckleInitializer.Initialize();
@@ -146,15 +148,15 @@ namespace SpeckleGSAUI
     {
       var signInWindow = new SpecklePopup.SignInWindow(true);
 
-			var helper = new System.Windows.Interop.WindowInteropHelper(signInWindow)
-			{
-				Owner = new System.Windows.Interop.WindowInteropHelper(this).Handle
-			};
+      var helper = new System.Windows.Interop.WindowInteropHelper(signInWindow)
+      {
+        Owner = new System.Windows.Interop.WindowInteropHelper(this).Handle
+      };
 
-			this.IsEnabled = false;
+      this.IsEnabled = false;
 
       signInWindow.ShowDialog();
-      
+
       this.IsEnabled = true;
 
       if (signInWindow.AccountListBox.SelectedIndex != -1)
@@ -291,7 +293,7 @@ namespace SpeckleGSAUI
           //SenderLayerToggle is a boolean toggle, where zero is design layer
           if (!SenderLayerToggle.IsChecked.Value)
           {
-            var dialogResult = MessageBox.Show("Results only supported for analysis layer.\r\nNo results will be sent.  Do you still wish to proceed?", 
+            var dialogResult = MessageBox.Show("Results only supported for analysis layer.\r\nNo results will be sent.  Do you still wish to proceed?",
               "SpeckleGSA", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (dialogResult == MessageBoxResult.No)
             {
@@ -301,7 +303,7 @@ namespace SpeckleGSAUI
           }
           else if (!SenderContinuousToggle.IsChecked.Value)
           {
-            var dialogResult = MessageBox.Show("Results only supported for single send mode.\r\nNo results will be sent.  Do you still wish to proceed?", 
+            var dialogResult = MessageBox.Show("Results only supported for single send mode.\r\nNo results will be sent.  Do you still wish to proceed?",
               "SpeckleGSA", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (dialogResult == MessageBoxResult.No)
             {
@@ -328,12 +330,12 @@ namespace SpeckleGSAUI
 
         if (SenderLayerToggle.IsChecked.Value)
         {
-					GSA.Settings.TargetLayer = GSATargetLayer.Analysis;
-				}
+          GSA.Settings.TargetLayer = GSATargetLayer.Analysis;
+        }
         else
         {
-					GSA.Settings.TargetLayer = GSATargetLayer.Design;
-				}
+          GSA.Settings.TargetLayer = GSATargetLayer.Design;
+        }
         SenderLayerToggle.IsEnabled = false;
         SenderContinuousToggle.IsEnabled = false;
 
@@ -508,13 +510,13 @@ namespace SpeckleGSAUI
 
         if (ReceiverLayerToggle.IsChecked.Value)
         {
-					GSA.Settings.TargetLayer = GSATargetLayer.Analysis;
-				}
+          GSA.Settings.TargetLayer = GSATargetLayer.Analysis;
+        }
         else
         {
 
-					GSA.Settings.TargetLayer = GSATargetLayer.Design;
-				}
+          GSA.Settings.TargetLayer = GSATargetLayer.Design;
+        }
         ReceiverLayerToggle.IsEnabled = false;
         ReceiverContinuousToggle.IsEnabled = false;
         ReceiverControlPanel.IsEnabled = false;
@@ -546,7 +548,7 @@ namespace SpeckleGSAUI
            });
           await gsaReceiver.Initialize(RestApi, ApiToken);
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
           Status.AddError(ex.Message);
           return;
@@ -557,7 +559,14 @@ namespace SpeckleGSAUI
         {
           try
           {
-            await Task.Run(() => gsaReceiver.Trigger(null, null))
+            await Task.Run(() =>
+            {
+              gsaReceiver.Trigger(null, null);
+              foreach (var m in ((SpeckleAppUI)GSA.appUi).GroupMessages())
+              {
+                Status.AddMessage(m);
+              }
+            })
               .ContinueWith(res =>
               {
                 Application.Current.Dispatcher.BeginInvoke(
@@ -575,7 +584,6 @@ namespace SpeckleGSAUI
 
             ReceiveStream(sender, e);
           }
-
         }
         else
         {
@@ -747,14 +755,14 @@ namespace SpeckleGSAUI
           propertyName = (sender as CheckBox).Name;
           propertyValue = (sender as CheckBox).IsChecked;
 
-					GSA.Settings.SetFieldOrPropValue(propertyName, propertyValue);
-				}
+          GSA.Settings.SetFieldOrPropValue(propertyName, propertyValue);
+        }
         else if (sender is TextBox)
         {
           propertyName = (sender as TextBox).Name;
           propertyValue = (sender as TextBox).Text;
 
-					GSA.Settings.SetFieldOrPropValue(propertyName, propertyValue);
+          GSA.Settings.SetFieldOrPropValue(propertyName, propertyValue);
         }
       }
       catch (Exception exception)
@@ -765,36 +773,36 @@ namespace SpeckleGSAUI
     {
       var chk = sender as CheckBox;
       if (chk.IsChecked.Value)
-				GSA.Settings.NodalResults[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
+        GSA.Settings.NodalResults[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
       else
-				GSA.Settings.NodalResults.Remove(chk.Content as string);
+        GSA.Settings.NodalResults.Remove(chk.Content as string);
     }
 
     private void UpdateElement1DResult(Object sender, RoutedEventArgs e)
     {
       var chk = sender as CheckBox;
       if (chk.IsChecked.Value)
-				GSA.Settings.Element1DResults[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
+        GSA.Settings.Element1DResults[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
       else
-				GSA.Settings.Element1DResults.Remove(chk.Content as string);
+        GSA.Settings.Element1DResults.Remove(chk.Content as string);
     }
 
     private void UpdateElement2DResult(Object sender, RoutedEventArgs e)
     {
       var chk = sender as CheckBox;
       if (chk.IsChecked.Value)
-				GSA.Settings.Element2DResults[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
+        GSA.Settings.Element2DResults[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
       else
-				GSA.Settings.Element2DResults.Remove(chk.Content as string);
+        GSA.Settings.Element2DResults.Remove(chk.Content as string);
     }
 
     private void UpdateMiscResult(Object sender, RoutedEventArgs e)
     {
       var chk = sender as CheckBox;
       if (chk.IsChecked.Value)
-				GSA.Settings.MiscResults[chk.Content as string] = chk.Tag as Tuple<string, int, int, List<string>>;
+        GSA.Settings.MiscResults[chk.Content as string] = chk.Tag as Tuple<string, int, int, List<string>>;
       else
-				GSA.Settings.MiscResults.Remove(chk.Content as string);
+        GSA.Settings.MiscResults.Remove(chk.Content as string);
     }
 
     private void StreamList_CopyStreamID(object sender, RoutedEventArgs e)
@@ -815,7 +823,7 @@ namespace SpeckleGSAUI
       {
         string streamID = (cell as Tuple<string, string>).Item2;
         string url = RestApi.Split(new string[] { "api" }, StringSplitOptions.RemoveEmptyEntries)[0];
-				Process.Start(url + @"#/view/" + streamID);
+        Process.Start(url + @"#/view/" + streamID);
       }
     }
 
@@ -826,7 +834,7 @@ namespace SpeckleGSAUI
       if (cell.GetType() == typeof(Tuple<string, string>))
       {
         string streamID = (cell as Tuple<string, string>).Item2;
-				Process.Start(RestApi + @"/streams/" + streamID);
+        Process.Start(RestApi + @"/streams/" + streamID);
       }
     }
 
@@ -837,7 +845,7 @@ namespace SpeckleGSAUI
       if (cell.GetType() == typeof(Tuple<string, string>))
       {
         string streamID = (cell as Tuple<string, string>).Item2;
-				Process.Start(RestApi + @"/streams/" + streamID + @"/objects?omit=displayValue,base64");
+        Process.Start(RestApi + @"/streams/" + streamID + @"/objects?omit=displayValue,base64");
       }
     }
 
@@ -859,7 +867,7 @@ namespace SpeckleGSAUI
       {
         string streamID = (cell as Tuple<string, string>).Item2;
         string url = RestApi.Split(new string[] { "api" }, StringSplitOptions.RemoveEmptyEntries)[0];
-				Process.Start(url + @"#/view/" + streamID);
+        Process.Start(url + @"#/view/" + streamID);
       }
     }
 
@@ -870,7 +878,7 @@ namespace SpeckleGSAUI
       if (cell.GetType() == typeof(Tuple<string, string>))
       {
         string streamID = (cell as Tuple<string, string>).Item2;
-				Process.Start(RestApi + @"/streams/" + streamID);
+        Process.Start(RestApi + @"/streams/" + streamID);
       }
     }
 
@@ -881,7 +889,7 @@ namespace SpeckleGSAUI
       if (cell.GetType() == typeof(Tuple<string, string>))
       {
         string streamID = (cell as Tuple<string, string>).Item2;
-				Process.Start(RestApi + @"/streams/" + streamID + @"/objects?omit=displayValue,base64");
+        Process.Start(RestApi + @"/streams/" + streamID + @"/objects?omit=displayValue,base64");
       }
     }
 
@@ -933,7 +941,7 @@ namespace SpeckleGSAUI
       if (streamID.GetType() == typeof(string))
       {
         string url = RestApi.Split(new string[] { "api" }, StringSplitOptions.RemoveEmptyEntries)[0];
-				Process.Start(url + @"#/view/" + streamID);
+        Process.Start(url + @"#/view/" + streamID);
       }
     }
 
@@ -943,7 +951,7 @@ namespace SpeckleGSAUI
 
       if (streamID.GetType() == typeof(string))
       {
-				Process.Start(RestApi + @"/streams/" + (string)streamID);
+        Process.Start(RestApi + @"/streams/" + (string)streamID);
       }
     }
 
@@ -953,7 +961,7 @@ namespace SpeckleGSAUI
 
       if (streamID.GetType() == typeof(string))
       {
-				Process.Start(RestApi + @"/streams/" + (string)streamID + @"/objects?omit=displayValue,base64");
+        Process.Start(RestApi + @"/streams/" + (string)streamID + @"/objects?omit=displayValue,base64");
       }
     }
 
@@ -986,5 +994,16 @@ namespace SpeckleGSAUI
     }
     #endregion
 
+    private void MessagePane_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+      if (e.KeyboardDevice.IsKeyDown(System.Windows.Input.Key.LeftCtrl) && e.Key == System.Windows.Input.Key.C)
+      {
+        System.Text.StringBuilder copy_buffer = new System.Text.StringBuilder();
+        foreach (object item in MessagePane.SelectedItems)
+          copy_buffer.AppendLine(item.ToString());
+        if (copy_buffer.Length > 0)
+          Clipboard.SetText(copy_buffer.ToString());
+      }
+    }
   }
 }

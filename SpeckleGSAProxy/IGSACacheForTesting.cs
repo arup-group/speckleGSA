@@ -8,5 +8,6 @@ namespace SpeckleGSAProxy
     List<string> GetGwaSetCommands();
 
     ReadOnlyCollection<GSACacheRecord> Records { get; }
+    void Clear();
   }
 }
