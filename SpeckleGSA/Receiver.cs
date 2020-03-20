@@ -126,8 +126,9 @@ namespace SpeckleGSA
             objects.Add(new Tuple<string, SpeckleObject>(key, o));
           }
 				}
-				catch {
-					errors.Add("Unable to get stream " + key);
+				catch (Exception ex) 
+        {
+					errors.Add("stream " + key + ": " + ((ex.InnerException == null) ? ex.Message : ex.InnerException.Message));
 				}
 			});
 
