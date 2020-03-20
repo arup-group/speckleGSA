@@ -442,7 +442,8 @@ namespace SpeckleGSAUI
     {
       if (ReceiverTextbox.Text != "")
       {
-        GSA.Receivers.Add(new Tuple<string, string>(ReceiverTextbox.Text, null));
+        var streamId = ReceiverTextbox.Text.Trim();
+        GSA.Receivers.Add(new Tuple<string, string>(streamId, null));
         if (!GSA.SetSpeckleClients(EmailAddress, RestApi))
         {
           Status.AddError("Error in communicating GSA - please check if the GSA file has been closed down");
@@ -463,7 +464,8 @@ namespace SpeckleGSAUI
 
       foreach (string p in paste)
       {
-        GSA.Receivers.Add(new Tuple<string, string>(p, null));
+        var streamId = p.Trim();
+        GSA.Receivers.Add(new Tuple<string, string>(streamId, null));
       }
       if (!GSA.SetSpeckleClients(EmailAddress, RestApi))
       {
