@@ -24,7 +24,7 @@ namespace SpeckleGSAProxy
     public Dictionary<int, object> GetIndicesSpeckleObjects(string speckleTypeName)
     {
       speckleTypeName = speckleTypeName.ChildType();
-      return records.Where(r => r.SpeckleObj != null && r.SpeckleType == speckleTypeName).ToDictionary(v => v.Index, v => (object)v.SpeckleObj);
+      return records.Where(r => r.SpeckleObj != null && r.SpeckleType.EndsWith(speckleTypeName)).ToDictionary(v => v.Index, v => (object)v.SpeckleObj);
     }
 
     public List<SpeckleObject> GetSpeckleObjects(string speckleTypeName, string applicationId, bool? latest = true, string streamId = null)
