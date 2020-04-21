@@ -20,13 +20,16 @@ namespace SpeckleGSA
         try
         {
           var keyword = (string)kvp.Key.GetAttribute("GSAKeyword");
-          keywords.AddIfNotContains(keyword);
-          var subKeywords = (string[])kvp.Key.GetAttribute("SubGSAKeywords");
-          if (subKeywords.Length > 0)
+          if (keyword.Length > 0)
           {
-            foreach (var skw in subKeywords)
+            keywords.AddIfNotContains(keyword);
+            var subKeywords = (string[])kvp.Key.GetAttribute("SubGSAKeywords");
+            if (subKeywords.Length > 0)
             {
-              keywords.AddIfNotContains(skw);
+              foreach (var skw in subKeywords)
+              {
+                keywords.AddIfNotContains(skw);
+              }
             }
           }
         }

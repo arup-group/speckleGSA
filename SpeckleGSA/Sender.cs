@@ -37,18 +37,33 @@ namespace SpeckleGSA
 			}
 
 			var attributeType = typeof(GSAObject);
+      var keywords = new List<string>();
 
       //Filter out Prereqs that are excluded by the layer selection
       // Remove wrong layer objects from Prereqs
       if (GSA.Settings.SendOnlyResults)
-			{
-				var stream = GSA.Settings.SendOnlyResults ? "results" : null;
-				var streamLayerPrereqs = GSA.ReadTypePrereqs.Where(t => (string)t.Key.GetAttribute("Stream") == stream && ObjectTypeMatchesLayer(t.Key, GSA.Settings.TargetLayer));
-				foreach (var kvp in streamLayerPrereqs)
-				{
-					FilteredReadTypePrereqs[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, GSA.Settings.TargetLayer)
-						&& (string)l.GetAttribute("Stream") == stream).ToList();
-				}
+      {
+        var stream = GSA.Settings.SendOnlyResults ? "results" : null;
+        var streamLayerPrereqs = GSA.ReadTypePrereqs.Where(t => (string)t.Key.GetAttribute("Stream") == stream && ObjectTypeMatchesLayer(t.Key, GSA.Settings.TargetLayer));
+        foreach (var kvp in streamLayerPrereqs)
+        {
+          FilteredReadTypePrereqs[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, GSA.Settings.TargetLayer)
+            && (string)l.GetAttribute("Stream") == stream).ToList();
+        }
+
+        //If only results then the keywords for the objects which have results still need to be retrieved.  Note these are different
+        //to the keywords of the types to be sent (which, being result objects, are blank in this case).
+        foreach (var t in FilteredReadTypePrereqs.Keys)
+        {
+          var subKeywords = (string[])t.GetAttribute("SubGSAKeywords");
+          foreach (var skw in subKeywords)
+          {
+            if (skw.Length > 0 && !keywords.Contains(skw))
+            {
+              keywords.Add(skw);
+            }
+          }
+        }
 			}
 			else
 			{
@@ -57,9 +72,8 @@ namespace SpeckleGSA
 				{
 					FilteredReadTypePrereqs[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, GSA.Settings.TargetLayer)).ToList();
 				}
-			}
-
-      var keywords = GetFilteredKeywords();
+        keywords.AddRange(GetFilteredKeywords());
+      }
 
       Status.ChangeStatus("Reading GSA data into cache");
 
