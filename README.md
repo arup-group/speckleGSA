@@ -1,20 +1,29 @@
 # SpeckleGSA
-![specklegsa-demo](https://gitlab.arup.com/speckle/SpeckleGSA/raw/b6be19d9e463f0aac00d4688e39084368ef8ecda/readme/demo.gif)
+![specklegsa-demo](https://github.com/SpeckleGSA/raw/master/readme/demo.gif)
 
 Requires GSA 10.
 
 ## Contents
 
-- [Installation](#installation)
-- [Usage](#usage)
-- [Bugs and feature requests](#bugs-and-feature-requests)
-- [Building SpeckleGSA](#building-specklegsa)
-- [About Speckle](#about-speckle)
-- [Notes](#notes)
+- [SpeckleGSA](#specklegsa)
+  - [Contents](#contents)
+  - [Installation](#installation)
+  - [Usage](#usage)
+  - [Bugs and Feature Requests](#bugs-and-feature-requests)
+  - [Building SpeckleGSA](#building-specklegsa)
+    - [Requirements](#requirements)
+    - [Dev Notes](#dev-notes)
+    - [Building Process](#building-process)
+    - [Release process](#release-process)
+  - [About Speckle](#about-speckle)
+  - [Notes](#notes)
 
 ## Installation
 
-SpeckleGSA is bundled as part of the Speckle Structural Suite. Download the latest version [here](https://gitlab.arup.com/speckle/specklestructuralsuite-installer/releases).
+SpeckleGSA is bundled as part of the Speckle Structural Suite. 
+
+
+Download the latest version [here](https://gitlab.arup.com/speckle/specklestructuralsuite-installer/releases).
 
 ## Usage
 SpeckleGSA implements key components of a Speckle client in it's tab interface:
@@ -30,7 +39,7 @@ SpeckleGSA implements key components of a Speckle client in it's tab interface:
 
 ## Bugs and Feature Requests
 
-SpeckleGSA is still currently under development which can cause many quick changes to occur. If there are any major bugs, please submit a new [issue](https://gitlab.arup.com/speckle/SpeckleGSA/issues).
+SpeckleGSA is still currently under development which can cause many quick changes to occur. If there are any major bugs, please submit a new [issue](https://github.com/arup-group/speckleGSA/issues).
 
 ## Building SpeckleGSA
 
@@ -59,7 +68,6 @@ This process is just to prepare this prerequisite artifact for inclusion in the 
 
 - Update versions in AssemblyInfo.cs for both SpeckleGSA and SpeckleGSAUI projects to incremented version
 - Merge into master and push - (test if a build is triggered)
-- Trigger a build at https://gitlab.arup.com/speckle/SpeckleGSA/pipelines by clicking "Run Pipeline"
 - Check that the build artefacts can be downloaded
 
 ## About Speckle
