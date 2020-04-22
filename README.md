@@ -1,5 +1,5 @@
 # SpeckleGSA
-![specklegsa-demo](https://github.com/SpeckleGSA/raw/master/readme/demo.gif)
+![specklegsa-demo](https://github.com/arup-group/speckleGSA/blob/master/readme/demo.gif?raw=true)
 
 Requires GSA 10.
 
