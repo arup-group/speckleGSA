@@ -1,0 +1,47 @@
+on: 
+  push:
+    branches:
+      - master
+
+name: build SpeckleGSA
+jobs:
+  build:
+    name: Output SpeckleGSA plugin
+    runs-on: windows-latest
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+
+    - uses: nuget/setup-nuget@v1
+      name: Install the latest version of nuget
+      with:
+        nuget-version: 'latest'
+
+    - uses: actions/cache@v1
+      name: Cache the packages folder
+      id: cache
+      with:
+        path: ${{ github.workspace }}\packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.config') }}
+    
+    - name: NuGet restore
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: nuget restore SpeckleGSA.sln
+
+    - name: Setup MSBuild.exe
+      uses: warrenbuckley/Setup-MSBuild@v1
+
+    - name: Run msbuild command in Release
+      run: msbuild /property:Configuration=Release
+
+    - name: Calculate next version
+      id: calculateVersion
+      run: |
+        $version += (Get-Item $env:GITHUB_WORKSPACE\SpeckleGSAUI\bin\Release\SpeckleGSA.dll).VersionInfo.FileVersion
+        echo "::set-output name=version::$version"
+
+    - name: Upload output
+      uses: actions/upload-artifact@v2-preview
+      with:
+        name: SpeckleGSA-${{ steps.calculateVersion.outputs.version }}
+        path: 'SpeckleGSAUI\bin\Release'
