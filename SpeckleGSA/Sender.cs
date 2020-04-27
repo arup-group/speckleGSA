@@ -37,18 +37,33 @@ namespace SpeckleGSA
 			}
 
 			var attributeType = typeof(GSAObject);
+      var keywords = new List<string>();
 
       //Filter out Prereqs that are excluded by the layer selection
       // Remove wrong layer objects from Prereqs
       if (GSA.Settings.SendOnlyResults)
-			{
-				var stream = GSA.Settings.SendOnlyResults ? "results" : null;
-				var streamLayerPrereqs = GSA.ReadTypePrereqs.Where(t => (string)t.Key.GetAttribute("Stream") == stream && ObjectTypeMatchesLayer(t.Key, GSA.Settings.TargetLayer));
-				foreach (var kvp in streamLayerPrereqs)
-				{
-					FilteredReadTypePrereqs[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, GSA.Settings.TargetLayer)
-						&& (string)l.GetAttribute("Stream") == stream).ToList();
-				}
+      {
+        var stream = GSA.Settings.SendOnlyResults ? "results" : null;
+        var streamLayerPrereqs = GSA.ReadTypePrereqs.Where(t => (string)t.Key.GetAttribute("Stream") == stream && ObjectTypeMatchesLayer(t.Key, GSA.Settings.TargetLayer));
+        foreach (var kvp in streamLayerPrereqs)
+        {
+          FilteredReadTypePrereqs[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, GSA.Settings.TargetLayer)
+            && (string)l.GetAttribute("Stream") == stream).ToList();
+        }
+
+        //If only results then the keywords for the objects which have results still need to be retrieved.  Note these are different
+        //to the keywords of the types to be sent (which, being result objects, are blank in this case).
+        foreach (var t in FilteredReadTypePrereqs.Keys)
+        {
+          var subKeywords = (string[])t.GetAttribute("SubGSAKeywords");
+          foreach (var skw in subKeywords)
+          {
+            if (skw.Length > 0 && !keywords.Contains(skw))
+            {
+              keywords.Add(skw);
+            }
+          }
+        }
 			}
 			else
 			{
@@ -57,15 +72,20 @@ namespace SpeckleGSA
 				{
 					FilteredReadTypePrereqs[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, GSA.Settings.TargetLayer)).ToList();
 				}
-			}
-
-      var keywords = GetFilteredKeywords();
+        keywords.AddRange(GetFilteredKeywords());
+      }
 
       Status.ChangeStatus("Reading GSA data into cache");
 
-      var numRowsupdated = await UpdateCache(keywords);
+      int numRowsUpdated = 0;
+      var updatedCache = await Task.Run(() => UpdateCache(keywords, out numRowsUpdated));
+      if (!updatedCache)
+      {
+        Status.AddError("Error in communicating GSA - please check if the GSA file has been closed down");
+        return statusMessages;
+      }
 
-      Status.AddMessage("Read " + numRowsupdated + " GWA lines across " + keywords.Count() + " keywords into cache");
+      Status.AddMessage("Read " + numRowsUpdated + " GWA lines across " + keywords.Count() + " keywords into cache");
 
       // Grab GSA interface type
       var interfaceType = typeof(IGSASpeckleContainer);
@@ -250,24 +270,34 @@ namespace SpeckleGSA
       return keywords;
     }
 
-    private Task<int> UpdateCache(List<string> keywords)
+    private bool UpdateCache(List<string> keywords, out int numUpdated)
     {
       GSA.gsaCache.Clear();
-      var data = GSA.gsaProxy.GetGwaData(keywords);
-      for (int i = 0; i < data.Count(); i++)
+      try
       {
-        GSA.gsaCache.Upsert(
-          data[i].Keyword,
-          data[i].Index,
-          data[i].GwaWithoutSet,
-          streamId: data[i].StreamId,
-          //This needs to be revised as this logic is in the kit too
-          applicationId: (string.IsNullOrEmpty(data[i].ApplicationId))
-            ? ("gsa/" + data[i].Keyword + "_" + data[i].Index.ToString())
-            : data[i].ApplicationId,
-          gwaSetCommandType: data[i].GwaSetType);
+        var data = GSA.gsaProxy.GetGwaData(keywords);
+        for (int i = 0; i < data.Count(); i++)
+        {
+          GSA.gsaCache.Upsert(
+            data[i].Keyword,
+            data[i].Index,
+            data[i].GwaWithoutSet,
+            streamId: data[i].StreamId,
+            //This needs to be revised as this logic is in the kit too
+            applicationId: (string.IsNullOrEmpty(data[i].ApplicationId))
+              ? ("gsa/" + data[i].Keyword + "_" + data[i].Index.ToString())
+              : data[i].ApplicationId,
+            gwaSetCommandType: data[i].GwaSetType);
+        }
+        numUpdated = data.Count();
+        return true;
       }
-      return Task.FromResult(data.Count());
+      catch
+      {
+        numUpdated = 0;
+        return false;
+      }
+
     }
   }
 }

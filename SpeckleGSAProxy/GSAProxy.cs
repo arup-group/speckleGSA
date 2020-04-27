@@ -22,7 +22,7 @@ namespace SpeckleGSAProxy
     };
 
     //These don't need to be the entire keywords - e.g. LOAD_BEAM covers LOAD_BEAM_UDL, LOAD_BEAM_LINE, LOAD_BEAM_PATCH and LOAD_BEAM_TRILIN
-    public static string[] SetAtKeywordBeginnings = new string[] { "LOAD_NODE", "LOAD_BEAM", "LOAD_GRID_LINE", "LOAD_2D_FACE", "LOAD_GRID_AREA", "LOAD_2D_THERMAL", "LOAD_GRAVITY", "INF_BEAM", "INF_NODE", "RIGID", "GEN_REST" };
+    public static string[] SetAtKeywordBeginnings = new string[] { "LOAD_NODE", "LOAD_BEAM", "LOAD_GRID_POINT", "LOAD_GRID_LINE", "LOAD_2D_FACE", "LOAD_GRID_AREA", "LOAD_2D_THERMAL", "LOAD_GRAVITY", "INF_BEAM", "INF_NODE", "RIGID", "GEN_REST" };
     //----
 
     private IComAuto GSAObject;
@@ -241,9 +241,19 @@ namespace SpeckleGSAProxy
       for (int i = 0; i < setKeywords.Count(); i++)
       {
         var newCommand = "GET_ALL\t" + setKeywords[i];
-        var gwaRecords = ((string)GSAObject.GwaCommand(newCommand)).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+        string[] gwaRecords;
+        try
+        {
+          gwaRecords = ((string)GSAObject.GwaCommand(newCommand)).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+        }
+        catch
+        {
+          gwaRecords = new string[0];
+        }
+
         for (int j = 0; j < gwaRecords.Length; j++)
         {
+          
           ParseGeneralGwa(gwaRecords[j], out string keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
           var index = foundIndex ?? 0;
           var originalSid = "";
@@ -254,7 +264,11 @@ namespace SpeckleGSAProxy
             //(at least in GSA v10 build 63) that GET_ALL NODE does return SID tags, the call is avoided for NODE keyword
             if (!keyword.Contains("NODE") && !keyword.StartsWith("EL."))
             {
-              foundStreamId = GSAObject.GetSidTagValue(keyword, index, SID_STRID_TAG);
+              try
+              {
+                foundStreamId = GSAObject.GetSidTagValue(keyword, index, SID_STRID_TAG);
+              }
+              catch { }
             }
           }
           else
@@ -267,7 +281,11 @@ namespace SpeckleGSAProxy
             //Again, the same optimisation as explained above
             if (!keyword.Contains("NODE") && !keyword.StartsWith("EL."))
             {
-              foundApplicationId = GSAObject.GetSidTagValue(keyword, index, SID_APPID_TAG);
+              try
+              {
+                foundApplicationId = GSAObject.GetSidTagValue(keyword, index, SID_APPID_TAG);
+              }
+              catch { }
             }
           }
           else
@@ -317,7 +335,11 @@ namespace SpeckleGSAProxy
             var originalSid = "";
             if (string.IsNullOrEmpty(foundStreamId))
             {
-              foundStreamId = GSAObject.GetSidTagValue(keyword, j, SID_STRID_TAG);
+              try
+              {
+                foundStreamId = GSAObject.GetSidTagValue(keyword, j, SID_STRID_TAG);
+              }
+              catch { }
             }
             else
             {
@@ -699,9 +721,17 @@ namespace SpeckleGSAProxy
     /// </summary>
     /// <param name="emailAddress">User email address</param>
     /// <param name="serverAddress">Speckle server address</param>
-    public void SetTopLevelSid(string sidRecord)
+    public bool SetTopLevelSid(string sidRecord)
     {
-      GSAObject.GwaCommand("SET\tSID\t" + sidRecord);
+      try
+      {
+        GSAObject.GwaCommand("SET\tSID\t" + sidRecord);
+        return true;
+      }
+      catch
+      {
+        return false;
+      }
     }
     #endregion
 
@@ -737,17 +767,33 @@ namespace SpeckleGSAProxy
     /// <summary>
     /// Update GSA viewer. This should be called at the end of changes.
     /// </summary>
-    public void UpdateViews()
+    public bool UpdateViews()
     {
-      GSAObject.UpdateViews();
+      try
+      {
+        GSAObject.UpdateViews();
+        return true;
+      }
+      catch
+      {
+        return false;
+      }
     }
 
     /// <summary>
     /// Update GSA case and task links. This should be called at the end of changes.
     /// </summary>
-    public void UpdateCasesAndTasks()
+    public bool UpdateCasesAndTasks()
     {
-      GSAObject.ReindexCasesAndTasks();
+      try
+      {
+        GSAObject.ReindexCasesAndTasks();
+        return true;
+      }
+      catch
+      {
+        return false;
+      }
     }
 
     public string GetTopLevelSid()

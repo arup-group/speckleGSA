@@ -12,7 +12,8 @@ namespace SpeckleGSA
 	/// </summary>
 	public class SpeckleGSASender
   {
-    const double MAX_BUCKET_SIZE = 5e5;
+    const double MAX_BUCKET_SIZE = 500000;
+    const int SendPayloadApiRetries = 3;
 
     public string StreamName { get => mySender == null ? null : mySender.Stream.Name; }
     public string StreamID { get => mySender == null ? null : mySender.StreamId; }
@@ -150,36 +151,58 @@ namespace SpeckleGSA
         // Send objects which are in payload and add to local DB with updated IDs
         foreach (List<SpeckleObject> payload in payloads)
         {
-          try
+          var SendPayloadApiRetries = 3;
+          do
           {
-            ResponseObject res = mySender.ObjectCreateAsync(payload).Result;
-
-            for (int i = 0; i < payload.Count(); i++)
+            try
             {
-              payload[i]._id = res.Resources[i]._id;
-              objectsInStream.Add(payload[i]._id);
-            }
+              ResponseObject res = mySender.ObjectCreateAsync(payload).Result;
+              SendPayloadApiRetries = 0;
 
-            Task.Run(() =>
-            {
-              foreach (SpeckleObject obj in payload)
+              for (int i = 0; i < payload.Count(); i++)
               {
-                try
-                {
-                  LocalContext.AddSentObject(obj, mySender.BaseUrl);
-                }
-                catch { }
+                payload[i]._id = res.Resources[i]._id;
+                objectsInStream.Add(payload[i]._id);
               }
-            });
-          }
-          catch
-          {
-            Status.AddError("Failed to send payload.");
-          }
+
+              Task.Run(() =>
+              {
+                foreach (SpeckleObject obj in payload)
+                {
+                  try
+                  {
+                    LocalContext.AddSentObject(obj, mySender.BaseUrl);
+                  }
+                  catch { }
+                }
+              });
+            }
+            catch (Exception ex)
+            {
+              SendPayloadApiRetries--;
+              if (SendPayloadApiRetries == 0)
+              {
+                if (ex is AggregateException && ex.InnerException != null && ex.InnerException.Message.Contains("task was canceled"))
+                {
+                  Status.AddError("Failed to send payload, likely due to timeout with server");
+                }
+                else
+                {
+                  Status.AddError("Failed to send payload. " + ex.Message);
+                }
+              }
+              else
+              {
+                Status.AddError("Retrying payload");
+              }
+            }
+          } while (SendPayloadApiRetries > 0);
         }
       }
       else
+      {
         objectsInStream = bucketObjects.Select(o => o._id).ToList();
+      }
 
       // Update stream with payload
       List<SpeckleObject> placeholders = new List<SpeckleObject>();
@@ -225,22 +248,21 @@ namespace SpeckleGSA
       long currentBucketSize = 0;
       List<List<SpeckleObject>> objectUpdatePayloads = new List<List<SpeckleObject>>();
       List<SpeckleObject> currentBucketObjects = new List<SpeckleObject>();
-      List<SpeckleObject> allObjects = new List<SpeckleObject>();
 
       foreach (SpeckleObject obj in bucketObjects)
       {
         long size = Converter.getBytes(obj).Length;
-        currentBucketSize += size;
-        totalBucketSize += size;
-        currentBucketObjects.Add(obj);
 
-        if (currentBucketSize > MAX_BUCKET_SIZE)
+        if (size > MAX_BUCKET_SIZE || (currentBucketSize + size) > MAX_BUCKET_SIZE)
         {
-          //Status.AddMessage("Reached payload limit. Making a new one, current  #: " + objectUpdatePayloads.Count);
           objectUpdatePayloads.Add(currentBucketObjects);
           currentBucketObjects = new List<SpeckleObject>();
           currentBucketSize = 0;
         }
+
+        currentBucketObjects.Add(obj);
+        currentBucketSize += size;
+        totalBucketSize += size;
       }
 
       // add in the last bucket 

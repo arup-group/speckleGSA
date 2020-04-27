@@ -87,9 +87,9 @@ namespace SpeckleGSAInterfaces
 
     string GetTitle();
 
-    void UpdateCasesAndTasks();
+    bool UpdateCasesAndTasks();
 
-    void UpdateViews();
+    bool UpdateViews();
 
     void DeleteGWA(string keyword, int index, GwaSetCommandType gwaSetCommandType);
 
@@ -108,7 +108,7 @@ namespace SpeckleGSAInterfaces
 
     string[] GetTolerances();
 
-    void SetTopLevelSid(string sidRecord);
+    bool SetTopLevelSid(string sidRecord);
 
     string GetTopLevelSid();
 
