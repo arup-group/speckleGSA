@@ -1,0 +1,75 @@
+on: push
+
+name: build SpeckleGSA
+jobs:
+  build:
+    name: Output SpeckleGSA plugin
+    runs-on: windows-latest
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+
+    - uses: nuget/setup-nuget@v1
+      name: Install the latest version of nuget
+      with:
+        nuget-version: 'latest'
+
+    - uses: actions/cache@v1
+      name: Cache the packages folder
+      id: cache
+      with:
+        path: ${{ github.workspace }}\packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.config') }}
+    
+    - name: NuGet restore
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: nuget restore SpeckleGSA.sln
+
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.0
+
+    - name: Run msbuild command in Release
+      run: msbuild /property:Configuration=Release
+
+    - name: Calculate next version
+      id: calculateVersion
+      run: |
+        $version += (Get-Item $env:GITHUB_WORKSPACE\SpeckleGSAUI\bin\Release\SpeckleGSA.dll).VersionInfo.FileVersion
+        echo "::set-output name=version::$version"
+
+    - name: Upload output
+      if: ${{ github.ref == 'refs/heads/dev' }}
+      uses: actions/upload-artifact@v2-preview
+      with:
+        name: SpeckleGSA-${{ steps.calculateVersion.outputs.version }}
+        path: 'SpeckleGSAUI\bin\Release'
+  
+    - name: Zip to upload to release
+      if: ${{ github.ref == 'refs/heads/master' }}
+      run: 7z a SpeckleGSA.zip "$env:GITHUB_WORKSPACE\SpeckleGSAUI\bin\Release\*"
+
+    - name: Create Release
+      id: create-release
+      if: ${{ github.ref == 'refs/heads/master' }}
+      uses: actions/create-release@latest
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+      with:
+        tag_name: ${{ steps.calculateVersion.outputs.version }}
+        release_name: SpeckleGSA ${{ steps.calculateVersion.outputs.version }}
+        body: |
+          Automated release of SpeckleGSA
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset
+      if: ${{ github.ref == 'refs/heads/master' }}
+      id: upload-release-asset 
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create-release.outputs.upload_url }}  
+        asset_path: ./SpeckleGSA.zip
+        asset_name: SpeckleGSA.zip
+        asset_content_type: application/zip
