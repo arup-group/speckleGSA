@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using SpeckleGSAInterfaces;
 using System.IO;
+using System.Diagnostics;
 
 namespace SpeckleGSAProxy.Test
 {
@@ -21,106 +22,120 @@ namespace SpeckleGSAProxy.Test
     [Test]
     public async Task ReceiveTestContinuousMerge()
     {
-      GSA.gsaProxy = new TestProxy();
-      GSA.Init();
+      for (var n = 0; n < 50; n++)
+      {
+        GSA.gsaProxy = new TestProxy();
+        GSA.Init();
 
-      var streamIds = savedJsonFileNames.Select(fn => fn.Split(new[] { '.' }).First()).ToList();
-      GSA.Receivers = streamIds.Select(si => new Tuple<string, string>(si, null)).ToList();
+        var streamIds = savedJsonFileNames.Select(fn => fn.Split(new[] { '.' }).First()).ToList();
+        GSA.Receivers = streamIds.Select(si => new Tuple<string, string>(si, null)).ToList();
 
-      //Create receiver with all streams
-      var receiver = new Receiver() { Receivers = streamIds.ToDictionary(s => s, s => (ISpeckleGSAReceiver) new TestReceiver()) };
-      LoadObjectsIntoReceiver(receiver, savedJsonFileNames, testDataDirectory);
+        //Create receiver with all streams
+        var receiver = new Receiver() { Receivers = streamIds.ToDictionary(s => s, s => (ISpeckleGSAReceiver)new TestReceiver()) };
+        LoadObjectsIntoReceiver(receiver, savedJsonFileNames, testDataDirectory);
 
-      GSA.gsaProxy.NewFile();
+        GSA.gsaProxy.NewFile();
 
-      //This will load data from all streams into the cache
-      await receiver.Initialize("", "");
+        //This will load data from all streams into the cache
+        await receiver.Initialize("", "");
 
-      //RECEIVE EVENT #1: first of continuous
-      receiver.Trigger(null, null);
+        //RECEIVE EVENT #1: first of continuous
+        receiver.Trigger(null, null);
 
-      //Check cache to see if object have been received
-      var records = ((IGSACacheForTesting)GSA.gsaCache).Records;
-      var latestGwaAfter1 = new List<string>(records.Where(r => r.Latest).Select(r => r.Gwa));
-      Assert.AreEqual(100, records.Where(r => r.Latest).Count());
-      Assert.AreEqual(0, records.Where(r => string.IsNullOrEmpty(r.StreamId)).Count());
-      Assert.IsTrue(records.All(r => r.Gwa.Contains(r.StreamId)));
+        //Check cache to see if object have been received
+        var records = ((IGSACacheForTesting)GSA.gsaCache).Records;
+        var latestGwaAfter1 = new List<string>(records.Where(r => r.Latest).Select(r => r.Gwa));
+        Assert.AreEqual(100, records.Where(r => r.Latest).Count());
+        Assert.AreEqual(0, records.Where(r => string.IsNullOrEmpty(r.StreamId)).Count());
+        Assert.IsTrue(records.All(r => r.Gwa.Contains(r.StreamId)));
 
-      //Refresh with new copy of objects so they aren't the same (so the merging code isn't trying to merge each object onto itself)
-      LoadObjectsIntoReceiver(receiver, savedJsonFileNames, testDataDirectory);
+        //Refresh with new copy of objects so they aren't the same (so the merging code isn't trying to merge each object onto itself)
+        LoadObjectsIntoReceiver(receiver, savedJsonFileNames, testDataDirectory);
 
-      //RECEIVE EVENT #2: second of continuous
-      receiver.Trigger(null, null);
+        //RECEIVE EVENT #2: second of continuous
+        receiver.Trigger(null, null);
 
-      //Check cache to see if object have been merged correctly and no extraneous calls to GSA is created
-      var latestGwaAfter2 = new List<string>(records.Where(r => r.Latest).Select(r => r.Gwa));
-      var diff = latestGwaAfter2.Where(a2 => !latestGwaAfter1.Any(a1 => string.Equals(a1, a2, StringComparison.InvariantCultureIgnoreCase))).ToList();
-      records = ((IGSACacheForTesting)GSA.gsaCache).Records;
-      Assert.AreEqual(100, records.Where(r => r.Latest).Count());
-      Assert.AreEqual(110, records.Count());
+        //Check cache to see if object have been merged correctly and no extraneous calls to GSA is created
+        var latestGwaAfter2 = new List<string>(records.Where(r => r.Latest).Select(r => r.Gwa));
+        var diff = latestGwaAfter2.Where(a2 => !latestGwaAfter1.Any(a1 => string.Equals(a1, a2, StringComparison.InvariantCultureIgnoreCase))).ToList();
+        records = ((IGSACacheForTesting)GSA.gsaCache).Records;
+        Assert.AreEqual(100, records.Where(r => r.Latest).Count());
+        Assert.AreEqual(110, records.Count());
 
-      GSA.gsaProxy.Close();
+        GSA.gsaProxy.Close();
+      }
     }
 
     [Test]
     public async Task ReceiveTestStreamSubset()
     {
-      GSA.gsaProxy = new TestProxy();
-      GSA.Init();
-
-      var streamIds = savedJsonFileNames.Select(fn => fn.Split(new[] { '.' }).First()).ToList();
-      GSA.Receivers = streamIds.Select(si => new Tuple<string, string>(si, null)).ToList();
-
-      //Create receiver with all streams
-      var receiver = new Receiver() { Receivers = streamIds.ToDictionary(s => s, s => (ISpeckleGSAReceiver)new TestReceiver()) };
-      LoadObjectsIntoReceiver(receiver, savedJsonFileNames, testDataDirectory);
-
-      GSA.gsaProxy.NewFile();
-
-      //This will load data from all streams into the cache
-      await receiver.Initialize("", "");
-
-      //RECEIVE EVENT #1: single
-      receiver.Trigger(null, null);
-
-      //RECEIVE EVENT #2: single with reduced streams
-
-      //Add contents of cache to the test proxy so they can be the source for the renewed hydration of the cache in the Initialize call
-      CopyCacheToTestProxy();
-
-      var streamIdsToTest = streamIds.Take(3).ToList();
-      GSA.Receivers = streamIdsToTest.Select(si => new Tuple<string, string>(si, null)).ToList();
-
-      //Yes the real SpeckleGSA does create a new receiver.  This time, create them with not all streams active
-      receiver = new Receiver() { Receivers = streamIdsToTest.ToDictionary(s => s, s => (ISpeckleGSAReceiver)new TestReceiver()) };
-
-      var records = ((IGSACacheForTesting)GSA.gsaCache).Records;
-      Assert.AreEqual(3, GSA.Receivers.Count());
-      Assert.AreEqual(3, receiver.Receivers.Count());
-      Assert.AreEqual(4, records.Select(r => r.StreamId).Distinct().Count());
-
-      await receiver.Initialize("", "");
-
-      //Refresh with new copy of objects so they aren't the same (so the merging code isn't trying to merge each object onto itself)
-      var streamObjectsTuples = ExtractObjects(savedJsonFileNames.Where(fn => streamIdsToTest.Any(ft => fn.Contains(ft))).ToArray(), testDataDirectory);
-      var objectsToExclude = streamObjectsTuples.Where(t => t.Item2.Name == "LSP-Lockup" || t.Item2.Type == "Structural2DThermalLoad").ToArray();
-      for (int i = 0; i < objectsToExclude.Count(); i++)
+      for (var n = 0; n < 100; n++)
       {
-        streamObjectsTuples.Remove(objectsToExclude[i]);
+        Debug.WriteLine("");
+        Debug.WriteLine("Test run number: " + (n + 1));
+        Debug.WriteLine("");
+
+        GSA.gsaProxy = new TestProxy();
+        GSA.Init();
+
+        var streamIds = savedJsonFileNames.Select(fn => fn.Split(new[] { '.' }).First()).ToList();
+        GSA.Receivers = streamIds.Select(si => new Tuple<string, string>(si, null)).ToList();
+
+        //Create receiver with all streams
+        var receiver = new Receiver() { Receivers = streamIds.ToDictionary(s => s, s => (ISpeckleGSAReceiver)new TestReceiver()) };
+        LoadObjectsIntoReceiver(receiver, savedJsonFileNames, testDataDirectory);
+
+        GSA.gsaProxy.NewFile();
+
+        //This will load data from all streams into the cache
+        await receiver.Initialize("", "");
+
+        //RECEIVE EVENT #1: single
+        receiver.Trigger(null, null);
+
+        //RECEIVE EVENT #2: single with reduced streams
+
+        //Add contents of cache to the test proxy so they can be the source for the renewed hydration of the cache in the Initialize call
+        CopyCacheToTestProxy();
+
+        var streamIdsToTest = streamIds.Take(3).ToList();
+        GSA.Receivers = streamIdsToTest.Select(si => new Tuple<string, string>(si, null)).ToList();
+
+        //Yes the real SpeckleGSA does create a new receiver.  This time, create them with not all streams active
+        receiver = new Receiver() { Receivers = streamIdsToTest.ToDictionary(s => s, s => (ISpeckleGSAReceiver)new TestReceiver()) };
+
+        var records = ((IGSACacheForTesting)GSA.gsaCache).Records;
+        Assert.AreEqual(3, GSA.Receivers.Count());
+        Assert.AreEqual(3, receiver.Receivers.Count());
+        Assert.AreEqual(4, records.Select(r => r.StreamId).Distinct().Count());
+
+        await receiver.Initialize("", "");
+
+        //Refresh with new copy of objects so they aren't the same (so the merging code isn't trying to merge each object onto itself)
+        var streamObjectsTuples = ExtractObjects(savedJsonFileNames.Where(fn => streamIdsToTest.Any(ft => fn.Contains(ft))).ToArray(), testDataDirectory);
+        var objectsToExclude = streamObjectsTuples.Where(t => t.Item2.Name == "LSP-Lockup" || t.Item2.Type == "Structural2DThermalLoad").ToArray();
+        for (int i = 0; i < objectsToExclude.Count(); i++)
+        {
+          streamObjectsTuples.Remove(objectsToExclude[i]);
+        }
+        for (int i = 0; i < streamIdsToTest.Count(); i++)
+        {
+          ((TestReceiver)receiver.Receivers[streamIds[i]]).Objects = streamObjectsTuples.Where(t => t.Item1 == streamIds[i]).Select(t => t.Item2).ToList();
+        }
+
+        receiver.Trigger(null, null);
+
+        //Check the other streams aren't affected by only having some active
+        records = ((IGSACacheForTesting)GSA.gsaCache).Records;
+        if (records.Where(r => r.Latest).Count() < 98)
+        {
+
+        }
+        Assert.AreEqual(98, records.Where(r => r.Latest).Count());
+        //-------
+
+        GSA.gsaProxy.Close();
       }
-      for (int i = 0; i < streamIdsToTest.Count(); i++)
-      {
-        ((TestReceiver)receiver.Receivers[streamIds[i]]).Objects = streamObjectsTuples.Where(t => t.Item1 == streamIds[i]).Select(t => t.Item2).ToList();
-      }
-
-      receiver.Trigger(null, null);
-
-      //Check the other streams aren't affected by only having some active
-      records = ((IGSACacheForTesting)GSA.gsaCache).Records;
-      Assert.AreEqual(98, records.Where(r => r.Latest).Count());
-      //-------
-
-      GSA.gsaProxy.Close();
     }
 
 

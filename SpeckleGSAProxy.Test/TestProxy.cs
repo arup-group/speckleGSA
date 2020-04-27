@@ -48,7 +48,7 @@ namespace SpeckleGSAProxy.Test
     public void AddDataLine(string keyword, int index, string streamId, string applicationId, string gwaWithoutSet, GwaSetCommandType gwaSetType)
     {
       var line = new ProxyGwaLine() { Keyword = keyword, Index = index, StreamId = streamId, ApplicationId = applicationId, GwaWithoutSet = gwaWithoutSet, GwaSetType = gwaSetType };
-      data.Add(line);
+      ExecuteWithLock(() => data.Add(line));
     }
 
     public new List<ProxyGwaLine> GetGwaData(IEnumerable<string> keywords)
@@ -58,30 +58,33 @@ namespace SpeckleGSAProxy.Test
 
     private int ResolveIndex(double x, double y, double z, double tol)
     {
-      int currMaxIndex = 1;
-      if (nodes.Keys.Count() == 0)
+      return ExecuteWithLock(() =>
       {
-        nodes.Add(currMaxIndex, new List<double> { x, y, z });
-        return currMaxIndex;
-      }
-      foreach (var i in nodes.Keys)
-      {
-        if ((WithinTol(x, nodes[i][0], tol)) && (WithinTol(y, nodes[i][1], tol)) && (WithinTol(z, nodes[i][2], tol)))
+        int currMaxIndex = 1;
+        if (nodes.Keys.Count() == 0)
         {
-          return i;
+          nodes.Add(currMaxIndex, new List<double> { x, y, z });
+          return currMaxIndex;
         }
-        currMaxIndex = i;
-      }
-      for (int i = 1; i <= (currMaxIndex + 1); i++)
-      {
-        if (!nodes.Keys.Contains(i))
+        foreach (var i in nodes.Keys)
         {
-          nodes.Add(i, new List<double> { x, y, z });
-          return i;
+          if ((WithinTol(x, nodes[i][0], tol)) && (WithinTol(y, nodes[i][1], tol)) && (WithinTol(z, nodes[i][2], tol)))
+          {
+            return i;
+          }
+          currMaxIndex = i;
         }
-      }
-      nodes.Add(currMaxIndex + 1, new List<double> { x, y, z });
-      return (currMaxIndex + 1);
+        for (int i = 1; i <= (currMaxIndex + 1); i++)
+        {
+          if (!nodes.Keys.Contains(i))
+          {
+            nodes.Add(i, new List<double> { x, y, z });
+            return i;
+          }
+        }
+        nodes.Add(currMaxIndex + 1, new List<double> { x, y, z });
+        return (currMaxIndex + 1);
+      });
     }
 
     public new void UpdateCasesAndTasks() { }

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Interop.Gsa_10_0;
 using SpeckleGSAInterfaces;
 
@@ -25,12 +26,31 @@ namespace SpeckleGSAProxy
     public static string[] SetAtKeywordBeginnings = new string[] { "LOAD_NODE", "LOAD_BEAM", "LOAD_GRID_POINT", "LOAD_GRID_LINE", "LOAD_2D_FACE", "LOAD_GRID_AREA", "LOAD_2D_THERMAL", "LOAD_GRAVITY", "INF_BEAM", "INF_NODE", "RIGID", "GEN_REST" };
     //----
 
+    //These are accessed via a lock
     private IComAuto GSAObject;
-
-    private List<string> batchSetGwa = new List<string>();
-    private List<string> batchBlankGwa = new List<string>();
+    private readonly List<string> batchSetGwa = new List<string>();
+    private readonly List<string> batchBlankGwa = new List<string>();
 
     public string FilePath { get; set; }
+
+    #region lock-related
+    private readonly object syncLock = new object();
+    protected T ExecuteWithLock<T>(Func<T> f)
+    {
+      lock (syncLock)
+      {
+        return f();
+      }
+    }
+
+    protected void ExecuteWithLock(Action a)
+    {
+      lock (syncLock)
+      {
+        a();
+      }
+    }
+    #endregion
 
     #region File Operations
     /// <summary>
@@ -40,31 +60,33 @@ namespace SpeckleGSAProxy
     /// <param name="serverAddress">Speckle server address</param>
     public void NewFile(bool showWindow = true, object gsaInstance = null)
     {
-      if (GSAObject != null)
+      ExecuteWithLock(() =>
       {
-        try
+        if (GSAObject != null)
         {
-          GSAObject.Close();
+          try
+          {
+            GSAObject.Close();
+          }
+          catch { }
+          GSAObject = null;
         }
-        catch { }
-        GSAObject = null;
-      }
 
-      GSAObject = (IComAuto) gsaInstance ?? new ComAuto();
+        GSAObject = (IComAuto)gsaInstance ?? new ComAuto();
 
+        GSAObject.LogFeatureUsage("api::specklegsa::" +
+            FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
+                .ProductVersion + "::GSA " + GSAObject.VersionString()
+                .Split(new char[] { '\n' })[0]
+                .Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries)[1]);
 
-      GSAObject.LogFeatureUsage("api::specklegsa::" +
-          FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
-              .ProductVersion + "::GSA " + GSAObject.VersionString()
-              .Split(new char[] { '\n' })[0]
-              .Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries)[1]);
-
-      GSAObject.NewFile();
-      GSAObject.SetLocale(Locale.LOC_EN_GB);
-      if (showWindow)
-      {
-        GSAObject.DisplayGsaWindow(true);
-      }
+        GSAObject.NewFile();
+        GSAObject.SetLocale(Locale.LOC_EN_GB);
+        if (showWindow)
+        {
+          GSAObject.DisplayGsaWindow(true);
+        }
+      });
     }
 
     /// <summary>
@@ -75,51 +97,52 @@ namespace SpeckleGSAProxy
     /// <param name="serverAddress">Speckle server address</param>
     public void OpenFile(string path, bool showWindow = true, object gsaInstance = null)
     {
-
-      if (GSAObject != null)
+      ExecuteWithLock(() =>
       {
-        try
+        if (GSAObject != null)
         {
-          GSAObject.Close();
+          try
+          {
+            GSAObject.Close();
+          }
+          catch { }
+          GSAObject = null;
         }
-        catch { }
-        GSAObject = null;
-      }
 
-      GSAObject = (IComAuto) gsaInstance ?? new ComAuto();
+        GSAObject = (IComAuto)gsaInstance ?? new ComAuto();
 
-      GSAObject.LogFeatureUsage("api::specklegsa::" +
-        FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
-          .ProductVersion + "::GSA " + GSAObject.VersionString()
-          .Split(new char[] { '\n' })[0]
-          .Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries)[1]);
+        GSAObject.LogFeatureUsage("api::specklegsa::" +
+          FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
+            .ProductVersion + "::GSA " + GSAObject.VersionString()
+            .Split(new char[] { '\n' })[0]
+            .Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries)[1]);
 
-      GSAObject.Open(path);
-      FilePath = path;
-      GSAObject.SetLocale(Locale.LOC_EN_GB);
+        GSAObject.Open(path);
+        FilePath = path;
+        GSAObject.SetLocale(Locale.LOC_EN_GB);
 
-      if (showWindow)
-      {
-        GSAObject.DisplayGsaWindow(true);
-      }
+        if (showWindow)
+        {
+          GSAObject.DisplayGsaWindow(true);
+        }
+      });
     }
 
-    public int SaveAs(string filePath)
-    {
-      return GSAObject.SaveAs(filePath);
-    }
+    public int SaveAs(string filePath) => ExecuteWithLock(() => GSAObject.SaveAs(filePath));
 
     /// <summary>
     /// Close GSA file.
     /// </summary>
     public void Close()
     {
-      try
+      ExecuteWithLock(() =>
       {
-        GSAObject.Close();
-      }
-      catch { }
-
+        try
+        {
+          GSAObject.Close();
+        }
+        catch { }
+      });
     }
     #endregion
 
@@ -177,8 +200,6 @@ namespace SpeckleGSAProxy
             index = foundIndex;
           }
 
-          index = foundIndex;
-
           pieces.Remove(pieces[0]);
         }
       }
@@ -222,6 +243,7 @@ namespace SpeckleGSAProxy
     //Tuple: keyword | index | Application ID | GWA command | Set or Set At
     public List<ProxyGwaLine> GetGwaData(IEnumerable<string> keywords)
     {
+      var dataLock = new object();
       var data = new List<ProxyGwaLine>();
       var setKeywords = new List<string>();
       var setAtKeywords = new List<string>();
@@ -241,20 +263,23 @@ namespace SpeckleGSAProxy
       for (int i = 0; i < setKeywords.Count(); i++)
       {
         var newCommand = "GET_ALL\t" + setKeywords[i];
+
         string[] gwaRecords;
+
         try
         {
-          gwaRecords = ((string)GSAObject.GwaCommand(newCommand)).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+          gwaRecords = ExecuteWithLock(() => ((string)GSAObject.GwaCommand(newCommand)).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries));
         }
         catch
         {
           gwaRecords = new string[0];
         }
 
-        for (int j = 0; j < gwaRecords.Length; j++)
+        Parallel.ForEach(gwaRecords, gwa =>
+        //for (int j = 0; j < gwaRecords.Length; j++)
         {
-          
-          ParseGeneralGwa(gwaRecords[j], out string keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
+          //ParseGeneralGwa(gwaRecords[j], out string keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
+          ParseGeneralGwa(gwa, out string keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
           var index = foundIndex ?? 0;
           var originalSid = "";
 
@@ -266,7 +291,7 @@ namespace SpeckleGSAProxy
             {
               try
               {
-                foundStreamId = GSAObject.GetSidTagValue(keyword, index, SID_STRID_TAG);
+                foundStreamId = ExecuteWithLock(() => GSAObject.GetSidTagValue(keyword, index, SID_STRID_TAG));
               }
               catch { }
             }
@@ -283,7 +308,7 @@ namespace SpeckleGSAProxy
             {
               try
               {
-                foundApplicationId = GSAObject.GetSidTagValue(keyword, index, SID_APPID_TAG);
+                foundApplicationId = ExecuteWithLock(() => GSAObject.GetSidTagValue(keyword, index, SID_APPID_TAG));
               }
               catch { }
             }
@@ -309,13 +334,17 @@ namespace SpeckleGSAProxy
             GwaSetType = GwaSetCommandType.Set
           };
 
-          data.Add(line);
+          lock (dataLock)
+          {
+            data.Add(line);
+          }
         }
+        );
       }
 
       for (int i = 0; i < setAtKeywords.Count(); i++)
       {
-        var highestIndex = GSAObject.GwaCommand("HIGHEST\t" + setAtKeywords[i]);
+        var highestIndex = ExecuteWithLock(() => GSAObject.GwaCommand("HIGHEST\t" + setAtKeywords[i]));
 
         for (int j = 1; j <= highestIndex; j++)
         {
@@ -324,7 +353,7 @@ namespace SpeckleGSAProxy
           var gwaRecord = "";
           try
           {
-            gwaRecord = (string)GSAObject.GwaCommand(newCommand);
+            gwaRecord = (string)ExecuteWithLock(() => GSAObject.GwaCommand(newCommand));
           }
           catch { }
 
@@ -337,7 +366,7 @@ namespace SpeckleGSAProxy
             {
               try
               {
-                foundStreamId = GSAObject.GetSidTagValue(keyword, j, SID_STRID_TAG);
+                foundStreamId = ExecuteWithLock(() => GSAObject.GetSidTagValue(keyword, j, SID_STRID_TAG));
               }
               catch { }
             }
@@ -347,7 +376,7 @@ namespace SpeckleGSAProxy
             }
             if (string.IsNullOrEmpty(foundApplicationId))
             {
-              foundApplicationId = GSAObject.GetSidTagValue(keyword, j, SID_APPID_TAG);
+              foundApplicationId = ExecuteWithLock(() => GSAObject.GetSidTagValue(keyword, j, SID_APPID_TAG));
             }
             else
             {
@@ -370,7 +399,10 @@ namespace SpeckleGSAProxy
               GwaSetType = GwaSetCommandType.SetAt
             };
 
-            data.Add(line);
+            lock (dataLock)
+            {
+              data.Add(line);
+            }
           }
         }
       }
@@ -382,7 +414,7 @@ namespace SpeckleGSAProxy
     {
       //It has been observed that sometimes GET commands don't include the SID despite there being one.  For some (but not all)
       //of these instances, the SID is available through an explicit call for the SID, so try that next
-      return (string.IsNullOrEmpty(applicationId)) ? GSAObject.GetSidTagValue(keyword, index, SID_APPID_TAG) : applicationId;
+      return (string.IsNullOrEmpty(applicationId)) ? ExecuteWithLock(() => GSAObject.GetSidTagValue(keyword, index, SID_APPID_TAG)) : applicationId;
     }
 
     private int ExtractGwaIndex(string gwaRecord)
@@ -393,20 +425,17 @@ namespace SpeckleGSAProxy
 
 
     //Assumed to be the full SET or SET_AT command
-    public void SetGwa(string gwaCommand)
-    {
-      batchSetGwa.Add(gwaCommand);
-    }
+    public void SetGwa(string gwaCommand) => ExecuteWithLock(() => batchSetGwa.Add(gwaCommand));
 
     public void Sync()
     {
-      var batchBlankCommand = string.Join("\r\n", batchBlankGwa);
-      var blankCommandResult = GSAObject.GwaCommand(batchBlankCommand);
-      batchBlankGwa.Clear();
+      var batchBlankCommand = ExecuteWithLock(() => string.Join("\r\n", batchBlankGwa));
+      var blankCommandResult = ExecuteWithLock(() => GSAObject.GwaCommand(batchBlankCommand));
+      ExecuteWithLock(() => batchBlankGwa.Clear());
 
-      var batchSetCommand = string.Join("\r\n", batchSetGwa);
-      var setCommandResult = GSAObject.GwaCommand(batchSetCommand);
-      batchSetGwa.Clear();      
+      var batchSetCommand = ExecuteWithLock(() => string.Join("\r\n", batchSetGwa));
+      var setCommandResult = ExecuteWithLock(() => GSAObject.GwaCommand(batchSetCommand));
+      ExecuteWithLock(() => batchSetGwa.Clear());      
     }
 
     public void GetGSATotal2DElementOffset(int index, double insertionPointOffset, out double offset, out string offsetRec)
@@ -414,7 +443,7 @@ namespace SpeckleGSAProxy
       double materialInsertionPointOffset = 0;
       double zMaterialOffset = 0;
 
-      object result = GSAObject.GwaCommand("GET\tPROP_2D\t" + index.ToString());
+      object result = ExecuteWithLock(() => GSAObject.GwaCommand("GET\tPROP_2D\t" + index.ToString()));
       string[] newPieces = ((string)result).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries).Select((s, idx) => idx.ToString() + ":" + s).ToArray();
 
       string res = newPieces.FirstOrDefault();
@@ -437,14 +466,14 @@ namespace SpeckleGSAProxy
     public int NodeAt(double x, double y, double z, double coincidenceTol)
     {
       //Note: the outcome of this might need to be added to the caches!
-      var index = GSAObject.Gen_NodeAt(x, y, z, coincidenceTol);
+      var index = ExecuteWithLock(() => GSAObject.Gen_NodeAt(x, y, z, coincidenceTol));
       return index;
     }
 
     public string GetGwaForNode(int index)
     {
       var gwaCommand = "GET\tNODE.2\t" + index.ToString();
-      return (string) GSAObject.GwaCommand(gwaCommand);
+      return (string)ExecuteWithLock(() => GSAObject.GwaCommand(gwaCommand));
     }
 
     public string SetSid(string gwa, string streamId, string applicationId)
@@ -456,11 +485,11 @@ namespace SpeckleGSAProxy
 
       if (!string.IsNullOrEmpty(streamIdToWrite))
       {
-        GSAObject.WriteSidTagValue(keyword, foundIndex.Value, SID_STRID_TAG, streamIdToWrite);
+        ExecuteWithLock(() => GSAObject.WriteSidTagValue(keyword, foundIndex.Value, SID_STRID_TAG, streamIdToWrite));
       }
       if (!string.IsNullOrEmpty(applicationIdToWrite))
       {
-        GSAObject.WriteSidTagValue(keyword, foundIndex.Value, SID_APPID_TAG, applicationIdToWrite);
+        ExecuteWithLock(() => GSAObject.WriteSidTagValue(keyword, foundIndex.Value, SID_APPID_TAG, applicationIdToWrite));
       }
 
       var newSid = FormatStreamIdSidTag(streamIdToWrite) + FormatApplicationIdSidTag(applicationIdToWrite);
@@ -487,7 +516,9 @@ namespace SpeckleGSAProxy
       for (int i = 0; i < pieces.Length; i++)
       {
         if (pieces[i].IsDigits())
+        {
           items.Add(Convert.ToInt32(pieces[i]));
+        }
         else if (pieces[i].Contains('"'))
         {
           items.AddRange(ConvertNamedGSAList(pieces[i], type));
@@ -506,16 +537,21 @@ namespace SpeckleGSAProxy
         {
           try
           {
-            int[] itemTemp;
-            GSAObject.EntitiesInList(pieces[i], (GsaEntity)type, out itemTemp);
+            var item = ExecuteWithLock(() =>
+            {
+              GSAObject.EntitiesInList(pieces[i], (GsaEntity)type, out int[] itemTemp);
 
-            if (itemTemp == null)
-              GSAObject.EntitiesInList("\"" + list + "\"", (GsaEntity)type, out itemTemp);
+              if (itemTemp == null)
+              {
+                GSAObject.EntitiesInList("\"" + list + "\"", (GsaEntity)type, out itemTemp);
+              }
+              return itemTemp;
+            });
 
-            if (itemTemp == null)
-              continue;
-
-            items.AddRange((int[])itemTemp);
+            if (item != null)
+            {
+              items.AddRange((int[])item);
+            }
           }
           catch
           { }
@@ -535,125 +571,128 @@ namespace SpeckleGSAProxy
 
       try
       {
-        int num;
-
-        // The 2nd condition here is a special case for assemblies
-        if (Enum.IsDefined(typeof(ResHeader), resHeader) || resHeader == 18002000)
+        return ExecuteWithLock(() =>
         {
-          returnCode = GSAObject.Output_Init_Arr(flags, axis, loadCase, (ResHeader)resHeader, num1DPoints);
+          int num;
 
-          try
+          // The 2nd condition here is a special case for assemblies
+          if (Enum.IsDefined(typeof(ResHeader), resHeader) || resHeader == 18002000)
           {
-            var existsResult = GSAObject.Output_DataExist(id);
-            exists = (existsResult == 1);
-          }
-          catch (Exception e)
-          {
-            return null;
-          }
+            returnCode = GSAObject.Output_Init_Arr(flags, axis, loadCase, (ResHeader)resHeader, num1DPoints);
 
-          if (exists)
-          {
-            var extracted = false;
             try
             {
-              returnCode = GSAObject.Output_Extract_Arr(id, out var outputExtractResults, out num);
-              res = (GsaResults[])outputExtractResults;
-              extracted = true;
+              var existsResult = GSAObject.Output_DataExist(id);
+              exists = (existsResult == 1);
             }
-            catch (Exception e) { }
-
-            if (!extracted)
+            catch (Exception e)
             {
-              // Try individual extract
-              for (var i = 1; i <= keys.Count; i++)
+              return null;
+            }
+
+            if (exists)
+            {
+              var extracted = false;
+              try
               {
-                var indivResHeader = resHeader + i;
+                returnCode = GSAObject.Output_Extract_Arr(id, out var outputExtractResults, out num);
+                res = (GsaResults[])outputExtractResults;
+                extracted = true;
+              }
+              catch { }
 
-                try
+              if (!extracted)
+              {
+                // Try individual extract
+                for (var i = 1; i <= keys.Count; i++)
                 {
-                  GSAObject.Output_Init(flags, axis, loadCase, indivResHeader, num1DPoints);
-                }
-                catch (Exception e)
-                {
-                  return null;
-                }
+                  var indivResHeader = resHeader + i;
 
-                var numPos = 1;
-
-                try
-                {
-                  numPos = GSAObject.Output_NumElemPos(id);
-                }
-                catch { }
-
-                if (i == 1)
-                {
-                  res = new GsaResults[numPos];
-                  for (var j = 0; j < res.Length; j++)
+                  try
                   {
-                    res[j] = new GsaResults() { dynaResults = new double[keys.Count] };
+                    GSAObject.Output_Init(flags, axis, loadCase, indivResHeader, num1DPoints);
+                  }
+                  catch (Exception e)
+                  {
+                    return null;
+                  }
+
+                  var numPos = 1;
+
+                  try
+                  {
+                    numPos = GSAObject.Output_NumElemPos(id);
+                  }
+                  catch { }
+
+                  if (i == 1)
+                  {
+                    res = new GsaResults[numPos];
+                    for (var j = 0; j < res.Length; j++)
+                    {
+                      res[j] = new GsaResults() { dynaResults = new double[keys.Count] };
+                    }
+                  }
+
+                  for (var j = 0; j < numPos; j++)
+                  {
+                    res[j].dynaResults[i - 1] = (double)GSAObject.Output_Extract(id, j);
                   }
                 }
-
-                for (var j = 0; j < numPos; j++)
-                {
-                  res[j].dynaResults[i - 1] = (double)GSAObject.Output_Extract(id, j);
-                }
               }
+
             }
-
-          }
-          else
-          {
-            return null;
-          }
-        }
-        else
-        {
-          returnCode = GSAObject.Output_Init(flags, axis, loadCase, resHeader, num1DPoints);
-
-          try
-          {
-            var existsResult = GSAObject.Output_DataExist(id);
-            exists = (existsResult == 1);
-          }
-          catch (Exception e)
-          {
-            return null;
-          }
-
-          if (exists)
-          {
-            var numPos = GSAObject.Output_NumElemPos(id);
-            res = new GsaResults[numPos];
-
-            try
-            {
-              for (var i = 0; i < numPos; i++)
-              {
-                res[i] = new GsaResults() { dynaResults = new double[] { (double)GSAObject.Output_Extract(id, i) } };
-              }
-            }
-            catch
+            else
             {
               return null;
             }
           }
           else
           {
-            return null;
+            returnCode = GSAObject.Output_Init(flags, axis, loadCase, resHeader, num1DPoints);
+
+            try
+            {
+              var existsResult = GSAObject.Output_DataExist(id);
+              exists = (existsResult == 1);
+            }
+            catch
+            {
+              return null;
+            }
+
+            if (exists)
+            {
+              var numPos = GSAObject.Output_NumElemPos(id);
+              res = new GsaResults[numPos];
+
+              try
+              {
+                for (var i = 0; i < numPos; i++)
+                {
+                  res[i] = new GsaResults() { dynaResults = new double[] { (double)GSAObject.Output_Extract(id, i) } };
+                }
+              }
+              catch
+              {
+                return null;
+              }
+            }
+            else
+            {
+              return null;
+            }
           }
-        }
 
-        var numColumns = res[0].dynaResults.Count();
+          var numColumns = res[0].dynaResults.Count();
 
-        for (var i = 0; i < numColumns; i++)
-        {
-          ret[keys[i]] = res.Select(x => (double)x.dynaResults.GetValue(i)).ToList();
-        }
+          for (var i = 0; i < numColumns; i++)
+          {
+            ret[keys[i]] = res.Select(x => (double)x.dynaResults.GetValue(i)).ToList();
+          }
 
-        return ret;
+          return ret;
+        });
       }
       catch
       {
@@ -668,11 +707,17 @@ namespace SpeckleGSAProxy
         string[] pieces = loadCase.Split(new char[] { 'p' }, StringSplitOptions.RemoveEmptyEntries);
 
         if (pieces.Length == 1)
-          return GSAObject.CaseExist(loadCase[0].ToString(), Convert.ToInt32(loadCase.Substring(1))) == 1;
+        {
+          return ExecuteWithLock(() => GSAObject.CaseExist(loadCase[0].ToString(), Convert.ToInt32(loadCase.Substring(1))) == 1);
+        }
         else if (pieces.Length == 2)
-          return GSAObject.CaseExist(loadCase[0].ToString(), Convert.ToInt32(pieces[0].Substring(1))) == 1;
+        {
+          return ExecuteWithLock(() => GSAObject.CaseExist(loadCase[0].ToString(), Convert.ToInt32(pieces[0].Substring(1))) == 1);
+        }
         else
+        {
           return false;
+        }
       }
       catch { return false; }
     }
@@ -684,7 +729,7 @@ namespace SpeckleGSAProxy
 
       try
       {
-        object result = GSAObject.GwaCommand("GET\tLIST\t" + list);
+        object result = ExecuteWithLock(() => GSAObject.GwaCommand("GET\tLIST\t" + list));
         string[] newPieces = ((string)result).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries).Select((s, idx) => idx.ToString() + ":" + s).ToArray();
 
         string res = newPieces.FirstOrDefault();
@@ -697,11 +742,11 @@ namespace SpeckleGSAProxy
       {
         try
         {
-          GSAObject.EntitiesInList("\"" + list + "\"", (GsaEntity)type, out int[] itemTemp);
-          if (itemTemp == null)
-            return new int[0];
-          else
-            return (int[])itemTemp;
+          return ExecuteWithLock(() =>
+          {
+            GSAObject.EntitiesInList("\"" + list + "\"", (GsaEntity)type, out int[] itemTemp);
+            return (itemTemp == null) ? new int[0] : (int[])itemTemp;
+          });
         }
         catch { return new int[0]; }
       }
@@ -711,7 +756,8 @@ namespace SpeckleGSAProxy
     //
     public void DeleteGWA(string keyword, int index, GwaSetCommandType gwaSetCommandType)
     {
-      var gwaReturnObj = GSAObject.GwaCommand(string.Join("\t", new[] { (gwaSetCommandType == GwaSetCommandType.Set) ? "BLANK" : "DELETE", keyword, index.ToString() }));
+      var gwaReturnObj = ExecuteWithLock(() => GSAObject.GwaCommand(string.Join("\t", 
+          new[] { (gwaSetCommandType == GwaSetCommandType.Set) ? "BLANK" : "DELETE", keyword, index.ToString() })));
     }
 
     //----
@@ -725,7 +771,7 @@ namespace SpeckleGSAProxy
     {
       try
       {
-        GSAObject.GwaCommand("SET\tSID\t" + sidRecord);
+        ExecuteWithLock(() => GSAObject.GwaCommand("SET\tSID\t" + sidRecord));
         return true;
       }
       catch
@@ -742,7 +788,7 @@ namespace SpeckleGSAProxy
     /// <returns>GSA model title</returns>
     public string GetTitle()
     {
-      string res = (string)GSAObject.GwaCommand("GET\tTITLE");
+      string res = (string)ExecuteWithLock(() => GSAObject.GwaCommand("GET\tTITLE"));
 
       string[] pieces = res.ListSplit("\t");
 
@@ -751,7 +797,7 @@ namespace SpeckleGSAProxy
 
     public string[] GetTolerances()
     {
-      return ((string)GSAObject.GwaCommand("GET\tTOL")).ListSplit("\t");
+      return ((string)ExecuteWithLock(() => GSAObject.GwaCommand("GET\tTOL"))).ListSplit("\t");
     }
 
     /// <summary>
@@ -759,7 +805,7 @@ namespace SpeckleGSAProxy
     /// </summary>
     public string GetUnits()
     {
-      return ((string)GSAObject.GwaCommand("GET\tUNIT_DATA.1\tLENGTH")).ListSplit("\t")[2];
+      return ((string)ExecuteWithLock(() => GSAObject.GwaCommand("GET\tUNIT_DATA.1\tLENGTH"))).ListSplit("\t")[2];
     }
     #endregion
 
@@ -771,7 +817,7 @@ namespace SpeckleGSAProxy
     {
       try
       {
-        GSAObject.UpdateViews();
+        ExecuteWithLock(() => GSAObject.UpdateViews());
         return true;
       }
       catch
@@ -787,7 +833,7 @@ namespace SpeckleGSAProxy
     {
       try
       {
-        GSAObject.ReindexCasesAndTasks();
+        ExecuteWithLock(() => GSAObject.ReindexCasesAndTasks());
         return true;
       }
       catch
@@ -801,7 +847,7 @@ namespace SpeckleGSAProxy
       string sid = "";
       try
       {
-        sid = (string)GSAObject.GwaCommand("GET\tSID");
+        sid = (string)ExecuteWithLock(() => GSAObject.GwaCommand("GET\tSID"));
       }
       catch
       {

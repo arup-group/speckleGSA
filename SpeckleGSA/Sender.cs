@@ -12,11 +12,16 @@ namespace SpeckleGSA
   /// </summary>
   public class Sender : BaseReceiverSender
   {
-    public Dictionary<Type, List<object>> SenderObjects = new Dictionary<Type, List<object>>();
     public Dictionary<string, SpeckleGSASender> Senders = new Dictionary<string, SpeckleGSASender>();
-    public Dictionary<Type, string> StreamMap = new Dictionary<Type, string>();
 
     private Dictionary<Type, List<Type>> FilteredReadTypePrereqs = new Dictionary<Type, List<Type>>();
+    public Dictionary<Type, string> StreamMap = new Dictionary<Type, string>();
+
+    //These need to be accessed using a lock
+    private object currentObjectsLock = new object();
+    private object traversedSerialisedLock = new object();
+    private Dictionary<Type, List<object>> currentObjects = new Dictionary<Type, List<object>>();
+    private List<Type> traversedSerialisedTypes = new List<Type>();
 
     /// <summary>
     /// Initializes sender.
@@ -153,50 +158,53 @@ namespace SpeckleGSA
 
       // Read objects
       var currentBatch = new List<Type>();
-      var traversedTypes = new List<Type>();
 
       bool changeDetected = false;
       do
       {
-        currentBatch = FilteredReadTypePrereqs.Where(i => i.Value.Count(x => !traversedTypes.Contains(x)) == 0).Select(i => i.Key).ToList();
-        currentBatch.RemoveAll(i => traversedTypes.Contains(i));
+        ExecuteWithLock(ref traversedSerialisedLock, () =>
+        {
+          currentBatch = FilteredReadTypePrereqs.Where(i => i.Value.Count(x => !traversedSerialisedTypes.Contains(x)) == 0).Select(i => i.Key).ToList();
+          currentBatch.RemoveAll(i => traversedSerialisedTypes.Contains(i));
+        });
 
-        foreach (var t in currentBatch)
+        Parallel.ForEach(currentBatch, t =>
+        //foreach (var t in currentBatch)
         {
           if (changeDetected) // This will skip the first read but it avoids flickering
           {
             Status.ChangeStatus("Reading " + t.Name);
           }
 
-					//The SpeckleStructural kit actually does serialisation (calling of ToSpeckle()) by type, not individual object.  This is due to
-					//GSA offering bulk GET based on type.
-					//So if the ToSpeckle() call for the type is successful it does all the objects of that type and returns SpeckleObject.
-					//If there is an error, then the SpeckleCore Converter.Serialise will return SpeckleNull.  
-					//The converted objects are stored in the kit in its own collection, not returned by Serialise() here.
+          //The SpeckleStructural kit actually does serialisation (calling of ToSpeckle()) by type, not individual object.  This is due to
+          //GSA offering bulk GET based on type.
+          //So if the ToSpeckle() call for the type is successful it does all the objects of that type and returns SpeckleObject.
+          //If there is an error, then the SpeckleCore Converter.Serialise will return SpeckleNull.  
+          //The converted objects are stored in the kit in its own collection, not returned by Serialise() here.
           var dummyObject = Activator.CreateInstance(t);
           var result = Converter.Serialise(dummyObject);
 
-					if (!(result is SpeckleNull))
-					{
-						changeDetected = true;
-					}
+          if (!(result is SpeckleNull))
+          {
+            changeDetected = true;
+          }
 
-					traversedTypes.Add(t);
+          ExecuteWithLock(ref traversedSerialisedLock, () => traversedSerialisedTypes.Add(t));
         }
+        );
       } while (currentBatch.Count > 0);
 
 			foreach (var dict in gsaStaticObjects)
 			{
-				//this item is the list of sender objects by type
-				//var typeSenderObjects = tuple.Item4;
-				foreach (var t in dict.Keys)
-				{
-					if (!SenderObjects.ContainsKey(t))
-					{
-						SenderObjects[t] = new List<object>();
-					}
-					SenderObjects[t].AddRange(dict[t]);
-				}
+        var allObjects = dict.GetAll();
+        foreach (var t in allObjects.Keys)
+        {
+          if (!currentObjects.ContainsKey(t))
+          {
+            currentObjects[t] = new List<object>();
+          }
+          currentObjects[t].AddRange(allObjects[t]);
+        }
 			}
 
 			if (!changeDetected)
@@ -209,7 +217,7 @@ namespace SpeckleGSA
       // Separate objects into streams
       var streamBuckets = new Dictionary<string, Dictionary<string, List<object>>>();
 
-      foreach (var kvp in SenderObjects)
+      foreach (var kvp in currentObjects)
       {
         var targetStream = GSA.Settings.SeparateStreams ? StreamMap[kvp.Key] : "Full Model";
 
