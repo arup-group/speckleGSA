@@ -12,7 +12,7 @@ Check out [http://makeapullrequest.com/]() or [https://www.firsttimersonly.com/]
 
 All contributions should be make SpeckleGSA better, so please make sure that your changes do not break SpeckleGSA, or remove existing functionality.
 
-If you would like to make a significant change, please open an issue to discuss it first and be sure to tag @daviddekoning and @nic-burgers-arup.
+If you would like to make a significant change, please open an issue to discuss it first and be sure to tag [daviddekoning](https://github.com/daviddekoning) and [nic-burgers-arup](https://github.com/nic-burgers-arup).
 
 ## Building SpeckleGSA
 
