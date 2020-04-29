@@ -10,11 +10,7 @@ SpeckleGSA is a plugin for [GSA 10](https://www.oasys-software.com/products/stru
   - [Installation](#installation)
   - [Usage](#usage)
   - [Bugs and Feature Requests](#bugs-and-feature-requests)
-  - [Building SpeckleGSA](#building-specklegsa)
-    - [Requirements](#requirements)
-    - [Dev Notes](#dev-notes)
-    - [Building Process](#building-process)
-    - [Release process](#release-process)
+  - [Contributing to SpeckleGSA](#contributing-to-specklegsa)
   - [About Speckle](#about-speckle)
   - [Notes](#notes)
 
