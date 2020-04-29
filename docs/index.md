@@ -14,6 +14,17 @@ SpeckleGSA is a Speckle client developed for [GSA 10](https://www.oasys-software
 * Clone model streams for version control
 * Built on top of [SpeckleStructures](https://github.com/speckleworks/SpeckleStructural/)!
 	
+## Recent news
+
+
+{% for post in site.categories.news limit:4  %}
+<h3><a href="{{ post.url }}">{{ post.title }}</a></h3>
+
+{{ post.excerpt }}
+
+{% endfor %}
+
+
 ##  What is Speckle?
 
 [Speckle](https://speckle.works) is an open digital infrastructure for designing, making and operating the built environment. It is a platform which connects various Architecture, Engineering, and Construction (AEC) tools together to foster inter-disciplinary communication and increase the ease with which design collaboration occurs.
