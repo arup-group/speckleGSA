@@ -13,6 +13,10 @@
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
+# jekyll
+docs/.jekyll-cache
+docs/_site
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
