@@ -1,7 +1,7 @@
 # SpeckleGSA
 ![specklegsa-demo](https://github.com/arup-group/speckleGSA/blob/master/readme/demo.gif?raw=true)
 
-Requires GSA 10.
+SpeckleGSA is a plugin for [GSA 10](https://www.oasys-software.com/products/structural/gsa/) that connects it to the [Speckle](https://speckle.systems) ecosystem.
 
 ## Contents
 
@@ -23,9 +23,12 @@ Requires GSA 10.
 SpeckleGSA is bundled as part of the Speckle Structural Suite. 
 
 
-Download the latest version [here](https://gitlab.arup.com/speckle/specklestructuralsuite-installer/releases).
+Download the latest version [here](https://github.com/arup-group/specklestructuralsuite-installer/releases).
 
 ## Usage
+
+Once SpeckleGSA is installed, run the program directly. It will take care of openning GSA - you cannot access SpeckleGSA if you run GSA directly.
+
 SpeckleGSA implements key components of a Speckle client in it's tab interface:
 - Server:
     - Allows users to login to a SpeckleServer
@@ -41,34 +44,9 @@ SpeckleGSA implements key components of a Speckle client in it's tab interface:
 
 SpeckleGSA is still currently under development which can cause many quick changes to occur. If there are any major bugs, please submit a new [issue](https://github.com/arup-group/speckleGSA/issues).
 
-## Building SpeckleGSA
+## Contributing to SpeckleGSA
 
-### Requirements
-
-- Visual Studio 2019
-- .NET Framework 4.7.1
-
-### Dev Notes
-
-The SpeckleGSA repo is currently made up of the following projects:
-- SpeckleGSA: main project with receiver and sender and GSA class objects
-- SpeckleGSAUI: user interface
-
-### Building Process
-
-SpeckleGSA depends on Speckle being installed. Install Speckle using the Speckle installer [here](https://speckle.works/builds/).
-
-- Clone/fork the repo
-- Restore all Nuget package missing on the solution
-- Set SpeckleGSAUI as start project and rebuild all
-
-### Release process
-
-This process is just to prepare this prerequisite artifact for inclusion in the SpeckleStructuralSuite-installer release process.  When the release process for SpeckleStructuralSuite-installer is invoked, it will include the latest SpeckleGSA artifact resulting from the process below:
-
-- Update versions in AssemblyInfo.cs for both SpeckleGSA and SpeckleGSAUI projects to incremented version
-- Merge into master and push - (test if a build is triggered)
-- Check that the build artefacts can be downloaded
+Checkout the [Contribution Guidelines](https://github.com/arup-group/speckleGSA/blob/master/CONTRIBUTING.md) for guidance or compiling SpeckleGSA and how to share your changes back to the community!
 
 ## About Speckle
 
@@ -76,4 +54,4 @@ Speckle reimagines the design process from the Internet up: an open source (MIT)
 
 ## Notes
 
-SpeckleGSA is maintained by [Nic Burgers](https://gitlab.arup.com/Nic.Burgers).
+SpeckleGSA is maintained by [Nic Burgers](https://github.com/nic-burgers-arup).
