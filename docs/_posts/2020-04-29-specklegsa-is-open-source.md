@@ -1,6 +1,7 @@
 ---
 title: SpeckleGSA is Open Source!
 layout: post
+date: 2020-04-29
 categories: [news]
 ---
 
