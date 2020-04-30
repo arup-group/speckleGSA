@@ -7,6 +7,8 @@ layout: default
 
 SpeckleGSA is a Speckle client developed for [GSA 10](https://www.oasys-software.com/products/structural/gsa/) to allow the transfer of finite element models to and from SpeckleServers.
 
+To install the latest version, download the [Speckle Structural Suite Installer](https://github.com/arup-group/specklestructuralsuite-installer/releases).
+
 ## Core SpeckleGSA Features:
 
 * Automatically converts, packages, and sends GSA models to Speckle servers
