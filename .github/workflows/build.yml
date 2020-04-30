@@ -1,4 +1,8 @@
-on: push
+on:
+  push:
+    paths: 
+      - 'Resource/**'
+      - 'Speckle*/**'
 
 name: build SpeckleGSA
 jobs:
