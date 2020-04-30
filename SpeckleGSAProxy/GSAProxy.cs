@@ -276,9 +276,7 @@ namespace SpeckleGSAProxy
         }
 
         Parallel.ForEach(gwaRecords, gwa =>
-        //for (int j = 0; j < gwaRecords.Length; j++)
         {
-          //ParseGeneralGwa(gwaRecords[j], out string keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
           ParseGeneralGwa(gwa, out string keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
           var index = foundIndex ?? 0;
           var originalSid = "";

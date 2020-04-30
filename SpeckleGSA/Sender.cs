@@ -245,17 +245,17 @@ namespace SpeckleGSA
       // Send package
       Status.ChangeStatus("Sending to Server");
 
-      foreach (var kvp in streamBuckets)
+      Parallel.ForEach(streamBuckets, kvp =>
       {
         Status.ChangeStatus("Sending to stream: " + Senders[kvp.Key].StreamID);
 
         var streamName = "";
-				var title = GSA.gsaProxy.GetTitle();
-				streamName = GSA.Settings.SeparateStreams ? title + "." + kvp.Key : title;
+        var title = GSA.gsaProxy.GetTitle();
+        streamName = GSA.Settings.SeparateStreams ? title + "." + kvp.Key : title;
 
         Senders[kvp.Key].UpdateName(streamName);
         Senders[kvp.Key].SendGSAObjects(kvp.Value);
-      }
+      });
 
 			IsBusy = false;
       Status.ChangeStatus("Finished sending", 100);

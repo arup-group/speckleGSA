@@ -182,44 +182,49 @@ namespace SpeckleGSAProxy
     //Not every record has stream IDs (like generated nodes)
     public bool Upsert(string keyword, int index, string gwa, string applicationId = "", SpeckleObject so = null, GwaSetCommandType gwaSetCommandType = GwaSetCommandType.Set, bool? latest = true, string streamId = null)
     {
-      return (ExecuteWithLock(() =>
+      try
       {
-        try
+        var matchingRecords = new List<GSACacheRecord>();
+        ExecuteWithLock(() =>
         {
           if (!recordsByKeyword.ContainsKey(keyword))
           {
             recordsByKeyword.Add(keyword, new List<GSACacheRecord>());
           }
-          var matchingRecords = recordsByKeyword[keyword].Where(r => r.Index == index);
-          if (matchingRecords.Count() > 0)
+          matchingRecords = recordsByKeyword[keyword].Where(r => r.Index == index).ToList();
+        });
+
+        if (matchingRecords.Count() > 0)
+        {
+          var matchingGwaRecords = matchingRecords.Where(r => r.Gwa.Equals(gwa, StringComparison.InvariantCultureIgnoreCase)).ToList();
+          if (matchingGwaRecords.Count() > 1)
           {
-            var matchingGwaRecords = matchingRecords.Where(r => r.Gwa.Equals(gwa, StringComparison.InvariantCultureIgnoreCase)).ToList();
-            if (matchingGwaRecords.Count() > 1)
-            {
-              throw new Exception("Unexpected multiple matches found in upsert of cache records");
-            }
-            else if (matchingGwaRecords.Count() == 1)
-            {
-              //There should just be one matching record
+            throw new Exception("Unexpected multiple matches found in upsert of cache records");
+          }
+          else if (matchingGwaRecords.Count() == 1)
+          {
+            //There should just be one matching record
 
-              //There is no change to the GWA but it clearly means it's part of the latest
-              if (latest.HasValue)
-              {
-                matchingGwaRecords.First().Latest = latest.Value;
-              }
-
-              return true;
-            }
-            else
+            //There is no change to the GWA but it clearly means it's part of the latest
+            if (latest.HasValue)
             {
-              //These will be return at the next call to GetToBeDeletedGwa() and removed at the next call to Snapshot()
-              foreach (var r in matchingRecords)
-              {
-                r.Latest = false;
-              }
+              ExecuteWithLock(() => matchingGwaRecords.First().Latest = latest.Value);
+            }
+
+            return true;
+          }
+          else
+          {
+            //These will be return at the next call to GetToBeDeletedGwa() and removed at the next call to Snapshot()
+            foreach (var r in matchingRecords)
+            {
+              ExecuteWithLock(() => r.Latest = false);
             }
           }
+        }
 
+        ExecuteWithLock(() =>
+        {
           if (!recordsByKeyword.ContainsKey(keyword))
           {
             recordsByKeyword.Add(keyword, new List<GSACacheRecord>());
@@ -228,14 +233,13 @@ namespace SpeckleGSAProxy
 
           UpsertApplicationIdLookup(keyword, index, applicationId);
           RemoveFromProvisional(keyword, index);
-
-          return true;
-        }
-        catch (Exception ex)
-        {
-          return false;
-        }
-      }));
+        });
+        return true;
+      }
+      catch
+      {
+        return false;
+      }
     }
 
     public bool AssignSpeckleObject(string keyword, string applicationId, SpeckleObject so, string streamId = null)
