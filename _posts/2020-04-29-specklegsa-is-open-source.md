@@ -5,7 +5,7 @@ date: 2020-04-29
 categories: [news]
 ---
 
-Oasys is delighted to announce the release of SpeckleGSA, an open-source GSA plugin that integrates GSA directly into the Speckle ecosystem. SpeckleGSA opens up new avenues for direct collaboration with architects and designers working in Grasshopper, Rhino, Revit, Dynamo, Excel and the many other design tools that integrate with the Speckle ecosystem.
+Oasys is delighted to announce the release of SpeckleGSA, an open-source [GSA](https://www.oasys-software.com/products/structural/gsa/) plugin that integrates GSA directly into the [Speckle](https://speckle.systems/) ecosystem. SpeckleGSA opens up new avenues for direct collaboration with architects and designers working in Grasshopper, Rhino, Revit, Dynamo, Excel and the many other design tools that integrate with the Speckle ecosystem.
 
 Over the past year, SpeckleGSA has been used by design teams to deliver automated workflows for metro stations, high rise towers, museums and bridges all around the world. Oasys is pleased to be able to make these capabilities available to all of our GSA customers.
 
@@ -15,6 +15,9 @@ Over the past year, SpeckleGSA has been used by design teams to deliver automate
 
 A big thanks to the primary [contributors](https://github.com/arup-group/speckleGSA/graphs/contributors): [Mishael Nuh](https://github.com/mishaelnuh) and [Nic Burgers](https://github.com/nic-burgers-arup)!!
 
-Speckle is an open source data platform for AEC. It is used by the world's top designers to liberate data from one platform to another in a quick, manageable, and efficient way.
-
 Stay tuned for an upcoming webinar that will present Speckle, SpeckleGSA and show you how to get started with this powerful new way of working.
+
+[Speckle](https://speckle.systems/) is an open source data platform for AEC. It is used by the world's top designers to liberate data from one platform to another in a quick, manageable, and efficient way.
+
+[GSA](https://www.oasys-software.com/products/structural/gsa/) is the software of choice for advanced analysis and design of buildings, bridges and tensile structures. It provides a complete toolkit, with quick model creation and a comprehensive suite of analysis options, working seamlessly with engineers’ favourite BIM tools and workflow. Designed by engineers for engineers. 
+
