@@ -161,7 +161,7 @@ namespace SpeckleGSAProxy.Test
     {
       var proxy = new GSAProxy();
       proxy.OpenFile(Path.Combine(testDataDirectory, "Structural Demo 191010.gwb"));
-      var data = proxy.GetGwaData(DesignLayerKeywords);
+      var data = proxy.GetGwaData(DesignLayerKeywords, false);
       Assert.AreEqual(195, data.Count());
       proxy.Close();
     }

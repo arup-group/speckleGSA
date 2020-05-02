@@ -283,7 +283,7 @@ namespace SpeckleGSA
       GSA.gsaCache.Clear();
       try
       {
-        var data = GSA.gsaProxy.GetGwaData(keywords);
+        var data = GSA.gsaProxy.GetGwaData(keywords, false);
         for (int i = 0; i < data.Count(); i++)
         {
           GSA.gsaCache.Upsert(

@@ -241,7 +241,7 @@ namespace SpeckleGSAProxy
     }
 
     //Tuple: keyword | index | Application ID | GWA command | Set or Set At
-    public List<ProxyGwaLine> GetGwaData(IEnumerable<string> keywords)
+    public List<ProxyGwaLine> GetGwaData(IEnumerable<string> keywords, bool nodeApplicationIdFilter)
     {
       var dataLock = new object();
       var data = new List<ProxyGwaLine>();
@@ -263,6 +263,8 @@ namespace SpeckleGSAProxy
       for (int i = 0; i < setKeywords.Count(); i++)
       {
         var newCommand = "GET_ALL\t" + setKeywords[i];
+        var isNode = setKeywords[i].Contains("NODE");
+        var isElement = setKeywords[i].StartsWith("EL.");
 
         string[] gwaRecords;
 
@@ -285,7 +287,7 @@ namespace SpeckleGSAProxy
           {
             //Slight hardcoding for optimisation here: the biggest source of GetSidTagValue calls would be from nodes, and knowing
             //(at least in GSA v10 build 63) that GET_ALL NODE does return SID tags, the call is avoided for NODE keyword
-            if (!keyword.Contains("NODE") && !keyword.StartsWith("EL."))
+            if (!isNode && !isElement)
             {
               try
               {
@@ -302,7 +304,7 @@ namespace SpeckleGSAProxy
           if (string.IsNullOrEmpty(foundApplicationId))
           {
             //Again, the same optimisation as explained above
-            if (!keyword.Contains("NODE") && !keyword.StartsWith("EL."))
+            if (!isNode && !isElement)
             {
               try
               {
@@ -322,19 +324,22 @@ namespace SpeckleGSAProxy
             gwaWithoutSet.Replace(originalSid, newSid);
           }
 
-          var line = new ProxyGwaLine()
+          if (!(nodeApplicationIdFilter == true && isNode && string.IsNullOrEmpty(foundApplicationId)))
           {
-            Keyword = keyword,
-            Index = index,
-            StreamId = foundStreamId,
-            ApplicationId = foundApplicationId,
-            GwaWithoutSet = gwaWithoutSet,
-            GwaSetType = GwaSetCommandType.Set
-          };
+            var line = new ProxyGwaLine()
+            {
+              Keyword = keyword,
+              Index = index,
+              StreamId = foundStreamId,
+              ApplicationId = foundApplicationId,
+              GwaWithoutSet = gwaWithoutSet,
+              GwaSetType = GwaSetCommandType.Set
+            };
 
-          lock (dataLock)
-          {
-            data.Add(line);
+            lock (dataLock)
+            {
+              data.Add(line);
+            }
           }
         }
         );
@@ -754,8 +759,19 @@ namespace SpeckleGSAProxy
     //
     public void DeleteGWA(string keyword, int index, GwaSetCommandType gwaSetCommandType)
     {
-      var gwaReturnObj = ExecuteWithLock(() => GSAObject.GwaCommand(string.Join("\t", 
-          new[] { (gwaSetCommandType == GwaSetCommandType.Set) ? "BLANK" : "DELETE", keyword, index.ToString() })));
+      var command = string.Join("\t", new[] { (gwaSetCommandType == GwaSetCommandType.Set) ? "BLANK" : "DELETE", keyword, index.ToString() });
+      ExecuteWithLock(() =>
+      { 
+        if (gwaSetCommandType == GwaSetCommandType.Set)
+        {
+          //For synchronising later
+          batchBlankGwa.Add(command);
+        }
+        else
+        {
+          GSAObject.GwaCommand(command);
+        }
+      });
     }
 
     //----

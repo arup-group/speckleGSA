@@ -124,5 +124,37 @@ namespace SpeckleGSAProxy
     {
       return fullTypeName.Split(new[] { '/' }).Last();
     }
-  }
+
+		public static string GwaForComparison(this string gwa)
+		{
+			if (string.IsNullOrWhiteSpace(gwa))
+			{
+				return "";
+			}
+
+			var gwaTemp = gwa.Replace(" ", "").Replace("\t", "");
+
+			bool changed;
+			do
+			{
+				var startSidIndex = gwaTemp.IndexOf('{');
+				var endSidIndex = gwaTemp.IndexOf('}');
+				if (startSidIndex > 0 || endSidIndex > startSidIndex)
+				{
+					gwaTemp = gwaTemp.Substring(0, startSidIndex) + gwaTemp.Substring(endSidIndex + 1);
+					if (startSidIndex > 1 && gwaTemp[startSidIndex - 1] == ':')
+					{
+						gwaTemp = gwaTemp.Remove(startSidIndex - 1, 1);
+					}
+					changed = true;
+				}
+				else
+				{
+					changed = false;
+				}
+			} while (changed == true);
+			
+			return gwaTemp;
+		}
+	}
 }

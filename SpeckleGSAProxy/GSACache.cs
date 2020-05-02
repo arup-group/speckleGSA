@@ -36,10 +36,10 @@ namespace SpeckleGSAProxy
     {
       var stackTrace = new StackTrace();
       var callingMethodName = ((stackTrace.GetFrames().Count() >= 2) ? stackTrace.GetFrames()[1].GetMethod().Name : stackTrace.GetFrames().Last().GetMethod().Name);
-      if (!callingMethodName.Equals("AssignSpeckleObject"))
-      {
-        Debug.WriteLine("Lock asked for on thread: " + Thread.CurrentThread.ManagedThreadId + " method " + callingMethodName);
-      }
+      //if (!callingMethodName.Equals("AssignSpeckleObject"))
+      //{
+      //  Debug.WriteLine("Lock asked for on thread: " + Thread.CurrentThread.ManagedThreadId + " method " + callingMethodName);
+      //}
       lock (syncLock)
       {
         a();
@@ -196,7 +196,8 @@ namespace SpeckleGSAProxy
 
         if (matchingRecords.Count() > 0)
         {
-          var matchingGwaRecords = matchingRecords.Where(r => r.Gwa.Equals(gwa, StringComparison.InvariantCultureIgnoreCase)).ToList();
+          var gwaFormatted = gwa.GwaForComparison();
+          var matchingGwaRecords = matchingRecords.Where(r => r.Gwa.GwaForComparison().Equals(gwaFormatted, StringComparison.InvariantCultureIgnoreCase)).ToList();
           if (matchingGwaRecords.Count() > 1)
           {
             throw new Exception("Unexpected multiple matches found in upsert of cache records");
@@ -274,7 +275,6 @@ namespace SpeckleGSAProxy
         {
           var indicesToRemove = new List<int>();
 
-
           for (int i = 0; i < recordsByKeyword[keyword].Count(); i++)
           {
             if (recordsByKeyword[keyword][i].StreamId == null || recordsByKeyword[keyword][i].StreamId != streamId || !IsAlterable(keyword, recordsByKeyword[keyword][i].ApplicationId))
@@ -290,8 +290,8 @@ namespace SpeckleGSAProxy
             }
             else
             {
-              recordsByKeyword[keyword][i].Latest = false;
               recordsByKeyword[keyword][i].Previous = true;
+              recordsByKeyword[keyword][i].Latest = false;
             }
           }
 

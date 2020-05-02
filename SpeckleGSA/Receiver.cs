@@ -30,6 +30,8 @@ namespace SpeckleGSA
     private readonly List<Type> traversedSerialisedTypes = new List<Type>();
     private readonly List<Type> traversedDeserialisedTypes = new List<Type>();
 
+    private readonly Dictionary<Type, object> dummyObjectDict = new Dictionary<Type, object>();
+
     /// <summary>
     /// Initializes receiver.
     /// </summary>
@@ -88,8 +90,11 @@ namespace SpeckleGSA
       Status.ChangeStatus("Reading GSA data into cache");
 
       var numRowsupdated = await UpdateCache(keywords);
-      
-      Status.AddMessage("Read " + numRowsupdated + " GWA lines across " + keywords.Count()  + " keywords into cache");
+
+      if (numRowsupdated > 0)
+      {
+        Status.AddMessage("Read " + numRowsupdated + " GWA lines across " + keywords.Count() + " keywords into cache");
+      }
 
       // Create receivers
       Status.ChangeStatus("Accessing streams");
@@ -186,15 +191,30 @@ namespace SpeckleGSA
       var otherLayer = GSA.Settings.TargetLayer == GSATargetLayer.Design ? GSATargetLayer.Analysis : GSATargetLayer.Design;
       await ProcessObjectsForLayer(otherLayer);
 
-      var toBeDeletedGwa = GSA.gsaCache.GetExpiredData();
-      for (int i = 0; i < toBeDeletedGwa.Count(); i++)  
+      var toBeAddedGwa = GSA.gsaCache.GetNewlyAddedGwa();
+      for (int i = 0; i < toBeAddedGwa.Count(); i++)
       {
-        var keyword = toBeDeletedGwa[i].Item1;
-        var index = toBeDeletedGwa[i].Item2;
-        var gwa = toBeDeletedGwa[i].Item3;
-        var gwaSetCommandType = toBeDeletedGwa[i].Item4;
-        GSA.gsaProxy.DeleteGWA(keyword, index, gwaSetCommandType);
+        GSA.gsaProxy.SetGwa(toBeAddedGwa[i]);
       }
+
+      var toBeDeletedGwa = GSA.gsaCache.GetExpiredData();
+
+      var setDeletes = toBeDeletedGwa.Where(t => t.Item4 == GwaSetCommandType.Set).ToList();
+      for (int i = 0; i < setDeletes.Count(); i++)  
+      {
+        var keyword = setDeletes[i].Item1;
+        var index = setDeletes[i].Item2;
+        GSA.gsaProxy.DeleteGWA(keyword, index, GwaSetCommandType.Set);
+      }
+
+      var setAtDeletes = toBeDeletedGwa.Where(t => t.Item4 == GwaSetCommandType.SetAt).OrderByDescending(t => t.Item2).ToList();
+      for (int i = 0; i < setAtDeletes.Count(); i++)
+      {
+        var keyword = setAtDeletes[i].Item1;
+        var index = setAtDeletes[i].Item2;
+        GSA.gsaProxy.DeleteGWA(keyword, index, GwaSetCommandType.SetAt);
+      }
+
       GSA.gsaProxy.Sync();
 
       GSA.gsaProxy.UpdateCasesAndTasks();
@@ -207,7 +227,7 @@ namespace SpeckleGSA
     private Task<int> UpdateCache(List<string> keywords)
     {
       GSA.gsaCache.Clear();
-      var data = GSA.gsaProxy.GetGwaData(keywords);
+      var data = GSA.gsaProxy.GetGwaData(keywords, true);
       for (int i = 0; i < data.Count(); i++)
       {
         GSA.gsaCache.Upsert(
@@ -228,7 +248,6 @@ namespace SpeckleGSA
     {
       // Write objects
       var currentBatch = new List<Type>();
-      //var traversedTypes = new SynchronizedCollection<Type>();
 
       do
       {
@@ -242,16 +261,19 @@ namespace SpeckleGSA
         //in preparation for their parallel use below.  The methods are stored in a Dictionary object, which is thread-safe
         //for reading. Because the calls to Deserialise below (of dummy objects) will alter the Dictionary object, it must be
         //done in serial on the one thread
-        var dummyObjectDict = new Dictionary<Type, object>();
         foreach (var t in currentBatch)
         {
-          if (!Converter.toNativeMethods.ContainsKey(t.ToString()))
+          if (!dummyObjectDict.ContainsKey(t))
           {
             var dummyObject = Activator.CreateInstance(t);
             dummyObjectDict[t] = dummyObject;
+          }
+          var valueType = t.GetProperty("Value").GetValue(dummyObjectDict[t]).GetType();
+          if (!Converter.toNativeMethods.ContainsKey(valueType.ToString()))
+          {
             try
             {
-              Converter.Deserialise((SpeckleObject)((IGSASpeckleContainer)dummyObject).Value);
+              Converter.Deserialise((SpeckleObject)((IGSASpeckleContainer)dummyObjectDict[t]).Value);
             }
             catch { }
           }
@@ -378,8 +400,6 @@ namespace SpeckleGSA
           gwaCommands[j] = gwaCommands[j].Replace(originalSid, newSid);
           gwaWithoutSet = gwaWithoutSet.Replace(originalSid, newSid);
         }
-
-        GSA.gsaProxy.SetGwa(gwaCommands[j]);
 
         //Only cache the object against, the top-level GWA command, not the sub-commands - this is what the SID value comparision is there for
         GSA.gsaCache.Upsert(keyword, 
