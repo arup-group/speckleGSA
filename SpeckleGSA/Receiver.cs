@@ -295,6 +295,20 @@ namespace SpeckleGSA
 
           var speckleTypeName = ((SpeckleObject)((IGSASpeckleContainer)dummyObject).Value).Type;
 
+          //First serialise all relevant objects into sending dictionary so that merging can happen
+          var typeAppIds = targetObjects.Where(o => o.Item2.ApplicationId != null).Select(o => o.Item2.ApplicationId).ToList();
+          if (typeAppIds.Any(i => GSA.gsaCache.ApplicationIdExists(keyword, i)))
+          {
+            //Serialise all objects of this type and update traversedSerialised list
+            ExecuteWithLock(ref traversedSerialisedLock, () =>
+            {
+              if (!traversedSerialisedTypes.Contains(t))
+              {
+                SerialiseUpdateCacheForGSAType(layer, keyword, t, dummyObject);
+              }
+            });
+          }
+
           Parallel.ForEach(targetObjects, tuple =>
           {
             dummyObject = Activator.CreateInstance(t);
@@ -333,36 +347,18 @@ namespace SpeckleGSA
 
     private SpeckleObject ProcessObject(SpeckleObject targetObject, string speckleTypeName, string keyword, Type t, object dummyObject, string streamId, GSATargetLayer layer)
     {
-      //Hold value for later upserting into cache
-      var applicationId = targetObject.ApplicationId;
+      var existingList = GSA.gsaCache.GetSpeckleObjects(speckleTypeName, targetObject.ApplicationId, streamId: streamId);
 
-      //Check if merging needs to be considered
-      if (GSA.gsaCache.ApplicationIdExists(keyword, targetObject.ApplicationId))
+      if (existingList == null || existingList.Count() == 0)
       {
-        if (!ExecuteWithLock(ref traversedSerialisedLock, () => traversedSerialisedTypes.Contains(t)))
-        {
-          var readPrereqs = GetPrereqs(t, FilteredReadTypePrereqs[layer]);
-          SerialiseUpdateCacheForGSAType(readPrereqs, keyword, t, dummyObject);
-        }
-
-        //If so but the type doesn't appear alongside it as one that was loaded, then load it now by calling ToSpeckle with a dummy version of the GSA corresponding type
-        var existingList = GSA.gsaCache.GetSpeckleObjects(speckleTypeName, targetObject.ApplicationId, streamId: streamId);
-
-        if (existingList == null || existingList.Count() == 0)
-        {
-          //The serialisation for this object didn't work (a notable example is ASSEMBLY when type is ELEMENT when Design layer is targeted)
-          //so mark it as previous as there is clearly an update from the stream.  For these cases, merging isn't possible.
-          GSA.gsaCache.MarkAsPrevious(keyword, targetObject.ApplicationId);
-        }
-        else
-        {
-          var existing = existingList.First();  //There should just be one instance of each Application ID per type
-          targetObject = GSA.Merger.Merge(targetObject, existing);
-        }
+        //The serialisation for this object didn't work (a notable example is ASSEMBLY when type is ELEMENT when Design layer is targeted)
+        //so mark it as previous as there is clearly an update from the stream.  For these cases, merging isn't possible.
+        GSA.gsaCache.MarkAsPrevious(keyword, targetObject.ApplicationId);
       }
       else
       {
-        //The application Id doesn't exist yet in the model - but the deserialisation will add it in
+        var existing = existingList.First();  //There should just be one instance of each Application ID per type
+        targetObject = GSA.Merger.Merge(targetObject, existing);
       }
 
       List<string> gwaCommands = new List<string>();
@@ -381,6 +377,7 @@ namespace SpeckleGSA
         //TO DO
       }
 
+      //TO DO - parallelise
       for (int j = 0; j < gwaCommands.Count(); j++)
       {
         //At this point the SID will be filled with the application ID
@@ -413,17 +410,22 @@ namespace SpeckleGSA
       return targetObject;
     }
 
-    private void SerialiseUpdateCacheForGSAType(List<Type> readPrereqs, string keyword, Type t, object dummyObject)
+    //Note: this is called while the traversedSerialisedLock is in place
+    private void SerialiseUpdateCacheForGSAType(GSATargetLayer layer, string keyword, Type t, object dummyObject)
     {
+      var readPrereqs = GetPrereqs(t, FilteredReadTypePrereqs[layer]);
+
+      //The way the readPrereqs are constructed (one linear list, not grouped by generations/batches), this cannot be parallelised
       for (int j = 0; j < readPrereqs.Count(); j++)
       {
         var prereqDummyObject = Activator.CreateInstance(readPrereqs[j]);
         var prereqKeyword = prereqDummyObject.GetAttribute("GSAKeyword").ToString();
 
-        if (!ExecuteWithLock(ref traversedSerialisedLock, () => traversedSerialisedTypes.Contains(readPrereqs[j])))
+        if (!traversedSerialisedTypes.Contains(readPrereqs[j]))
         {
           var prereqResult = Converter.Serialise(prereqDummyObject);
           var prereqSerialisedObjects = CollateSerialisedObjects(readPrereqs[j]);
+
           for (int k = 0; k < prereqSerialisedObjects.Count; k++)
           {
             //The GWA will contain stream ID, which needs to be stripped off for merging and sending purposes
@@ -437,7 +439,7 @@ namespace SpeckleGSA
               GSA.gsaCache.AssignSpeckleObject(prereqKeyword, applicationId, prereqSerialisedObjects[k]);
             }
           }
-          ExecuteWithLock(ref traversedSerialisedLock, () => traversedSerialisedTypes.Add(readPrereqs[j]));
+          traversedSerialisedTypes.Add(readPrereqs[j]);
         }
       }
 
@@ -462,9 +464,12 @@ namespace SpeckleGSA
         }
       }
 
-      ExecuteWithLock(ref traversedSerialisedLock, () => traversedSerialisedTypes.Add(t));
+      traversedSerialisedTypes.Add(t);
     }
 
+
+    //These are not grouped by generation - so should be treated as a linear list
+    //Note: this is called while traversedSerialisedLock is in place 
     private List<Type> GetPrereqs(Type t, Dictionary<Type, List<Type>> allPrereqs)
     {
       var prereqs = new List<Type>();
