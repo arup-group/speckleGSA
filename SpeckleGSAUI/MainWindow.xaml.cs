@@ -354,7 +354,7 @@ namespace SpeckleGSAUI
           }
 
           gsaSender = new Sender();
-          var statusMessages = await gsaSender.Initialize(RestApi, ApiToken);
+          var statusMessages = await gsaSender.Initialize(RestApi, ApiToken, (restApi, apiToken) => new SpeckleGSASender(restApi, apiToken));
         }
         catch (Exception ex)
         {

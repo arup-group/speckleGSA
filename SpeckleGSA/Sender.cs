@@ -12,7 +12,7 @@ namespace SpeckleGSA
   /// </summary>
   public class Sender : BaseReceiverSender
   {
-    public Dictionary<string, SpeckleGSASender> Senders = new Dictionary<string, SpeckleGSASender>();
+    public Dictionary<string, ISpeckleGSASender> Senders = new Dictionary<string, ISpeckleGSASender>();
 
     private Dictionary<Type, List<Type>> FilteredReadTypePrereqs = new Dictionary<Type, List<Type>>();
     public Dictionary<Type, string> StreamMap = new Dictionary<Type, string>();
@@ -29,7 +29,7 @@ namespace SpeckleGSA
     /// <param name="restApi">Server address</param>
     /// <param name="apiToken">API token of account</param>
     /// <returns>Task</returns>
-    public async Task<List<string>> Initialize(string restApi, string apiToken)
+    public async Task<List<string>> Initialize(string restApi, string apiToken, Func<string, string, ISpeckleGSASender> GSASenderCreator)
     {
 			var statusMessages = new List<string>();
 
@@ -123,7 +123,8 @@ namespace SpeckleGSA
 
       foreach (string streamName in streamNames)
       {
-        Senders[streamName] = new SpeckleGSASender(restApi, apiToken);
+        //Senders[streamName] = new SpeckleGSASender(restApi, apiToken);
+        Senders[streamName] = GSASenderCreator(restApi, apiToken);
 
         if (!GSA.Senders.ContainsKey(streamName))
         {

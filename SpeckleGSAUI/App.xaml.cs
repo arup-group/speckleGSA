@@ -264,7 +264,7 @@ namespace SpeckleGSAUI
       
       GSA.GetSpeckleClients(EmailAddress, RestApi);
       var gsaSender = new Sender();
-      Task.Run(() => gsaSender.Initialize(RestApi, ApiToken)).Wait();
+      Task.Run(() => gsaSender.Initialize(RestApi, ApiToken, (restApi, apiToken) => new SpeckleGSASender(restApi, apiToken))).Wait();
       GSA.SetSpeckleClients(EmailAddress, RestApi);
       gsaSender.Trigger();
       gsaSender.Dispose();

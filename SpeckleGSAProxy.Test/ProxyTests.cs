@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using SpeckleGSAInterfaces;
 using System.IO;
 using System.Diagnostics;
+using System.Collections;
 
 namespace SpeckleGSAProxy.Test
 {
@@ -138,6 +139,39 @@ namespace SpeckleGSAProxy.Test
       }
     }
 
+    [TestCase("sjc.gwb")]
+    public async Task SendTest(string filename)
+    {
+      GSA.gsaProxy = new GSAProxy();
+      GSA.Init();
+
+      Status.MessageAdded += (s, e) => Debug.WriteLine("Message: " + e.Message);
+      Status.ErrorAdded += (s, e) => Debug.WriteLine("Error: " + e.Message);
+      Status.StatusChanged += (s, e) => Debug.WriteLine("Status: " + e.Name);
+
+      GSA.Senders = new Dictionary<string, Tuple<string, string>>() { { "testStream", new Tuple<string, string>("testStreamId", "testClientId") } };
+
+      var sender = new Sender();
+
+      GSA.gsaProxy.OpenFile(Path.Combine(testDataDirectory, filename), true);
+
+      //This will load data from all streams into the cache
+      await sender.Initialize("", "", (restApi, apiToken) => new TestSender());
+
+      //RECEIVE EVENT #1: first of continuous
+      sender.Trigger();
+
+      GSA.gsaProxy.Close();
+
+      var testSender = (TestSender)sender.Senders.First().Value;
+
+      var a = new SpeckleObject();
+      var sentObjects = testSender.sentObjects.SelectMany(kvp => kvp.Value.Select(v => (SpeckleObject)v)).ToList();
+
+      Assert.AreEqual(1481, sentObjects.Where(so => so.Type.EndsWith("Structural1DElement")).Count());
+      Assert.AreEqual(50, sentObjects.Where(so => so.Type.Contains("Structural2DElement")).Count());
+      Assert.AreEqual(172, sentObjects.Where(so => so.Type.EndsWith("Structural2DVoid")).Count());
+    }
 
 
     [TestCase("SET\tMEMB.7:{speckle_app_id:gh/a}\t5\tTheRest", "MEMB.7", 5, "gh/a", "MEMB.7:{speckle_app_id:gh/a}\t5\tTheRest")]
