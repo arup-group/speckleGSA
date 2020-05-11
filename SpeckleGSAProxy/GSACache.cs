@@ -21,10 +21,10 @@ namespace SpeckleGSAProxy
     {
       var stackTrace = new StackTrace();
       var callingMethodName = ((stackTrace.GetFrames().Count() >= 2) ? stackTrace.GetFrames()[1].GetMethod().Name : stackTrace.GetFrames().Last().GetMethod().Name);
-      if (!callingMethodName.Equals("AssignSpeckleObject"))
-      {
-        Debug.WriteLine("Lock asked for on thread: " + Thread.CurrentThread.ManagedThreadId + " method " + callingMethodName);
-      }
+      //if (!callingMethodName.Equals("AssignSpeckleObject"))
+      //{
+      //  Debug.WriteLine("Lock asked for on thread: " + Thread.CurrentThread.ManagedThreadId + " method " + callingMethodName);
+      //}
       lock (syncLock)
       {
         var ret = f();
