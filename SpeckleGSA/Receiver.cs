@@ -44,6 +44,7 @@ namespace SpeckleGSA
 
 			if (IsInit) return statusMessages;
 
+      var startTime = DateTime.Now;
 			if (!GSA.IsInit)
 			{
 				Status.AddError("GSA link not found.");
@@ -99,7 +100,7 @@ namespace SpeckleGSA
       // Create receivers
       Status.ChangeStatus("Accessing streams");
 
-			var nonBlankReceivers = GSA.Receivers.Where(r => !string.IsNullOrEmpty(r.Item1)).ToList();
+			var nonBlankReceivers = GSA.ReceiverInfo.Where(r => !string.IsNullOrEmpty(r.Item1)).ToList();
 
       await nonBlankReceivers.ForEachAsync(async (streamInfo) =>
 			{
@@ -107,7 +108,10 @@ namespace SpeckleGSA
 				Receivers[streamInfo.Item1].UpdateGlobalTrigger += Trigger;
 			}, Environment.ProcessorCount);
 
-			Status.ChangeStatus("Ready to receive");
+      TimeSpan duration = DateTime.Now - startTime;
+      Status.AddMessage("Duration of initialisation: " + duration.ToString(@"hh\:mm\:ss"));
+
+      Status.ChangeStatus("Ready to receive");
 			IsInit = true;
 
 			return statusMessages;
@@ -121,6 +125,8 @@ namespace SpeckleGSA
       if ((IsBusy) || (!IsInit)) return;
 
       IsBusy = true;
+
+      var startTime = DateTime.Now;
 
       GSA.Settings.Units = GSA.gsaProxy.GetUnits();
 
@@ -165,7 +171,11 @@ namespace SpeckleGSA
 				}
 			}
 
-      var streamIds = GSA.Receivers.Select(r => r.Item1).ToList();
+      TimeSpan duration = DateTime.Now - startTime;
+      Status.AddMessage("Duration of reception from Speckle and scaling: " + duration.ToString(@"hh\:mm\:ss"));
+      startTime = DateTime.Now;
+
+      var streamIds = GSA.ReceiverInfo.Select(r => r.Item1).ToList();
       for (int i = 0; i < streamIds.Count(); i++)
       {
         GSA.gsaCache.Snapshot(streamIds[i]);
@@ -219,6 +229,10 @@ namespace SpeckleGSA
 
       GSA.gsaProxy.UpdateCasesAndTasks();
 			GSA.gsaProxy.UpdateViews();
+
+      duration = DateTime.Now - startTime;
+      Status.AddMessage("Duration of conversion from Speckle: " + duration.ToString(@"hh\:mm\:ss"));
+      startTime = DateTime.Now;
 
       Status.ChangeStatus("Finished receiving", 100);
       IsBusy = false;
@@ -503,7 +517,7 @@ namespace SpeckleGSA
     /// </summary>
     public void Dispose()
     {
-      foreach (Tuple<string,string> streamInfo in GSA.Receivers)
+      foreach (Tuple<string,string> streamInfo in GSA.ReceiverInfo)
       {
         Receivers[streamInfo.Item1].UpdateGlobalTrigger -= Trigger;
         Receivers[streamInfo.Item1].Dispose();

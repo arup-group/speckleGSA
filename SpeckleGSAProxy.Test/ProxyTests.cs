@@ -29,7 +29,7 @@ namespace SpeckleGSAProxy.Test
         GSA.Init();
 
         var streamIds = savedJsonFileNames.Select(fn => fn.Split(new[] { '.' }).First()).ToList();
-        GSA.Receivers = streamIds.Select(si => new Tuple<string, string>(si, null)).ToList();
+        GSA.ReceiverInfo = streamIds.Select(si => new Tuple<string, string>(si, null)).ToList();
 
         //Create receiver with all streams
         var receiver = new Receiver() { Receivers = streamIds.ToDictionary(s => s, s => (ISpeckleGSAReceiver)new TestReceiver()) };
@@ -80,7 +80,7 @@ namespace SpeckleGSAProxy.Test
         GSA.Init();
 
         var streamIds = savedJsonFileNames.Select(fn => fn.Split(new[] { '.' }).First()).ToList();
-        GSA.Receivers = streamIds.Select(si => new Tuple<string, string>(si, null)).ToList();
+        GSA.ReceiverInfo = streamIds.Select(si => new Tuple<string, string>(si, null)).ToList();
 
         //Create receiver with all streams
         var receiver = new Receiver() { Receivers = streamIds.ToDictionary(s => s, s => (ISpeckleGSAReceiver)new TestReceiver()) };
@@ -100,13 +100,13 @@ namespace SpeckleGSAProxy.Test
         CopyCacheToTestProxy();
 
         var streamIdsToTest = streamIds.Take(3).ToList();
-        GSA.Receivers = streamIdsToTest.Select(si => new Tuple<string, string>(si, null)).ToList();
+        GSA.ReceiverInfo = streamIdsToTest.Select(si => new Tuple<string, string>(si, null)).ToList();
 
         //Yes the real SpeckleGSA does create a new receiver.  This time, create them with not all streams active
         receiver = new Receiver() { Receivers = streamIdsToTest.ToDictionary(s => s, s => (ISpeckleGSAReceiver)new TestReceiver()) };
 
         var records = ((IGSACacheForTesting)GSA.gsaCache).Records;
-        Assert.AreEqual(3, GSA.Receivers.Count());
+        Assert.AreEqual(3, GSA.ReceiverInfo.Count());
         Assert.AreEqual(3, receiver.Receivers.Count());
         Assert.AreEqual(4, records.Select(r => r.StreamId).Distinct().Count());
 
@@ -149,21 +149,21 @@ namespace SpeckleGSAProxy.Test
       Status.ErrorAdded += (s, e) => Debug.WriteLine("Error: " + e.Message);
       Status.StatusChanged += (s, e) => Debug.WriteLine("Status: " + e.Name);
 
-      GSA.Senders = new Dictionary<string, Tuple<string, string>>() { { "testStream", new Tuple<string, string>("testStreamId", "testClientId") } };
+      GSA.SenderInfo = new Dictionary<string, Tuple<string, string>>() { { "testStream", new Tuple<string, string>("testStreamId", "testClientId") } };
 
       var sender = new Sender();
 
       GSA.gsaProxy.OpenFile(Path.Combine(testDataDirectory, filename), true);
 
+      var testSender = new TestSender();
+
       //This will load data from all streams into the cache
-      await sender.Initialize("", "", (restApi, apiToken) => new TestSender());
+      await sender.Initialize("", "", (restApi, apiToken) => testSender);
 
       //RECEIVE EVENT #1: first of continuous
       sender.Trigger();
 
       GSA.gsaProxy.Close();
-
-      var testSender = (TestSender)sender.Senders.First().Value;
 
       var a = new SpeckleObject();
       var sentObjects = testSender.sentObjects.SelectMany(kvp => kvp.Value.Select(v => (SpeckleObject)v)).ToList();

@@ -23,8 +23,8 @@ namespace SpeckleGSA
 
     public static bool IsInit;
 
-    public static Dictionary<string, Tuple<string, string>> Senders { get; set; }
-    public static List<Tuple<string, string>> Receivers { get; set; }
+    public static Dictionary<string, Tuple<string, string>> SenderInfo { get; set; }
+    public static List<Tuple<string, string>> ReceiverInfo { get; set; }
 
 		public static Dictionary<Type, List<Type>> WriteTypePrereqs = new Dictionary<Type, List<Type>>();
 		public static Dictionary<Type, List<Type>> ReadTypePrereqs = new Dictionary<Type, List<Type>>();
@@ -33,8 +33,8 @@ namespace SpeckleGSA
     {
       if (IsInit) return;
 
-      Senders = new Dictionary<string, Tuple<string, string>>();
-      Receivers = new List<Tuple<string, string>>();
+      SenderInfo = new Dictionary<string, Tuple<string, string>>();
+      ReceiverInfo = new List<Tuple<string, string>>();
 
       IsInit = true;
 
@@ -189,8 +189,8 @@ namespace SpeckleGSA
       if (!IsInit) return;
 
 			gsaProxy.Close();
-			Senders.Clear();
-      Receivers.Clear();
+			SenderInfo.Clear();
+      ReceiverInfo.Clear();
     }
     #endregion
 
@@ -202,8 +202,8 @@ namespace SpeckleGSA
     /// <param name="serverAddress">Speckle server address</param>
     public static bool GetSpeckleClients(string emailAddress, string serverAddress)
     {
-      Senders.Clear();
-      Receivers.Clear();
+      SenderInfo.Clear();
+      ReceiverInfo.Clear();
 
       try
       { 
@@ -229,7 +229,7 @@ namespace SpeckleGSA
           string[] senders = senderList[1].Split(new char[] { '&' });
 
           for (int i = 0; i < senders.Length; i += 3)
-            Senders[senders[i]] = new Tuple<string, string>(senders[i + 1], senders[i + 2]);
+            SenderInfo[senders[i]] = new Tuple<string, string>(senders[i + 1], senders[i + 2]);
         }
 
         if (receiverList != null && !string.IsNullOrEmpty(receiverList[1]))
@@ -237,15 +237,15 @@ namespace SpeckleGSA
           string[] receivers = receiverList[1].Split(new char[] { '&' });
 
           for (int i = 0; i < receivers.Length; i += 2)
-            Receivers.Add(new Tuple<string, string>(receivers[i], receivers[i + 1]));
+            ReceiverInfo.Add(new Tuple<string, string>(receivers[i], receivers[i + 1]));
         }
         return true;
       }
       catch
       {
         // If fail to read, clear client SIDs
-        Senders.Clear();
-        Receivers.Clear();
+        SenderInfo.Clear();
+        ReceiverInfo.Clear();
         return SetSpeckleClients(emailAddress, serverAddress);
       }
     }
@@ -268,7 +268,7 @@ namespace SpeckleGSA
       sids.RemoveAll(S => S[0] == "SpeckleSender&" + key || S[0] == "SpeckleReceiver&" + key);
 
       List<string> senderList = new List<string>();
-      foreach (KeyValuePair<string, Tuple<string, string>> kvp in Senders)
+      foreach (KeyValuePair<string, Tuple<string, string>> kvp in SenderInfo)
       {
         senderList.Add(kvp.Key);
         senderList.Add(kvp.Value.Item1);
@@ -276,7 +276,7 @@ namespace SpeckleGSA
       }
 
       List<string> receiverList = new List<string>();
-      foreach (Tuple<string, string> t in Receivers)
+      foreach (Tuple<string, string> t in ReceiverInfo)
       {
         receiverList.Add(t.Item1);
         receiverList.Add(t.Item2);
