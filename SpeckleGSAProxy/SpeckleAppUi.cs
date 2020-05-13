@@ -9,20 +9,27 @@ namespace SpeckleGSAProxy
 {
   public class SpeckleAppUI : ISpeckleGSAAppUI
   {
+    private readonly object syncLock = new object();
     private Dictionary<string, List<string>> messages = new Dictionary<string, List<string>>();
     public bool Message(string headingMessage, string exampleDetail)
     {
-      if (!messages.ContainsKey(headingMessage))
+      lock (syncLock)
       {
-        messages.Add(headingMessage, new List<string>());
+        if (!messages.ContainsKey(headingMessage))
+        {
+          messages.Add(headingMessage, new List<string>());
+        }
+        messages[headingMessage].Add(exampleDetail);
       }
-      messages[headingMessage].Add(exampleDetail);
       return true;
     }
 
     public List<string> GroupMessages()
     {
-      return messages.Select(kvp => kvp.Key + " " + string.Join(",", kvp.Value)).ToList();
+      lock (syncLock)
+      {
+        return messages.Select(kvp => kvp.Key + " " + string.Join(",", kvp.Value)).ToList();
+      }
     }
   }
 }

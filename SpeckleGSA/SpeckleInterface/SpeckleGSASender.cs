@@ -10,7 +10,7 @@ namespace SpeckleGSA
 	/// <summary>
 	/// Packages and sends objects as a stream.
 	/// </summary>
-	public class SpeckleGSASender
+	public class SpeckleGSASender : ISpeckleGSASender
   {
     const double MAX_BUCKET_SIZE = 500000;
     const int SendPayloadApiRetries = 3;

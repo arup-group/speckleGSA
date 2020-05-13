@@ -48,6 +48,7 @@
     <Compile Include="IGSAIndexer.cs" />
     <Compile Include="Enums.cs" />
     <Compile Include="IGSAProxy.cs" />
+    <Compile Include="IGSASenderDictionary.cs" />
     <Compile Include="IGSASettings.cs" />
     <Compile Include="IGSASpeckleContainer.cs" />
     <Compile Include="ISpeckleGSAAppUI.cs" />
