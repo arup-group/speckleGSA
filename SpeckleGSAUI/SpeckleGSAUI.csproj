@@ -188,6 +188,7 @@
     <ProjectReference Include="..\SpeckleGSAInterfaces\SpeckleGSAInterfaces.csproj">
       <Project>{5ca1bffe-f623-4677-8412-9d20f0017523}</Project>
       <Name>SpeckleGSAInterfaces</Name>
+      <Private>True</Private>
     </ProjectReference>
     <ProjectReference Include="..\SpeckleGSAProxy\SpeckleGSAProxy.csproj">
       <Project>{88AE85C3-1966-4B71-8C91-242C80DCE6D4}</Project>
