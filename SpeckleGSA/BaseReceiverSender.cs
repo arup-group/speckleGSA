@@ -12,6 +12,25 @@ namespace SpeckleGSA
 		public bool IsInit = false;
 		public bool IsBusy = false;
 
+    #region lock-related
+
+    protected T ExecuteWithLock<T>(ref object lockObject, Func<T> f)
+    {
+      lock (lockObject)
+      {
+        return f();
+      }
+    }
+
+    protected void ExecuteWithLock(ref object lockObject, Action a)
+    {
+      lock (lockObject)
+      {
+        a();
+      }
+    }
+    #endregion
+
     protected List<string> GetFilteredKeywords(Dictionary<Type, List<Type>> prereqs)
     {
       var keywords = new List<string>();
@@ -52,10 +71,10 @@ namespace SpeckleGSA
 			return true;
 		}
 
-    protected List<Dictionary<Type, List<object>>> GetAssembliesStaticTypes()
+    protected List<IGSASenderDictionary> GetAssembliesStaticTypes()
     {
       var assemblies = SpeckleInitializer.GetAssemblies().Where(a => a.GetTypes().Any(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer))));
-      var staticObjects = new List<Dictionary<Type, List<object>>>();
+      var staticObjects = new List<IGSASenderDictionary>();
 
       //Now obtain the serialised (inheriting from SpeckleObject) objects
       foreach (var ass in assemblies)
@@ -67,7 +86,7 @@ namespace SpeckleGSA
           var gsaStatic = types.FirstOrDefault(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer)) && t.GetProperties().Any(p => p.PropertyType == typeof(IGSACacheForKit)));
           if (gsaStatic != null)
           {
-            var dict = (Dictionary<Type, List<object>>)gsaStatic.GetProperties().FirstOrDefault(p => p.PropertyType == typeof(Dictionary<Type, List<object>>)).GetValue(null);
+            var dict = (IGSASenderDictionary)gsaStatic.GetProperties().FirstOrDefault(p => p.PropertyType == typeof(IGSASenderDictionary)).GetValue(null);
             //This is how SpeckleGSA finds the objects in the GSASenderObjects dictionary - by finding the first property in ISpeckleInitializer which is of the specific dictionary type
             staticObjects.Add(dict);
           }

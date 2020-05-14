@@ -167,7 +167,7 @@ namespace SpeckleGSAUI
 
       var streamIds = arguments["streamIDs"].Split(new char[] { ',' });
       foreach (string id in streamIds)
-        GSA.Receivers.Add(new Tuple<string, string>(id, null));
+        GSA.ReceiverInfo.Add(new Tuple<string, string>(id, null));
       GSA.SetSpeckleClients(EmailAddress, RestApi);
 
       if (arguments.ContainsKey("layer"))
@@ -189,7 +189,7 @@ namespace SpeckleGSAUI
       var gsaReceiver = new Receiver();
       Task.Run(() =>
       {
-        var nonBlankReceivers = GSA.Receivers.Where(r => !string.IsNullOrEmpty(r.Item1)).ToList();
+        var nonBlankReceivers = GSA.ReceiverInfo.Where(r => !string.IsNullOrEmpty(r.Item1)).ToList();
 
         foreach (var streamInfo in nonBlankReceivers)
         {
@@ -264,7 +264,7 @@ namespace SpeckleGSAUI
       
       GSA.GetSpeckleClients(EmailAddress, RestApi);
       var gsaSender = new Sender();
-      Task.Run(() => gsaSender.Initialize(RestApi, ApiToken)).Wait();
+      Task.Run(() => gsaSender.Initialize(RestApi, ApiToken, (restApi, apiToken) => new SpeckleGSASender(restApi, apiToken))).Wait();
       GSA.SetSpeckleClients(EmailAddress, RestApi);
       gsaSender.Trigger();
       gsaSender.Dispose();

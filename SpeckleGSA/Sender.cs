@@ -12,11 +12,15 @@ namespace SpeckleGSA
   /// </summary>
   public class Sender : BaseReceiverSender
   {
-    public Dictionary<Type, List<object>> SenderObjects = new Dictionary<Type, List<object>>();
-    public Dictionary<string, SpeckleGSASender> Senders = new Dictionary<string, SpeckleGSASender>();
-    public Dictionary<Type, string> StreamMap = new Dictionary<Type, string>();
+    private readonly Dictionary<string, ISpeckleGSASender> Senders = new Dictionary<string, ISpeckleGSASender>();
 
     private Dictionary<Type, List<Type>> FilteredReadTypePrereqs = new Dictionary<Type, List<Type>>();
+    public Dictionary<Type, string> StreamMap = new Dictionary<Type, string>();
+
+    //These need to be accessed using a lock
+    private object traversedSerialisedLock = new object();
+    private Dictionary<Type, List<object>> currentObjects = new Dictionary<Type, List<object>>();
+    private List<Type> traversedSerialisedTypes = new List<Type>();
 
     /// <summary>
     /// Initializes sender.
@@ -24,7 +28,7 @@ namespace SpeckleGSA
     /// <param name="restApi">Server address</param>
     /// <param name="apiToken">API token of account</param>
     /// <returns>Task</returns>
-    public async Task<List<string>> Initialize(string restApi, string apiToken)
+    public async Task<List<string>> Initialize(string restApi, string apiToken, Func<string, string, ISpeckleGSASender> GSASenderCreator)
     {
 			var statusMessages = new List<string>();
 
@@ -35,6 +39,8 @@ namespace SpeckleGSA
 				Status.AddError("GSA link not found.");
 				return statusMessages;
 			}
+
+      var startTime = DateTime.Now;
 
 			var attributeType = typeof(GSAObject);
       var keywords = new List<string>();
@@ -118,18 +124,22 @@ namespace SpeckleGSA
 
       foreach (string streamName in streamNames)
       {
-        Senders[streamName] = new SpeckleGSASender(restApi, apiToken);
+        Senders[streamName] = GSASenderCreator(restApi, apiToken);
 
-        if (!GSA.Senders.ContainsKey(streamName))
+        if (!GSA.SenderInfo.ContainsKey(streamName))
         {
           Status.AddMessage(streamName + " sender not initialized. Creating new " + streamName + " sender.");
           await Senders[streamName].InitializeSender(null, null, streamName);
-          GSA.Senders[streamName] = new Tuple<string, string> (Senders[streamName].StreamID, Senders[streamName].ClientID);
+          GSA.SenderInfo[streamName] = new Tuple<string, string>(Senders[streamName].StreamID, Senders[streamName].ClientID);
         }
         else
-          await Senders[streamName].InitializeSender(GSA.Senders[streamName].Item1, GSA.Senders[streamName].Item2, streamName);
+        {
+          await Senders[streamName].InitializeSender(GSA.SenderInfo[streamName].Item1, GSA.SenderInfo[streamName].Item2, streamName);
+        }
       }
 
+      TimeSpan duration = DateTime.Now - startTime;
+      Status.AddMessage("Duration of initialisation: " + duration.ToString(@"hh\:mm\:ss"));
       Status.ChangeStatus("Ready to stream");
       IsInit = true;
 
@@ -143,6 +153,8 @@ namespace SpeckleGSA
     {
       if ((IsBusy) || (!IsInit)) return;
 
+      var startTime = DateTime.Now;
+
       IsBusy = true;
 			GSA.Settings.Units = GSA.gsaProxy.GetUnits();
 
@@ -153,50 +165,52 @@ namespace SpeckleGSA
 
       // Read objects
       var currentBatch = new List<Type>();
-      var traversedTypes = new List<Type>();
 
       bool changeDetected = false;
       do
       {
-        currentBatch = FilteredReadTypePrereqs.Where(i => i.Value.Count(x => !traversedTypes.Contains(x)) == 0).Select(i => i.Key).ToList();
-        currentBatch.RemoveAll(i => traversedTypes.Contains(i));
+        ExecuteWithLock(ref traversedSerialisedLock, () =>
+        {
+          currentBatch = FilteredReadTypePrereqs.Where(i => i.Value.Count(x => !traversedSerialisedTypes.Contains(x)) == 0).Select(i => i.Key).ToList();
+          currentBatch.RemoveAll(i => traversedSerialisedTypes.Contains(i));
+        });
 
-        foreach (var t in currentBatch)
+        Parallel.ForEach(currentBatch, t =>
         {
           if (changeDetected) // This will skip the first read but it avoids flickering
           {
             Status.ChangeStatus("Reading " + t.Name);
           }
 
-					//The SpeckleStructural kit actually does serialisation (calling of ToSpeckle()) by type, not individual object.  This is due to
-					//GSA offering bulk GET based on type.
-					//So if the ToSpeckle() call for the type is successful it does all the objects of that type and returns SpeckleObject.
-					//If there is an error, then the SpeckleCore Converter.Serialise will return SpeckleNull.  
-					//The converted objects are stored in the kit in its own collection, not returned by Serialise() here.
+          //The SpeckleStructural kit actually does serialisation (calling of ToSpeckle()) by type, not individual object.  This is due to
+          //GSA offering bulk GET based on type.
+          //So if the ToSpeckle() call for the type is successful it does all the objects of that type and returns SpeckleObject.
+          //If there is an error, then the SpeckleCore Converter.Serialise will return SpeckleNull.  
+          //The converted objects are stored in the kit in its own collection, not returned by Serialise() here.
           var dummyObject = Activator.CreateInstance(t);
           var result = Converter.Serialise(dummyObject);
 
-					if (!(result is SpeckleNull))
-					{
-						changeDetected = true;
-					}
+          if (!(result is SpeckleNull))
+          {
+            changeDetected = true;
+          }
 
-					traversedTypes.Add(t);
+          ExecuteWithLock(ref traversedSerialisedLock, () => traversedSerialisedTypes.Add(t));
         }
+        );
       } while (currentBatch.Count > 0);
 
 			foreach (var dict in gsaStaticObjects)
 			{
-				//this item is the list of sender objects by type
-				//var typeSenderObjects = tuple.Item4;
-				foreach (var t in dict.Keys)
-				{
-					if (!SenderObjects.ContainsKey(t))
-					{
-						SenderObjects[t] = new List<object>();
-					}
-					SenderObjects[t].AddRange(dict[t]);
-				}
+        var allObjects = dict.GetAll();
+        foreach (var t in allObjects.Keys)
+        {
+          if (!currentObjects.ContainsKey(t))
+          {
+            currentObjects[t] = new List<object>();
+          }
+          currentObjects[t].AddRange(allObjects[t]);
+        }
 			}
 
 			if (!changeDetected)
@@ -209,7 +223,7 @@ namespace SpeckleGSA
       // Separate objects into streams
       var streamBuckets = new Dictionary<string, Dictionary<string, List<object>>>();
 
-      foreach (var kvp in SenderObjects)
+      foreach (var kvp in currentObjects)
       {
         var targetStream = GSA.Settings.SeparateStreams ? StreamMap[kvp.Key] : "Full Model";
 
@@ -234,22 +248,28 @@ namespace SpeckleGSA
         }
       }
 
+      TimeSpan duration = DateTime.Now - startTime;
+      Status.AddMessage("Duration of conversion to Speckle: " + duration.ToString(@"hh\:mm\:ss"));
+      startTime = DateTime.Now;
+
       // Send package
       Status.ChangeStatus("Sending to Server");
 
-      foreach (var kvp in streamBuckets)
+      Parallel.ForEach(streamBuckets, kvp =>
       {
         Status.ChangeStatus("Sending to stream: " + Senders[kvp.Key].StreamID);
 
         var streamName = "";
-				var title = GSA.gsaProxy.GetTitle();
-				streamName = GSA.Settings.SeparateStreams ? title + "." + kvp.Key : title;
+        var title = GSA.gsaProxy.GetTitle();
+        streamName = GSA.Settings.SeparateStreams ? title + "." + kvp.Key : title;
 
         Senders[kvp.Key].UpdateName(streamName);
         Senders[kvp.Key].SendGSAObjects(kvp.Value);
-      }
+      });
 
-			IsBusy = false;
+      duration = DateTime.Now - startTime;
+      Status.AddMessage("Duration of sending to Speckle: " + duration.ToString(@"hh\:mm\:ss"));
+      IsBusy = false;
       Status.ChangeStatus("Finished sending", 100);
     }
 
@@ -258,7 +278,7 @@ namespace SpeckleGSA
     /// </summary>
     public void Dispose()
     {
-      foreach (KeyValuePair<string, Tuple<string, string>> kvp in GSA.Senders)
+      foreach (KeyValuePair<string, Tuple<string, string>> kvp in GSA.SenderInfo)
         Senders[kvp.Key].Dispose();
     }
 
@@ -275,7 +295,7 @@ namespace SpeckleGSA
       GSA.gsaCache.Clear();
       try
       {
-        var data = GSA.gsaProxy.GetGwaData(keywords);
+        var data = GSA.gsaProxy.GetGwaData(keywords, false);
         for (int i = 0; i < data.Count(); i++)
         {
           GSA.gsaCache.Upsert(
