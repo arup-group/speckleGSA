@@ -157,7 +157,7 @@ namespace SpeckleGSA
           {
             try
             {
-              ResponseObject res = mySender.ObjectCreateAsync(payload).Result;
+              ResponseObject res = mySender.ObjectCreateAsync(payload, 60000).Result;
               SendPayloadApiRetries = 0;
 
               for (int i = 0; i < payload.Count(); i++)
