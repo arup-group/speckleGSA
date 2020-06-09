@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using SpeckleCore;
 
 namespace SpeckleGSA
@@ -12,7 +13,7 @@ namespace SpeckleGSA
 	/// </summary>
 	public class SpeckleGSASender : ISpeckleGSASender
   {
-    const double MAX_BUCKET_SIZE = 500000;
+    const double MAX_BUCKET_SIZE = 1000000;
     const int SendPayloadApiRetries = 3;
 
     public string StreamName { get => mySender == null ? null : mySender.Stream.Name; }
@@ -156,7 +157,7 @@ namespace SpeckleGSA
           {
             try
             {
-              ResponseObject res = mySender.ObjectCreateAsync(payload).Result;
+              ResponseObject res = mySender.ObjectCreateAsync(payload, 60000).Result;
               SendPayloadApiRetries = 0;
 
               for (int i = 0; i < payload.Count(); i++)
@@ -243,19 +244,55 @@ namespace SpeckleGSA
     /// <returns>List of list of SpeckleObjects separated into payloads</returns>
     public List<List<SpeckleObject>> CreatePayloads(List<SpeckleObject> bucketObjects)
     {
-      // Separate objects into sizable payloads
+      // Seperate objects into sizable payloads
       long totalBucketSize = 0;
       long currentBucketSize = 0;
-      List<List<SpeckleObject>> objectUpdatePayloads = new List<List<SpeckleObject>>();
-      List<SpeckleObject> currentBucketObjects = new List<SpeckleObject>();
+      var payloadDict = new List<Tuple<long, List<SpeckleObject>>>();
+      var currentBucketObjects = new List<SpeckleObject>();
+
+      long size = 0;
+      long placeholderSize = 0;
 
       foreach (SpeckleObject obj in bucketObjects)
       {
-        long size = Converter.getBytes(obj).Length;
+        size = 0;
+
+        if (obj is SpecklePlaceholder)
+        {
+          if (placeholderSize == 0)
+          {
+            try
+            {
+              placeholderSize = Converter.getBytes(JsonConvert.SerializeObject(obj)).Length;
+            }
+            catch { }
+          }
+          size = placeholderSize;
+        }
+        else if (obj.Type.ToLower().Contains("result"))
+        {
+          size = Converter.getBytes(obj).Length;
+        }
+
+        if (size == 0)
+        {
+          string objAsJson = "";
+          try
+          {
+            objAsJson = JsonConvert.SerializeObject(obj);
+          }
+          catch { }
+
+          try
+          {
+            size = (objAsJson == "") ? Converter.getBytes(obj).Length : Converter.getBytes(objAsJson).Length;
+          }
+          catch { }
+        }
 
         if (size > MAX_BUCKET_SIZE || (currentBucketSize + size) > MAX_BUCKET_SIZE)
         {
-          objectUpdatePayloads.Add(currentBucketObjects);
+          payloadDict.Add(new Tuple<long, List<SpeckleObject>>(size, currentBucketObjects));
           currentBucketObjects = new List<SpeckleObject>();
           currentBucketSize = 0;
         }
@@ -267,9 +304,12 @@ namespace SpeckleGSA
 
       // add in the last bucket 
       if (currentBucketObjects.Count > 0)
-        objectUpdatePayloads.Add(currentBucketObjects);
+      {
+        payloadDict.Add(new Tuple<long, List<SpeckleObject>>(size, currentBucketObjects));
+      }
 
-      return objectUpdatePayloads;
+      payloadDict = payloadDict.OrderByDescending(o => o.Item1).ToList();
+      return payloadDict.Select(d => d.Item2).ToList();
     }
 
     /// <summary>

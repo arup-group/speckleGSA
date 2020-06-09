@@ -145,16 +145,26 @@ namespace SpeckleGSA
 				try
 				{
 					var receivedObjects = Receivers[key].GetObjects().Distinct();
-					double scaleFactor = (1.0).ConvertUnit(Receivers[key].Units.ShortUnitName(), GSA.Settings.Units);
-					foreach (var o in receivedObjects)
-					{
-						try
-						{
-							o.Scale(scaleFactor);
-						}
-						catch { }
+          if (receivedObjects.Count() > 0)
+          {
+            if (Receivers[key].Units == null)
+            {
+              Status.AddError("stream " + key + ": No unit information could be found");
+            }
+            else
+            {
+              double scaleFactor = (1.0).ConvertUnit(Receivers[key].Units.ShortUnitName(), GSA.Settings.Units);
+              foreach (var o in receivedObjects)
+              {
+                try
+                {
+                  o.Scale(scaleFactor);
+                }
+                catch { }
 
-            ExecuteWithLock(ref currentObjectsLock, () => currentObjects.Add(new Tuple<string, SpeckleObject>(key, o)));
+                ExecuteWithLock(ref currentObjectsLock, () => currentObjects.Add(new Tuple<string, SpeckleObject>(key, o)));
+              }
+            }
           }
 				}
 				catch (Exception ex) 
@@ -173,67 +183,74 @@ namespace SpeckleGSA
 
       TimeSpan duration = DateTime.Now - startTime;
       Status.AddMessage("Duration of reception from Speckle and scaling: " + duration.ToString(@"hh\:mm\:ss"));
-      startTime = DateTime.Now;
 
-      var streamIds = GSA.ReceiverInfo.Select(r => r.Item1).ToList();
-      for (int i = 0; i < streamIds.Count(); i++)
+      if (currentObjects.Count() == 0)
       {
-        GSA.gsaCache.Snapshot(streamIds[i]);
+        Status.AddMessage("No processing needed because the stream(s) contain(s) no objects");
       }
-      
-      var gsaStaticObjects = GetAssembliesStaticTypes();
-
-      foreach (var dict in gsaStaticObjects)
+      else
       {
-        senderDictionaries.Add(dict);
+        startTime = DateTime.Now;
+
+        var streamIds = GSA.ReceiverInfo.Select(r => r.Item1).ToList();
+        for (int i = 0; i < streamIds.Count(); i++)
+        {
+          GSA.gsaCache.Snapshot(streamIds[i]);
+        }
+
+        var gsaStaticObjects = GetAssembliesStaticTypes();
+
+        foreach (var dict in gsaStaticObjects)
+        {
+          senderDictionaries.Add(dict);
+        }
+
+        //These sender dictionaries will be used in merging and they need to be clear in order for the merging code to work
+        for (int j = 0; j < senderDictionaries.Count(); j++)
+        {
+          senderDictionaries[j].Clear();
+        }
+
+        //Process on the basis of writing to the chosen layer first.  After this call, the only objects left are those which can only be written to the other layer
+        await ProcessObjectsForLayer(GSA.Settings.TargetLayer);
+
+        //For any objects still left in the collection, process on the basis of writing to the other layer
+        var otherLayer = GSA.Settings.TargetLayer == GSATargetLayer.Design ? GSATargetLayer.Analysis : GSATargetLayer.Design;
+        await ProcessObjectsForLayer(otherLayer);
+
+        var toBeAddedGwa = GSA.gsaCache.GetNewlyAddedGwa();
+        for (int i = 0; i < toBeAddedGwa.Count(); i++)
+        {
+          GSA.gsaProxy.SetGwa(toBeAddedGwa[i]);
+        }
+
+        var toBeDeletedGwa = GSA.gsaCache.GetExpiredData();
+
+        var setDeletes = toBeDeletedGwa.Where(t => t.Item4 == GwaSetCommandType.Set).ToList();
+        for (int i = 0; i < setDeletes.Count(); i++)
+        {
+          var keyword = setDeletes[i].Item1;
+          var index = setDeletes[i].Item2;
+          GSA.gsaProxy.DeleteGWA(keyword, index, GwaSetCommandType.Set);
+        }
+
+        var setAtDeletes = toBeDeletedGwa.Where(t => t.Item4 == GwaSetCommandType.SetAt).OrderByDescending(t => t.Item2).ToList();
+        for (int i = 0; i < setAtDeletes.Count(); i++)
+        {
+          var keyword = setAtDeletes[i].Item1;
+          var index = setAtDeletes[i].Item2;
+          GSA.gsaProxy.DeleteGWA(keyword, index, GwaSetCommandType.SetAt);
+        }
+
+        GSA.gsaProxy.Sync();
+
+        GSA.gsaProxy.UpdateCasesAndTasks();
+        GSA.gsaProxy.UpdateViews();
+
+        duration = DateTime.Now - startTime;
+        Status.AddMessage("Duration of conversion from Speckle: " + duration.ToString(@"hh\:mm\:ss"));
+        startTime = DateTime.Now;
       }
-
-      //These sender dictionaries will be used in merging and they need to be clear in order for the merging code to work
-      for (int j = 0; j < senderDictionaries.Count(); j++)
-      {
-        senderDictionaries[j].Clear();
-      }
-
-      //Process on the basis of writing to the chosen layer first.  After this call, the only objects left are those which can only be written to the other layer
-      await ProcessObjectsForLayer(GSA.Settings.TargetLayer);
-
-      //For any objects still left in the collection, process on the basis of writing to the other layer
-      var otherLayer = GSA.Settings.TargetLayer == GSATargetLayer.Design ? GSATargetLayer.Analysis : GSATargetLayer.Design;
-      await ProcessObjectsForLayer(otherLayer);
-
-      var toBeAddedGwa = GSA.gsaCache.GetNewlyAddedGwa();
-      for (int i = 0; i < toBeAddedGwa.Count(); i++)
-      {
-        GSA.gsaProxy.SetGwa(toBeAddedGwa[i]);
-      }
-
-      var toBeDeletedGwa = GSA.gsaCache.GetExpiredData();
-
-      var setDeletes = toBeDeletedGwa.Where(t => t.Item4 == GwaSetCommandType.Set).ToList();
-      for (int i = 0; i < setDeletes.Count(); i++)  
-      {
-        var keyword = setDeletes[i].Item1;
-        var index = setDeletes[i].Item2;
-        GSA.gsaProxy.DeleteGWA(keyword, index, GwaSetCommandType.Set);
-      }
-
-      var setAtDeletes = toBeDeletedGwa.Where(t => t.Item4 == GwaSetCommandType.SetAt).OrderByDescending(t => t.Item2).ToList();
-      for (int i = 0; i < setAtDeletes.Count(); i++)
-      {
-        var keyword = setAtDeletes[i].Item1;
-        var index = setAtDeletes[i].Item2;
-        GSA.gsaProxy.DeleteGWA(keyword, index, GwaSetCommandType.SetAt);
-      }
-
-      GSA.gsaProxy.Sync();
-
-      GSA.gsaProxy.UpdateCasesAndTasks();
-			GSA.gsaProxy.UpdateViews();
-
-      duration = DateTime.Now - startTime;
-      Status.AddMessage("Duration of conversion from Speckle: " + duration.ToString(@"hh\:mm\:ss"));
-      startTime = DateTime.Now;
-
       Status.ChangeStatus("Finished receiving", 100);
       IsBusy = false;
     }
