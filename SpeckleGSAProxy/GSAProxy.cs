@@ -5,7 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Interop.Gsa_10_0;
+using Interop.Gsa_10_1;
 using SpeckleGSAInterfaces;
 
 namespace SpeckleGSAProxy
