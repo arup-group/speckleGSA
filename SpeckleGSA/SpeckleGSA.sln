@@ -3,20 +3,20 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29411.108
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleGSA", "SpeckleGSA\SpeckleGSA.csproj", "{6D8CA3AD-E530-4CDA-AF79-9715A7583F4F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleGSA", "SpeckleGSA.csproj", "{6D8CA3AD-E530-4CDA-AF79-9715A7583F4F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleGSAUI", "SpeckleGSAUI\SpeckleGSAUI.csproj", "{74BD53B7-5588-4CBC-86A3-EFBBC99DB7ED}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleGSAUI", "..\SpeckleGSAUI\SpeckleGSAUI.csproj", "{74BD53B7-5588-4CBC-86A3-EFBBC99DB7ED}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleGSAProxy", "SpeckleGSAProxy\SpeckleGSAProxy.csproj", "{88AE85C3-1966-4B71-8C91-242C80DCE6D4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleGSAProxy", "..\SpeckleGSAProxy\SpeckleGSAProxy.csproj", "{88AE85C3-1966-4B71-8C91-242C80DCE6D4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleGSAInterfaces", "SpeckleGSAInterfaces\SpeckleGSAInterfaces.csproj", "{5CA1BFFE-F623-4677-8412-9D20F0017523}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleGSAInterfaces", "..\SpeckleGSAInterfaces\SpeckleGSAInterfaces.csproj", "{5CA1BFFE-F623-4677-8412-9D20F0017523}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleGSAProxy.Test", "SpeckleGSAProxy.Test\SpeckleGSAProxy.Test.csproj", "{0D6BEB52-A505-43C3-A954-8DBC05575A31}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleGSAProxy.Test", "..\SpeckleGSAProxy.Test\SpeckleGSAProxy.Test.csproj", "{0D6BEB52-A505-43C3-A954-8DBC05575A31}"
 	ProjectSection(ProjectDependencies) = postProject
 		{C8C902F6-550A-4AC9-84E3-D4F9085260B1} = {C8C902F6-550A-4AC9-84E3-D4F9085260B1}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleUtil", "SpeckleUtil\SpeckleUtil.csproj", "{C8C902F6-550A-4AC9-84E3-D4F9085260B1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleUtil", "..\SpeckleUtil\SpeckleUtil.csproj", "{C8C902F6-550A-4AC9-84E3-D4F9085260B1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
