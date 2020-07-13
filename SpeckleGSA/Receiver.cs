@@ -312,7 +312,11 @@ namespace SpeckleGSA
 
         Debug.WriteLine("Ran through all types in batch to populate SpeckleCore's ToNative list");
 
+#if DEBUG
+        foreach (var t in currentBatch)
+#else
         Parallel.ForEach(currentBatch, t =>
+#endif
         {
           Status.ChangeStatus("Writing " + t.Name);
 
@@ -340,7 +344,11 @@ namespace SpeckleGSA
             });
           }
 
-          Parallel.ForEach(targetObjects, tuple =>
+#if DEBUG
+          foreach (var tuple in targetObjects)
+#else
+            Parallel.ForEach(targetObjects, tuple =>
+#endif
           {
             dummyObject = Activator.CreateInstance(t);
             var streamId = tuple.Item1;
@@ -367,9 +375,15 @@ namespace SpeckleGSA
                 ExecuteWithLock(ref currentObjectsLock, () => currentObjects.Remove(tuple));
               }
             }
-          });
+          }
+#if !DEBUG
+          );
+#endif
           ExecuteWithLock(ref traversedDeserialisedLock, () => traversedDeserialisedTypes.Add(t));
-        });
+        }
+#if !DEBUG
+        );
+#endif
 
       } while (currentBatch.Count > 0);
 
