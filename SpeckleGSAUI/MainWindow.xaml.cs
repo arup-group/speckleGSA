@@ -15,6 +15,8 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 using SpeckleGSAProxy;
+using Serilog;
+using Serilog.Events;
 
 namespace SpeckleGSAUI
 {
@@ -131,9 +133,17 @@ namespace SpeckleGSAUI
       ReceiveButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
       ReceiveButtonPath.Fill = (SolidColorBrush)FindResource("PrimaryHueMidBrush");
 
+      //Adds event handling delegates to the status events
       Status.Init(this.AddMessage, this.AddError, this.ChangeStatus);
       GSA.Init();
-//      Status.Init(this.AddMessage, this.AddError, this.ChangeStatus);
+
+      //Add further event handling delegates - this time for logging - to the status events
+      Status.MessageAdded += (sender, eventArgs) => { Log.Information(eventArgs.Message); };
+      Status.ErrorAdded += (sender, eventArgs) => 
+      { 
+        Log.Error(eventArgs.Exception, eventArgs.Message);
+      };
+
       MessagePane.ItemsSource = Messages;
 
       SpeckleCore.SpeckleInitializer.Initialize();
@@ -510,15 +520,8 @@ namespace SpeckleGSAUI
         ReceiveButtonPath.Data = Geometry.Parse(PAUSE_BUTTON);
         ReceiveButtonPath.Fill = Brushes.DimGray;
 
-        if (ReceiverLayerToggle.IsChecked.Value)
-        {
-          GSA.Settings.TargetLayer = GSATargetLayer.Analysis;
-        }
-        else
-        {
+        GSA.Settings.TargetLayer = (ReceiverLayerToggle.IsChecked.Value) ? GSATargetLayer.Analysis : GSA.Settings.TargetLayer = GSATargetLayer.Design;
 
-          GSA.Settings.TargetLayer = GSATargetLayer.Design;
-        }
         ReceiverLayerToggle.IsEnabled = false;
         ReceiverContinuousToggle.IsEnabled = false;
         ReceiverControlPanel.IsEnabled = false;
@@ -647,7 +650,7 @@ namespace SpeckleGSAUI
     /// <summary>
     /// Error message handler.
     /// </summary>
-    private void AddError(object sender, MessageEventArgs e)
+    private void AddError(object sender, ErrorEventArgs e)
     {
       Application.Current.Dispatcher.BeginInvoke(
           DispatcherPriority.Background,
@@ -751,18 +754,36 @@ namespace SpeckleGSAUI
         string propertyName = "";
         object propertyValue = null;
 
-
         if (sender is CheckBox)
         {
-          propertyName = (sender as CheckBox).Name;
-          propertyValue = (sender as CheckBox).IsChecked;
+          var chkBox = (sender as CheckBox);
+          propertyName = chkBox.Name;
+          propertyValue = chkBox.IsChecked;
 
           GSA.Settings.SetFieldOrPropValue(propertyName, propertyValue);
         }
         else if (sender is TextBox)
         {
-          propertyName = (sender as TextBox).Name;
-          propertyValue = (sender as TextBox).Text;
+          var txtBox = (sender as TextBox);
+          propertyName = txtBox.Name;
+          propertyValue = txtBox.Text;
+
+          GSA.Settings.SetFieldOrPropValue(propertyName, propertyValue);
+        }
+        else if (sender is ComboBox)
+        {
+          var comboBox = (sender as ComboBox);
+          propertyName = comboBox.Name;
+          var selectedItem = (comboBox.SelectedItem as ComboBoxItem);
+          //For now, use the tag if present, otherwise use the text
+          if (selectedItem.Tag != null && int.TryParse(selectedItem.Tag.ToString(), out int comboIntValue))
+          {
+            propertyValue = comboIntValue;
+          }
+          else
+          {
+            propertyValue = comboBox.Text;
+          }
 
           GSA.Settings.SetFieldOrPropValue(propertyName, propertyValue);
         }
@@ -1002,9 +1023,13 @@ namespace SpeckleGSAUI
       {
         System.Text.StringBuilder copy_buffer = new System.Text.StringBuilder();
         foreach (object item in MessagePane.SelectedItems)
+        {
           copy_buffer.AppendLine(item.ToString());
+        }
         if (copy_buffer.Length > 0)
+        {
           Clipboard.SetText(copy_buffer.ToString());
+        }
       }
     }
   }

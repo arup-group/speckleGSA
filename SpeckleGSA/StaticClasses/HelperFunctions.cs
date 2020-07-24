@@ -131,7 +131,7 @@ namespace SpeckleGSA
     }
 		#endregion
 
-		#region Miscellanious
+		#region Miscellaneous
 
 		/// <summary>
 		/// Extract attribute from attribute type.
@@ -149,6 +149,31 @@ namespace SpeckleGSA
 			}
       catch { return null; }
     }
+
+    public static Func<Action, string, string, bool> tryCatchWithEvents = (action, msgSuccessful, msgFailure) =>
+    {
+      bool success = false;
+      try
+      {
+        action();
+        success = true;
+      }
+      catch (Exception ex)
+      {
+        if (!string.IsNullOrEmpty(msgFailure))
+        {
+          Status.AddError(msgFailure, GSA.Settings.VerboseErrors ? ex : null);
+        }
+      }
+      if (success)
+      {
+        if (!string.IsNullOrEmpty(msgSuccessful))
+        {
+          Status.AddMessage(msgSuccessful);
+        }
+      }
+      return success;
+    };
     #endregion
   }
 }

@@ -120,7 +120,9 @@ namespace SpeckleGSA
       // Create the streams
       Status.ChangeStatus("Creating streams");
 
-			var streamNames = (GSA.Settings.SeparateStreams) ? objTypes.Select(t => (string)t.GetAttribute("Stream")).Distinct().ToList() : new List<string>() { "Full Model" };
+			var streamNames = (GSA.Settings.SeparateStreams) 
+        ? objTypes.Select(t => (string)t.GetAttribute("Stream")).Distinct().ToList() 
+        : new List<string>() { "Full Model" };
 
       foreach (string streamName in streamNames)
       {
@@ -128,7 +130,7 @@ namespace SpeckleGSA
 
         if (!GSA.SenderInfo.ContainsKey(streamName))
         {
-          Status.AddMessage(streamName + " sender not initialized. Creating new " + streamName + " sender.");
+          Status.AddMessage("Creating new sender for " + streamName);
           await Senders[streamName].InitializeSender(null, null, streamName);
           GSA.SenderInfo[streamName] = new Tuple<string, string>(Senders[streamName].StreamID, Senders[streamName].ClientID);
         }
@@ -221,19 +223,27 @@ namespace SpeckleGSA
           if (GSA.Settings.SendOnlyMeaningfulNodes)
           {
             if (obj.GetType().Name == "GSANode" && !(bool)obj.GetType().GetField("ForceSend").GetValue(obj))
+            {
               continue;
+            }
           }
           object insideVal = obj.GetType().GetProperty("Value").GetValue(obj);
 
           ((SpeckleObject)insideVal).GenerateHash();
 
           if (!streamBuckets.ContainsKey(targetStream))
+          {
             streamBuckets[targetStream] = new Dictionary<string, List<object>>();
+          }
 
           if (streamBuckets[targetStream].ContainsKey(insideVal.GetType().Name))
+          {
             streamBuckets[targetStream][insideVal.GetType().Name].Add(insideVal);
+          }
           else
+          {
             streamBuckets[targetStream][insideVal.GetType().Name] = new List<object>() { insideVal };
+          }
         }
       }
 
