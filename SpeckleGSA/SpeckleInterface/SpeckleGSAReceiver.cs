@@ -193,8 +193,8 @@ namespace SpeckleGSA
 				{ }
 			}
 
-			Task.Run(() =>
-			{
+			//Task.Run(() =>
+			//{
 				foreach (SpeckleObject obj in receivedObjects)
 				{
 					try
@@ -203,7 +203,7 @@ namespace SpeckleGSA
 					}
 					catch { }
 				}
-			});
+			//});
 
 			Status.AddMessage("Received " + myReceiver.Stream.Name + " stream with " + myReceiver.Stream.Objects.Count() + " objects.");
 		}

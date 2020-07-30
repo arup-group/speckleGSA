@@ -140,7 +140,11 @@ namespace SpeckleGSA
       Status.ChangeStatus("Receiving streams");
 			var errors = new ConcurrentBag<string>();
 
-			Parallel.ForEach(Receivers.Keys, key =>
+#if DEBUG
+      foreach (var key in Receivers.Keys)
+#else
+      Parallel.ForEach(Receivers.Keys, key =>
+#endif
 			{
 				try
 				{
@@ -171,9 +175,12 @@ namespace SpeckleGSA
         {
 					errors.Add("stream " + key + ": " + ((ex.InnerException == null) ? ex.Message : ex.InnerException.Message));
 				}
-			});
+			}
+#if !DEBUG
+      );
+#endif
 
-			if (errors.Count() > 0)
+      if (errors.Count() > 0)
 			{
 				foreach (var error in errors)
 				{
@@ -397,7 +404,7 @@ namespace SpeckleGSA
         HelperFunctions.tryCatchWithEvents(() =>
         {
           targetObject = GSA.Merger.Merge(targetObject, existing);
-        }, "", "Unable to merge object with existing for type: " + t.GetType().Name);
+        }, "", "Unable to merge object with existing for type: " + t.Name);
       }
 
       List<string> gwaCommands = new List<string>();

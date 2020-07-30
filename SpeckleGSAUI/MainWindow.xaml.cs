@@ -142,6 +142,10 @@ namespace SpeckleGSAUI
       Status.ErrorAdded += (sender, eventArgs) => 
       { 
         Log.Error(eventArgs.Exception, eventArgs.Message);
+        if (eventArgs.Exception.InnerException != null)
+        {
+          Log.Error(eventArgs.Exception.InnerException, eventArgs.Message);
+        }
       };
 
       MessagePane.ItemsSource = Messages;
