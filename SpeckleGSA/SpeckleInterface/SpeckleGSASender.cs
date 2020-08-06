@@ -129,11 +129,7 @@ namespace SpeckleGSA
           continue;
         }
 
-        List<SpeckleObject> convertedObjects = null;
-        HelperFunctions.tryCatchWithEvents(() =>
-        {
-          convertedObjects = Converter.Serialise(kvp.Value).Where(o => o != null).ToList();
-        }, "", "Unable to convert all objects of " + kvp.Value + " layer");
+        var convertedObjects = kvp.Value.Select(v => (SpeckleObject)v).ToList();
 
         if (convertedObjects != null && convertedObjects.Count() > 0)
         {

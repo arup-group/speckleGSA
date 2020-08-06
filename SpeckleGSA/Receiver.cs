@@ -265,7 +265,7 @@ namespace SpeckleGSA
     private Task<int> UpdateCache(List<string> keywords)
     {
       GSA.gsaCache.Clear();
-      var data = GSA.gsaProxy.GetGwaData(keywords, true);
+      var data = GSA.gsaProxy.GetGwaData(keywords, false);
       for (int i = 0; i < data.Count(); i++)
       {
         GSA.gsaCache.Upsert(
@@ -401,10 +401,16 @@ namespace SpeckleGSA
       else
       {
         var existing = existingList.First();  //There should just be one instance of each Application ID per type
-        HelperFunctions.tryCatchWithEvents(() =>
+
+        try
         {
           targetObject = GSA.Merger.Merge(targetObject, existing);
-        }, "", "Unable to merge object with existing for type: " + t.Name);
+        }
+        catch
+        {
+          //Add for summary messaging at the end of processing
+          GSA.appUi.Message("Unable to merge " + t.Name + " with existing objects", targetObject.ApplicationId);
+        }
       }
 
       List<string> gwaCommands = new List<string>();

@@ -159,11 +159,7 @@ namespace SpeckleGSA
 			HelperFunctions.tryCatchWithEvents(() =>
 			{
 				LocalContext.AddOrUpdateStream(myReceiver.Stream, myReceiver.BaseUrl);
-			}, "", "Unable to add or update stream into local database");
-
-			// Get cached objects
-			HelperFunctions.tryCatchWithEvents(() => LocalContext.GetCachedObjects(myReceiver.Stream.Objects, myReceiver.BaseUrl), 
-				"", "Unable to get cached objects from local database");
+			}, "", "Unable to add or update stream details into local database");
 
 			string[] payload = myReceiver.Stream.Objects.Where(o => o.Type == "Placeholder").Select(o => o._id).ToArray();
 
@@ -192,18 +188,6 @@ namespace SpeckleGSA
 				catch
 				{ }
 			}
-
-			//Task.Run(() =>
-			//{
-				foreach (SpeckleObject obj in receivedObjects)
-				{
-					try
-					{
-						LocalContext.AddCachedObject(obj, myReceiver.BaseUrl);
-					}
-					catch { }
-				}
-			//});
 
 			Status.AddMessage("Received " + myReceiver.Stream.Name + " stream with " + myReceiver.Stream.Objects.Count() + " objects.");
 		}
