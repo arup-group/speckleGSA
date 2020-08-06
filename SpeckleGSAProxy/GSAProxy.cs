@@ -5,7 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Interop.Gsa_10_0;
+using Interop.Gsa_10_1;
 using SpeckleGSAInterfaces;
 
 namespace SpeckleGSAProxy
@@ -432,13 +432,19 @@ namespace SpeckleGSAProxy
 
     public void Sync()
     {
-      var batchBlankCommand = ExecuteWithLock(() => string.Join("\r\n", batchBlankGwa));
-      var blankCommandResult = ExecuteWithLock(() => GSAObject.GwaCommand(batchBlankCommand));
-      ExecuteWithLock(() => batchBlankGwa.Clear());
+      if (batchBlankGwa.Count() > 0)
+      {
+        var batchBlankCommand = ExecuteWithLock(() => string.Join("\r\n", batchBlankGwa));
+        var blankCommandResult = ExecuteWithLock(() => GSAObject.GwaCommand(batchBlankCommand));
+        ExecuteWithLock(() => batchBlankGwa.Clear());
+      }
 
-      var batchSetCommand = ExecuteWithLock(() => string.Join("\r\n", batchSetGwa));
-      var setCommandResult = ExecuteWithLock(() => GSAObject.GwaCommand(batchSetCommand));
-      ExecuteWithLock(() => batchSetGwa.Clear());      
+      if (batchSetGwa.Count() > 0)
+      {
+        var batchSetCommand = ExecuteWithLock(() => string.Join("\r\n", batchSetGwa));
+        var setCommandResult = ExecuteWithLock(() => GSAObject.GwaCommand(batchSetCommand));
+        ExecuteWithLock(() => batchSetGwa.Clear());
+      }
     }
 
     public void GetGSATotal2DElementOffset(int index, double insertionPointOffset, out double offset, out string offsetRec)

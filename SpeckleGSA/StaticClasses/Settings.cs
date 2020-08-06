@@ -1,8 +1,10 @@
-﻿using SpeckleGSAInterfaces;
+﻿using Serilog;
+using SpeckleGSAInterfaces;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Reflection;
 
 namespace SpeckleGSA
@@ -23,6 +25,40 @@ namespace SpeckleGSA
 		public bool SendOnlyResults { get; set; } = false;
 
 		public bool SendResults = false;
+
+		private int loggingthreshold = 3;
+
+		public bool VerboseErrors = false;
+
+		//Using an integer scale at the moment from 0 to 5, which can be mapped to individual loggers
+		public int LoggingMinimumLevel
+		{
+			get
+			{
+				return loggingthreshold;
+			}	
+			set
+			{
+				this.loggingthreshold = value;
+				var loggerConfigMinimum = new LoggerConfiguration().ReadFrom.AppSettings().MinimumLevel;
+				LoggerConfiguration loggerConfig;
+				switch(this.loggingthreshold)
+				{
+					case 1:
+						loggerConfig = loggerConfigMinimum.Debug();
+						break;
+
+					case 4:
+						loggerConfig = loggerConfigMinimum.Error();
+						break;
+
+					default:
+						loggerConfig = loggerConfigMinimum.Information();
+						break;
+				}
+				Log.Logger = loggerConfig.CreateLogger();
+			}
+		}
 
 		public Dictionary<string, Tuple<int, int, List<string>>> NodalResults { get; set; } = new Dictionary<string, Tuple<int, int, List<string>>>();
 		public Dictionary<string, Tuple<int, int, List<string>>> Element1DResults { get; set; } = new Dictionary<string, Tuple<int, int, List<string>>>();
@@ -59,8 +95,8 @@ namespace SpeckleGSA
 			if (typeof(IEnumerable).IsAssignableFrom(fieldOrPropType))
 			{
 				//Assume all enumerable values are of string type for now
-				var pieces = ((string)value).Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-				Type subType = fieldOrPropType.GetGenericArguments()[0];
+				var pieces = ((string)value).Split(new string[] { "\r\n", " ", ";", "\t" }, StringSplitOptions.RemoveEmptyEntries);
+				var subType = fieldOrPropType.GetGenericArguments()[0];
 
 				var newList = Activator.CreateInstance(fieldOrPropType);
 				foreach (string p in pieces)

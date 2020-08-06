@@ -140,7 +140,11 @@ namespace SpeckleGSA
       Status.ChangeStatus("Receiving streams");
 			var errors = new ConcurrentBag<string>();
 
-			Parallel.ForEach(Receivers.Keys, key =>
+#if DEBUG
+      foreach (var key in Receivers.Keys)
+#else
+      Parallel.ForEach(Receivers.Keys, key =>
+#endif
 			{
 				try
 				{
@@ -171,9 +175,12 @@ namespace SpeckleGSA
         {
 					errors.Add("stream " + key + ": " + ((ex.InnerException == null) ? ex.Message : ex.InnerException.Message));
 				}
-			});
+			}
+#if !DEBUG
+      );
+#endif
 
-			if (errors.Count() > 0)
+      if (errors.Count() > 0)
 			{
 				foreach (var error in errors)
 				{
@@ -258,7 +265,7 @@ namespace SpeckleGSA
     private Task<int> UpdateCache(List<string> keywords)
     {
       GSA.gsaCache.Clear();
-      var data = GSA.gsaProxy.GetGwaData(keywords, true);
+      var data = GSA.gsaProxy.GetGwaData(keywords, false);
       for (int i = 0; i < data.Count(); i++)
       {
         GSA.gsaCache.Upsert(
@@ -361,19 +368,10 @@ namespace SpeckleGSA
             //Check if this application appears in the cache at all
             if (!string.IsNullOrEmpty(applicationId))
             {
-              try
-              {
-                ProcessObject(obj, speckleTypeName, keyword, t, dummyObject, streamId, layer);
-              }
-              catch (Exception ex)
-              {
-                // TO DO:
-                Status.AddMessage("Processing error for " + speckleTypeName + " with ApplicationId = " + applicationId + " - " + ex.Message);
-              }
-              finally
-              {
-                ExecuteWithLock(ref currentObjectsLock, () => currentObjects.Remove(tuple));
-              }
+              HelperFunctions.tryCatchWithEvents(() => ProcessObject(obj, speckleTypeName, keyword, t, dummyObject, streamId, layer),
+                "", "Processsing error for " + speckleTypeName + " with ApplicationId = " + applicationId);
+
+              ExecuteWithLock(ref currentObjectsLock, () => currentObjects.Remove(tuple));
             }
           }
 #if !DEBUG
@@ -403,54 +401,65 @@ namespace SpeckleGSA
       else
       {
         var existing = existingList.First();  //There should just be one instance of each Application ID per type
-        targetObject = GSA.Merger.Merge(targetObject, existing);
+
+        try
+        {
+          targetObject = GSA.Merger.Merge(targetObject, existing);
+        }
+        catch
+        {
+          //Add for summary messaging at the end of processing
+          GSA.appUi.Message("Unable to merge " + t.Name + " with existing objects", targetObject.ApplicationId);
+        }
       }
 
       List<string> gwaCommands = new List<string>();
-      try
-      {
-        var deserialiseReturn = Converter.Deserialise(targetObject);
-        if (deserialiseReturn.GetType() != typeof(string))
+      List<string> linesToAdd = null;
+
+      HelperFunctions.tryCatchWithEvents(() =>
         {
-          //TO DO
-        }
-        var linesToAdd = ((string)deserialiseReturn).Split(new[] { '\n' }).Where(c => c.Length > 0);
+          var deserialiseReturn = Converter.Deserialise(targetObject);
+          if (deserialiseReturn.GetType() != typeof(string))
+          {
+            throw new Exception("Converting to native didn't produce a string output");
+          }
+          linesToAdd = ((string)deserialiseReturn).Split(new[] { '\n' }).Where(c => c.Length > 0).ToList();
+        }, "", "Unable to convert object to GWA");
+
+      if (linesToAdd != null)
+      {
         gwaCommands.AddRange(linesToAdd);
-      }
-      catch (Exception ex)
-      {
-        //TO DO
-      }
 
-      //TO DO - parallelise
-      for (int j = 0; j < gwaCommands.Count(); j++)
-      {
-        //At this point the SID will be filled with the application ID
-        GSA.gsaProxy.ParseGeneralGwa(gwaCommands[j], out keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
-
-        var originalSid = GSA.gsaProxy.FormatSidTags(foundStreamId,foundApplicationId);
-        var newSid = GSA.gsaProxy.FormatSidTags(streamId, foundApplicationId);
-
-        //If the SID tag has been set then update it with the stream
-        if (string.IsNullOrEmpty(originalSid))
+        //TO DO - parallelise
+        for (int j = 0; j < gwaCommands.Count(); j++)
         {
-          gwaCommands[j] = gwaCommands[j].Replace(keyword, keyword + ":" + newSid);
-          gwaWithoutSet = gwaWithoutSet.Replace(keyword, keyword + ":" + newSid);
-        }
-        else
-        {
-          gwaCommands[j] = gwaCommands[j].Replace(originalSid, newSid);
-          gwaWithoutSet = gwaWithoutSet.Replace(originalSid, newSid);
-        }
+          //At this point the SID will be filled with the application ID
+          GSA.gsaProxy.ParseGeneralGwa(gwaCommands[j], out keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
 
-        //Only cache the object against, the top-level GWA command, not the sub-commands - this is what the SID value comparision is there for
-        GSA.gsaCache.Upsert(keyword, 
-          foundIndex.Value, 
-          gwaWithoutSet, 
-          foundApplicationId,
-          so: (foundApplicationId != null && targetObject.ApplicationId.EqualsWithoutSpaces(foundApplicationId)) ? targetObject : null, 
-          gwaSetCommandType: gwaSetCommandType.HasValue ? gwaSetCommandType.Value : GwaSetCommandType.Set, 
-          streamId: streamId);
+          var originalSid = GSA.gsaProxy.FormatSidTags(foundStreamId, foundApplicationId);
+          var newSid = GSA.gsaProxy.FormatSidTags(streamId, foundApplicationId);
+
+          //If the SID tag has been set then update it with the stream
+          if (string.IsNullOrEmpty(originalSid))
+          {
+            gwaCommands[j] = gwaCommands[j].Replace(keyword, keyword + ":" + newSid);
+            gwaWithoutSet = gwaWithoutSet.Replace(keyword, keyword + ":" + newSid);
+          }
+          else
+          {
+            gwaCommands[j] = gwaCommands[j].Replace(originalSid, newSid);
+            gwaWithoutSet = gwaWithoutSet.Replace(originalSid, newSid);
+          }
+
+          //Only cache the object against, the top-level GWA command, not the sub-commands - this is what the SID value comparision is there for
+          GSA.gsaCache.Upsert(keyword,
+            foundIndex.Value,
+            gwaWithoutSet,
+            foundApplicationId,
+            so: (foundApplicationId != null && targetObject.ApplicationId.EqualsWithoutSpaces(foundApplicationId)) ? targetObject : null,
+            gwaSetCommandType: gwaSetCommandType.HasValue ? gwaSetCommandType.Value : GwaSetCommandType.Set,
+            streamId: streamId);
+        }
       }
       return targetObject;
     }

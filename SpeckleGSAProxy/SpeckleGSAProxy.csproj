@@ -41,8 +41,8 @@
     <Reference Include="DeviceId, Version=4.3.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\DeviceId.4.3.0\lib\net40\DeviceId.dll</HintPath>
     </Reference>
-    <Reference Include="Interop.Gsa_10_0">
-      <HintPath>..\Resource\Interop.Gsa_10_0.dll</HintPath>
+    <Reference Include="Interop.Gsa_10_1">
+      <HintPath>..\Resource\Interop.Gsa_10_1.dll</HintPath>
       <EmbedInteropTypes>True</EmbedInteropTypes>
     </Reference>
     <Reference Include="Microsoft.Threading.Tasks, Version=1.0.12.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
