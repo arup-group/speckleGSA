@@ -1,0 +1,8 @@
+David deKoning:
+  name        : "David de Koning"
+  bio         : "El Capitano"
+  avatar      : "/assets/images/bio-photo-2.jpg"
+  links:
+    - label: "Email"
+      icon: "fas fa-fw fa-envelope-square"
+      url: "mailto:David.deKoning@arup.com"

@@ -3,12 +3,31 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+
 # User-specific files
 *.rsuser
 *.suo
 *.user
 *.userosscache
 *.sln.docstates
+
+SpeckleGSA
+SpeckleGSAInterfaces
+SpeckleGSAProxy
+SpeckleGSAProxy.Test
+SpeckleGSAUI
+SpeckleUtil
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

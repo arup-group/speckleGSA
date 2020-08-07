@@ -1,0 +1,9 @@
+main:
+  - title: "Quick start"
+    url: /quickstart/
+  - title: "Docs"
+    url: /docs/
+  - title: "Blog"
+    url: /archive/
+  - title: "Dev docs"
+    url: /devdocs/

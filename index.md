@@ -1,9 +1,8 @@
 ---
+permalink: /
 title: SpeckleGSA
-layout: default
+layout: archive
 ---
-
-# SpeckleGSA
 
 SpeckleGSA is a Speckle client developed for [GSA 10](https://www.oasys-software.com/products/structural/gsa/) to allow the transfer of finite element models to and from SpeckleServers.
 
@@ -42,4 +41,3 @@ SpeckleObjects are pieces of data which are stored in a SpeckleServer. They coul
 SpeckleObjects can be grouped and organized together into SpeckleStreams. The Speckle ecosystem provides a useful set of built-in features for sharing SpeckleStream data in an online viewer called SpeckleViewer and performing various versioning and comparison operations on different SpeckleStreams. For example, a SpeckleStream could be created to represent a specific design option for a project. This design option could be communicated to and shared with the larger project team in SpeckleViewer. This design option could then be overlaid against and compared with a previous design option to facilitate design iteration and evaluation.
 
 While communication with a SpeckleServer is performed through the web, communication between a specific AEC tool and the larger Speckle ecosystem is facilitated through a Speckle Client (e.g., communication between Rhino and Speckle is facilitated through the SpeckleRhino client). A Speckle Client performs this communication using sender and receiver components. These components are responsible for converting, packaging and transferring data to and from the server.
-

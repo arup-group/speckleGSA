@@ -1,8 +1,9 @@
 ---
 title: SpeckleGSA is Open Source!
-layout: post
+author: David deKoning
 date: 2020-04-29
-categories: [news]
+categories:
+    - news
 ---
 
 Oasys is delighted to announce the release of SpeckleGSA, an open-source [GSA](https://www.oasys-software.com/products/structural/gsa/) plugin that integrates GSA directly into the [Speckle](https://speckle.systems/) ecosystem. SpeckleGSA opens up new avenues for direct collaboration with architects and designers working in Grasshopper, Rhino, Revit, Dynamo, Excel and the many other design tools that integrate with the Speckle ecosystem.
