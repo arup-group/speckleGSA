@@ -13,6 +13,30 @@ namespace SpeckleGSAProxy.Test
   [TestFixture]
   public class CacheTests
   {
+    private string TestDataDirectory { get => AppDomain.CurrentDomain.BaseDirectory.TrimEnd(new[] { '\\' }) + @"\..\..\TestData\"; }
+
+    [TestCase("test_model.gwb", "A1, A2 A2 to A3;C1-\nA2,C2to A1 and C2 to C10", 3, 2)]
+    [TestCase("test_model.gwb", "A1c1", 1, 1)]
+    [TestCase("test_model.gwb", "All all", 3, 4)]
+    public void LoadCaseNameTest(string filename, string testCaseString, int expectedAs, int expectedCs)
+    {
+      var gsaProxy = new GSAProxy();
+      gsaProxy.OpenFile(Path.Combine(TestDataDirectory, filename), false);
+      var data = gsaProxy.GetGwaData(new List<string> { "ANAL", "COMBINATION" }, false);
+      gsaProxy.Close();
+
+      var cache = new GSACache();
+      foreach (var r in data)
+      {
+        cache.Upsert(r.Keyword, r.Index, r.GwaWithoutSet, r.StreamId, r.ApplicationId, r.GwaSetType);
+      }
+
+      var expandedLoadCases = cache.ExpandLoadCasesAndCombinations(testCaseString);
+
+      Assert.AreEqual(expectedAs, expandedLoadCases.Where(c => char.ToLowerInvariant(c[0]) == 'a').Count());
+      Assert.AreEqual(expectedCs, expandedLoadCases.Where(c => char.ToLowerInvariant(c[0]) == 'c').Count());
+    }
+
     [Test]
     public void ReserveMultipleIndicesSet()
     {

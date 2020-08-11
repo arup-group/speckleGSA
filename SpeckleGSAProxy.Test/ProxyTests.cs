@@ -10,6 +10,9 @@ using SpeckleGSAInterfaces;
 using System.IO;
 using System.Diagnostics;
 using System.Collections;
+using Interop.Gsa_10_1;
+using Microsoft.SqlServer.Server;
+using System.Runtime.InteropServices;
 
 namespace SpeckleGSAProxy.Test
 {
@@ -18,7 +21,7 @@ namespace SpeckleGSAProxy.Test
   {
     public static string[] savedJsonFileNames = new[] { "U7ntEJkzdZ.json", "lfsaIEYkR.json", "NaJD7d5kq.json", "UNg87ieJG.json" };
 
-    private string testDataDirectory { get => AppDomain.CurrentDomain.BaseDirectory.TrimEnd(new[] { '\\' }) + @"\..\..\TestData\"; }
+    private string TestDataDirectory { get => AppDomain.CurrentDomain.BaseDirectory.TrimEnd(new[] { '\\' }) + @"\..\..\TestData\"; }
 
     [Test]
     public async Task ReceiveTestContinuousMerge()
@@ -33,7 +36,7 @@ namespace SpeckleGSAProxy.Test
 
         //Create receiver with all streams
         var receiver = new Receiver() { Receivers = streamIds.ToDictionary(s => s, s => (ISpeckleGSAReceiver)new TestReceiver()) };
-        LoadObjectsIntoReceiver(receiver, savedJsonFileNames, testDataDirectory);
+        LoadObjectsIntoReceiver(receiver, savedJsonFileNames, TestDataDirectory);
 
         GSA.gsaProxy.NewFile();
 
@@ -51,7 +54,7 @@ namespace SpeckleGSAProxy.Test
         Assert.IsTrue(records.All(r => r.Gwa.Contains(r.StreamId)));
 
         //Refresh with new copy of objects so they aren't the same (so the merging code isn't trying to merge each object onto itself)
-        LoadObjectsIntoReceiver(receiver, savedJsonFileNames, testDataDirectory);
+        LoadObjectsIntoReceiver(receiver, savedJsonFileNames, TestDataDirectory);
 
         //RECEIVE EVENT #2: second of continuous
         receiver.Trigger(null, null);
@@ -84,7 +87,7 @@ namespace SpeckleGSAProxy.Test
 
         //Create receiver with all streams
         var receiver = new Receiver() { Receivers = streamIds.ToDictionary(s => s, s => (ISpeckleGSAReceiver)new TestReceiver()) };
-        LoadObjectsIntoReceiver(receiver, savedJsonFileNames, testDataDirectory);
+        LoadObjectsIntoReceiver(receiver, savedJsonFileNames, TestDataDirectory);
 
         GSA.gsaProxy.NewFile();
 
@@ -113,7 +116,7 @@ namespace SpeckleGSAProxy.Test
         await receiver.Initialize("", "");
 
         //Refresh with new copy of objects so they aren't the same (so the merging code isn't trying to merge each object onto itself)
-        var streamObjectsTuples = ExtractObjects(savedJsonFileNames.Where(fn => streamIdsToTest.Any(ft => fn.Contains(ft))).ToArray(), testDataDirectory);
+        var streamObjectsTuples = ExtractObjects(savedJsonFileNames.Where(fn => streamIdsToTest.Any(ft => fn.Contains(ft))).ToArray(), TestDataDirectory);
         var objectsToExclude = streamObjectsTuples.Where(t => t.Item2.Name == "LSP-Lockup" || t.Item2.Type == "Structural2DThermalLoad").ToArray();
         for (int i = 0; i < objectsToExclude.Count(); i++)
         {
@@ -153,7 +156,7 @@ namespace SpeckleGSAProxy.Test
 
       var sender = new Sender();
 
-      GSA.gsaProxy.OpenFile(Path.Combine(testDataDirectory, filename), true);
+      GSA.gsaProxy.OpenFile(Path.Combine(TestDataDirectory, filename), true);
 
       var testSender = new TestSender();
 
@@ -194,7 +197,7 @@ namespace SpeckleGSAProxy.Test
     public void TestProxyGetDataForCache()
     {
       var proxy = new GSAProxy();
-      proxy.OpenFile(Path.Combine(testDataDirectory, "Structural Demo 191010.gwb"));
+      proxy.OpenFile(Path.Combine(TestDataDirectory, "Structural Demo 191010.gwb"));
       var data = proxy.GetGwaData(DesignLayerKeywords, false);
 
       Assert.AreEqual(194, data.Count());

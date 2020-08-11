@@ -875,7 +875,29 @@ namespace SpeckleGSAProxy
       }
       return sid;
     }
-   
+
+    //Created as part of functionality needed to convert a load case specification in the UI into an itemised list of load cases 
+    //(including combinations)
+    //Since EntitiesInList doesn't offer load cases/combinations as a GsaEntity type, a dummy GSA proxy (and therefore GSA instance) 
+    //is created by the GSA cache and that calls the method below - even though it deals with nodes - as a roundabout way of
+    //converting a list specification into valid load cases or combinations.   This method is called separately for load cases and combinations. 
+    public List<int> GetNodeEntitiesInList(string spec)
+    {
+      var listType = GsaEntity.NODE;
+
+      //Check that this indeed a list - the EntitiesInList call will function differently if given a single item
+      var pieces = spec.Trim().Split(new[] { ' ' });
+      if (pieces.Count() == 1)
+      {
+        spec = pieces[0] + " " + pieces[0];
+      }
+
+      var result = GSAObject.EntitiesInList(spec, ref listType, out int[] entities);
+      return (entities != null && entities.Count() > 0)
+        ? entities.ToList()
+        : new List<int>();
+    }
+
     #endregion
   }
 }
