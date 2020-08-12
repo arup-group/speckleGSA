@@ -466,9 +466,17 @@ namespace SpeckleGSAProxy
 
       string[] pieces = res.ListSplit("\t");
 
-      zMaterialOffset = -Convert.ToDouble(pieces[12]);
-      offset = insertionPointOffset + zMaterialOffset + materialInsertionPointOffset;
       offsetRec = res;
+
+      if (pieces.Length >= 13)
+      {
+        zMaterialOffset = -Convert.ToDouble(pieces[12]);
+        offset = insertionPointOffset + zMaterialOffset + materialInsertionPointOffset;
+      }
+      else
+      {
+        offset = 0;
+      }
       return;
     }
 

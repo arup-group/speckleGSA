@@ -383,6 +383,28 @@ namespace SpeckleGSAUI
           return;
         }
 
+        var resultCases = GSA.Settings.ResultCases;
+
+        if (GSA.Settings.SendResults && resultCases.Count() > 0)
+        {
+          var startTime = DateTime.Now;
+
+          var expandedCases = GSA.gsaCache.ExpandLoadCasesAndCombinations(string.Join(" ", resultCases));
+
+          if (!expandedCases.SequenceEqual(resultCases))
+          {
+            Status.AddMessage("Expanded list of load cases/combinations to be sent: " + string.Join(" ", expandedCases));
+
+            GSA.Settings.ResultCases = expandedCases;
+
+            TimeSpan duration = DateTime.Now - startTime;
+            if (duration.Milliseconds > 100)
+            {
+              Status.AddMessage("Duration of expanding and validating load cases/combinations: " + duration.ToString(@"hh\:mm\:ss"));
+            }
+          }
+        }
+
         status = UIStatus.SENDING;
         if (SenderContinuousToggle.IsChecked.Value)
         {
