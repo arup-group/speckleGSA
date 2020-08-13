@@ -247,6 +247,7 @@ namespace SpeckleGSAProxy
       var data = new List<ProxyGwaLine>();
       var setKeywords = new List<string>();
       var setAtKeywords = new List<string>();
+      var tempKeywordIndexCache = new Dictionary<string, List<int>>();
 
       foreach (var keyword in keywords)
       {
@@ -338,7 +339,15 @@ namespace SpeckleGSAProxy
 
             lock (dataLock)
             {
-              data.Add(line);
+              if (!tempKeywordIndexCache.ContainsKey(keyword))
+              {
+                tempKeywordIndexCache.Add(keyword, new List<int>());
+              }
+              if (!tempKeywordIndexCache[keyword].Contains(index))
+              {
+                data.Add(line);
+                tempKeywordIndexCache[keyword].Add(index);
+              }
             }
           }
         }
@@ -404,7 +413,15 @@ namespace SpeckleGSAProxy
 
             lock (dataLock)
             {
-              data.Add(line);
+              if (!tempKeywordIndexCache.ContainsKey(setAtKeywords[i]))
+              {
+                tempKeywordIndexCache.Add(setAtKeywords[i], new List<int>());
+              }
+              if (!tempKeywordIndexCache[setAtKeywords[i]].Contains(j))
+              {
+                data.Add(line);
+                tempKeywordIndexCache[setAtKeywords[i]].Add(j);
+              }
             }
           }
         }
