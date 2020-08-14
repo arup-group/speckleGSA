@@ -8,6 +8,7 @@ description: Speckle plugin for Oasys GSA
 include: 
   - _pages
   - _posts
+  - _docs
 
 plugins:
   - jekyll-include-cache
@@ -27,6 +28,29 @@ defaults:
       type: pages
     values:
       layout: single
+      author_profile: true
+  # _docs
+  - scope:
+      path: "_docs"
+      type: pages
+    values:
+      layout: single
+      read_time: false
+      author_profile: false
+      share: false
+      comments: false
+      sidebar:
+        nav: "docs"
+
+search                   : true # true, false (default)
+# search_full_content      : true # true, false (default)
+# search_provider          : lunr # lunr (default), algolia
+
+footer:
+  links:
+    - label: "GitHub"
+      icon: "fab fa-fw fa-github"
+      url: "https://github.com/arup-group/speckleGSA"
 
 # Sass/SCSS
 sass:

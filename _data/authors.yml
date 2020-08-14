@@ -1,8 +1,29 @@
 David deKoning:
   name        : "David de Koning"
   bio         : "El Capitano"
-  avatar      : "/assets/images/bio-photo-2.jpg"
+  avatar      : "/assets/images/ddk_profile.jpg"
   links:
     - label: "Email"
       icon: "fas fa-fw fa-envelope-square"
       url: "mailto:David.deKoning@arup.com"
+
+Mishael Nuh:
+  name        : "Mishael Nuh"
+  bio         : "Engineering Science student majoring in Infrastructure Engineering at the University of Toronto interested in the interplay between digital technologies and structural engineering"
+  avatar      : "/assets/images/mish_profile.jpg"
+  links:
+    - label: "Website"
+      icon: "fas fa-fw fa-link"
+      url: "https://www.mnuh.org/#/"
+    - label: "Twitter"
+      icon: "fab fa-fw fa-twitter-square"
+      url: "https://twitter.com/MishaelNuh"
+
+Hugh Groves:
+  name        : "Hugh Groves"
+  bio         : "Structural engineer turned software developer - Hugh works on SpeckleGSA, as well as internal Arup projects such as ArupCompute and is the lead developer of DesignCheck and CalcBuilder"
+  avatar      : "/assets/images/hugh_profile.jpg"
+  links:
+    - label: "Email"
+      icon: "fas fa-fw fa-envelope-square"
+      url: "mailto:Hugh.Groves@arup.com"

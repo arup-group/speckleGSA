@@ -5,5 +5,13 @@ main:
     url: /docs/
   - title: "Blog"
     url: /archive/
-  - title: "Dev docs"
-    url: /devdocs/
+
+docs:
+  - title: "Documentation"
+    url: /docs/
+  - title: "Grasshopper"
+    url: /docs/gh
+  - title: "Revit"
+    url: /docs/revit
+  - title: "CLI"
+    url: /docs/cli

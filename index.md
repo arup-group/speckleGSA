@@ -2,7 +2,19 @@
 permalink: /
 title: SpeckleGSA
 layout: archive
+
+gallery:
+  - url: /assets/images/speckle_logo.png
+    image_path: /assets/images/speckle_logo.png
+    alt: "Speckle"
+    title: "Speckle"
+  - url: /assets/images/GSA_logo.png
+    image_path: /assets/images/GSA_logo.png
+    alt: "GSA"
+    title: "GSA"
 ---
+
+{% include gallery caption="Speckle & GSA" %}
 
 SpeckleGSA is a Speckle client developed for [GSA 10](https://www.oasys-software.com/products/structural/gsa/) to allow the transfer of finite element models to and from SpeckleServers.
 
