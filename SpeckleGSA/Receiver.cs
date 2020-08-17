@@ -365,11 +365,22 @@ namespace SpeckleGSA
 
             var applicationId = obj.ApplicationId;
 
+            if (string.IsNullOrEmpty(applicationId))
+            {
+              if (string.IsNullOrEmpty(obj.Name))
+              {
+                GSA.appUi.Message(speckleTypeName + " with no name nor ApplicationId (identified by hashes)", obj.Hash);
+              }
+              else
+              {
+                GSA.appUi.Message(speckleTypeName + " with name but no ApplicationId (identified by name)", obj.Name);
+              }
+            }
             //Check if this application appears in the cache at all
-            if (!string.IsNullOrEmpty(applicationId))
+            else
             {
               HelperFunctions.tryCatchWithEvents(() => ProcessObject(obj, speckleTypeName, keyword, t, dummyObject, streamId, layer),
-                "", "Processsing error for " + speckleTypeName + " with ApplicationId = " + applicationId);
+                "", "Processing error for " + speckleTypeName + " with ApplicationId = " + applicationId);
 
               ExecuteWithLock(ref currentObjectsLock, () => currentObjects.Remove(tuple));
             }
@@ -456,7 +467,11 @@ namespace SpeckleGSA
             foundIndex.Value,
             gwaWithoutSet,
             foundApplicationId,
-            so: (foundApplicationId != null && targetObject.ApplicationId.EqualsWithoutSpaces(foundApplicationId)) ? targetObject : null,
+            so: (foundApplicationId != null 
+              && targetObject.ApplicationId != null 
+              && targetObject.ApplicationId.EqualsWithoutSpaces(foundApplicationId)) 
+                ? targetObject 
+                : null,
             gwaSetCommandType: gwaSetCommandType.HasValue ? gwaSetCommandType.Value : GwaSetCommandType.Set,
             streamId: streamId);
         }
