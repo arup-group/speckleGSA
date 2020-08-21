@@ -17,8 +17,8 @@ namespace SpeckleGSA
 
     private SpeckleApiClient myReceiver;
 
-    private string apiToken;
-    private string serverAddress;
+    private readonly string apiToken;
+    private readonly string serverAddress;
 
     public event EventHandler<EventArgs> UpdateGlobalTrigger;
 
@@ -54,30 +54,32 @@ namespace SpeckleGSA
 
       if (string.IsNullOrEmpty(clientID))
       {
-				var task = myReceiver.ClientCreateAsync(new AppClient()
+				HelperFunctions.tryCatchWithEvents(() =>
 				{
-					DocumentName = Path.GetFileNameWithoutExtension(GSA.gsaProxy.FilePath),
-					DocumentType = "GSA",
-					Role = "Receiver",
-					StreamId = streamID,
-					Online = true,
-				});
-				await task;
-				var clientResponse = task.Result;
+					var clientResponse = myReceiver.ClientCreateAsync(new AppClient()
+					{
+						DocumentName = Path.GetFileNameWithoutExtension(GSA.gsaProxy.FilePath),
+						DocumentType = "GSA",
+						Role = "Receiver",
+						StreamId = streamID,
+						Online = true,
+					}).Result;
 
-        myReceiver.ClientId = clientResponse.Resource._id;
+					myReceiver.ClientId = clientResponse.Resource._id;
+				}, "", "Unable to create client on server");
       }
       else
       {
-				var task = myReceiver.ClientUpdateAsync(clientID, new AppClient()
+				HelperFunctions.tryCatchWithEvents(() =>
 				{
-					DocumentName = Path.GetFileNameWithoutExtension(GSA.gsaProxy.FilePath),
-					Online = true,
-				});
-				await task;
-				var clientResponse = task.Result;
+					_ = myReceiver.ClientUpdateAsync(clientID, new AppClient()
+					{
+						DocumentName = Path.GetFileNameWithoutExtension(GSA.gsaProxy.FilePath),
+						Online = true,
+					}).Result;
 
-        myReceiver.ClientId = clientID;
+					myReceiver.ClientId = clientID;
+				}, "", "Unable to update client on server");
       }
 
       myReceiver.SetupWebsocket();
@@ -125,8 +127,11 @@ namespace SpeckleGSA
     /// </summary>
     public void UpdateChildren()
     {
-      var result = myReceiver.StreamGetAsync(myReceiver.StreamId, "fields=children").Result;
-      myReceiver.Stream.Children = result.Resource.Children;
+			HelperFunctions.tryCatchWithEvents(() =>
+			{
+				var result = myReceiver.StreamGetAsync(myReceiver.StreamId, "fields=children").Result;
+				myReceiver.Stream.Children = result.Resource.Children;
+			}, "", "Unable to get children of stream");
     }
 
 		/// <summary>
@@ -135,69 +140,56 @@ namespace SpeckleGSA
 		public void UpdateGlobal()
 		{
 			// Try to get stream
-			ResponseStream streamGetResult = myReceiver.StreamGetAsync(myReceiver.StreamId, null).Result;
+			ResponseStream streamGetResult = null;
 
-			if (streamGetResult.Success == false)
+			var exceptionThrown = HelperFunctions.tryCatchWithEvents(() =>
+			{
+				streamGetResult = myReceiver.StreamGetAsync(myReceiver.StreamId, null).Result;
+			}, "", "Unable to get stream info from server");
+
+			if (!exceptionThrown && streamGetResult.Success == false)
 			{
 				Status.AddError("Failed to receive " + myReceiver.Stream.Name + "stream.");
+				return;
 			}
-			else
+
+			myReceiver.Stream = streamGetResult.Resource;
+
+			// Store stream data in local DB
+			HelperFunctions.tryCatchWithEvents(() =>
 			{
-				myReceiver.Stream = streamGetResult.Resource;
+				LocalContext.AddOrUpdateStream(myReceiver.Stream, myReceiver.BaseUrl);
+			}, "", "Unable to add or update stream details into local database");
 
-				// Store stream data in local DB
-				try
+			string[] payload = myReceiver.Stream.Objects.Where(o => o.Type == "Placeholder").Select(o => o._id).ToArray();
+
+			List<SpeckleObject> receivedObjects = new List<SpeckleObject>();
+
+			// Get remaining objects from server
+			for (int i = 0; i < payload.Length; i += MAX_OBJ_REQUEST_COUNT)
+			{
+				string[] partialPayload = payload.Skip(i).Take(MAX_OBJ_REQUEST_COUNT).ToArray();
+
+				HelperFunctions.tryCatchWithEvents(() =>
 				{
-					LocalContext.AddOrUpdateStream(myReceiver.Stream, myReceiver.BaseUrl);
-				}
-				catch { }
-
-				// Get cached objects
-				try
-				{
-					LocalContext.GetCachedObjects(myReceiver.Stream.Objects, myReceiver.BaseUrl);
-				}
-				catch { }
-
-				string[] payload = myReceiver.Stream.Objects.Where(o => o.Type == "Placeholder").Select(o => o._id).ToArray();
-
-				List<SpeckleObject> receivedObjects = new List<SpeckleObject>();
-
-				// Get remaining objects from server
-				for (int i = 0; i < payload.Length; i += MAX_OBJ_REQUEST_COUNT)
-				{
-					string[] partialPayload = payload.Skip(i).Take(MAX_OBJ_REQUEST_COUNT).ToArray();
-
 					ResponseObject response = myReceiver.ObjectGetBulkAsync(partialPayload, "omit=displayValue").Result;
 
 					receivedObjects.AddRange(response.Resources);
-				}
-
-				foreach (SpeckleObject obj in receivedObjects)
-				{
-					int streamLoc = myReceiver.Stream.Objects.FindIndex(o => o._id == obj._id);
-					try
-					{
-						myReceiver.Stream.Objects[streamLoc] = obj;
-					}
-					catch
-					{ }
-				}
-
-				Task.Run(() =>
-				{
-					foreach (SpeckleObject obj in receivedObjects)
-					{
-						try
-						{
-							LocalContext.AddCachedObject(obj, myReceiver.BaseUrl);
-						}
-						catch { }
-					 }
-				 });
-
-				Status.AddMessage("Received " + myReceiver.Stream.Name + " stream with " + myReceiver.Stream.Objects.Count() + " objects.");
+				}, "", "Unable to get objects for stream in bulk");
 			}
+
+			foreach (SpeckleObject obj in receivedObjects)
+			{
+				int streamLoc = myReceiver.Stream.Objects.FindIndex(o => o._id == obj._id);
+				try
+				{
+					myReceiver.Stream.Objects[streamLoc] = obj;
+				}
+				catch
+				{ }
+			}
+
+			Status.AddMessage("Received " + myReceiver.Stream.Name + " stream with " + myReceiver.Stream.Objects.Count() + " objects.");
 		}
 
     /// <summary>
@@ -205,7 +197,10 @@ namespace SpeckleGSA
     /// </summary>
     public void Dispose()
     {
-      myReceiver.ClientUpdateAsync(myReceiver.ClientId, new AppClient() { Online = false });
+			HelperFunctions.tryCatchWithEvents(() =>
+			{
+				_ = myReceiver.ClientUpdateAsync(myReceiver.ClientId, new AppClient() { Online = false }).Result;
+			}, "", "Unable to update client on server");
     }
   }
 }

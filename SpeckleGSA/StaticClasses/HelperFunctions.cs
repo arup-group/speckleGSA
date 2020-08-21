@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Interop.Gsa_10_0;
+using Interop.Gsa_10_1;
 using System.Text.RegularExpressions;
 using System.Windows.Media.Media3D;
 using System.Drawing;
@@ -131,7 +131,7 @@ namespace SpeckleGSA
     }
 		#endregion
 
-		#region Miscellanious
+		#region Miscellaneous
 
 		/// <summary>
 		/// Extract attribute from attribute type.
@@ -149,6 +149,31 @@ namespace SpeckleGSA
 			}
       catch { return null; }
     }
+
+    public static Func<Action, string, string, bool> tryCatchWithEvents = (action, msgSuccessful, msgFailure) =>
+    {
+      bool success = false;
+      try
+      {
+        action();
+        success = true;
+      }
+      catch (Exception ex)
+      {
+        if (!string.IsNullOrEmpty(msgFailure))
+        {
+          Status.AddError(msgFailure, GSA.Settings.VerboseErrors ? ex : null);
+        }
+      }
+      if (success)
+      {
+        if (!string.IsNullOrEmpty(msgSuccessful))
+        {
+          Status.AddMessage(msgSuccessful);
+        }
+      }
+      return success;
+    };
     #endregion
   }
 }

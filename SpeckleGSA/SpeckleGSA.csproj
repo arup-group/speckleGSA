@@ -67,14 +67,17 @@
     <Compile Include="Sender.cs" />
     <Compile Include="SpeckleInterface\ISpeckleGSAReceiver.cs" />
     <Compile Include="SpeckleInterface\ISpeckleGSASender.cs" />
+    <Compile Include="StaticClasses\ErrorEventArgs.cs" />
     <Compile Include="StaticClasses\GSA.cs" />
     <Compile Include="StaticClasses\HelperFunctions.cs" />
+    <Compile Include="StaticClasses\MessageEventArgs.cs" />
     <Compile Include="StaticClasses\Result.cs" />
     <Compile Include="StaticClasses\Settings.cs" />
     <Compile Include="SpeckleInterface\SpeckleGSAReceiver.cs" />
     <Compile Include="SpeckleInterface\SpeckleGSASender.cs" />
     <Compile Include="StaticClasses\Status.cs" />
     <Compile Include="SpeckleInterface\SpeckleStreamManager.cs" />
+    <Compile Include="StaticClasses\StatusEventArgs.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Countly, Version=19.8.0.0, Culture=neutral, PublicKeyToken=30fd2b3d8bfe4882, processorArchitecture=MSIL">
@@ -83,10 +86,9 @@
     <Reference Include="DeviceId, Version=4.3.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\DeviceId.4.3.0\lib\net40\DeviceId.dll</HintPath>
     </Reference>
-    <Reference Include="Interop.Gsa_10_0, Version=10.0.0.0, Culture=neutral, processorArchitecture=AMD64">
-      <SpecificVersion>False</SpecificVersion>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-      <HintPath>..\Resource\Interop.Gsa_10_0.dll</HintPath>
+    <Reference Include="Interop.Gsa_10_1">
+      <HintPath>..\Resource\Interop.Gsa_10_1.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.Threading.Tasks, Version=1.0.12.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
@@ -103,6 +105,12 @@
     </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
+    <Reference Include="Serilog, Version=2.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10, processorArchitecture=MSIL">
+      <HintPath>..\packages\Serilog.2.6.0\lib\net46\Serilog.dll</HintPath>
+    </Reference>
+    <Reference Include="Serilog.Settings.AppSettings, Version=2.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10, processorArchitecture=MSIL">
+      <HintPath>..\packages\Serilog.Settings.AppSettings.2.2.2\lib\net45\Serilog.Settings.AppSettings.dll</HintPath>
+    </Reference>
     <Reference Include="SpeckleCore, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Resource\SpeckleCore.dll</HintPath>
@@ -124,6 +132,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.IO, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\System.IO.4.3.0\lib\net462\System.IO.dll</HintPath>

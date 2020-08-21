@@ -30,5 +30,7 @@ namespace SpeckleGSAProxy
     List<Tuple<string, int, string, GwaSetCommandType>> GetDeletableData();
 
     void MarkAsPrevious(string keyword, string sid);
+
+    List<string> ExpandLoadCasesAndCombinations(string loadCaseString);
   }
 }
