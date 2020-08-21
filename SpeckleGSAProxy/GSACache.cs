@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using SpeckleCore;
 using SpeckleGSAInterfaces;
 
@@ -57,6 +58,10 @@ namespace SpeckleGSAProxy
 
     // < keyword , { < index, app_id >, < index, app_id >, ... } >
     private readonly Dictionary<string, Dictionary<int, string>> provisionals = new Dictionary<string, Dictionary<int, string>>();
+
+    //Hardcoded for now to use current 10.1 keywords - to be reviewed
+    private readonly string analKey = "ANAL.1";
+    private readonly string comboKey = "COMBINATION.1";
 
     public Dictionary<int, object> GetIndicesSpeckleObjects(string speckleTypeName)
     {
@@ -491,14 +496,329 @@ namespace SpeckleGSAProxy
       });
     }
 
-    private bool IsAlterable(string keyword, string applicationId)
+    public List<string> ExpandLoadCasesAndCombinations(string loadCaseString)
     {
-      if (keyword.Contains("NODE") && (applicationId == "" || (applicationId != null && applicationId.StartsWith("gsa"))))
+      var retList = new List<string>();
+
+      if (string.IsNullOrEmpty(loadCaseString) || recordsByKeyword.Keys.Count == 0
+        || !ProcessLoadCaseCombinationSpec(loadCaseString, out List<string> aParts, out List<string> cParts))
+      {
+        return retList;
+      }
+
+      var cachedAnalIndices = (recordsByKeyword.ContainsKey(analKey))
+        ? recordsByKeyword[analKey].Select(r => r.Index).ToList()
+        : new List<int>();
+
+      var cachedComboIndices = (recordsByKeyword.ContainsKey(comboKey))
+        ? recordsByKeyword[comboKey].Select(r => r.Index).ToList()
+        : new List<int>();
+
+      var tasks = new List<Task>();
+      var retListLock = new object();
+
+      if (aParts.Count() > 0)
+      {
+#if !DEBUG
+        tasks.Add(Task.Run(() =>
+#endif
+        {
+          var aSpecs = ExpandLoadCasesAndCombinationSubset(aParts, "A", cachedAnalIndices);
+          if (aSpecs != null && aSpecs.Count() > 0)
+          {
+            lock (retListLock)
+            {
+              retList.AddRange(aSpecs);
+            }
+          }
+        }
+#if !DEBUG
+        ));
+#endif
+      }
+
+      if (cParts.Count() > 0)
+      {
+#if !DEBUG
+        tasks.Add(Task.Run(() =>
+#endif
+        {
+          var cSpecs = ExpandLoadCasesAndCombinationSubset(cParts, "C", cachedComboIndices);
+          if (cSpecs != null && cSpecs.Count() > 0)
+          {
+            lock (retListLock)
+            {
+              retList.AddRange(cSpecs);
+            }
+          }
+        }
+#if !DEBUG
+        ));
+#endif
+      }
+
+      Task.WaitAll(tasks.ToArray());
+
+      return retList;
+    }
+
+    private List<string> ExpandLoadCasesAndCombinationSubset(List<string> listParts, string marker, List<int> cachedIndices)
+    {
+      var specs = new List<string>();
+      if (listParts.All(sp => IsMarkerPattern(sp)))
+      {
+        var aPartsDistinct = listParts.Distinct();
+        foreach (var a in aPartsDistinct)
+        {
+          if (a.Length > 1 && int.TryParse(a.Substring(1), out int specIndex))
+          {
+            if (cachedIndices.Contains(specIndex))
+            {
+              specs.Add(a);
+            }
+          }
+        }
+      }
+      else
+      {
+        specs = (listParts[0].ToLower() == "all")
+          ? cachedIndices.Select(i => marker + i).ToList()
+          : ExpandSubsetViaProxy(cachedIndices, listParts, marker);
+      }
+      return specs;
+    }
+
+    #region load_case_conversion
+
+    //Since EntitiesInList doesn't offer load cases/combinations as a GsaEntity type, a dummy GSA instance is 
+    //created where a node is created for every load case/combination in the specification.  This is done separately for load cases and combinations.
+    private List<string> ExpandSubsetViaProxy(List<int> existingIndices, List<string> specParts, string marker)
+    {
+      var items = new List<string>();
+      var gsaProxy = new GSAProxy();
+
+      try
+      {
+        gsaProxy.NewFile(false);
+
+        for (int i = 0; i < existingIndices.Count(); i++)
+        {
+          var indexStr = existingIndices[i].ToString();
+          gsaProxy.SetGwa(string.Join("\t", new[] { "SET", "NODE.3", indexStr, indexStr, "NO_RGB", "0", "0", "0" }));
+        }
+        gsaProxy.Sync();
+        var tempSpec = string.Join(" ", specParts.Select(a => RemoveMarker(a)));
+        items.AddRange(gsaProxy.GetNodeEntitiesInList(tempSpec).Select(e => marker + e.ToString()));
+      }
+      catch { }
+      finally
+      {
+        gsaProxy.Close();
+        gsaProxy = null;
+      }
+
+      return items;
+    }
+
+    private bool IsMarkerPattern(string item)
+    {
+      return (item.Length >= 2 && char.IsLetter(item[0]) && item.Substring(1).All(c => char.IsDigit(c)));
+    }
+
+    private string RemoveMarker(string item)
+    {
+      return (IsMarkerPattern(item) ? item.Substring(1) : item);
+    }
+
+    private bool ProcessLoadCaseCombinationSpec(string spec, out List<string> aParts, out List<string> cParts)
+    {
+      aParts = new List<string>();
+      cParts = new List<string>();
+      var formattedSpec = spec.ToLower().Trim();
+
+      if (formattedSpec.StartsWith("all"))
+      {
+        aParts.Add("All");
+        cParts.Add("All");
+        return true;
+      }
+
+      var stage1Parts = new List<string>();
+      //break up the string by any A<number> and C<number> substrings
+      var inCurrSpec = false;
+      var currSpec = "";
+      var bnSpec = "";  //Between spec, could be any string
+      for (int i = 0; i < formattedSpec.Length; i++)
+      {
+        if (Char.IsDigit(formattedSpec[i]))
+        {
+          if (i == 0)
+          {
+            bnSpec += formattedSpec[i];
+          }
+          else
+          {
+            if (formattedSpec[i - 1] == 'a' || formattedSpec[i - 1] == 'c')
+            {
+              //Previous is A or C and current is a number
+              inCurrSpec = true;
+              currSpec = spec[i - 1].ToString() + spec[i].ToString();
+              bnSpec = bnSpec.Substring(0, bnSpec.Length - 1);
+              if (bnSpec.Length > 0)
+              {
+                stage1Parts.Add(bnSpec);
+              }
+              bnSpec = "";
+            }
+            else if (Char.IsNumber(formattedSpec[i - 1]))
+            {
+              //Previous is not A or C but current is a number - assume continuation of previous state
+              if (inCurrSpec)
+              {
+                currSpec += spec[i].ToString();
+              }
+              else
+              {
+                bnSpec += spec[i].ToString();
+              }
+            }
+          }
+        }
+        else if (Char.IsLetter(formattedSpec[i]))
+        {
+          //it's not a number, so close off new part if relevant
+          if (inCurrSpec)
+          {
+            stage1Parts.Add(currSpec);
+            currSpec = "";
+          }
+
+          inCurrSpec = false;
+          bnSpec += spec[i].ToString();
+        }
+        else
+        {
+          if (inCurrSpec)
+          {
+            stage1Parts.Add(currSpec);
+            currSpec = "";
+            inCurrSpec = false;
+          }
+          else if (bnSpec.Length > 0)
+          {
+            stage1Parts.Add(bnSpec);
+            bnSpec = "";
+          }
+        }
+      }
+
+      if (inCurrSpec)
+      {
+        stage1Parts.Add(currSpec);
+      }
+      else
+      {
+        stage1Parts.Add(bnSpec);
+      }
+
+      //Now break up these items into groups, delimited by a switch between an A_ and C_ mention, or an all-number item and an A_ or C_ mention
+      var partsAorC = stage1Parts.Select(p => GetAorC(p)).ToList();
+
+      if (partsAorC.All(p => p == 0))
       {
         return false;
       }
-      return true;
+      int? firstViableIndex = null;
+      for (int i = 0; i < partsAorC.Count(); i++)
+      {
+        if (partsAorC[i] > 0)
+        {
+          firstViableIndex = i;
+          break;
+        }
+      }
+      if (!firstViableIndex.HasValue)
+      {
+        return false;
+      }
+
+      int currAorC = GetAorC(stage1Parts[firstViableIndex.Value]); // A = 1, C = 2
+      if (currAorC == 1)
+      {
+        aParts.Add(stage1Parts[firstViableIndex.Value]);
+      }
+      else
+      {
+        cParts.Add(stage1Parts[firstViableIndex.Value]);
+      }
+
+      for (int i = (firstViableIndex.Value + 1); i < stage1Parts.Count(); i++)
+      {
+        var itemAorC = GetAorC(stage1Parts[i]);
+
+        if (itemAorC == 0 || itemAorC == currAorC)
+        {
+          //Continue on
+          if (currAorC == 1)
+          {
+            aParts.Add(stage1Parts[i]);
+          }
+          else
+          {
+            cParts.Add(stage1Parts[i]);
+          }
+        }
+        else if (itemAorC != currAorC)
+        {
+          if (currAorC == 1)
+          {
+            RemoveTrailingLettersOnlyItems(ref aParts);
+
+            cParts.Add(stage1Parts[i]);
+          }
+          else if (currAorC == 2)
+          {
+            RemoveTrailingLettersOnlyItems(ref cParts);
+
+            aParts.Add(stage1Parts[i]);
+          }
+          currAorC = itemAorC;
+        }
+      }
+
+      return (aParts.Count > 0 || cParts.Count > 0);
     }
+
+    private static void RemoveTrailingLettersOnlyItems(ref List<string> parts)
+    {
+      var found = true;
+
+      //First remove any all-letter items from the last state
+      var index = (parts.Count - 1);
+
+      do
+      {
+        if (parts[index].All(p => (char.IsLetter(p))))
+        {
+          parts.RemoveAt(index);
+          index--;
+        }
+        else
+        {
+          found = false;
+        }
+      } while (found);
+    }
+
+    private static int GetAorC(string part)
+    {
+      if (string.IsNullOrEmpty(part) || part.Length < 2 || !(Char.IsLetter(part[0]) && Char.IsDigit(part[1])))
+      {
+        return 0;
+      }
+      return (char.ToLowerInvariant(part[0]) == 'a') ? 1 : (char.ToLowerInvariant(part[0]) == 'c') ? 2 : 0;
+    }
+    #endregion
 
     #region applicationIdLookup
     public string GetApplicationId(string keyword, int index)
@@ -535,6 +855,15 @@ namespace SpeckleGSAProxy
     }
 
     #endregion
+
+    private bool IsAlterable(string keyword, string applicationId)
+    {
+      if (keyword.Contains("NODE") && (applicationId == "" || (applicationId != null && applicationId.StartsWith("gsa"))))
+      {
+        return false;
+      }
+      return true;
+    }
 
     //For testing
     ReadOnlyCollection<GSACacheRecord> IGSACacheForTesting.Records => records;

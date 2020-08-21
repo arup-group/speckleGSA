@@ -28,7 +28,7 @@ namespace SpeckleGSAProxy
     {
       lock (syncLock)
       {
-        return messages.Select(kvp => kvp.Key + " " + string.Join(",", kvp.Value)).ToList();
+        return messages.Select(kvp => kvp.Key + ": " + string.Join(", ", kvp.Value)).ToList();
       }
     }
   }

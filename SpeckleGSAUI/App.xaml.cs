@@ -290,7 +290,7 @@ namespace SpeckleGSAUI
     /// <summary>
     /// Error message handler.
     /// </summary>
-    private void AddError(object sender, MessageEventArgs e)
+    private void AddError(object sender, SpeckleGSA.ErrorEventArgs e)
     {
       Console.WriteLine("[" + DateTime.Now.ToString("h:mm:ss tt") + "] ERROR: " + e.Message);
     }

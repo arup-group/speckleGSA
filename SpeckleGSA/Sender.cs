@@ -120,7 +120,9 @@ namespace SpeckleGSA
       // Create the streams
       Status.ChangeStatus("Creating streams");
 
-			var streamNames = (GSA.Settings.SeparateStreams) ? objTypes.Select(t => (string)t.GetAttribute("Stream")).Distinct().ToList() : new List<string>() { "Full Model" };
+			var streamNames = (GSA.Settings.SeparateStreams) 
+        ? objTypes.Select(t => (string)t.GetAttribute("Stream")).Distinct().ToList() 
+        : new List<string>() { "Full Model" };
 
       foreach (string streamName in streamNames)
       {
@@ -128,7 +130,7 @@ namespace SpeckleGSA
 
         if (!GSA.SenderInfo.ContainsKey(streamName))
         {
-          Status.AddMessage(streamName + " sender not initialized. Creating new " + streamName + " sender.");
+          Status.AddMessage("Creating new sender for " + streamName);
           await Senders[streamName].InitializeSender(null, null, streamName);
           GSA.SenderInfo[streamName] = new Tuple<string, string>(Senders[streamName].StreamID, Senders[streamName].ClientID);
         }
@@ -175,29 +177,18 @@ namespace SpeckleGSA
           currentBatch.RemoveAll(i => traversedSerialisedTypes.Contains(i));
         });
 
+#if DEBUG
+        foreach (var t in currentBatch)
+        {
+          ProcessTypeForSending(t, ref changeDetected);
+        }
+#else
         Parallel.ForEach(currentBatch, t =>
         {
-          if (changeDetected) // This will skip the first read but it avoids flickering
-          {
-            Status.ChangeStatus("Reading " + t.Name);
-          }
-
-          //The SpeckleStructural kit actually does serialisation (calling of ToSpeckle()) by type, not individual object.  This is due to
-          //GSA offering bulk GET based on type.
-          //So if the ToSpeckle() call for the type is successful it does all the objects of that type and returns SpeckleObject.
-          //If there is an error, then the SpeckleCore Converter.Serialise will return SpeckleNull.  
-          //The converted objects are stored in the kit in its own collection, not returned by Serialise() here.
-          var dummyObject = Activator.CreateInstance(t);
-          var result = Converter.Serialise(dummyObject);
-
-          if (!(result is SpeckleNull))
-          {
-            changeDetected = true;
-          }
-
-          ExecuteWithLock(ref traversedSerialisedLock, () => traversedSerialisedTypes.Add(t));
+          ProcessTypeForSending(t, ref changeDetected);
         }
         );
+#endif
       } while (currentBatch.Count > 0);
 
 			foreach (var dict in gsaStaticObjects)
@@ -232,19 +223,27 @@ namespace SpeckleGSA
           if (GSA.Settings.SendOnlyMeaningfulNodes)
           {
             if (obj.GetType().Name == "GSANode" && !(bool)obj.GetType().GetField("ForceSend").GetValue(obj))
+            {
               continue;
+            }
           }
           object insideVal = obj.GetType().GetProperty("Value").GetValue(obj);
 
           ((SpeckleObject)insideVal).GenerateHash();
 
           if (!streamBuckets.ContainsKey(targetStream))
+          {
             streamBuckets[targetStream] = new Dictionary<string, List<object>>();
+          }
 
           if (streamBuckets[targetStream].ContainsKey(insideVal.GetType().Name))
+          {
             streamBuckets[targetStream][insideVal.GetType().Name].Add(insideVal);
+          }
           else
+          {
             streamBuckets[targetStream][insideVal.GetType().Name] = new List<object>() { insideVal };
+          }
         }
       }
 
@@ -271,6 +270,29 @@ namespace SpeckleGSA
       Status.AddMessage("Duration of sending to Speckle: " + duration.ToString(@"hh\:mm\:ss"));
       IsBusy = false;
       Status.ChangeStatus("Finished sending", 100);
+    }
+
+    private void ProcessTypeForSending(Type t, ref bool changeDetected)
+    {
+      if (changeDetected) // This will skip the first read but it avoids flickering
+      {
+        Status.ChangeStatus("Reading " + t.Name);
+      }
+
+      //The SpeckleStructural kit actually does serialisation (calling of ToSpeckle()) by type, not individual object.  This is due to
+      //GSA offering bulk GET based on type.
+      //So if the ToSpeckle() call for the type is successful it does all the objects of that type and returns SpeckleObject.
+      //If there is an error, then the SpeckleCore Converter.Serialise will return SpeckleNull.  
+      //The converted objects are stored in the kit in its own collection, not returned by Serialise() here.
+      var dummyObject = Activator.CreateInstance(t);
+      var result = Converter.Serialise(dummyObject);
+
+      if (!(result is SpeckleNull))
+      {
+        changeDetected = true;
+      }
+
+      ExecuteWithLock(ref traversedSerialisedLock, () => traversedSerialisedTypes.Add(t));
     }
 
     /// <summary>

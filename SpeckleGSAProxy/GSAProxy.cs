@@ -5,7 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Interop.Gsa_10_0;
+using Interop.Gsa_10_1;
 using SpeckleGSAInterfaces;
 
 namespace SpeckleGSAProxy
@@ -247,6 +247,7 @@ namespace SpeckleGSAProxy
       var data = new List<ProxyGwaLine>();
       var setKeywords = new List<string>();
       var setAtKeywords = new List<string>();
+      var tempKeywordIndexCache = new Dictionary<string, List<int>>();
 
       foreach (var keyword in keywords)
       {
@@ -338,7 +339,15 @@ namespace SpeckleGSAProxy
 
             lock (dataLock)
             {
-              data.Add(line);
+              if (!tempKeywordIndexCache.ContainsKey(keyword))
+              {
+                tempKeywordIndexCache.Add(keyword, new List<int>());
+              }
+              if (!tempKeywordIndexCache[keyword].Contains(index))
+              {
+                data.Add(line);
+                tempKeywordIndexCache[keyword].Add(index);
+              }
             }
           }
         }
@@ -404,7 +413,15 @@ namespace SpeckleGSAProxy
 
             lock (dataLock)
             {
-              data.Add(line);
+              if (!tempKeywordIndexCache.ContainsKey(setAtKeywords[i]))
+              {
+                tempKeywordIndexCache.Add(setAtKeywords[i], new List<int>());
+              }
+              if (!tempKeywordIndexCache[setAtKeywords[i]].Contains(j))
+              {
+                data.Add(line);
+                tempKeywordIndexCache[setAtKeywords[i]].Add(j);
+              }
             }
           }
         }
@@ -432,13 +449,19 @@ namespace SpeckleGSAProxy
 
     public void Sync()
     {
-      var batchBlankCommand = ExecuteWithLock(() => string.Join("\r\n", batchBlankGwa));
-      var blankCommandResult = ExecuteWithLock(() => GSAObject.GwaCommand(batchBlankCommand));
-      ExecuteWithLock(() => batchBlankGwa.Clear());
+      if (batchBlankGwa.Count() > 0)
+      {
+        var batchBlankCommand = ExecuteWithLock(() => string.Join("\r\n", batchBlankGwa));
+        var blankCommandResult = ExecuteWithLock(() => GSAObject.GwaCommand(batchBlankCommand));
+        ExecuteWithLock(() => batchBlankGwa.Clear());
+      }
 
-      var batchSetCommand = ExecuteWithLock(() => string.Join("\r\n", batchSetGwa));
-      var setCommandResult = ExecuteWithLock(() => GSAObject.GwaCommand(batchSetCommand));
-      ExecuteWithLock(() => batchSetGwa.Clear());      
+      if (batchSetGwa.Count() > 0)
+      {
+        var batchSetCommand = ExecuteWithLock(() => string.Join("\r\n", batchSetGwa));
+        var setCommandResult = ExecuteWithLock(() => GSAObject.GwaCommand(batchSetCommand));
+        ExecuteWithLock(() => batchSetGwa.Clear());
+      }
     }
 
     public void GetGSATotal2DElementOffset(int index, double insertionPointOffset, out double offset, out string offsetRec)
@@ -460,9 +483,17 @@ namespace SpeckleGSAProxy
 
       string[] pieces = res.ListSplit("\t");
 
-      zMaterialOffset = -Convert.ToDouble(pieces[12]);
-      offset = insertionPointOffset + zMaterialOffset + materialInsertionPointOffset;
       offsetRec = res;
+
+      if (pieces.Length >= 13)
+      {
+        zMaterialOffset = -Convert.ToDouble(pieces[12]);
+        offset = insertionPointOffset + zMaterialOffset + materialInsertionPointOffset;
+      }
+      else
+      {
+        offset = 0;
+      }
       return;
     }
 
@@ -869,7 +900,29 @@ namespace SpeckleGSAProxy
       }
       return sid;
     }
-   
+
+    //Created as part of functionality needed to convert a load case specification in the UI into an itemised list of load cases 
+    //(including combinations)
+    //Since EntitiesInList doesn't offer load cases/combinations as a GsaEntity type, a dummy GSA proxy (and therefore GSA instance) 
+    //is created by the GSA cache and that calls the method below - even though it deals with nodes - as a roundabout way of
+    //converting a list specification into valid load cases or combinations.   This method is called separately for load cases and combinations. 
+    public List<int> GetNodeEntitiesInList(string spec)
+    {
+      var listType = GsaEntity.NODE;
+
+      //Check that this indeed a list - the EntitiesInList call will function differently if given a single item
+      var pieces = spec.Trim().Split(new[] { ' ' });
+      if (pieces.Count() == 1)
+      {
+        spec = pieces[0] + " " + pieces[0];
+      }
+
+      var result = GSAObject.EntitiesInList(spec, ref listType, out int[] entities);
+      return (entities != null && entities.Count() > 0)
+        ? entities.ToList()
+        : new List<int>();
+    }
+
     #endregion
   }
 }

@@ -18,7 +18,8 @@
   Background="{DynamicResource MaterialDesignPaper}"
   FontFamily="{DynamicResource MaterialDesignFont}"
     
-  Title="SpeckleGSA" Height="1000" Width="700">
+  Title="SpeckleGSA" Height="720" Width="700">
+
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="auto"/>
@@ -26,7 +27,7 @@
 			<RowDefinition Height="auto"/>
 		</Grid.RowDefinitions>
 		<Grid
-      Grid.Row="0">
+      Grid.Row="0" Grid.ColumnSpan="2">
 			<TextBlock>
         <TextBlock
           Height="29"
@@ -51,7 +52,7 @@
       </TextBlock>
 		</Grid>
 		<Grid
-      Grid.Row="1">
+      Grid.Row="1" Grid.ColumnSpan="2">
 			<dragablz:TabablzControl
         x:Name="UITabControl"
         SelectionChanged="ChangeTab"
@@ -65,8 +66,8 @@
 							<RowDefinition Height="auto"/>
 							<RowDefinition Height="*"/>
 						</Grid.RowDefinitions>
-            <Button Style="{DynamicResource MaterialDesignRaisedAccentButton}" FontWeight="Regular" Grid.Row="0" Click="Login" Content="Login" Margin="5" HorizontalAlignment="Right" MinWidth="100" />
-            <Button Style="{DynamicResource MaterialDesignRaisedLightButton}" FontWeight="Regular" Grid.Row="1" Click="UpdateStreamList"  Content="Update Stream List" Margin="5,5,5,5" MinWidth="100" Grid.Column="1"/>
+						<Button Style="{DynamicResource MaterialDesignRaisedAccentButton}" FontWeight="Regular" Grid.Row="0" Click="Login" Content="Login" Margin="5" HorizontalAlignment="Right" MinWidth="100" />
+						<Button Style="{DynamicResource MaterialDesignRaisedLightButton}" FontWeight="Regular" Grid.Row="1" Click="UpdateStreamList"  Content="Update Stream List" Margin="5,5,5,5" MinWidth="100" Grid.Column="1"/>
 						<materialDesign:Card
               Grid.Row="2"
               Margin="5,0,5,5">
@@ -123,31 +124,41 @@
 							<RowDefinition Height="auto"/>
 							<RowDefinition Height="*"/>
 						</Grid.RowDefinitions>
-						<Grid Grid.Row="0" Background="Transparent">
-							<Button x:Name ="SenderButton" Style="{StaticResource TransparentButton}" Click="SendStream" Width="48" Height="48" Margin="25" Background="Transparent" BorderThickness="0">
-								<Viewbox>
-									<Canvas Width="24" Height="24">
-										<Path x:Name="SendButtonPath"
-                      Fill="{DynamicResource SecondaryAccentBrush}"/>
-									</Canvas>
-								</Viewbox>
-							</Button>
-						</Grid>
-						<StackPanel Grid.Row="1" HorizontalAlignment="Right" Orientation="Horizontal">
-							<ToggleButton
-                x:Name="SenderLayerToggle"
-                Margin="5"
-                Content="Layer to Stream:"
-                Style="{StaticResource AnalysisDesignToggle}"/>
+
+						<StackPanel Grid.Row="0">
+							<Grid Margin="5">
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="*" />
+									<ColumnDefinition Width="auto" />
+								</Grid.ColumnDefinitions>
+
+								<DockPanel Grid.Column="0">
+									<Button x:Name ="SenderButton" Style="{StaticResource TransparentButton}" Click="SendStream" Height="48" Margin="10" Background="Transparent" BorderThickness="0" HorizontalAlignment="Center">
+										<Viewbox>
+											<Canvas Width="24" Height="24">
+												<Path x:Name="SendButtonPath" Fill="{DynamicResource SecondaryAccentBrush}"/>
+											</Canvas>
+										</Viewbox>
+									</Button>
+								</DockPanel>
+								<StackPanel Grid.Column="1">
+										<ToggleButton
+											x:Name="SenderLayerToggle"
+											Margin="5"
+											Content="Layer to Stream:"
+											HorizontalAlignment="Right"
+											Style="{StaticResource AnalysisDesignToggle}"/>
+										<ToggleButton
+											x:Name="SenderContinuousToggle"
+											Margin="5"
+											Content="Streaming Method:"
+											HorizontalAlignment="Right"
+											IsChecked="True"
+											Style="{StaticResource ContinuousSingleToggle}"/>
+									</StackPanel>
+							</Grid>
 						</StackPanel>
-						<StackPanel Grid.Row="2" HorizontalAlignment="Right" Orientation="Horizontal">
-							<ToggleButton
-                x:Name="SenderContinuousToggle"
-                Margin="5"
-                Content="Streaming Method:"
-							  IsChecked="True"
-                Style="{StaticResource ContinuousSingleToggle}"/>
-						</StackPanel>
+
 						<materialDesign:Card Grid.Row="4" Margin="5">
 							<DataGrid
                 x:Name="SenderStreams"
@@ -193,32 +204,41 @@
 							<RowDefinition Height="auto"/>
 							<RowDefinition Height="*"/>
 						</Grid.RowDefinitions>
-						<Grid Grid.Row="0" Background="Transparent">
-							<Button x:Name="ReceiveButton" Style="{StaticResource TransparentButton}" Click="ReceiveStream" Width="48" Height="48" Margin="25" Background="Transparent" BorderThickness="0">
-								<Viewbox>
-									<Canvas Width="24" Height="24">
-										<Path x:Name="ReceiveButtonPath"
+
+						<StackPanel Grid.Row="0">
+							<Grid Margin="5">
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="*" />
+									<ColumnDefinition Width="auto" />
+								</Grid.ColumnDefinitions>
+								<DockPanel Grid.Column="0">
+								<Button x:Name="ReceiveButton" Style="{StaticResource TransparentButton}" Click="ReceiveStream" Width="48" Height="48" Margin="10" Background="Transparent" BorderThickness="0">
+									<Viewbox>
+										<Canvas Width="24" Height="24">
+											<Path x:Name="ReceiveButtonPath"
                       Fill="{DynamicResource SecondaryAccentBrush}" />
-									</Canvas>
-								</Viewbox>
-							</Button>
-						</Grid>
-						<StackPanel Grid.Row="1" HorizontalAlignment="Right" Orientation="Horizontal">
-							<ToggleButton
-                x:Name="ReceiverLayerToggle"
-                Margin="5"
-                Content="Layer to Stream:"
-                Style="{StaticResource AnalysisDesignToggle}"/>
+										</Canvas>
+									</Viewbox>
+								</Button>
+							</DockPanel>
+							<StackPanel Grid.Column="1">
+								<ToggleButton
+									x:Name="ReceiverLayerToggle"
+									Margin="5"
+									Content="Layer to Stream:"
+									HorizontalAlignment="Right"
+									Style="{StaticResource AnalysisDesignToggle}"/>
+								<ToggleButton
+									x:Name="ReceiverContinuousToggle"
+									Margin="5"
+									IsChecked="true"
+									HorizontalAlignment="Right"
+									Content="Streaming Method:"
+									Style="{StaticResource ContinuousSingleToggle}"/>
+							</StackPanel>
+							</Grid>
 						</StackPanel>
-						<StackPanel Grid.Row="2" HorizontalAlignment="Right" Orientation="Horizontal">
-							<ToggleButton
-                x:Name="ReceiverContinuousToggle"
-                Margin="5"
-								IsChecked="true"
-                Content="Streaming Method:"
-                Style="{StaticResource ContinuousSingleToggle}"/>
-						</StackPanel>
-						<DockPanel Grid.Row="3" Margin="0" LastChildFill="True" x:Name="ReceiverControlPanel">
+						<DockPanel Grid.Row="1" Margin="0" LastChildFill="True" x:Name="ReceiverControlPanel">
 							<Button Style="{DynamicResource MaterialDesignRaisedLightButton}" FontWeight="Regular" DockPanel.Dock="Right" Click="ClearReceiver" Content="Clear All"  Margin="5" Padding="5" MinWidth="100"/>
 							<Button Style="{DynamicResource MaterialDesignRaisedLightButton}" FontWeight="Regular" DockPanel.Dock="Right" Click="PasteClipboardReceiver" Content="Paste Clipboard"  Margin="5" Padding="5"  MinWidth="100"/>
 							<materialDesign:Card DockPanel.Dock="Left" Margin="5" Padding="0" materialDesign:ShadowAssist.ShadowDepth="Depth1">
@@ -228,7 +248,7 @@
 								</DockPanel>
 							</materialDesign:Card>
 						</DockPanel>
-						<materialDesign:Card Grid.Row="4" Margin="5">
+						<materialDesign:Card Grid.Row="2" Margin="5">
 							<DataGrid
               x:Name="ReceiverStreams"
               CanUserSortColumns="False"
@@ -268,6 +288,7 @@
 						<Grid.RowDefinitions>
 							<RowDefinition Height="*"/>
 							<RowDefinition Height="Auto"/>
+							<RowDefinition Height="Auto"/>
 						</Grid.RowDefinitions>
 						<Grid.ColumnDefinitions>
 							<ColumnDefinition Width="*"/>
@@ -297,7 +318,21 @@
 								</DockPanel>
 							</StackPanel>
 						</GroupBox>
-						<GroupBox Grid.Column="1" Grid.RowSpan="2" Margin="5" Header="Result" Style="{DynamicResource MaterialDesignCardGroupBox}" materialDesign:ColorZoneAssist.Mode="PrimaryLight">
+						<GroupBox Grid.Row="2" Margin="5" Header="Logging" Style="{DynamicResource MaterialDesignCardGroupBox}" materialDesign:ColorZoneAssist.Mode="PrimaryLight">
+							<StackPanel>
+								<DockPanel Margin="5" LastChildFill="True">
+									<TextBlock DockPanel.Dock="Left" Text="Minimum level:" Margin="0 5 0 0"/>
+									<ComboBox Margin="5 0 0 0" x:Name="LoggingMinimumLevel" SelectionChanged="UpdateSettings">
+										<ComboBoxItem Tag="1">Debug</ComboBoxItem>
+										<ComboBoxItem Tag="2" IsSelected="True">Information</ComboBoxItem>
+										<ComboBoxItem Tag="4">Error</ComboBoxItem>
+										<ComboBoxItem Tag="5">Fatal</ComboBoxItem>
+									</ComboBox>
+								</DockPanel>
+								<CheckBox Margin="5" Content="Verbose error information" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="VerboseErrors"/>
+							</StackPanel>
+						</GroupBox>
+						<GroupBox Grid.Column="1" Grid.RowSpan="3" Margin="5" Header="Result" Style="{DynamicResource MaterialDesignCardGroupBox}" materialDesign:ColorZoneAssist.Mode="PrimaryLight">
 							<Grid>
 								<Grid.RowDefinitions>
 									<RowDefinition Height="Auto"/>
@@ -306,8 +341,10 @@
 								<StackPanel Grid.Row="0">
 									<CheckBox Margin="5" Content="Send only results" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="SendOnlyResults"/>
 									<CheckBox Margin="5" Content="Embed results in objects" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="EmbedResults"/>
-									<TextBlock Text="Cases:" Margin="5"/>
-									<TextBox TextWrapping="Wrap" AcceptsReturn="True" Margin="5,0,5,5" x:Name="ResultCases" TextChanged="UpdateSettings"/>
+									<DockPanel Margin="5" LastChildFill="True">
+										<TextBlock Text="Cases:" Margin="5" ToolTip="One or more, separated by spaces" />
+										<TextBox TextWrapping="Wrap" AcceptsReturn="True" Margin="5,0,5,5" x:Name="ResultCases" TextChanged="UpdateSettings"/>
+									</DockPanel>
 									<CheckBox Margin="5" Content="Results in local axis" Checked="UpdateSettings" Unchecked="UpdateSettings" x:Name="ResultInLocalAxis"/>
 									<DockPanel Margin="5" LastChildFill="True">
 										<TextBlock DockPanel.Dock="Left" Text="Additional Positions for 1D Elements:" Margin="0 5 0 0"/>
@@ -332,9 +369,13 @@
 		</Grid>
 		<materialDesign:Card
       Grid.Row="2"
-      Margin="10">
+      Margin="10" Grid.ColumnSpan="2">
 			<Grid
         Background="{DynamicResource MaterialDesignPaper}">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="629*"/>
+					<ColumnDefinition Width="45*"/>
+				</Grid.ColumnDefinitions>
 				<Grid.RowDefinitions>
 					<RowDefinition Height="auto"/>
 					<RowDefinition Height="*"/>
@@ -344,14 +385,14 @@
           Grid.Row="0"
           FontWeight="Medium"
           Content="Message Log"
-          Margin="5,10,20,0"/>
+          Margin="5,10,20,0" Grid.ColumnSpan="2"/>
 				<ListBox
           Grid.Row="1"
           x:Name="MessagePane"
-          Height="100"
+          Height="120"
 					KeyDown="MessagePane_KeyDown"
 					SelectionMode="Extended"
-          Background="{DynamicResource MaterialDesignPaper}">
+          Background="{DynamicResource MaterialDesignPaper}" Grid.ColumnSpan="2">
 					<ListBox.Resources>
 						<DataTemplate x:Key="MessageItem">
 							<!--<Label x:Name="MessageLine" Margin="0" Padding="0"  Content="{Binding}"/>-->
@@ -369,7 +410,7 @@
 				</ListBox>
 				<Grid
           Grid.Row="2"
-          VerticalAlignment="Bottom">
+          VerticalAlignment="Bottom" Grid.ColumnSpan="2">
 					<StackPanel>
 						<Label
               x:Name="StatusText"
