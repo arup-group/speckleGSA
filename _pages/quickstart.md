@@ -31,12 +31,12 @@ As with most other clients, you will need an account on the Speckle server of yo
 Do be advised that this `https://hestia.speckle.works/api` is a test server - use at your own risk!
 {: .notice--danger}
 
-![login](/assets/images/quick_start/login.png)
+![login]({{site.baseurl}}/assets/images/quick_start/login.png)
 
 ## Sending
 Once logged in, you can start sending GSA models. First, either create or open a GSA file from the GSA tab. **Only files opened through this menu are accessible by the client.** A demo GSA file can be downloaded [here](/docs/clients/gsa/SpeckleGSADemo.gwb). Next, switch to the sender tab and click on the <i class="fa fa-play-circle"></i> button to start sending. Once finished, the ID of the stream as well as the name will be displayed in the list view. Right clicking this entry will give various useful options, such as viewing the model in the [online viewer](/docs/basics/viewer), copying the stream ID, or cloning the stream.
 
-![sending](/assets/images/quick_start/sending.gif)
+![sending]({{site.baseurl}}/assets/images/quick_start/sending.gif)
 
 You will need to pause the sender by clicking the <i class="fa fa-pause-circle"></i> button before receiving streams or changing any settings.
 {: .notice-primary}
@@ -50,7 +50,7 @@ Additional options for the sender is contained within the settings tab.
 ## Receiving
 Receiving streams can be done through the receiver tab. As with sending, you will need to login and create/open a GSA file prior to receiving. To start sending, add the stream IDs of the streams you wish to receive using the `Add Receiver` button. Next, click on the <i class="fa fa-play-circle"></i> button to start receiving.
 
-![receiving](/assets/images/quick_start/receiving.gif)
+![receiving]({{site.baseurl}}/assets/images/quick_start/receiving.gif)
 
 You will need to pause the receiver by clicking the <i class="fa fa-pause-circle"></i> button before sending streams or changing any settings.
 {: .notice-primary}
@@ -71,11 +71,11 @@ Results can only be sent from the <b>analytical</b> layer in <b>single</b> strea
 
 By default, the result are embedded within the object itself. If you wish to send only results, unselect `embed results in objects` and select `send only results`.
 
-![results](/assets/images/quick_start/results.gif)
+![results]({{site.baseurl}}/assets/images/quick_start/results.gif)
 
 Results can then be then be received in other clients and manipulated. Below is an example of the results being received in Grasshopper and its contour being displayed.
 
-![ghcontour](/assets/images/quick_start/ghcontour.png)
+![ghcontour]({{site.baseurl}}/assets/images/quick_start/ghcontour.png)
 
 ## Beyond the basics
 This guide has shown how to use the GSA plugin to send and receive models with Speckle. The best way to familiarize yourself is to play around with the plugin in conjunction with other Speckle plugins. Check out the other GSA docs for some other features and integrations with other clients.
