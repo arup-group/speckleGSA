@@ -14,13 +14,13 @@ namespace SpeckleGSA
   {
     private readonly Dictionary<string, ISpeckleGSASender> Senders = new Dictionary<string, ISpeckleGSASender>();
 
-    private Dictionary<Type, List<Type>> FilteredReadTypePrereqs = new Dictionary<Type, List<Type>>();
+    private readonly Dictionary<Type, List<Type>> FilteredReadTypePrereqs = new Dictionary<Type, List<Type>>();
     public Dictionary<Type, string> StreamMap = new Dictionary<Type, string>();
 
     //These need to be accessed using a lock
     private object traversedSerialisedLock = new object();
-    private Dictionary<Type, List<object>> currentObjects = new Dictionary<Type, List<object>>();
-    private List<Type> traversedSerialisedTypes = new List<Type>();
+    private readonly Dictionary<Type, List<object>> currentObjects = new Dictionary<Type, List<object>>();
+    private readonly List<Type> traversedSerialisedTypes = new List<Type>();
 
     /// <summary>
     /// Initializes sender.
@@ -194,7 +194,10 @@ namespace SpeckleGSA
 			foreach (var dict in gsaStaticObjects)
 			{
         var allObjects = dict.GetAll();
-        foreach (var t in allObjects.Keys)
+        //Ensure alphabetical order here as this has a bearing on the order of the layers when it's sent, and therefore the order of
+        //the layers as displayed in GH.  Note the type names here are the GSA ones (e.g. GSAGravityLoading) not the StructuralClasses ones
+        var sortedKeys = allObjects.Keys.OrderBy(k => k.Name);
+        foreach (var t in sortedKeys)
         {
           if (!currentObjects.ContainsKey(t))
           {
@@ -204,7 +207,7 @@ namespace SpeckleGSA
         }
 			}
 
-			if (!changeDetected)
+      if (!changeDetected)
       {
         Status.ChangeStatus("Finished sending", 100);
         IsBusy = false;
@@ -254,7 +257,7 @@ namespace SpeckleGSA
       // Send package
       Status.ChangeStatus("Sending to Server");
 
-      Parallel.ForEach(streamBuckets, kvp =>
+      foreach (var kvp in streamBuckets)
       {
         Status.ChangeStatus("Sending to stream: " + Senders[kvp.Key].StreamID);
 
@@ -264,7 +267,7 @@ namespace SpeckleGSA
 
         Senders[kvp.Key].UpdateName(streamName);
         Senders[kvp.Key].SendGSAObjects(kvp.Value);
-      });
+      }
 
       duration = DateTime.Now - startTime;
       Status.AddMessage("Duration of sending to Speckle: " + duration.ToString(@"hh\:mm\:ss"));

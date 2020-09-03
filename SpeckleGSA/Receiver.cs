@@ -361,8 +361,6 @@ namespace SpeckleGSA
             var streamId = tuple.Item1;
             var obj = tuple.Item2;
 
-            Debug.WriteLine("Processing " + t.Name + " " + " AppId " + obj.ApplicationId + " on thread " + Thread.CurrentThread.ManagedThreadId);
-
             var applicationId = obj.ApplicationId;
 
             if (string.IsNullOrEmpty(applicationId))
