@@ -16,16 +16,10 @@ namespace SpeckleGSAProxy
     //private object recordsLock = new object();
     //private object provisionalsLock = new object();
 
-    private object syncLock = new object();
+    private readonly object syncLock = new object();
 
     private T ExecuteWithLock<T>(Func<T> f)
     {
-      var stackTrace = new StackTrace();
-      var callingMethodName = ((stackTrace.GetFrames().Count() >= 2) ? stackTrace.GetFrames()[1].GetMethod().Name : stackTrace.GetFrames().Last().GetMethod().Name);
-      //if (!callingMethodName.Equals("AssignSpeckleObject"))
-      //{
-      //  Debug.WriteLine("Lock asked for on thread: " + Thread.CurrentThread.ManagedThreadId + " method " + callingMethodName);
-      //}
       lock (syncLock)
       {
         var ret = f();
@@ -35,19 +29,12 @@ namespace SpeckleGSAProxy
 
     private void ExecuteWithLock(Action a)
     {
-      var stackTrace = new StackTrace();
-      var callingMethodName = ((stackTrace.GetFrames().Count() >= 2) ? stackTrace.GetFrames()[1].GetMethod().Name : stackTrace.GetFrames().Last().GetMethod().Name);
-      //if (!callingMethodName.Equals("AssignSpeckleObject"))
-      //{
-      //  Debug.WriteLine("Lock asked for on thread: " + Thread.CurrentThread.ManagedThreadId + " method " + callingMethodName);
-      //}
       lock (syncLock)
       {
         a();
       }
     }
 
-    //private readonly List<GSACacheRecord> records = new List<GSACacheRecord>();
     private ReadOnlyCollection<GSACacheRecord> records => recordsByKeyword.SelectMany(k => k.Value).ToList().AsReadOnly();
 
     //There could be multiple entries at the same index - namely, a previous and a latest
