@@ -1,16 +1,26 @@
 main:
-  - title: "Quick start"
-    url: /quickstart/
   - title: "Docs"
     url: /docs/
-  - title: "Blog"
+  - title: "News"
     url: /archive/
 
 docs:
-  - title: "Documentation"
+  - title: "SpeckleGSA" 
     url: /docs/
+    children:
+    - title: "Receiving"
+      url: /docs/specklegsa_receiving
+    - title: "Sending"
+      url: /docs/specklegsa_sending
+    - title: "Stream organisation"
+      url: /docs/stream_org
   - title: "Grasshopper"
     url: /docs/gh
+    children:
+    - title: "Sending"
+      url: /docs/gh_sending
+    - title: "Receiving"
+      url: /docs/gh_receiving
   - title: "Revit"
     url: /docs/revit
   - title: "CLI"
