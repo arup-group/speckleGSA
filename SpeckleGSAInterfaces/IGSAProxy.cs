@@ -65,7 +65,7 @@ namespace SpeckleGSAInterfaces
     #endregion
 
     #region Results
-    /// <summary>
+    /// <summary> 
     /// General extraction
     /// </summary>
     /// <param name="id">GSA entity ID</param>
@@ -103,6 +103,8 @@ namespace SpeckleGSAInterfaces
 
     //Used to update a node without having to BLANK then SET it - which is the case for all other types
     string SetSid(string gwa, string streamId, string applicationId);
+
+    int Save();
 
     int SaveAs(string filePath);
 

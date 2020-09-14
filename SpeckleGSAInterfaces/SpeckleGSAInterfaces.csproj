@@ -51,6 +51,7 @@
     <Compile Include="IGSASenderDictionary.cs" />
     <Compile Include="IGSASettings.cs" />
     <Compile Include="IGSASpeckleContainer.cs" />
+    <Compile Include="IGSAResultsContext.cs" />
     <Compile Include="ISpeckleGSAAppUI.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

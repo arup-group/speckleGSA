@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -86,6 +87,7 @@ namespace SpeckleGSAProxy
         {
           GSAObject.DisplayGsaWindow(true);
         }
+
       });
     }
 
@@ -128,7 +130,14 @@ namespace SpeckleGSAProxy
       });
     }
 
-    public int SaveAs(string filePath) => ExecuteWithLock(() => GSAObject.SaveAs(filePath));
+    public int Save() => ExecuteWithLock(() => GSAObject.Save());
+
+    public int SaveAs(string filePath) => ExecuteWithLock(() =>
+    {
+      var retVal = GSAObject.SaveAs(filePath);
+      FilePath = filePath;
+      return retVal;
+    });
 
     /// <summary>
     /// Close GSA file.

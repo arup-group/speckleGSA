@@ -2,6 +2,7 @@
 using SpeckleGSAInterfaces;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -22,6 +23,9 @@ namespace SpeckleGSA
     private readonly Dictionary<Type, List<object>> currentObjects = new Dictionary<Type, List<object>>();
     private readonly List<Type> traversedSerialisedTypes = new List<Type>();
 
+    private Task ResultExportTask;
+    private string resultsDir;
+
     /// <summary>
     /// Initializes sender.
     /// </summary>
@@ -39,6 +43,27 @@ namespace SpeckleGSA
 				Status.AddError("GSA link not found.");
 				return statusMessages;
 			}
+
+      //Prepare for sending of results
+      if (GSA.Settings.SendResults && GSA.Settings.ResultCases.Count() > 0)
+      {
+        //Make sure the file is saved so it can be the subject of a GsaShell call
+        if (string.IsNullOrEmpty(GSA.gsaProxy.FilePath))
+        {
+          var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TempForResults_" + DateTime.Now.ToString("yyMMdd_HHmmss") + ".gwb");
+          GSA.gsaProxy.SaveAs(filePath);
+        }
+        else
+        {
+          GSA.gsaProxy.Save();
+        }
+
+        //Start task to export to file
+        ResultExportTask = Task.Run(() =>
+        {
+          var retVal = SpeckleGSAResults.SpeckleGSAResultsHelper.ExtractResults(GSA.gsaProxy.FilePath, out resultsDir, out List<string> errMsgs);
+        });
+      }
 
       var startTime = DateTime.Now;
 
@@ -91,8 +116,6 @@ namespace SpeckleGSA
         return statusMessages;
       }
 
-      Status.AddMessage("Read " + numRowsUpdated + " GWA lines across " + keywords.Count() + " keywords into cache");
-
       // Grab GSA interface type
       var interfaceType = typeof(IGSASpeckleContainer);
 
@@ -142,6 +165,33 @@ namespace SpeckleGSA
 
       TimeSpan duration = DateTime.Now - startTime;
       Status.AddMessage("Duration of initialisation: " + duration.ToString(@"hh\:mm\:ss"));
+
+      //Now wait for the exporting to complete
+      if (ResultExportTask == null)
+      {
+        Status.AddMessage("Read " + numRowsUpdated + " GWA lines across " + keywords.Count() + " keywords into cache");
+      }
+      else
+      {
+        ResultExportTask.Wait();
+        Status.AddMessage("Prepared results for extraction & read " + numRowsUpdated + " GWA lines across " + keywords.Count() + " keywords into cache");
+
+        Status.AddMessage("Importing results into local database");
+        startTime = DateTime.Now;
+
+
+        var tableNames = new List<string>();
+        if (GSA.Settings.NodalResults.Count > 0) tableNames.Add("result_node");
+        if (GSA.Settings.Element1DResults.Count > 0) tableNames.Add("result_element_section");
+        if (GSA.Settings.Element2DResults.Count > 0) tableNames.Add("result_element_2d");
+        if (GSA.Settings.MiscResults.Count > 0) tableNames.Add("result_global");
+        GSA.gsaResultsContext.ImportResultsFromFileDir(resultsDir, GSA.Settings.ResultCases, tableNames);
+
+        duration = DateTime.Now - startTime;
+        Status.AddMessage("Duration of results into local database: " + duration.ToString(@"hh\:mm\:ss"));
+      }
+
+
       Status.ChangeStatus("Ready to stream");
       IsInit = true;
 

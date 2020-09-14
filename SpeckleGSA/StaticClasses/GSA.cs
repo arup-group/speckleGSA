@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using SpeckleGSAInterfaces;
 using SpeckleGSAProxy;
 using SpeckleUtil;
+using SpeckleGSAResults;
 
 namespace SpeckleGSA
 {
@@ -20,6 +21,7 @@ namespace SpeckleGSA
     public static IGSAProxy gsaProxy = new GSAProxy();
     public static IGSACache gsaCache = new GSACache();
     public static ISpeckleGSAAppUI appUi = new SpeckleAppUI();
+    public static IGSAResultsContext gsaResultsContext = new SpeckleGSAResultsContext();
 
     public static bool IsInit;
 

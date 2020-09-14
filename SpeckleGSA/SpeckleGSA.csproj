@@ -188,6 +188,10 @@
       <Project>{88ae85c3-1966-4b71-8c91-242c80dce6d4}</Project>
       <Name>SpeckleGSAProxy</Name>
     </ProjectReference>
+    <ProjectReference Include="..\SpeckleGSAResults.Context\SpeckleGSAResults.Context.csproj">
+      <Project>{35500f71-a61f-4002-a489-5b09d8c914c8}</Project>
+      <Name>SpeckleGSAResults.Context</Name>
+    </ProjectReference>
     <ProjectReference Include="..\SpeckleUtil\SpeckleUtil.csproj">
       <Project>{c8c902f6-550a-4ac9-84e3-d4f9085260b1}</Project>
       <Name>SpeckleUtil</Name>
