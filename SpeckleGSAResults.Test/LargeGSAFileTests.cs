@@ -59,7 +59,7 @@ namespace SpeckleGSAResults.Test
 
         startTime = DateTime.Now;
 
-        SpeckleGSAResultsHelper.ExtractResults(filePath, out string resultsPath, out List<string> errMsgs);
+        SpeckleGSAResultsHelper.ExtractCsvResults(filePath, out string resultsPath, out List<string> errMsgs);
 
         duration = DateTime.Now - startTime;
         Console.WriteLine("Duration of export-csv: " + duration.ToString(@"hh\:mm\:ss"));
@@ -98,7 +98,7 @@ namespace SpeckleGSAResults.Test
 
         SpeckleGSAResultsHelper.gsaShellPath = SpeckleGSAResultsHelper.gsaShellPath.Replace("10.1", "10.0");
 
-        SpeckleGSAResultsHelper.ExtractResults(filePath, out string resultsPath, out List<string> errMsgs);
+        SpeckleGSAResultsHelper.ExtractCsvResults(filePath, out string resultsPath, out List<string> errMsgs);
 
         duration = DateTime.Now - startTime;
         Console.WriteLine("Duration of export-csv: " + duration.ToString(@"hh\:mm\:ss"));

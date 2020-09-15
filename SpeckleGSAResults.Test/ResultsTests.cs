@@ -14,18 +14,18 @@ namespace SpeckleGSAResults.Test
     private string TestDataDirectory { get => AppDomain.CurrentDomain.BaseDirectory.TrimEnd(new[] { '\\' }) + @"\..\..\TestData\"; }
 
     [TestCase("Mu1-Podium-Rev04 v10.1.gwb")]
-    public void GsaShellTest(string fileName)
+    public void GsaShellExportCsvTest(string fileName)
     {
       var filePath = Path.Combine(TestDataDirectory, fileName);
+      Assert.IsTrue(File.Exists(filePath));
+
       var resultsPath = Path.Combine(TestDataDirectory, SpeckleGSAResultsHelper.gsaResultsSubdirectoryName);
       if (Directory.Exists(resultsPath))
       {
         Directory.Delete(resultsPath, true);
       }
 
-      Assert.IsTrue(File.Exists(filePath));
-
-      Assert.IsTrue(SpeckleGSAResultsHelper.ExtractResults(filePath, out string resultsDir, out List<string> errMsgs));
+      Assert.IsTrue(SpeckleGSAResultsHelper.ExtractCsvResults(filePath, out string resultsDir, out List<string> errMsgs));
       Assert.IsNotEmpty(resultsDir);
       Assert.IsTrue(errMsgs == null || errMsgs.Count() == 0);
 
@@ -35,14 +35,14 @@ namespace SpeckleGSAResults.Test
     }
 
     [Test]
-    public void LoadCsvFiles()
+    public void ImportResultCsvFiles()
     {
       var resultsPath = Path.Combine(TestDataDirectory, SpeckleGSAResultsHelper.gsaResultsSubdirectoryName);
       var gsaResultsContext = new SpeckleGSAResultsContext();
 
       var tableNames = new List<string>() { "result_node" };
 
-      gsaResultsContext.ImportResultsFromFileDir(resultsPath, new List<string> { "A1" }, tableNames);
+      gsaResultsContext.ImportResultsFromFileDir(resultsPath, tableNames);
 
       //gsaResultsContext.Query("SELECT * FROM ")
     }

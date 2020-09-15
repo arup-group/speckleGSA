@@ -61,7 +61,7 @@ namespace SpeckleGSA
         //Start task to export to file
         ResultExportTask = Task.Run(() =>
         {
-          var retVal = SpeckleGSAResults.SpeckleGSAResultsHelper.ExtractResults(GSA.gsaProxy.FilePath, out resultsDir, out List<string> errMsgs);
+          var retVal = SpeckleGSAResults.SpeckleGSAResultsHelper.ExtractCsvResults(GSA.gsaProxy.FilePath, out resultsDir, out List<string> errMsgs);
         });
       }
 
@@ -185,7 +185,7 @@ namespace SpeckleGSA
         if (GSA.Settings.Element1DResults.Count > 0) tableNames.Add("result_element_section");
         if (GSA.Settings.Element2DResults.Count > 0) tableNames.Add("result_element_2d");
         if (GSA.Settings.MiscResults.Count > 0) tableNames.Add("result_global");
-        GSA.gsaResultsContext.ImportResultsFromFileDir(resultsDir, GSA.Settings.ResultCases, tableNames);
+        GSA.gsaResultsContext.ImportResultsFromFileDir(resultsDir, tableNames);
 
         duration = DateTime.Now - startTime;
         Status.AddMessage("Duration of results into local database: " + duration.ToString(@"hh\:mm\:ss"));

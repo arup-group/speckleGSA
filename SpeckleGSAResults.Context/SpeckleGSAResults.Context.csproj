@@ -59,6 +59,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ExportCsvTable.cs" />
+    <Compile Include="ExportCsvResultsTable.cs" />
     <Compile Include="SpeckleGSAResultsContext.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SpeckleGSAResultsHelper.cs" />

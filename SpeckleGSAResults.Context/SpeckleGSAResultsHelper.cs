@@ -9,7 +9,7 @@ namespace SpeckleGSAResults
     public static string gsaShellPath = @"C:\Program Files\Oasys\GSA 10.1\GsaShell.exe";
     public static string gsaResultsSubdirectoryName = "Results";
 
-    public static bool ExtractResults(string filePath, out string resultsDirPath, out List<string> errMsgs)
+    public static bool ExtractCsvResults(string filePath, out string resultsDirPath, out List<string> errMsgs)
     {
       resultsDirPath = Path.Combine(Path.GetDirectoryName(filePath), gsaResultsSubdirectoryName);
       errMsgs = new List<string>();
