@@ -159,6 +159,24 @@ namespace SpeckleGSAUI
 
       SpeckleCore.SpeckleInitializer.Initialize();
       SpeckleCore.LocalContext.Init();
+
+      try
+      {
+        //This will throw an exception if there is no default account
+        var account = SpeckleCore.LocalContext.GetDefaultAccount();
+        if (account != null)
+        {
+          EmailAddress = account.Email;
+          RestApi = account.RestApi;
+          ApiToken = account.Token;
+
+          Status.AddMessage("Logged in to default account at: " + RestApi);
+        }
+      }
+      catch
+      {
+        Status.AddMessage("No default account found - press the Login button to login/select an account");
+      }
     }
 
     #region Speckle Operations
@@ -184,14 +202,14 @@ namespace SpeckleGSAUI
       {
         var account = signInWindow.accounts[signInWindow.AccountListBox.SelectedIndex];
 
-        Status.AddMessage("Login successful");
-
         EmailAddress = account.Email;
         RestApi = account.RestApi;
         ApiToken = account.Token;
         (SenderTab.Content as Grid).IsEnabled = FileOpened && LoggedIn;
         (ReceiverTab.Content as Grid).IsEnabled = FileOpened && LoggedIn;
         UpdateClientLists();
+
+        Status.AddMessage("Logged in to account at: " + RestApi);
       }
       else
         Status.AddError("Failed to log in");
