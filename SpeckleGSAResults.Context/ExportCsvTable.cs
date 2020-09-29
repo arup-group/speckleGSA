@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace SpeckleGSAResults
 {
@@ -23,7 +24,8 @@ namespace SpeckleGSAResults
 
     public bool LoadFromFile(string filePath)
     {
-      var sr = new StreamReader(filePath);
+      var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+      var sr = new StreamReader(fs);
       var delimiters = new[] { ',' };
 
       //Headers

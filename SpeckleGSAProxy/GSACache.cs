@@ -501,6 +501,13 @@ namespace SpeckleGSAProxy
         ? recordsByKeyword[comboKey].Select(r => r.Index).ToList()
         : new List<int>();
 
+      if (loadCaseString.Equals("all", StringComparison.InvariantCultureIgnoreCase))
+      {
+        retList.AddRange(cachedAnalIndices.Select(ai => "A" + ai));
+        retList.AddRange(cachedComboIndices.Select(ai => "C" + ai));
+        return retList;
+      }
+
       var tasks = new List<Task>();
       var retListLock = new object();
 

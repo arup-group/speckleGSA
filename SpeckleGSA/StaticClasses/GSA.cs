@@ -7,6 +7,7 @@ using SpeckleGSAInterfaces;
 using SpeckleGSAProxy;
 using SpeckleUtil;
 using SpeckleGSAResults;
+using System.IO;
 
 namespace SpeckleGSA
 {
@@ -21,7 +22,7 @@ namespace SpeckleGSA
     public static IGSAProxy gsaProxy = new GSAProxy();
     public static IGSACache gsaCache = new GSACache();
     public static ISpeckleGSAAppUI appUi = new SpeckleAppUI();
-    public static IGSAResultsContext gsaResultsContext = new SpeckleGSAResultsContext();
+    public static IGSAResultsContext gsaResultsContext = new SpeckleGSAResultsContext(Path.Combine(Path.GetTempPath(), "CsvResults"));
 
     public static bool IsInit;
 
@@ -105,6 +106,7 @@ namespace SpeckleGSA
           gsaStatic.GetProperty("Settings").SetValue(null, Settings);
           gsaStatic.GetProperty("Cache").SetValue(null, gsaCache);
           gsaStatic.GetProperty("AppUI").SetValue(null, appUi);
+          gsaStatic.GetProperty("ResultsContext").SetValue(null, gsaResultsContext);
         }
         catch
         {

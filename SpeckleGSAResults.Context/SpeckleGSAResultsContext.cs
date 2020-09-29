@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualBasic.FileIO;
 using SpeckleGSAInterfaces;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
@@ -12,16 +13,70 @@ namespace SpeckleGSAResults
 {
   public class SpeckleGSAResultsContext : IGSAResultsContext
   {
-    private readonly List<ExportCsvResultsTable> resultsTables = new List<ExportCsvResultsTable>();
-    private readonly List<ExportCsvTable> dataTables = new List<ExportCsvTable>();
+    private readonly ConcurrentBag<ExportCsvResultsTable> resultsTables = new ConcurrentBag<ExportCsvResultsTable>();
+    private readonly ConcurrentBag<ExportCsvTable> dataTables = new ConcurrentBag<ExportCsvTable>();
+    public string ResultsDir { get; private set; }
 
-    public object[,] Query(string tableName, string loadCase, List<string> columns)
+    public SpeckleGSAResultsContext(string resultsDir)
     {
-
-      return new object[0, 0];
+      this.ResultsDir = resultsDir;
     }
 
-    public bool ImportResultsFromFileDir(string dir, List<string> tableNames = null)
+    public bool Query(string tableName, IEnumerable<string> columns, string loadCase, out object[,] results, int? elemId = null)
+    {
+      results = null; //default
+
+      var t = resultsTables.FirstOrDefault(rt => rt.TableName.Equals(tableName, StringComparison.InvariantCultureIgnoreCase));
+      if (t == null)
+      {
+        return false;
+      }
+
+      return t.Query(columns, new[] { loadCase }, out results, elemId.HasValue ? new[] { elemId.Value }: null);
+    }
+
+    public bool Query(string tableName, IEnumerable<string> columns, IEnumerable<string> loadCases, out object[,] results, IEnumerable<int> elemIds = null)
+    {
+      results = null; //default
+
+      var t = resultsTables.FirstOrDefault(rt => rt.TableName.Equals(tableName, StringComparison.InvariantCultureIgnoreCase));
+      if (t == null)
+      {
+        return false;
+      }
+
+      return t.Query(columns, loadCases, out results, elemIds);
+    }
+
+    public bool ImportResultsFromFile(string fileName, string caseIdField, string elemIdField)
+    {
+      var fn = Path.HasExtension(fileName) ? fileName : fileName + ".csv";
+      var filePath = fn.Contains(":") ? fn : Path.Combine(ResultsDir, fn);
+
+      var tableName = Path.GetFileNameWithoutExtension(filePath);
+      var isResultsTable = tableName.StartsWith("result_", StringComparison.InvariantCultureIgnoreCase);
+
+      ExportCsvTable t = isResultsTable ? new ExportCsvResultsTable(tableName, caseIdField, elemIdField) : new ExportCsvTable(tableName);
+      if (t.LoadFromFile(filePath))
+      {
+        if (isResultsTable)
+        {
+          resultsTables.Add((ExportCsvResultsTable)t);
+        }
+        else
+        {
+          dataTables.Add(t);
+        }
+      }
+      else
+      {
+        return false;
+      }
+      return true;
+    }
+
+    /*
+    public bool ImportResultsFromFileDir(string dir, IEnumerable<string> tableNames = null)
     {
       //Names of files that will be needed regardless of the later queries
       var otherTableNamesToImport = new List<string>() { "analysis_case.csv" };  //All IDS here are combined with "A" to form the load case string
@@ -34,9 +89,9 @@ namespace SpeckleGSAResults
 
       foreach (var f in filesToImport)
       {
-        var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(f);
-        var isResultsTable = fileNameWithoutExtension.StartsWith("result_", StringComparison.InvariantCultureIgnoreCase);
-        var tableName = isResultsTable ? fileNameWithoutExtension.Substring(("result_").Length) : fileNameWithoutExtension;
+        var tableName = Path.GetFileNameWithoutExtension(f);
+        var isResultsTable = tableName.StartsWith("result_", StringComparison.InvariantCultureIgnoreCase);
+
         ExportCsvTable t = isResultsTable ? new ExportCsvResultsTable(tableName, "case_id") : new ExportCsvTable(tableName);
         if (t.LoadFromFile(f))
         {
@@ -57,6 +112,7 @@ namespace SpeckleGSAResults
 
       return true;
     }
+    */
 
     /*
     private bool LoadTable(string filePath, List<string> loadCases)

@@ -1,5 +1,6 @@
 ﻿using SpeckleCore;
 using SpeckleGSAInterfaces;
+using SpeckleGSAResults;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -24,7 +25,6 @@ namespace SpeckleGSA
     private readonly List<Type> traversedSerialisedTypes = new List<Type>();
 
     private Task ResultExportTask;
-    private string resultsDir;
 
     /// <summary>
     /// Initializes sender.
@@ -50,7 +50,7 @@ namespace SpeckleGSA
         //Make sure the file is saved so it can be the subject of a GsaShell call
         if (string.IsNullOrEmpty(GSA.gsaProxy.FilePath))
         {
-          var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TempForResults_" + DateTime.Now.ToString("yyMMdd_HHmmss") + ".gwb");
+          var filePath = Path.Combine(Path.GetTempPath(), "TempForResults_" + DateTime.Now.ToString("yyMMdd_HHmmss") + ".gwb");
           GSA.gsaProxy.SaveAs(filePath);
         }
         else
@@ -61,8 +61,9 @@ namespace SpeckleGSA
         //Start task to export to file
         ResultExportTask = Task.Run(() =>
         {
-          var retVal = SpeckleGSAResults.SpeckleGSAResultsHelper.ExtractCsvResults(GSA.gsaProxy.FilePath, out resultsDir, out List<string> errMsgs);
-        });
+          var retVal = SpeckleGSAResultsHelper.ExtractCsvResults(GSA.gsaProxy.FilePath, GSA.gsaResultsContext.ResultsDir, out List<string> errMsgs);
+        }
+        );
       }
 
       var startTime = DateTime.Now;
@@ -81,6 +82,15 @@ namespace SpeckleGSA
           FilteredReadTypePrereqs[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, GSA.Settings.TargetLayer)
             && (string)l.GetAttribute("Stream") == stream).ToList();
         }
+
+        //The load tasks and combos need to be loaded to to ensure they can be used to process the list of cases to be sent
+        var extraLoadCaseTypes = GSA.ReadTypePrereqs.Where(t => t.Key.Name.EndsWith("LoadTask", StringComparison.InvariantCultureIgnoreCase)
+        || t.Key.Name.EndsWith("LoadCombo", StringComparison.InvariantCultureIgnoreCase));
+        if (extraLoadCaseTypes.Count() > 0)
+        {
+          keywords.AddRange(GetFilteredKeywords(extraLoadCaseTypes));
+        }
+          
 
         //If only results then the keywords for the objects which have results still need to be retrieved.  Note these are different
         //to the keywords of the types to be sent (which, being result objects, are blank in this case).
@@ -103,8 +113,8 @@ namespace SpeckleGSA
 				{
 					FilteredReadTypePrereqs[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, GSA.Settings.TargetLayer)).ToList();
 				}
-        keywords.AddRange(GetFilteredKeywords());
       }
+      keywords.AddRange(GetFilteredKeywords());
 
       Status.ChangeStatus("Reading GSA data into cache");
 
@@ -180,12 +190,9 @@ namespace SpeckleGSA
         startTime = DateTime.Now;
 
 
-        var tableNames = new List<string>();
-        if (GSA.Settings.NodalResults.Count > 0) tableNames.Add("result_node");
-        if (GSA.Settings.Element1DResults.Count > 0) tableNames.Add("result_element_section");
-        if (GSA.Settings.Element2DResults.Count > 0) tableNames.Add("result_element_2d");
-        if (GSA.Settings.MiscResults.Count > 0) tableNames.Add("result_global");
-        GSA.gsaResultsContext.ImportResultsFromFileDir(resultsDir, tableNames);
+        GSA.gsaResultsContext.ImportResultsFromFile("result_node", "case_id", "node_id");
+        GSA.gsaResultsContext.ImportResultsFromFile("result_element_section", "case_id", "element_id");
+        GSA.gsaResultsContext.ImportResultsFromFile("result_element_2d", "case_id", "element_id");
 
         duration = DateTime.Now - startTime;
         Status.AddMessage("Duration of results into local database: " + duration.ToString(@"hh\:mm\:ss"));

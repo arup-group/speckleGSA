@@ -92,5 +92,44 @@ namespace SpeckleGSAProxy.Test
       //Check that the next index recognises (and doesn't re-use) the current provisional indices
       Assert.AreEqual(5, cache.ResolveIndex("LOAD_2D_THERMAL.2"));
     }
+
+    [Test]
+    public void ExpandTestCasesTest()
+    {
+      var cache = new GSACache();
+
+      var gwa = new List<string>
+      {
+        "ANAL.1\t1\tSW\t1\tL1", 
+        "ANAL.1\t3\tLL\t1\tL3", 
+        "ANAL.1\t4\tDynamic : Mode 1\t2\tM1", 
+        "ANAL.1\t5\tDynamic: Mode 2\t2\tM2", 
+        "ANAL.1\t6\tDynamic: Mode 3\t2\tM3", 
+        "ANAL.1\t7\tDynamic: Mode 4\t2\tM4", 
+        "ANAL.1\t8\tDynamic: Mode 5\t2\tM5", 
+        "ANAL.1\t9\tDynamic: Mode 6\t2\tM6", 
+        "ANAL.1\t10\tDynamic: Mode 7\t2\tM7", 
+        "ANAL.1\t11\tDynamic: Mode 8\t2\tM8", 
+        "ANAL.1\t12\tDynamic: Mode 9\t2\tM9", 
+        "ANAL.1\t13\tDynamic: Mode 10\t2\tM10", 
+        "COMBINATION.1\t1\tULS\t1.35A1 + 1.35A2 + 1.5A3\t\t", 
+        "COMBINATION.1\t2\tSLS\tA1 + A2 + 0.7A3\t\t"
+      };
+
+      foreach (var g in gwa)
+      {
+        var gSplit = g.Split(new string[] { "\t" }, StringSplitOptions.None);
+        var keyword = gSplit.First();
+        int.TryParse(gSplit[1], out int index);
+        cache.Upsert(keyword, index, g);
+      }
+
+      var cases = cache.ExpandLoadCasesAndCombinations("all");
+
+      GSA.gsaProxy.Close();
+
+      Assert.IsNotNull(cases);
+      Assert.IsTrue(cases.Count() > 0);
+    }
   }
 }

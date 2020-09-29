@@ -4,8 +4,9 @@ namespace SpeckleGSAInterfaces
 {
   public interface IGSAResultsContext
   {
-    bool ImportResultsFromFileDir(string dir, List<string> tableNames = null);
+    string ResultsDir { get; }
+    bool ImportResultsFromFile(string filePath, string loadCaseField, string elemIdField = null);
 
-    object[,] Query(string tableName, string loadCase, List<string> columns);
+    bool Query(string tableName, IEnumerable<string> columns, IEnumerable<string> loadCases, out object[,] results, IEnumerable<int> elemIds = null);
   }
 }
