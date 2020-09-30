@@ -10,4 +10,4 @@ toc: false
 
 Using the Revit plugin and the GSA plugin, you can send the Revit Analytical Model and receive it in GSA. To do so, add the analytical model elements you wish to send to a sender in the Revit plugin and receive as usual in GSA.
 
-![revittogsa](/assets/images/user_docs/revittogsa.gif)
+![revittogsa]({{site.baseurl}}/assets/images/user_docs/revittogsa.gif)

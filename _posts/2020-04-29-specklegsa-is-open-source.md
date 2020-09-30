@@ -1,6 +1,6 @@
 ---
 title: SpeckleGSA is Open Source!
-author: David deKoning
+author: David de Koning
 date: 2020-04-29
 categories:
     - news
