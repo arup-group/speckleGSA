@@ -55,16 +55,13 @@ Note that the 2D element needs a mesh as its base geometry. This is not the fini
 
 Now we have created our basic geometrical features we need to create some analysis properties.
 
-It is at this point where we need to understand a little more about the Speckle data format. To mark each object as 'the same' over multiple stream updates each sender marks its objects with an 'application id'. This key gives us a handy way to identify any object, so instead of needing keys to specific tables (e.g. property id = 5) we can instead just refer to the application id to link one object to another.
-
-So the steps to create a 1d property and link it to a 1d element are:
+The steps to create a 1d property and link it to a 1d element are:
 
 * Create a `Structural1DProperty` using the `Schema Builder` component
 * Assign its key properties (section shape and profile)
-* Use the `Get ApplicationId` component to find out the Structural1DProperty's identifier
-* Wire that id to the PropertyRef input of the Structural1DProperty
+* Wire the output of the `Structural1DProperty` to the `PropertyRef` input of the `Structural1DElement`.
 
-The `Get ApplicationId` component is not in the main Speckle Grasshopper plugin. Instead use the [Arup version of the Speckle Grasshopper plugin](https://www.youtube.com/watch?v=oHg5SJYRHA0).
+The above process will only work if you are using the SpeckleGrasshopper-cx components. [The latest version of these components can be found on the GitHub releases page](https://github.com/arup-group/SpeckleRhino/releases)
 {: .notice--warning}
 
 ![Assign 1d prop]({{site.baseurl}}/assets/images/user_docs/grasshopper/gh_assign_1d_prop.png)

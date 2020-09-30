@@ -44,9 +44,10 @@ defaults:
       sidebar:
         nav: "docs"
 
-search: true # true, false (default)
-search_full_content: true # true, false (default)
-search_provider: lunr # lunr (default), algolia
+# lunr search does not seem functional
+# search: true # true, false (default)
+# search_full_content: true # true, false (default)
+# search_provider: lunr # lunr (default), algolia
 
 footer:
   links:
