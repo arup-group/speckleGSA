@@ -44,9 +44,9 @@ defaults:
       sidebar:
         nav: "docs"
 
-search                   : true # true, false (default)
-# search_full_content      : true # true, false (default)
-# search_provider          : lunr # lunr (default), algolia
+search: true # true, false (default)
+search_full_content: true # true, false (default)
+search_provider: lunr # lunr (default), algolia
 
 footer:
   links:

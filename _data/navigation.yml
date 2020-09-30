@@ -25,3 +25,5 @@ docs:
     url: /docs/revit
   - title: "CLI"
     url: /docs/cli
+  - title: "Schema"
+    url: /docs/schema
