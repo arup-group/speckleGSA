@@ -31,6 +31,31 @@ namespace SpeckleGSA
     }
     #endregion
 
+    protected List<string> GetFilteredKeywords(IEnumerable<KeyValuePair<Type, List<Type>>> prereqs)
+    {
+      var keywords = new List<string>();
+      foreach (var kvp in prereqs)
+      {
+        try
+        {
+          var keyword = (string)kvp.Key.GetAttribute("GSAKeyword");
+          if (keyword.Length > 0)
+          {
+            keywords.AddIfNotContains(keyword);
+            var subKeywords = (string[])kvp.Key.GetAttribute("SubGSAKeywords");
+            if (subKeywords.Length > 0)
+            {
+              foreach (var skw in subKeywords)
+              {
+                keywords.AddIfNotContains(skw);
+              }
+            }
+          }
+        }
+        catch { }
+      }
+      return keywords;
+    }
     protected List<string> GetFilteredKeywords(Dictionary<Type, List<Type>> prereqs)
     {
       var keywords = new List<string>();

@@ -176,6 +176,7 @@
 								<DataGrid.ContextMenu>
 									<ContextMenu>
 										<MenuItem Header="Copy streamId" Click="SenderStreams_CopyStreamID"/>
+										<MenuItem Header="Remove stream from use by this model" Click="SenderStreams_RemoveStream"/>
 										<Separator />
 										<MenuItem Header="View stream" Click="SenderStreams_ViewStream"/>
 										<MenuItem Header="View stream data" Click="SenderStreams_ViewStreamData"/>

@@ -812,6 +812,31 @@ namespace SpeckleGSAUI
           propertyValue = chkBox.IsChecked;
 
           GSA.Settings.SetFieldOrPropValue(propertyName, propertyValue);
+
+          //TO DO: review this implementation
+          if (propertyName.Equals("SendOnlyResults", StringComparison.InvariantCultureIgnoreCase))
+          {
+            var value = (bool?)propertyValue;
+            if (value == true)
+            {
+              GSA.Settings.EmbedResults = false;
+              EmbedResults.IsChecked = false;
+
+              GSA.Settings.SeparateStreams = true;
+              SeparateStreams.IsChecked = true;
+
+              SeparateStreams.IsEnabled = false;
+            }
+            else if (value == false)
+            {
+              SeparateStreams.IsEnabled = true;
+            }
+          }
+          else if (propertyName.Equals("EmbedResults", StringComparison.InvariantCultureIgnoreCase) && ((bool?)propertyValue) == true)
+          {
+            GSA.Settings.SendOnlyResults = false;
+            SendOnlyResults.IsChecked = false;
+          }
         }
         else if (sender is TextBox)
         {
@@ -995,6 +1020,29 @@ namespace SpeckleGSAUI
                       }
                       ));
         });
+      }
+    }
+
+    private void SenderStreams_RemoveStream(object sender, RoutedEventArgs e)
+    {
+      var cell = SenderStreams.CurrentCell.Item;
+
+      if (cell.GetType() == typeof(Tuple<string, string>))
+      {
+        var cellTuple = (Tuple<string, string>)cell;
+        var streamName = cellTuple.Item1;
+        var streamID = cellTuple.Item2;
+
+        if (streamID.GetType() == typeof(string))
+        {
+          GSA.SenderInfo.Remove(streamName);
+          if (!GSA.SetSpeckleClients(EmailAddress, RestApi))
+          {
+            Status.AddError("Error in communicating GSA - please check if the GSA file has been closed down");
+            return;
+          }
+          UpdateClientLists();
+        }
       }
     }
 
