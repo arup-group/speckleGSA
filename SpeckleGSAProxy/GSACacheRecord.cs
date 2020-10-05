@@ -8,7 +8,7 @@ namespace SpeckleGSAProxy
   {
     public string Keyword { get; private set; }
     public int Index { get; private set; }
-    public string ApplicationId { get; private set; }
+    public string ApplicationId { get; set; }
     public string StreamId { get; private set; }    
     public SpeckleObject SpeckleObj { get; set; }
     //Note: these booleans can't be merged into one state property because records could be both previous and latest, or only one of them
@@ -28,7 +28,7 @@ namespace SpeckleGSAProxy
       Previous = previous;
       StreamId = streamId;
       //values cannot have spaces
-      ApplicationId = applicationId.Replace(" ", "");
+      ApplicationId = (applicationId == null) ? "" : applicationId.Replace(" ", "");
       SpeckleObj = so;
       GwaSetCommandType = gwaSetCommandType;
     }

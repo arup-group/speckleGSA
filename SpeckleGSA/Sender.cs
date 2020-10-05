@@ -359,15 +359,13 @@ namespace SpeckleGSA
         var data = GSA.gsaProxy.GetGwaData(keywords, false);
         for (int i = 0; i < data.Count(); i++)
         {
+          var applicationId = (string.IsNullOrEmpty(data[i].ApplicationId)) ? null : data[i].ApplicationId;
           GSA.gsaCache.Upsert(
             data[i].Keyword,
             data[i].Index,
             data[i].GwaWithoutSet,
             streamId: data[i].StreamId,
-            //This needs to be revised as this logic is in the kit too
-            applicationId: (string.IsNullOrEmpty(data[i].ApplicationId))
-              ? ("gsa/" + data[i].Keyword + "_" + data[i].Index.ToString())
-              : data[i].ApplicationId,
+            applicationId: applicationId,
             gwaSetCommandType: data[i].GwaSetType);
         }
         numUpdated = data.Count();
