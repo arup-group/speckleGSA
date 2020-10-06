@@ -170,7 +170,7 @@ namespace SpeckleGSA
         {
           HelperFunctions.tryCatchWithEvents(() =>
           {
-            ResponseObject res = mySender.ObjectCreateAsync(payload, 60000).Result;
+            ResponseObject res = mySender.ObjectCreateAsync(payload, 20000).Result;
 
             for (int i = 0; i < payload.Count(); i++)
             {

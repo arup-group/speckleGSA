@@ -229,7 +229,9 @@ namespace SpeckleGSA
           string[] senders = senderList[1].Split(new char[] { '&' });
 
           for (int i = 0; i < senders.Length; i += 3)
+          {
             SenderInfo[senders[i]] = new Tuple<string, string>(senders[i + 1], senders[i + 2]);
+          }
         }
 
         if (receiverList != null && !string.IsNullOrEmpty(receiverList[1]))
@@ -237,7 +239,9 @@ namespace SpeckleGSA
           string[] receivers = receiverList[1].Split(new char[] { '&' });
 
           for (int i = 0; i < receivers.Length; i += 2)
+          {
             ReceiverInfo.Add(new Tuple<string, string>(receivers[i], receivers[i + 1]));
+          }
         }
         return true;
       }
@@ -265,7 +269,7 @@ namespace SpeckleGSA
               .Where(s => s.Length == 2)
               .ToList();
 
-      sids.RemoveAll(S => S[0] == "SpeckleSender&" + key || S[0] == "SpeckleReceiver&" + key);
+      sids.RemoveAll(S => S[0] == "SpeckleSender&" + key || S[0] == "SpeckleReceiver&" + key || string.IsNullOrEmpty(S[1]));
 
       List<string> senderList = new List<string>();
       foreach (KeyValuePair<string, Tuple<string, string>> kvp in SenderInfo)
@@ -282,12 +286,20 @@ namespace SpeckleGSA
         receiverList.Add(t.Item2);
       }
 
-      sids.Add(new string[] { "SpeckleSender&" + key, string.Join("&", senderList) });
-      sids.Add(new string[] { "SpeckleReceiver&" + key, string.Join("&", receiverList) });
+      if (senderList.Count() > 0)
+      {
+        sids.Add(new string[] { "SpeckleSender&" + key, string.Join("&", senderList) });
+      }
+      if (receiverList.Count() > 0)
+      {
+        sids.Add(new string[] { "SpeckleReceiver&" + key, string.Join("&", receiverList) });
+      }
 
       string sidRecord = "";
       foreach (string[] s in sids)
+      {
         sidRecord += "{" + s[0] + ":" + s[1] + "}";
+      }
 
       return gsaProxy.SetTopLevelSid(sidRecord);
     }

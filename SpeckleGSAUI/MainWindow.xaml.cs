@@ -159,6 +159,24 @@ namespace SpeckleGSAUI
 
       SpeckleCore.SpeckleInitializer.Initialize();
       SpeckleCore.LocalContext.Init();
+
+      try
+      {
+        //This will throw an exception if there is no default account
+        var account = SpeckleCore.LocalContext.GetDefaultAccount();
+        if (account != null)
+        {
+          EmailAddress = account.Email;
+          RestApi = account.RestApi;
+          ApiToken = account.Token;
+
+          Status.AddMessage("Logged in to default account at: " + RestApi);
+        }
+      }
+      catch
+      {
+        Status.AddMessage("No default account found - press the Login button to login/select an account");
+      }
     }
 
     #region Speckle Operations
@@ -184,14 +202,14 @@ namespace SpeckleGSAUI
       {
         var account = signInWindow.accounts[signInWindow.AccountListBox.SelectedIndex];
 
-        Status.AddMessage("Login successful");
-
         EmailAddress = account.Email;
         RestApi = account.RestApi;
         ApiToken = account.Token;
         (SenderTab.Content as Grid).IsEnabled = FileOpened && LoggedIn;
         (ReceiverTab.Content as Grid).IsEnabled = FileOpened && LoggedIn;
         UpdateClientLists();
+
+        Status.AddMessage("Logged in to account at: " + RestApi);
       }
       else
         Status.AddError("Failed to log in");
@@ -794,6 +812,31 @@ namespace SpeckleGSAUI
           propertyValue = chkBox.IsChecked;
 
           GSA.Settings.SetFieldOrPropValue(propertyName, propertyValue);
+
+          //TO DO: review this implementation
+          if (propertyName.Equals("SendOnlyResults", StringComparison.InvariantCultureIgnoreCase))
+          {
+            var value = (bool?)propertyValue;
+            if (value == true)
+            {
+              GSA.Settings.EmbedResults = false;
+              EmbedResults.IsChecked = false;
+
+              GSA.Settings.SeparateStreams = true;
+              SeparateStreams.IsChecked = true;
+
+              SeparateStreams.IsEnabled = false;
+            }
+            else if (value == false)
+            {
+              SeparateStreams.IsEnabled = true;
+            }
+          }
+          else if (propertyName.Equals("EmbedResults", StringComparison.InvariantCultureIgnoreCase) && ((bool?)propertyValue) == true)
+          {
+            GSA.Settings.SendOnlyResults = false;
+            SendOnlyResults.IsChecked = false;
+          }
         }
         else if (sender is TextBox)
         {
@@ -977,6 +1020,29 @@ namespace SpeckleGSAUI
                       }
                       ));
         });
+      }
+    }
+
+    private void SenderStreams_RemoveStream(object sender, RoutedEventArgs e)
+    {
+      var cell = SenderStreams.CurrentCell.Item;
+
+      if (cell.GetType() == typeof(Tuple<string, string>))
+      {
+        var cellTuple = (Tuple<string, string>)cell;
+        var streamName = cellTuple.Item1;
+        var streamID = cellTuple.Item2;
+
+        if (streamID.GetType() == typeof(string))
+        {
+          GSA.SenderInfo.Remove(streamName);
+          if (!GSA.SetSpeckleClients(EmailAddress, RestApi))
+          {
+            Status.AddError("Error in communicating GSA - please check if the GSA file has been closed down");
+            return;
+          }
+          UpdateClientLists();
+        }
       }
     }
 

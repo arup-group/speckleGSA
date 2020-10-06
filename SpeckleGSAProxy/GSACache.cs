@@ -117,6 +117,25 @@ namespace SpeckleGSAProxy
       });
     }
 
+    //For results
+    public bool GetKeywordRecordsSummary(string keyword, out List<string> gwa, out List<int> indices, out List<string> applicationIds)
+    {
+      gwa = new List<string>();
+      indices = new List<int>();
+      applicationIds = new List<string>();
+      if (!recordsByKeyword.ContainsKey(keyword))
+      {
+        return false;
+      }
+      foreach (var record in recordsByKeyword[keyword])
+      {
+        gwa.Add(record.Gwa);
+        indices.Add(record.Index);
+        applicationIds.Add(record.ApplicationId);
+      }
+      return true;
+    }
+
     //For testing
     public List<string> GetGwaSetCommands() => ExecuteWithLock(() => records.Select(r => (r.GwaSetCommandType == GwaSetCommandType.Set) ? "SET\t" + r.Gwa
       : string.Join("\t", new[] { "SET_AT", r.Index.ToString(), r.Gwa })).ToList());
@@ -148,11 +167,14 @@ namespace SpeckleGSAProxy
     #region methods_used_within_lock_by_Upsert
     private void UpsertApplicationIdLookup(string keyword, int index, string applicationId)
     {
-      if (!applicationIdLookup.ContainsKey(keyword))
+      if (!string.IsNullOrEmpty(applicationId))
       {
-        applicationIdLookup.Add(keyword, new Dictionary<int, string>());
+        if (!applicationIdLookup.ContainsKey(keyword))
+        {
+          applicationIdLookup.Add(keyword, new Dictionary<int, string>());
+        }
+        applicationIdLookup[keyword][index] = applicationId.Replace(" ", "");
       }
-      applicationIdLookup[keyword][index] = applicationId.Replace(" ", "");
     }
 
     private void RemoveFromProvisional(string keyword, int index)
@@ -174,6 +196,11 @@ namespace SpeckleGSAProxy
     //Not every record has stream IDs (like generated nodes)
     public bool Upsert(string keyword, int index, string gwa, string applicationId = "", SpeckleObject so = null, GwaSetCommandType gwaSetCommandType = GwaSetCommandType.Set, bool? latest = true, string streamId = null)
     {
+      if (applicationId == null)
+      {
+        applicationId = "";
+      }
+
       try
       {
         var matchingRecords = new List<GSACacheRecord>();
@@ -821,6 +848,27 @@ namespace SpeckleGSAProxy
         }
         return "";
       });
+    }
+
+    public bool SetApplicationId(string keyword, int index, string applicationId)
+    {
+      return ExecuteWithLock(() =>
+      {
+        if (!recordsByKeyword.ContainsKey(keyword) || index >= recordsByKeyword[keyword].Count())
+        {
+          return false;
+        }
+        var recordsWithSameIndex = recordsByKeyword[keyword].Where(r => r.Index == index);
+        if (recordsWithSameIndex.Count() == 0)
+        {
+          return false;
+        }
+        var record = recordsWithSameIndex.First();
+        record.ApplicationId = applicationId;
+        UpsertApplicationIdLookup(keyword, index, applicationId);
+        return true;
+      }
+      );
     }
 
     private void RemoveFromApplicationIdLookup(string keyword, int index)

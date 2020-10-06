@@ -10,9 +10,13 @@ namespace SpeckleGSAInterfaces
 
     List<string> GetGwa(string keyword);
 
+    bool GetKeywordRecordsSummary(string keyword, out List<string> gwa, out List<int> indices, out List<string> applicationIds);
+
     Dictionary<int, string> GetGwaToSerialise(string keyword);
 
     string GetApplicationId(string keyword, int index);
+
+    bool SetApplicationId(string keyword, int index, string applicationID);
 
     int ResolveIndex(string keyword, string applicationId = "");
 

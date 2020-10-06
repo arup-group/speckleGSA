@@ -3,6 +3,7 @@ using SpeckleGSAInterfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 
 namespace SpeckleGSA
@@ -49,12 +50,18 @@ namespace SpeckleGSA
       // Remove wrong layer objects from Prereqs
       if (GSA.Settings.SendOnlyResults)
       {
-        var stream = GSA.Settings.SendOnlyResults ? "results" : null;
-        var streamLayerPrereqs = GSA.ReadTypePrereqs.Where(t => (string)t.Key.GetAttribute("Stream") == stream && ObjectTypeMatchesLayer(t.Key, GSA.Settings.TargetLayer));
+        //Ensure the load-relatd types are into the cache too so that the load cases and combos are there to resolve the load cases listed by the user
+        var bucketNames = GSA.Settings.SendOnlyResults ? new string[] { "results" } : null;
+
+        var streamLayerPrereqs = GSA.ReadTypePrereqs.Where(t =>
+          bucketNames.Any(s => s.Equals((string)t.Key.GetAttribute("Stream"), StringComparison.InvariantCultureIgnoreCase)) 
+          && ObjectTypeMatchesLayer(t.Key, GSA.Settings.TargetLayer));
+
         foreach (var kvp in streamLayerPrereqs)
         {
-          FilteredReadTypePrereqs[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, GSA.Settings.TargetLayer)
-            && (string)l.GetAttribute("Stream") == stream).ToList();
+          FilteredReadTypePrereqs[kvp.Key] = kvp.Value.Where(l =>
+            ObjectTypeMatchesLayer(l, GSA.Settings.TargetLayer)
+            && bucketNames.Any(s => s.Equals((string)l.GetAttribute("Stream"), StringComparison.InvariantCultureIgnoreCase))).ToList();
         }
 
         //If only results then the keywords for the objects which have results still need to be retrieved.  Note these are different
@@ -69,6 +76,20 @@ namespace SpeckleGSA
               keywords.Add(skw);
             }
           }
+
+          //The load tasks and combos need to be loaded to to ensure they can be used to process the list of cases to be sent
+          var extraLoadCaseTypes = GSA.ReadTypePrereqs.Where(et => et.Key.Name.EndsWith("LoadTask", StringComparison.InvariantCultureIgnoreCase)
+            || et.Key.Name.EndsWith("LoadCombo", StringComparison.InvariantCultureIgnoreCase));
+          if (extraLoadCaseTypes.Count() > 0)
+          {
+            GetFilteredKeywords(extraLoadCaseTypes).ForEach(kw =>
+            { 
+              if (!keywords.Contains(kw))
+              {
+                keywords.Add(kw);
+              }
+            });
+          }
         }
 			}
 			else
@@ -78,8 +99,15 @@ namespace SpeckleGSA
 				{
 					FilteredReadTypePrereqs[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, GSA.Settings.TargetLayer)).ToList();
 				}
-        keywords.AddRange(GetFilteredKeywords());
+        GetFilteredKeywords().ForEach(kw =>
+        {
+          if (!keywords.Contains(kw))
+          {
+            keywords.Add(kw);
+          }
+        });
       }
+      
 
       Status.ChangeStatus("Reading GSA data into cache");
 
@@ -120,9 +148,17 @@ namespace SpeckleGSA
       // Create the streams
       Status.ChangeStatus("Creating streams");
 
-			var streamNames = (GSA.Settings.SeparateStreams) 
-        ? objTypes.Select(t => (string)t.GetAttribute("Stream")).Distinct().ToList() 
-        : new List<string>() { "Full Model" };
+      var streamNames = (GSA.Settings.SendOnlyResults) ? new List<string> { "results" }
+        : (GSA.Settings.SeparateStreams) 
+          ? objTypes.Select(t => (string)t.GetAttribute("Stream")).Distinct().ToList() 
+          : new List<string>() { "Full Model" };
+
+      //Remove any streams that will no longer need to be used - if the "Separate sender streams" item has been toggled, for example
+      var senderKeysToRemove = GSA.SenderInfo.Keys.Where(k => !streamNames.Any(sn => sn.Equals(k, StringComparison.InvariantCultureIgnoreCase))).ToList();
+      foreach (var k in senderKeysToRemove)
+      {
+        GSA.SenderInfo.Remove(k);
+      }
 
       foreach (string streamName in streamNames)
       {
@@ -323,15 +359,13 @@ namespace SpeckleGSA
         var data = GSA.gsaProxy.GetGwaData(keywords, false);
         for (int i = 0; i < data.Count(); i++)
         {
+          var applicationId = (string.IsNullOrEmpty(data[i].ApplicationId)) ? null : data[i].ApplicationId;
           GSA.gsaCache.Upsert(
             data[i].Keyword,
             data[i].Index,
             data[i].GwaWithoutSet,
             streamId: data[i].StreamId,
-            //This needs to be revised as this logic is in the kit too
-            applicationId: (string.IsNullOrEmpty(data[i].ApplicationId))
-              ? ("gsa/" + data[i].Keyword + "_" + data[i].Index.ToString())
-              : data[i].ApplicationId,
+            applicationId: applicationId,
             gwaSetCommandType: data[i].GwaSetType);
         }
         numUpdated = data.Count();
