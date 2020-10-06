@@ -1,5 +1,5 @@
 ---
-permalink: /docs/speckleGSA_sending
+permalink: /docs/specklegsa_sending
 title: "Sending data from SpeckleGSA"
 excerpt: "Sending data from SpeckleGSA"
 toc: false

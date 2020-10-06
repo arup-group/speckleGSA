@@ -1,5 +1,5 @@
 ---
-permalink: /docs/speckleGSA_receiving
+permalink: /docs/specklegsa_receiving
 title: "Receiving data into SpeckleGSA"
 excerpt: "Receiving data into SpeckleGSA"
 toc: false
