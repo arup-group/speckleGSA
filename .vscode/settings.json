@@ -1,0 +1,6 @@
+{
+    "pasteImage.basePath": "",
+    "pasteImage.insertPattern": "[Image name here](${imageSyntaxPrefix}${imageFilePath}${imageSyntaxSuffix})",
+    "pasteImage.path": "${projectRoot}/assets/images/user_docs/grasshopper",
+    "pasteImage.showFilePathConfirmInputBox": true
+}
