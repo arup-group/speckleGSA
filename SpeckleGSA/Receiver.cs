@@ -225,7 +225,7 @@ namespace SpeckleGSA
         var otherLayer = GSA.Settings.TargetLayer == GSATargetLayer.Design ? GSATargetLayer.Analysis : GSATargetLayer.Design;
         await ProcessObjectsForLayer(otherLayer);
 
-        var toBeAddedGwa = GSA.gsaCache.GetNewlyAddedGwa();
+        var toBeAddedGwa = GSA.gsaCache.GetNewlyGwaSetCommands();
         for (int i = 0; i < toBeAddedGwa.Count(); i++)
         {
           GSA.gsaProxy.SetGwa(toBeAddedGwa[i]);

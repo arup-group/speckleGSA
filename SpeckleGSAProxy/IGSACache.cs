@@ -23,7 +23,7 @@ namespace SpeckleGSAProxy
 
     void Clear();
 
-    List<string> GetNewlyAddedGwa();
+    List<string> GetNewlyGwaSetCommands();
 
     List<Tuple<string, int, string, GwaSetCommandType>> GetExpiredData();
 

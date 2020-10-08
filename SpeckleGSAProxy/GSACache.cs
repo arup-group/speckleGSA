@@ -92,9 +92,17 @@ namespace SpeckleGSAProxy
         .ToDictionary(r => r.Index, r => r.Gwa)
       : new Dictionary<int, string>());
 
-    //TO DO: review if this is needed
-    public List<string> GetNewlyAddedGwa() => ExecuteWithLock(()
-      => records.Where(r => r.Previous == false && r.Latest == true).Select(r => r.Gwa).ToList());
+    public List<string> GetNewlyGwaSetCommands() => ExecuteWithLock(() =>
+      {
+        var retList = new List<string>();
+        foreach (var r in records.Where(r => r.Previous == false && r.Latest == true))
+        {
+          retList.Add((r.GwaSetCommandType == GwaSetCommandType.SetAt)
+            ? string.Join("/t", new[] { "SET_AT", r.Index.ToString(), r.Gwa })
+            : r.Gwa);
+        }
+        return retList;
+      });
 
     //To review: does this need to be latest records only?
     public List<string> GetGwa(string keyword, int index) => ExecuteWithLock(() => (recordsByKeyword.ContainsKey(keyword))
