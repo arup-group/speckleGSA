@@ -27,3 +27,6 @@ docs:
     url: /docs/cli
   - title: "Schema"
     url: /docs/schema
+  - title: "Troubleshooting"
+    url: /docs/troubleshooting
+  
