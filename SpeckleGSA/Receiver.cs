@@ -54,8 +54,6 @@ namespace SpeckleGSA
       ExecuteWithLock(ref traversedSerialisedLock, () => traversedSerialisedTypes.Clear());
       ExecuteWithLock(ref traversedDeserialisedLock, () => traversedDeserialisedTypes.Clear());
 
-      senderDictionaries.Clear();
-
       Status.AddMessage("Initialising receivers");
 
       var attributeType = typeof(GSAObject);
@@ -205,7 +203,7 @@ namespace SpeckleGSA
           GSA.gsaCache.Snapshot(streamIds[i]);
         }
 
-        var gsaStaticObjects = GetAssembliesStaticTypes();
+        var gsaStaticObjects = GetAssembliesSenderDictionaries();
 
         foreach (var dict in gsaStaticObjects)
         {
@@ -490,7 +488,7 @@ namespace SpeckleGSA
 
         if (!traversedSerialisedTypes.Contains(readPrereqs[j]))
         {
-          var prereqResult = Converter.Serialise(prereqDummyObject);
+          _ = Converter.Serialise(prereqDummyObject);
           var prereqSerialisedObjects = CollateSerialisedObjects(readPrereqs[j]);
 
           for (int k = 0; k < prereqSerialisedObjects.Count; k++)

@@ -7,10 +7,10 @@ using SpeckleGSAProxy;
 
 namespace SpeckleGSA
 {
-	public abstract class BaseReceiverSender
-	{
-		public bool IsInit = false;
-		public bool IsBusy = false;
+  public abstract class BaseReceiverSender
+  {
+    public bool IsInit = false;
+    public bool IsBusy = false;
 
     #region lock-related
 
@@ -82,21 +82,21 @@ namespace SpeckleGSA
       return keywords;
     }
 
-		protected bool ObjectTypeMatchesLayer(Type t, GSATargetLayer layer)
-		{
-			var analysisLayerAttribute = t.GetAttribute("AnalysisLayer");
-			var designLayerAttribute = t.GetAttribute("DesignLayer");
+    protected bool ObjectTypeMatchesLayer(Type t, GSATargetLayer layer)
+    {
+      var analysisLayerAttribute = t.GetAttribute("AnalysisLayer");
+      var designLayerAttribute = t.GetAttribute("DesignLayer");
 
-			//If an object type has a layer attribute exists and its boolean value doesn't match the settings target layer, then it doesn't match.  This could be reviewed and simplified.
-			if ((analysisLayerAttribute != null && layer == GSATargetLayer.Analysis && !(bool)analysisLayerAttribute)
-				|| (designLayerAttribute != null && layer == GSATargetLayer.Design && !(bool)designLayerAttribute))
-			{
-				return false;
-			}
-			return true;
-		}
+      //If an object type has a layer attribute exists and its boolean value doesn't match the settings target layer, then it doesn't match.  This could be reviewed and simplified.
+      if ((analysisLayerAttribute != null && layer == GSATargetLayer.Analysis && !(bool)analysisLayerAttribute)
+        || (designLayerAttribute != null && layer == GSATargetLayer.Design && !(bool)designLayerAttribute))
+      {
+        return false;
+      }
+      return true;
+    }
 
-    protected List<IGSASenderDictionary> GetAssembliesStaticTypes()
+    public static List<IGSASenderDictionary> GetAssembliesSenderDictionaries()
     {
       var assemblies = SpeckleInitializer.GetAssemblies().Where(a => a.GetTypes().Any(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer))));
       var staticObjects = new List<IGSASenderDictionary>();
@@ -121,6 +121,28 @@ namespace SpeckleGSA
         }
       }
       return staticObjects;
+    }
+
+    public static Dictionary<Type, List<object>> GetAllConvertedGsaObjectsByType()
+    {
+      var gsaStaticObjects = GetAssembliesSenderDictionaries();
+      var currentObjects = new Dictionary<Type, List<object>>();
+      foreach (var dict in gsaStaticObjects)
+      {
+        var allObjects = dict.GetAll();
+        //Ensure alphabetical order here as this has a bearing on the order of the layers when it's sent, and therefore the order of
+        //the layers as displayed in GH.  Note the type names here are the GSA ones (e.g. GSAGravityLoading) not the StructuralClasses ones
+        var sortedKeys = allObjects.Keys.OrderBy(k => k.Name);
+        foreach (var t in sortedKeys)
+        {
+          if (!currentObjects.ContainsKey(t))
+          {
+            currentObjects[t] = new List<object>();
+          }
+          currentObjects[t].AddRange(allObjects[t]);
+        }
+      }
+      return currentObjects;
     }
   }
 }
