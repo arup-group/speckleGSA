@@ -147,6 +147,7 @@
 											Margin="5"
 											Content="Layer to Stream:"
 											HorizontalAlignment="Right"
+											IsChecked="True"
 											Style="{StaticResource AnalysisDesignToggle}"/>
 										<ToggleButton
 											x:Name="SenderContinuousToggle"
@@ -176,6 +177,7 @@
 								<DataGrid.ContextMenu>
 									<ContextMenu>
 										<MenuItem Header="Copy streamId" Click="SenderStreams_CopyStreamID"/>
+										<MenuItem Header="Remove stream from use by this model" Click="SenderStreams_RemoveStream"/>
 										<Separator />
 										<MenuItem Header="View stream" Click="SenderStreams_ViewStream"/>
 										<MenuItem Header="View stream data" Click="SenderStreams_ViewStreamData"/>

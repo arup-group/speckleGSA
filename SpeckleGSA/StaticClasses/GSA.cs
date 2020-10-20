@@ -6,30 +6,33 @@ using System.Text.RegularExpressions;
 using SpeckleGSAInterfaces;
 using SpeckleGSAProxy;
 using SpeckleUtil;
+using System.IO;
 
 namespace SpeckleGSA
 {
-	/// <summary>
-	/// Static class which interfaces with GSA
-	/// </summary>
-	public static class GSA
+  /// <summary>
+  /// Static class which interfaces with GSA
+  /// </summary>
+  public static class GSA
   {
-		public static Settings Settings = new Settings();
+    public static Settings Settings = new Settings();
 
     public static ISpeckleObjectMerger Merger = new SpeckleObjectMerger();
     public static IGSAProxy gsaProxy = new GSAProxy();
     public static IGSACache gsaCache = new GSACache();
     public static ISpeckleGSAAppUI appUi = new SpeckleAppUI();
 
+    public static List<IGSASenderDictionary> senderDictionaries;
+
     public static bool IsInit;
 
     public static Dictionary<string, Tuple<string, string>> SenderInfo { get; set; }
     public static List<Tuple<string, string>> ReceiverInfo { get; set; }
 
-		public static Dictionary<Type, List<Type>> WriteTypePrereqs = new Dictionary<Type, List<Type>>();
-		public static Dictionary<Type, List<Type>> ReadTypePrereqs = new Dictionary<Type, List<Type>>();
+    public static Dictionary<Type, List<Type>> WriteTypePrereqs = new Dictionary<Type, List<Type>>();
+    public static Dictionary<Type, List<Type>> ReadTypePrereqs = new Dictionary<Type, List<Type>>();
 
-		public static void Init()
+    public static void Init()
     {
       if (IsInit) return;
 
@@ -40,28 +43,28 @@ namespace SpeckleGSA
 
       Status.AddMessage("Linked to GSA.");
 
-			InitialiseKits(out List<string> statusMessages);
+      InitialiseKits(out List<string> statusMessages);
 
-			if (statusMessages.Count() > 0)
-			{
-				foreach (var msg in statusMessages)
-				{
-					Status.AddMessage(msg);
-				}
-			}
+      if (statusMessages.Count() > 0)
+      {
+        foreach (var msg in statusMessages)
+        {
+          Status.AddMessage(msg);
+        }
+      }
     }
 
-		private static void InitialiseKits(out List<string> statusMessages)
-		{
-			statusMessages = new List<string>();
+    private static void InitialiseKits(out List<string> statusMessages)
+    {
+      statusMessages = new List<string>();
 
-			var attributeType = typeof(GSAObject);
-			var interfaceType = typeof(IGSASpeckleContainer);
+      var attributeType = typeof(GSAObject);
+      var interfaceType = typeof(IGSASpeckleContainer);
 
-			SpeckleInitializer.Initialize();
+      SpeckleInitializer.Initialize();
 
-			// Run initialize receiver method in interfacer
-			var assemblies = SpeckleInitializer.GetAssemblies().Where(a => a.GetTypes().Any(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer))));
+      // Run initialize receiver method in interfacer
+      var assemblies = SpeckleInitializer.GetAssemblies().Where(a => a.GetTypes().Any(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer))));
 
       var speckleTypes = new List<Type>();
       foreach (var assembly in assemblies)
@@ -78,24 +81,24 @@ namespace SpeckleGSA
 
       var mappableTypes = new List<Type>();
       foreach (var ass in assemblies)
-			{
-				var types = ass.GetTypes();
+      {
+        var types = ass.GetTypes();
 
         Type gsaStatic;
-				try
-				{
-					gsaStatic = types.FirstOrDefault(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer)) && t.GetProperties().Any(p => p.PropertyType == typeof(IGSACacheForKit)));
-					if (gsaStatic == null)
-					{
-						continue;
-					}
+        try
+        {
+          gsaStatic = types.FirstOrDefault(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer)) && t.GetProperties().Any(p => p.PropertyType == typeof(IGSACacheForKit)));
+          if (gsaStatic == null)
+          {
+            continue;
+          }
         }
-				catch
-				{
-					//The kits could throw an exception due to an app-specific library not being linked in (e.g.: the Revit SDK).  These libraries aren't of the kind that
-					//would contain the static properties searched for anyway, so just continue.
-					continue;
-				}
+        catch
+        {
+          //The kits could throw an exception due to an app-specific library not being linked in (e.g.: the Revit SDK).  These libraries aren't of the kind that
+          //would contain the static properties searched for anyway, so just continue.
+          continue;
+        }
 
         try
         {
@@ -113,14 +116,14 @@ namespace SpeckleGSA
         var objTypes = types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType).ToList();
         objTypes = objTypes.Distinct().ToList();
 
-				foreach (var t in objTypes)
-				{
-					var prereq = t.GetAttribute("WritePrerequisite");
-					WriteTypePrereqs[t] = (prereq != null) ? ((Type[])prereq).ToList() : new List<Type>();
+        foreach (var t in objTypes)
+        {
+          var prereq = t.GetAttribute("WritePrerequisite");
+          WriteTypePrereqs[t] = (prereq != null) ? ((Type[])prereq).ToList() : new List<Type>();
 
-					prereq = t.GetAttribute("ReadPrerequisite");
-					ReadTypePrereqs[t] = (prereq != null) ? ((Type[])prereq).ToList() : new List<Type>();
-				}
+          prereq = t.GetAttribute("ReadPrerequisite");
+          ReadTypePrereqs[t] = (prereq != null) ? ((Type[])prereq).ToList() : new List<Type>();
+        }
 
         foreach (var t in speckleTypes)
         {
@@ -137,18 +140,102 @@ namespace SpeckleGSA
               }
             }
           }
-        }        
+        }
       }
       Merger.Initialise(mappableTypes);
-    } 
+    }
 
-		#region File Operations
-		/// <summary>
-		/// Creates a new GSA file. Email address and server address is needed for logging purposes.
-		/// </summary>
-		/// <param name="emailAddress">User email address</param>
-		/// <param name="serverAddress">Speckle server address</param>
-		public static void NewFile(string emailAddress, string serverAddress, bool showWindow = true)
+    #region streamInfo
+    public static void RemoveUnusedStreamInfo(List<string> streamNames)
+    {
+      //Remove any streams that will no longer need to be used - if the "Separate sender streams" item has been toggled, for example
+      var senderKeysToRemove = GSA.SenderInfo.Keys.Where(k => !streamNames.Any(sn => sn.Equals(k, StringComparison.InvariantCultureIgnoreCase))).ToList();
+      foreach (var k in senderKeysToRemove)
+      {
+        SenderInfo.Remove(k);
+      }
+    }
+    #endregion
+
+    #region sender_dictionaries
+
+    public static bool SetAssembliesSenderDictionaries()
+    {
+      var assemblies = SpeckleInitializer.GetAssemblies().Where(a => a.GetTypes().Any(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer))));
+      senderDictionaries = new List<IGSASenderDictionary>();
+
+      //Now obtain the serialised (inheriting from SpeckleObject) objects
+      foreach (var ass in assemblies)
+      {
+        var types = ass.GetTypes();
+
+        try
+        {
+          var gsaStatic = types.FirstOrDefault(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer)) && t.GetProperties().Any(p => p.PropertyType == typeof(IGSACacheForKit)));
+          if (gsaStatic != null)
+          {
+            var dict = (IGSASenderDictionary)gsaStatic.GetProperties().FirstOrDefault(p => p.PropertyType == typeof(IGSASenderDictionary)).GetValue(null);
+            //This is how SpeckleGSA finds the objects in the GSASenderObjects dictionary - by finding the first property in ISpeckleInitializer which is of the specific dictionary type
+            senderDictionaries.Add(dict);
+          }
+        }
+        catch (FileNotFoundException)
+        {
+          //Swallow as it is likely to be an application SDK that a kit's conversion code references which isn't installed
+        }
+        catch (Exception e)
+        {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    public static void ClearSenderDictionaries()
+    {
+      foreach (var sd in senderDictionaries)
+      {
+        sd.Clear();
+      }
+    }
+
+    public static List<SpeckleObject> GetSpeckleObjectsFromSenderDictionaries()
+    {
+      return GetAllConvertedGsaObjectsByType().SelectMany(sd => sd.Value).Cast<IGSASpeckleContainer>().Select(c => c.Value).Cast<SpeckleObject>().ToList();
+    }
+
+    public static Dictionary<Type, List<object>> GetAllConvertedGsaObjectsByType()
+    {
+      var gsaStaticObjects = SetAssembliesSenderDictionaries();
+      var currentObjects = new Dictionary<Type, List<object>>();
+
+      foreach (var dict in GSA.senderDictionaries)
+      {
+        var allObjects = dict.GetAll();
+        //Ensure alphabetical order here as this has a bearing on the order of the layers when it's sent, and therefore the order of
+        //the layers as displayed in GH.  Note the type names here are the GSA ones (e.g. GSAGravityLoading) not the StructuralClasses ones
+        var sortedKeys = allObjects.Keys.OrderBy(k => k.Name);
+        foreach (var t in sortedKeys)
+        {
+          if (!currentObjects.ContainsKey(t))
+          {
+            currentObjects[t] = new List<object>();
+          }
+          currentObjects[t].AddRange(allObjects[t]);
+        }
+      }
+      return currentObjects;
+    }
+
+  #endregion
+
+    #region File Operations
+    /// <summary>
+    /// Creates a new GSA file. Email address and server address is needed for logging purposes.
+    /// </summary>
+    /// <param name="emailAddress">User email address</param>
+    /// <param name="serverAddress">Speckle server address</param>
+    public static void NewFile(string emailAddress, string serverAddress, bool showWindow = true)
     {
 			if (!IsInit) return;
 
@@ -229,7 +316,9 @@ namespace SpeckleGSA
           string[] senders = senderList[1].Split(new char[] { '&' });
 
           for (int i = 0; i < senders.Length; i += 3)
+          {
             SenderInfo[senders[i]] = new Tuple<string, string>(senders[i + 1], senders[i + 2]);
+          }
         }
 
         if (receiverList != null && !string.IsNullOrEmpty(receiverList[1]))
@@ -237,7 +326,9 @@ namespace SpeckleGSA
           string[] receivers = receiverList[1].Split(new char[] { '&' });
 
           for (int i = 0; i < receivers.Length; i += 2)
+          {
             ReceiverInfo.Add(new Tuple<string, string>(receivers[i], receivers[i + 1]));
+          }
         }
         return true;
       }
@@ -265,7 +356,7 @@ namespace SpeckleGSA
               .Where(s => s.Length == 2)
               .ToList();
 
-      sids.RemoveAll(S => S[0] == "SpeckleSender&" + key || S[0] == "SpeckleReceiver&" + key);
+      sids.RemoveAll(S => S[0] == "SpeckleSender&" + key || S[0] == "SpeckleReceiver&" + key || string.IsNullOrEmpty(S[1]));
 
       List<string> senderList = new List<string>();
       foreach (KeyValuePair<string, Tuple<string, string>> kvp in SenderInfo)
@@ -282,12 +373,20 @@ namespace SpeckleGSA
         receiverList.Add(t.Item2);
       }
 
-      sids.Add(new string[] { "SpeckleSender&" + key, string.Join("&", senderList) });
-      sids.Add(new string[] { "SpeckleReceiver&" + key, string.Join("&", receiverList) });
+      if (senderList.Count() > 0)
+      {
+        sids.Add(new string[] { "SpeckleSender&" + key, string.Join("&", senderList) });
+      }
+      if (receiverList.Count() > 0)
+      {
+        sids.Add(new string[] { "SpeckleReceiver&" + key, string.Join("&", receiverList) });
+      }
 
       string sidRecord = "";
       foreach (string[] s in sids)
+      {
         sidRecord += "{" + s[0] + ":" + s[1] + "}";
+      }
 
       return gsaProxy.SetTopLevelSid(sidRecord);
     }

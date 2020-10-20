@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace SpeckleGSAProxy.Test
 {
-  class TestSender : ISpeckleGSASender
+  class TestSpeckleGSASender : ISpeckleGSASender
   {
     private string clientId;
     private string streamId;

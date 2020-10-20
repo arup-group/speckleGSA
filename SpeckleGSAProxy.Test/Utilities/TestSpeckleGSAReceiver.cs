@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SpeckleGSAProxy.Test
 {
-  internal class TestReceiver : ISpeckleGSAReceiver
+  internal class TestSpeckleGSAReceiver : ISpeckleGSAReceiver
   {
     public string Units => "mm";
 

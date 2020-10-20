@@ -150,8 +150,8 @@
     <Compile Include="Utilities\GwaRecord.cs" />
     <Compile Include="Utilities\Helper.cs" />
     <Compile Include="Utilities\TestProxy.cs" />
-    <Compile Include="Utilities\TestReceiver.cs" />
-    <Compile Include="Utilities\TestSender.cs" />
+    <Compile Include="Utilities\TestSpeckleGSAReceiver.cs" />
+    <Compile Include="Utilities\TestSpeckleGSASender.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
