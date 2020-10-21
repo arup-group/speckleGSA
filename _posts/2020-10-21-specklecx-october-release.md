@@ -8,18 +8,18 @@ categories:
 
 It is our pleasure to announce a set of Speckle updates that simplify the construction of structural analysis models with Speckle:
 
-* Comprehensive Speckle Strutural Documentation
+* Speckle structural documentation
 * A spruced-up Grasshopper plugin
 * A brand new Speckle Installer
-* SpeckleGSA vXXXX
+* SpeckleGSA v0.11.1.2
 
-## Comprehensive Speckle Strutural Documentation
+## Speckle structural documentation
 
-The SpeckleGSA documentation has been updated with a detailed guide to creating structural models in Grasshopper and sending them to GSA. [You can follow along here](/docs/gh_sending).
+The SpeckleGSA documentation has been updated with a detailed guide to creating structural models in Grasshopper and sending them to GSA. [You can follow along here]({{site.baseurl}}/docs/gh_sending).
 
-The documentation on this site has been written using the SpeckleGrasshopper-cx components.
+The documentation on this site has been written using the <i class="fas fa-arrow-down"></i><i class="fas fa-arrow-down"></i><i class="fas fa-arrow-down"></i>
 
-## A spruced-up Grasshopper plugin
+## Spruced-up Grasshopper plugin
 
 Since the main speckle plugins [are not being actively developed](https://speckle.systems/blog/insider-speckle2), we have released our progression of the Speckle Grasshopper plugin called Speckle Grasshopper Community Extensions or SpeckleGrasshopper-cx. Our work is open-source, and you can find [all the code here](https://github.com/arup-group/SpeckleRhino).
 
@@ -33,22 +33,31 @@ Highlights include:
 
 If you have previously given up building a structural model in GH with the speckle plugin, now is the time to give it another shot! The new components and the comprehensive documentation make the process much easier! 
 
-To get this new plugin, check out the...
+To get this new plugin, check out the <i class="fas fa-arrow-down"></i><i class="fas fa-arrow-down"></i><i class="fas fa-arrow-down"></i>
 
 ## Brand new Speckle Installer
 
-We have released an all-in-one installer for all of the Speckle desktop clients. It includes SpeckleGSA and the SpeckleGrasshopper-cx plugin. [You can download it from here](https://github.com/arup-group/SpeckleInstaller/releases).
+We have released an all-in-one installer for all of the Speckle desktop clients. It includes SpeckleGSA and the SpeckleGrasshopper-cx plugin, as well as all of the main Speckle clients and kits. [You can download it from here](https://github.com/arup-group/SpeckleInstaller/releases/latest).
 
 All Arup staff should use the all-in-one installer. Anyone else is welcome to use it as well!
-{: .notice-success}
+{: .notice--success}
+
+You may get a warning screen from Windows Defender due to the executable being downloaded from the internet. It is safe to ignore this message and continue installation.
+{: .notice--warning}
 
 ## SpeckleGSA
 
-SpeckleGSA has been updated. This release mostly contains bug fixes and performance improvements.
+SpeckleGSA has been updated:
 
-[Nic will send a list of updates to include here]
+* Automatically logged in using your default account
+* When streams are sent from SpeckleGSA they will now appear in just two layers: model and results
+* Sending now happens on the analysis layer by default
+* Streams can be removed
+* Load cases can now be specified in the GSA-style string like "A2, A3 to A7"
+* Native IDs and properties are sent along with elements, nodes, properties and materials
+* Various bugfixes
 
-If you don't want to use the all-in-one installer above you can find the [latest version of SpeckleGSA here](https://github.com/arup-group/speckleGSA/releases). Arup staff should use the all-in-one installer.
+If you don't want to use the all-in-one installer above you can find the [latest version of SpeckleGSA here](https://github.com/arup-group/speckleGSA/releases/latest).
 
 ## Thanks
 

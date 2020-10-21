@@ -7,6 +7,8 @@ description: Speckle plugin for Oasys GSA
 
 baseurl: /speckleGSA
 
+repository: speckleGSA/arup-group.github.io
+
 include: 
   - _pages
   - _posts
