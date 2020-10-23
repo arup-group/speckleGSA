@@ -17,3 +17,11 @@ If the SchemaBuilderComponent is not showing all the SpeckleStructural types, tr
 The grasshopper file will show you which version of the Rhino/Grasshopper plugin Grasshopper is using, and 
 show a list of various Speckle plugins that are installed on your system. If you have more than one installed,
 delete the older ones (or delete them all and reinstall...)
+
+## Unable to log into your speckle server account
+
+If you receive the following error when trying to log into your Speckle Server account:
+
+![The I/O operation has been aborted because of either a thread exit or an application request.]({{site.baseurl}}/assets/images/speckle-io-abort-error.png)
+
+Open your browser and [remove the cookies](https://www.lifewire.com/clear-cookies-for-one-site-4587347) from the server that you are trying to connect to. After removing the cookies, you should be able to log on.
