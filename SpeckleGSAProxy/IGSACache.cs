@@ -14,6 +14,7 @@ namespace SpeckleGSAProxy
     void Snapshot(string streamId);
 
     bool ApplicationIdExists(string keyword, string applicationId);
+    bool ReserveIndex(string keyword, string applicationId);
 
     bool ContainsType(string speckleTypeName);
 

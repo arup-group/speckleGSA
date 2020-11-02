@@ -66,13 +66,14 @@ namespace SpeckleGSA
           var keyword = (string)kvp.Key.GetAttribute("GSAKeyword");
           if (keyword.Length > 0)
           {
+            keyword = keyword.Split('.').First();
             keywords.AddIfNotContains(keyword);
             var subKeywords = (string[])kvp.Key.GetAttribute("SubGSAKeywords");
             if (subKeywords.Length > 0)
             {
               foreach (var skw in subKeywords)
               {
-                keywords.AddIfNotContains(skw);
+                keywords.AddIfNotContains(skw.Split('.').First());
               }
             }
           }

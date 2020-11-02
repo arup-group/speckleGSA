@@ -161,7 +161,7 @@ namespace SpeckleGSAProxy
       return FormatStreamIdSidTag(streamId) + FormatApplicationIdSidTag(applicationId);
     }
 
-    public void ParseGeneralGwa(string fullGwa, out string keyword, out int? index, out string streamId, out string applicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType)
+    public void ParseGeneralGwa(string fullGwa, out string keyword, out int? index, out string streamId, out string applicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType, bool includeKwVersion = false)
     {
       var pieces = fullGwa.ListSplit("\t").ToList();
       keyword = "";
@@ -236,6 +236,11 @@ namespace SpeckleGSAProxy
         }
       }
 
+      if (!includeKwVersion)
+      {
+        keyword = keyword.Split('.').First();
+      }
+
       gwaWithoutSet = string.Join("\t", pieces);
       return;
     }
@@ -265,7 +270,7 @@ namespace SpeckleGSAProxy
       {
         var newCommand = "GET_ALL\t" + setKeywords[i];
         var isNode = setKeywords[i].Contains("NODE");
-        var isElement = setKeywords[i].StartsWith("EL.");
+        var isElement = setKeywords[i].StartsWith("EL");
 
         string[] gwaRecords;
 
@@ -512,7 +517,7 @@ namespace SpeckleGSAProxy
 
     public string SetSid(string gwa, string streamId, string applicationId)
     {
-      ParseGeneralGwa(gwa, out string keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
+      ParseGeneralGwa(gwa, out string keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType, true);
 
       var streamIdToWrite = (string.IsNullOrEmpty(streamId) ? foundStreamId : streamId);
       var applicationIdToWrite = (string.IsNullOrEmpty(applicationId) ? foundApplicationId : applicationId);

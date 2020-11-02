@@ -379,6 +379,11 @@ namespace SpeckleGSAProxy
     }
     #endregion
 
+    public bool ReserveIndex(string keyword, string applicationId)
+    {
+      return (ResolveIndex(keyword, applicationId) > 0);
+    }
+
     public int ResolveIndex(string keyword, string applicationId = "")
     {
       return ExecuteWithLock(() =>

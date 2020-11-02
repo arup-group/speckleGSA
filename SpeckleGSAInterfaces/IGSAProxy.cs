@@ -120,6 +120,6 @@ namespace SpeckleGSAInterfaces
 
     string FormatSidTags(string streamId = "", string applicationId = "");
 
-    void ParseGeneralGwa(string fullGwa, out string keyword, out int? index, out string streamId, out string applicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
+    void ParseGeneralGwa(string fullGwa, out string keyword, out int? index, out string streamId, out string applicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType, bool includeKwVersion = false);
   }
 }
