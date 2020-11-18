@@ -29,5 +29,5 @@ Do be advised that this `https://hestia.speckle.works/api` is a test server - us
 
 ## Receiving and sending
 
-* [Receiving data into SpeckleGSA](speckleGSA_receiving)
-* [Sending data from SpeckleGSA](speckleGSA_sending)
+* [Receiving data into SpeckleGSA](specklegsa_receiving)
+* [Sending data from SpeckleGSA](specklegsa_sending)

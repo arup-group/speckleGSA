@@ -5,7 +5,7 @@ excerpt: "Sending data from SpeckleGSA"
 toc: false
 ---
 
-Once logged in, you can start sending GSA models. First, either create or open a GSA file from the GSA tab. **Only files opened through this menu are accessible by the client.** Next, switch to the sender tab and click on the <i class="fa fa-play-circle"></i> button to start sending. Once finished, the ID of the stream as well as the name will be displayed in the list view. Right clicking this entry will give various useful options, such as viewing the model in the [online viewer](/docs/basics/viewer), copying the stream ID, or cloning the stream.
+Once logged in, you can start sending GSA models. First, either create or open a GSA file from the GSA tab. **Only files opened through this menu are accessible by the client.** Next, switch to the sender tab and click on the <i class="fa fa-play-circle"></i> button to start sending. Once finished, the ID of the stream as well as the name will be displayed in the list view. Right clicking this entry will give various useful options, such as viewing the model in the [online viewer](https://speckle.systems/docs/web/viewer), copying the stream ID, or cloning the stream.
 
 ![sending]({{site.baseurl}}/assets/images/quick_start/sending.gif)
 
