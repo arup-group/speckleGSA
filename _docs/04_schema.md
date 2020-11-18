@@ -42,7 +42,7 @@ The JsonSchema has been automatically created from the C# codebase. As such each
 | Results          | Structural1DElementResult       | (On a) 1d element        | (EL)               |
 | Results          | Structural2DElementResult       | (On a) 2d element        | (EL)               |
 | Results          | StructuralMiscResult            | (On a) assembly          | (ASSEMBLY)         |
-| Results          | StructuralNodeResult            | (On a ) node             | (NODE)             |
+| Results          | StructuralNodeResult            | (On a) node              | (NODE)             |
 | Bridge           | Structural1DInfluenceEffect     | Beam influence effect    | INF_BEAM           |
 | Bridge           | StructuralBridgeAlignment       | Alignment                | ALIGN              |
 | Bridge           | StructuralBridgePath            | Path                     | PATH               |
