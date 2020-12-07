@@ -12,6 +12,8 @@ namespace SpeckleGSAProxy.Test
 
     public List<SpeckleObject> Objects { get; set; }
 
+    public string StreamId => "TestStream";
+
     public event EventHandler<EventArgs> UpdateGlobalTrigger;
 
     public void Dispose()

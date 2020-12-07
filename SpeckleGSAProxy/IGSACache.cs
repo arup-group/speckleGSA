@@ -14,6 +14,7 @@ namespace SpeckleGSAProxy
     void Snapshot(string streamId);
 
     bool ApplicationIdExists(string keyword, string applicationId);
+    bool ReserveIndex(string keyword, string applicationId);
 
     bool ContainsType(string speckleTypeName);
 
@@ -23,7 +24,9 @@ namespace SpeckleGSAProxy
 
     void Clear();
 
-    List<string> GetNewlyGwaSetCommands();
+    List<string> GetNewGwaSetCommands();
+
+    bool SetStream(string applicationId, string streamId);
 
     List<Tuple<string, int, string, GwaSetCommandType>> GetExpiredData();
 

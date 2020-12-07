@@ -27,6 +27,8 @@ namespace SpeckleGSA
 
     public string Units { get => myReceiver == null ? null : myReceiver.Stream.BaseProperties["units"]; }
 
+		public string StreamId { get => myReceiver == null ? "" : myReceiver.Stream.StreamId; }
+
     /// <summary>
     /// Create SpeckleGSAReceiver object.
     /// </summary>

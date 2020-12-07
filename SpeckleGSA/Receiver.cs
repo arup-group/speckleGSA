@@ -158,6 +158,10 @@ namespace SpeckleGSA
               double scaleFactor = (1.0).ConvertUnit(Receivers[key].Units.ShortUnitName(), GSA.Settings.Units);
               foreach (var o in receivedObjects)
               {
+                if (!string.IsNullOrEmpty(o.ApplicationId))
+                {
+                  GSA.gsaCache.SetStream(o.ApplicationId, Receivers[key].StreamId);
+                }
                 try
                 {
                   o.Scale(scaleFactor);
@@ -223,7 +227,7 @@ namespace SpeckleGSA
         var otherLayer = GSA.Settings.TargetLayer == GSATargetLayer.Design ? GSATargetLayer.Analysis : GSATargetLayer.Design;
         await ProcessObjectsForLayer(otherLayer);
 
-        var toBeAddedGwa = GSA.gsaCache.GetNewlyGwaSetCommands();
+        var toBeAddedGwa = GSA.gsaCache.GetNewGwaSetCommands();
         for (int i = 0; i < toBeAddedGwa.Count(); i++)
         {
           GSA.gsaProxy.SetGwa(toBeAddedGwa[i]);
@@ -349,10 +353,16 @@ namespace SpeckleGSA
             });
           }
 
+          //Provisionally reserve indices for all new objects to avoid random order due to parallel processing
+          //foreach (var appId in typeAppIds)
+          //{
+          //  GSA.gsaCache.ReserveIndex(keyword, appId);
+          //}
+
 #if DEBUG
           foreach (var tuple in targetObjects)
 #else
-            Parallel.ForEach(targetObjects, tuple =>
+          Parallel.ForEach(targetObjects, tuple =>
 #endif
           {
             dummyObject = Activator.CreateInstance(t);
@@ -440,39 +450,44 @@ namespace SpeckleGSA
         //TO DO - parallelise
         for (int j = 0; j < gwaCommands.Count(); j++)
         {
-          //At this point the SID will be filled with the application ID
-          GSA.gsaProxy.ParseGeneralGwa(gwaCommands[j], out keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
-
-          var originalSid = GSA.gsaProxy.FormatSidTags(foundStreamId, foundApplicationId);
-          var newSid = GSA.gsaProxy.FormatSidTags(streamId, foundApplicationId);
-
-          //If the SID tag has been set then update it with the stream
-          if (string.IsNullOrEmpty(originalSid))
-          {
-            gwaCommands[j] = gwaCommands[j].Replace(keyword, keyword + ":" + newSid);
-            gwaWithoutSet = gwaWithoutSet.Replace(keyword, keyword + ":" + newSid);
-          }
-          else
-          {
-            gwaCommands[j] = gwaCommands[j].Replace(originalSid, newSid);
-            gwaWithoutSet = gwaWithoutSet.Replace(originalSid, newSid);
-          }
-
-          //Only cache the object against, the top-level GWA command, not the sub-commands - this is what the SID value comparision is there for
-          GSA.gsaCache.Upsert(keyword,
-            foundIndex.Value,
-            gwaWithoutSet,
-            foundApplicationId,
-            so: (foundApplicationId != null 
-              && targetObject.ApplicationId != null 
-              && targetObject.ApplicationId.EqualsWithoutSpaces(foundApplicationId)) 
-                ? targetObject 
-                : null,
-            gwaSetCommandType: gwaSetCommandType.HasValue ? gwaSetCommandType.Value : GwaSetCommandType.Set,
-            streamId: streamId);
+          GwaToCache(gwaCommands[j], streamId, targetObject);
         }
       }
       return targetObject;
+    }
+
+    private bool GwaToCache(string gwaCommand, string streamId, SpeckleObject targetObject)
+    {
+      //At this point the SID will be filled with the application ID
+      GSA.gsaProxy.ParseGeneralGwa(gwaCommand, out string keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType, true);
+
+      var originalSid = GSA.gsaProxy.FormatSidTags(foundStreamId, foundApplicationId);
+      var newSid = GSA.gsaProxy.FormatSidTags(streamId, foundApplicationId);
+
+      //If the SID tag has been set then update it with the stream
+      if (string.IsNullOrEmpty(originalSid))
+      {
+        gwaCommand = gwaCommand.Replace(keyword, keyword + ":" + newSid);
+        gwaWithoutSet = gwaWithoutSet.Replace(keyword, keyword + ":" + newSid);
+      }
+      else
+      {
+        gwaCommand = gwaCommand.Replace(originalSid, newSid);
+        gwaWithoutSet = gwaWithoutSet.Replace(originalSid, newSid);
+      }
+
+      //Only cache the object against, the top-level GWA command, not the sub-commands - this is what the SID value comparision is there for
+      return GSA.gsaCache.Upsert(keyword.Split('.').First(),
+        foundIndex.Value,
+        gwaWithoutSet,
+        foundApplicationId,
+        so: (foundApplicationId != null
+          && targetObject.ApplicationId != null
+          && targetObject.ApplicationId.EqualsWithoutSpaces(foundApplicationId))
+            ? targetObject
+            : null,
+        gwaSetCommandType: gwaSetCommandType ?? GwaSetCommandType.Set,
+        streamId: streamId);
     }
 
     //Note: this is called while the traversedSerialisedLock is in place
