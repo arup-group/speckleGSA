@@ -87,6 +87,8 @@ namespace SpeckleGSAInterfaces
 
     string GetTitle();
 
+    char GwaDelimiter { get; }
+
     bool UpdateCasesAndTasks();
 
     bool UpdateViews();

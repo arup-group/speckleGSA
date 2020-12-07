@@ -15,7 +15,6 @@ namespace SpeckleGSAProxy
     public bool Latest { get; set; }
     public bool Previous { get; set; }
     public string Gwa { get; private set; }
-    public object SchemaObj { get; private set; }
     public GwaSetCommandType GwaSetCommandType { get; private set; }
     public string SpeckleType => SpeckleObj.Type.ChildType();
 

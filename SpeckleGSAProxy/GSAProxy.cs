@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Interop.Gsa_10_1;
@@ -14,8 +15,10 @@ namespace SpeckleGSAProxy
   {
     //Hardwired values for interacting with the GSA instance
     //----
-    private static string SID_APPID_TAG = "speckle_app_id";
-    private static string SID_STRID_TAG = "speckle_stream_id";
+    private static readonly string SID_APPID_TAG = "speckle_app_id";
+    private static readonly string SID_STRID_TAG = "speckle_stream_id";
+
+    public static readonly char GwaDelimiter = '\t';
 
     //These are the exceptions to the rule that, in GSA, all records that relate to each table (i.e. the set with mutually-exclusive indices) have the same keyword
     public static Dictionary<string, string[]> IrregularKeywordGroups = new Dictionary<string, string[]> { 
@@ -32,6 +35,8 @@ namespace SpeckleGSAProxy
     private readonly List<string> batchBlankGwa = new List<string>();
 
     public string FilePath { get; set; }
+
+    char IGSAProxy.GwaDelimiter => GSAProxy.GwaDelimiter;
 
     #region lock-related
     private readonly object syncLock = new object();
@@ -78,7 +83,7 @@ namespace SpeckleGSAProxy
             FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
                 .ProductVersion + "::GSA " + GSAObject.VersionString()
                 .Split(new char[] { '\n' })[0]
-                .Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries)[1]);
+                .Split(new char[] { GwaDelimiter }, StringSplitOptions.RemoveEmptyEntries)[1]);
 
         GSAObject.NewFile();
         GSAObject.SetLocale(Locale.LOC_EN_GB);
@@ -115,7 +120,7 @@ namespace SpeckleGSAProxy
           FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
             .ProductVersion + "::GSA " + GSAObject.VersionString()
             .Split(new char[] { '\n' })[0]
-            .Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries)[1]);
+            .Split(new char[] { GwaDelimiter }, StringSplitOptions.RemoveEmptyEntries)[1]);
 
         GSAObject.Open(path);
         FilePath = path;
@@ -163,7 +168,7 @@ namespace SpeckleGSAProxy
 
     public void ParseGeneralGwa(string fullGwa, out string keyword, out int? index, out string streamId, out string applicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType, bool includeKwVersion = false)
     {
-      var pieces = fullGwa.ListSplit("\t").ToList();
+      var pieces = fullGwa.ListSplit(GSAProxy.GwaDelimiter).ToList();
       keyword = "";
       streamId = "";
       applicationId = "";
@@ -241,7 +246,7 @@ namespace SpeckleGSAProxy
         keyword = keyword.Split('.').First();
       }
 
-      gwaWithoutSet = string.Join("\t", pieces);
+      gwaWithoutSet = string.Join(GSAProxy.GwaDelimiter.ToString(), pieces);
       return;
     }
 
@@ -268,7 +273,7 @@ namespace SpeckleGSAProxy
 
       for (int i = 0; i < setKeywords.Count(); i++)
       {
-        var newCommand = "GET_ALL\t" + setKeywords[i];
+        var newCommand = "GET_ALL" + GSAProxy.GwaDelimiter + setKeywords[i];
         var isNode = setKeywords[i].Contains("NODE");
         var isElement = setKeywords[i].StartsWith("EL");
 
@@ -285,9 +290,10 @@ namespace SpeckleGSAProxy
 
         Parallel.ForEach(gwaRecords, gwa =>
         {
-          ParseGeneralGwa(gwa, out string keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
+          ParseGeneralGwa(gwa, out string keywordWithVersion, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType, true);
           var index = foundIndex ?? 0;
           var originalSid = "";
+          var keyword = keywordWithVersion.Split('.').First();
 
           if (string.IsNullOrEmpty(foundStreamId))
           {
@@ -325,9 +331,16 @@ namespace SpeckleGSAProxy
           }
 
           var newSid = FormatStreamIdSidTag(foundStreamId) + FormatApplicationIdSidTag(foundApplicationId);
-          if (!string.IsNullOrEmpty(originalSid) && !string.IsNullOrEmpty(newSid))
+          if (!string.IsNullOrEmpty(newSid))
           {
-            gwaWithoutSet.Replace(originalSid, newSid);
+            if (string.IsNullOrEmpty(originalSid))
+            {
+              gwaWithoutSet = gwaWithoutSet.Replace(keywordWithVersion, keywordWithVersion + ":" + newSid);
+            }
+            else
+            {
+              gwaWithoutSet = gwaWithoutSet.Replace(originalSid, newSid);
+            }
           }
 
           if (!(nodeApplicationIdFilter == true && isNode && string.IsNullOrEmpty(foundApplicationId)))
@@ -361,11 +374,11 @@ namespace SpeckleGSAProxy
 
       for (int i = 0; i < setAtKeywords.Count(); i++)
       {
-        var highestIndex = ExecuteWithLock(() => GSAObject.GwaCommand("HIGHEST\t" + setAtKeywords[i]));
+        var highestIndex = ExecuteWithLock(() => GSAObject.GwaCommand("HIGHEST" + GSAProxy.GwaDelimiter + setAtKeywords[i]));
 
         for (int j = 1; j <= highestIndex; j++)
         {
-          var newCommand = string.Join("\t", new[] { "GET", setAtKeywords[i], j.ToString() });
+          var newCommand = string.Join(GwaDelimiter.ToString(), new[] { "GET", setAtKeywords[i], j.ToString() });
 
           var gwaRecord = "";
           try
@@ -444,7 +457,7 @@ namespace SpeckleGSAProxy
 
     private int ExtractGwaIndex(string gwaRecord)
     {
-      var pieces = gwaRecord.Split(new[] { '\t' });
+      var pieces = gwaRecord.Split(GwaDelimiter);
       return (int.TryParse(pieces[1], out int index)) ? index : 0;
     }
 
@@ -474,7 +487,7 @@ namespace SpeckleGSAProxy
       double materialInsertionPointOffset = 0;
       double zMaterialOffset = 0;
 
-      object result = ExecuteWithLock(() => GSAObject.GwaCommand("GET\tPROP_2D\t" + index.ToString()));
+      object result = ExecuteWithLock(() => GSAObject.GwaCommand(string.Join(GSAProxy.GwaDelimiter.ToString(), new[] { "GET", "PROP_2D", index.ToString() })));
       string[] newPieces = ((string)result).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries).Select((s, idx) => idx.ToString() + ":" + s).ToArray();
 
       string res = newPieces.FirstOrDefault();
@@ -486,7 +499,7 @@ namespace SpeckleGSAProxy
         return;
       }
 
-      string[] pieces = res.ListSplit("\t");
+      string[] pieces = res.ListSplit(GSAProxy.GwaDelimiter);
 
       offsetRec = res;
 
@@ -511,7 +524,7 @@ namespace SpeckleGSAProxy
 
     public string GetGwaForNode(int index)
     {
-      var gwaCommand = "GET\tNODE.2\t" + index.ToString();
+      var gwaCommand = string.Join(GwaDelimiter.ToString(), new[] { "GET", "NODE.2", index.ToString() });
       return (string)ExecuteWithLock(() => GSAObject.GwaCommand(gwaCommand));
     }
 
@@ -768,12 +781,12 @@ namespace SpeckleGSAProxy
 
       try
       {
-        object result = ExecuteWithLock(() => GSAObject.GwaCommand("GET\tLIST\t" + list));
+        object result = ExecuteWithLock(() => GSAObject.GwaCommand(string.Join(GwaDelimiter.ToString(), new[] { "GET", "LIST", list })));
         string[] newPieces = ((string)result).Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries).Select((s, idx) => idx.ToString() + ":" + s).ToArray();
 
         string res = newPieces.FirstOrDefault();
 
-        string[] pieces = res.Split(new char[] { '\t' });
+        string[] pieces = res.Split(GSAProxy.GwaDelimiter);
 
         return ConvertGSAList(pieces[pieces.Length - 1], type);
       }
@@ -795,7 +808,7 @@ namespace SpeckleGSAProxy
     //
     public void DeleteGWA(string keyword, int index, GwaSetCommandType gwaSetCommandType)
     {
-      var command = string.Join("\t", new[] { (gwaSetCommandType == GwaSetCommandType.Set) ? "BLANK" : "DELETE", keyword, index.ToString() });
+      var command = string.Join(GwaDelimiter.ToString(), new[] { (gwaSetCommandType == GwaSetCommandType.Set) ? "BLANK" : "DELETE", keyword, index.ToString() });
       ExecuteWithLock(() =>
       { 
         if (gwaSetCommandType == GwaSetCommandType.Set)
@@ -821,7 +834,7 @@ namespace SpeckleGSAProxy
     {
       try
       {
-        ExecuteWithLock(() => GSAObject.GwaCommand("SET\tSID\t" + sidRecord));
+        ExecuteWithLock(() => GSAObject.GwaCommand(string.Join(GwaDelimiter.ToString(), new[] { "SET", "SID", sidRecord })));
         return true;
       }
       catch
@@ -838,16 +851,16 @@ namespace SpeckleGSAProxy
     /// <returns>GSA model title</returns>
     public string GetTitle()
     {
-      string res = (string)ExecuteWithLock(() => GSAObject.GwaCommand("GET\tTITLE"));
+      string res = (string)ExecuteWithLock(() => GSAObject.GwaCommand("GET" + GSAProxy.GwaDelimiter + "TITLE"));
 
-      string[] pieces = res.ListSplit("\t");
+      string[] pieces = res.ListSplit(GSAProxy.GwaDelimiter);
 
       return pieces.Length > 1 ? pieces[1] : "My GSA Model";
     }
 
     public string[] GetTolerances()
     {
-      return ((string)ExecuteWithLock(() => GSAObject.GwaCommand("GET\tTOL"))).ListSplit("\t");
+      return ((string)ExecuteWithLock(() => GSAObject.GwaCommand("GET" + GSAProxy.GwaDelimiter + "TOL"))).ListSplit(GSAProxy.GwaDelimiter);
     }
 
     /// <summary>
@@ -855,7 +868,7 @@ namespace SpeckleGSAProxy
     /// </summary>
     public string GetUnits()
     {
-      return ((string)ExecuteWithLock(() => GSAObject.GwaCommand("GET\tUNIT_DATA.1\tLENGTH"))).ListSplit("\t")[2];
+      return ((string)ExecuteWithLock(() => GSAObject.GwaCommand(string.Join(GwaDelimiter.ToString(), new[] { "GET", "UNIT_DATA.1", "LENGTH" })))).ListSplit(GwaDelimiter)[2];
     }
     #endregion
 
@@ -897,7 +910,7 @@ namespace SpeckleGSAProxy
       string sid = "";
       try
       {
-        sid = (string)ExecuteWithLock(() => GSAObject.GwaCommand("GET\tSID"));
+        sid = (string)ExecuteWithLock(() => GSAObject.GwaCommand("GET" + GwaDelimiter + "SID"));
       }
       catch
       {

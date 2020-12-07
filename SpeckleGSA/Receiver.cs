@@ -158,6 +158,10 @@ namespace SpeckleGSA
               double scaleFactor = (1.0).ConvertUnit(Receivers[key].Units.ShortUnitName(), GSA.Settings.Units);
               foreach (var o in receivedObjects)
               {
+                if (!string.IsNullOrEmpty(o.ApplicationId))
+                {
+                  GSA.gsaCache.SetStream(o.ApplicationId, Receivers[key].StreamId);
+                }
                 try
                 {
                   o.Scale(scaleFactor);
@@ -223,7 +227,7 @@ namespace SpeckleGSA
         var otherLayer = GSA.Settings.TargetLayer == GSATargetLayer.Design ? GSATargetLayer.Analysis : GSATargetLayer.Design;
         await ProcessObjectsForLayer(otherLayer);
 
-        var toBeAddedGwa = GSA.gsaCache.GetNewlyGwaSetCommands();
+        var toBeAddedGwa = GSA.gsaCache.GetNewGwaSetCommands();
         for (int i = 0; i < toBeAddedGwa.Count(); i++)
         {
           GSA.gsaProxy.SetGwa(toBeAddedGwa[i]);
@@ -350,10 +354,10 @@ namespace SpeckleGSA
           }
 
           //Provisionally reserve indices for all new objects to avoid random order due to parallel processing
-          foreach (var appId in typeAppIds)
-          {
-            GSA.gsaCache.ReserveIndex(keyword, appId);
-          }
+          //foreach (var appId in typeAppIds)
+          //{
+          //  GSA.gsaCache.ReserveIndex(keyword, appId);
+          //}
 
 #if DEBUG
           foreach (var tuple in targetObjects)
@@ -455,7 +459,7 @@ namespace SpeckleGSA
     private bool GwaToCache(string gwaCommand, string streamId, SpeckleObject targetObject)
     {
       //At this point the SID will be filled with the application ID
-      GSA.gsaProxy.ParseGeneralGwa(gwaCommand, out string keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
+      GSA.gsaProxy.ParseGeneralGwa(gwaCommand, out string keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType, true);
 
       var originalSid = GSA.gsaProxy.FormatSidTags(foundStreamId, foundApplicationId);
       var newSid = GSA.gsaProxy.FormatSidTags(streamId, foundApplicationId);
@@ -473,7 +477,7 @@ namespace SpeckleGSA
       }
 
       //Only cache the object against, the top-level GWA command, not the sub-commands - this is what the SID value comparision is there for
-      return GSA.gsaCache.Upsert(keyword,
+      return GSA.gsaCache.Upsert(keyword.Split('.').First(),
         foundIndex.Value,
         gwaWithoutSet,
         foundApplicationId,
