@@ -3,6 +3,7 @@ on:
     paths: 
       - 'Resource/**'
       - 'Speckle*/**'
+      - '.github/workflows/build.yml'
 
 name: build SpeckleGSA
 jobs:
