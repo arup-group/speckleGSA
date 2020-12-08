@@ -10,6 +10,7 @@ namespace SpeckleGSA
   public interface ISpeckleGSAReceiver
   {
     string Units { get; }
+    string StreamId { get; }
 
     event EventHandler<EventArgs> UpdateGlobalTrigger;
 

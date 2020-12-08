@@ -31,6 +31,11 @@ namespace SpeckleGSAProxy
 		{
 			return Regex.Split(list, delimiter + "(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
 		}
+
+		public static string[] ListSplit(this string list, char delimiter)
+		{
+			return Regex.Split(list, delimiter + "(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+		}
 		#endregion
 
 		#region Comparison
@@ -132,7 +137,7 @@ namespace SpeckleGSAProxy
 				return "";
 			}
 
-			var gwaTemp = gwa.Replace(" ", "").Replace("\t", "");
+			var gwaTemp = gwa.Replace(" ", "").Replace(GSAProxy.GwaDelimiter.ToString(), "");
 
 			bool changed;
 			do

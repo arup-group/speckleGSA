@@ -8,6 +8,7 @@
 
 	public enum GSAEntity
 	{
+		NotSet = 0,
 		NODE = 1,
 		ELEMENT = 2,
 		MEMBER = 3,

@@ -22,6 +22,8 @@ namespace SpeckleGSAInterfaces
 
     int? LookupIndex(string keyword, string applicationId);
 
+    string LookupStream(string applicationId);
+
     List<int?> LookupIndices(string keyword, IEnumerable<string> applicationIds);
 
     List<int?> LookupIndices(string keyword);
