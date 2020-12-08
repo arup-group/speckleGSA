@@ -30,7 +30,7 @@ jobs:
       run: nuget restore SpeckleGSA.sln
 
     - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1.0.0
+      uses: microsoft/setup-msbuild@v1.0.2
 
     - name: Run msbuild command in Release
       run: msbuild /property:Configuration=Release
