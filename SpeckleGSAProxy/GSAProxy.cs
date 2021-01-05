@@ -524,7 +524,7 @@ namespace SpeckleGSAProxy
 
     public string GetGwaForNode(int index)
     {
-      var gwaCommand = string.Join(GwaDelimiter.ToString(), new[] { "GET", "NODE.2", index.ToString() });
+      var gwaCommand = string.Join(GwaDelimiter.ToString(), new[] { "GET", "NODE.3", index.ToString() });
       return (string)ExecuteWithLock(() => GSAObject.GwaCommand(gwaCommand));
     }
 

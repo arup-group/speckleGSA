@@ -30,7 +30,7 @@ namespace SpeckleGSA
     private readonly List<Type> traversedSerialisedTypes = new List<Type>();
     private readonly List<Type> traversedDeserialisedTypes = new List<Type>();
 
-    private readonly Dictionary<Type, object> dummyObjectDict = new Dictionary<Type, object>();
+    public readonly Dictionary<Type, object> dummyObjectDict = new Dictionary<Type, object>();
 
     /// <summary>
     /// Initializes receiver.
@@ -162,12 +162,14 @@ namespace SpeckleGSA
                 {
                   GSA.gsaCache.SetStream(o.ApplicationId, Receivers[key].StreamId);
                 }
-                try
+                if (scaleFactor != 1)
                 {
-                  o.Scale(scaleFactor);
+                  try
+                  {
+                    o.Scale(scaleFactor);
+                  }
+                  catch { }
                 }
-                catch { }
-
                 ExecuteWithLock(ref currentObjectsLock, () => currentObjects.Add(new Tuple<string, SpeckleObject>(key, o)));
               }
             }
@@ -321,6 +323,7 @@ namespace SpeckleGSA
 
         Debug.WriteLine("Ran through all types in batch to populate SpeckleCore's ToNative list");
 
+//Commented this out to enable debug tests for preserving order
 #if DEBUG
         foreach (var t in currentBatch)
 #else
@@ -328,8 +331,6 @@ namespace SpeckleGSA
 #endif
         {
           Status.ChangeStatus("Writing " + t.Name);
-
-          Debug.WriteLine("Processing " + t.Name + " on thread " + Thread.CurrentThread.ManagedThreadId);
 
           var dummyObject = dummyObjectDict[t];
           var keyword = dummyObject.GetAttribute("GSAKeyword").ToString();
@@ -359,6 +360,7 @@ namespace SpeckleGSA
           //  GSA.gsaCache.ReserveIndex(keyword, appId);
           //}
 
+//Commented this out to enable debug tests for preserving order
 #if DEBUG
           foreach (var tuple in targetObjects)
 #else
@@ -411,6 +413,7 @@ namespace SpeckleGSA
 
       if (existingList == null || existingList.Count() == 0)
       {
+        //Either this is the first reception event, or it's not in the cache for another reason, like:
         //The serialisation for this object didn't work (a notable example is ASSEMBLY when type is ELEMENT when Design layer is targeted)
         //so mark it as previous as there is clearly an update from the stream.  For these cases, merging isn't possible.
         GSA.gsaCache.MarkAsPrevious(keyword, targetObject.ApplicationId);
