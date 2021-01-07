@@ -43,7 +43,7 @@ namespace SpeckleGSA
 				return statusMessages;
 			}
 
-      GSA.SetAssembliesSenderDictionaries();
+      GSA.CollateKitSenderDictionaries();
 
       var startTime = DateTime.Now;      
       Status.ChangeStatus("Reading GSA data into cache");

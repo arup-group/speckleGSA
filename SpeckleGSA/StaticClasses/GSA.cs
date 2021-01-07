@@ -24,6 +24,8 @@ namespace SpeckleGSA
 
     public static List<IGSASenderDictionary> senderDictionaries;
 
+    public static List<Type> RxParallelisableTypes;
+
     public static bool IsInit;
 
     public static Dictionary<string, Tuple<string, string>> SenderInfo { get; set; }
@@ -113,7 +115,7 @@ namespace SpeckleGSA
         }
 
 
-        var objTypes = types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType).ToList();
+        var objTypes = types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType && !t.IsAbstract).ToList();
         objTypes = objTypes.Distinct().ToList();
 
         foreach (var t in objTypes)
@@ -157,9 +159,9 @@ namespace SpeckleGSA
     }
     #endregion
 
-    #region sender_dictionaries
+    #region kit_resources
 
-    public static bool SetAssembliesSenderDictionaries()
+    public static bool CollateKitSenderDictionaries()
     {
       var assemblies = SpeckleInitializer.GetAssemblies().Where(a => a.GetTypes().Any(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer))));
       senderDictionaries = new List<IGSASenderDictionary>();
@@ -190,6 +192,37 @@ namespace SpeckleGSA
       }
       return true;
     }
+    public static bool CollateRxParallelisableTypes()
+    {
+      var assemblies = SpeckleInitializer.GetAssemblies().Where(a => a.GetTypes().Any(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer))));
+      RxParallelisableTypes = new List<Type>();
+
+      //Now obtain the serialised (inheriting from SpeckleObject) objects
+      foreach (var ass in assemblies)
+      {
+        var types = ass.GetTypes();
+
+        try
+        {
+          var gsaStatic = types.FirstOrDefault(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer)) && t.GetProperties().Any(p => p.PropertyType == typeof(IGSACacheForKit)));
+          if (gsaStatic != null)
+          {
+            var parallelisableTypes = (List<Type>)gsaStatic.GetProperties().FirstOrDefault(p => p.PropertyType == typeof(List<Type>)).GetValue(null);
+
+            RxParallelisableTypes.AddRange(parallelisableTypes);
+          }
+        }
+        catch (FileNotFoundException)
+        {
+          //Swallow as it is likely to be an application SDK that a kit's conversion code references which isn't installed
+        }
+        catch (Exception e)
+        {
+          return false;
+        }
+      }
+      return true;
+    }
 
     public static void ClearSenderDictionaries()
     {
@@ -201,12 +234,12 @@ namespace SpeckleGSA
 
     public static List<SpeckleObject> GetSpeckleObjectsFromSenderDictionaries()
     {
-      return GetAllConvertedGsaObjectsByType().SelectMany(sd => sd.Value).Cast<IGSASpeckleContainer>().Select(c => c.Value).Cast<SpeckleObject>().ToList();
+      return GetAllConvertedGsaObjectsByType().SelectMany(sd => sd.Value).Cast<IGSASpeckleContainer>().Select(c => (SpeckleObject) c.SpeckleObject).ToList();
     }
 
     public static Dictionary<Type, List<object>> GetAllConvertedGsaObjectsByType()
     {
-      var gsaStaticObjects = SetAssembliesSenderDictionaries();
+      var gsaStaticObjects = CollateKitSenderDictionaries();
       var currentObjects = new Dictionary<Type, List<object>>();
 
       foreach (var dict in GSA.senderDictionaries)

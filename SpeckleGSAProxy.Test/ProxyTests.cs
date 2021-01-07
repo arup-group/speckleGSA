@@ -98,7 +98,7 @@ namespace SpeckleGSAProxy.Test
           || (oneToManyAppIdKws.Any(om => om.Equals(kw)))
           ) continue;
 
-        var speckleType = ((SpeckleObject)((IGSASpeckleContainer)receiver.dummyObjectDict[gsaType]).Value).GetType();
+        var speckleType = receiver.dummyObjectDict[gsaType].SpeckleObject.GetType();
 
         if (!speckleKeywordMap.ContainsKey(speckleType))
         {
@@ -123,6 +123,12 @@ namespace SpeckleGSAProxy.Test
 
             var cachedAppIds = cachedAllAppIdsForKeyword.Where(ci => serverAppIds.Any(si => si == ci)).ToList();
 
+            Assert.Greater(cachedAppIds.Count(), 0);
+
+            if (!serverAppIds.SequenceEqual(cachedAppIds))
+            {
+              var test = 1;
+            }
             Assert.IsTrue(serverAppIds.SequenceEqual(cachedAppIds));
           }
         }
@@ -319,8 +325,10 @@ namespace SpeckleGSAProxy.Test
 
     private List<string> GetKeywordApplicationIds(string streamId, string keyword)
     {
-      return ((IGSACacheForTesting)GSA.gsaCache).Records
-              .Where(r => r.StreamId == streamId && r.Keyword.Equals(keyword) && !string.IsNullOrEmpty(r.ApplicationId)).Select(r => r.ApplicationId).ToList();
+      var records = ((IGSACacheForTesting)GSA.gsaCache).Records
+              .Where(r => r.StreamId == streamId && r.Keyword.Equals(keyword) && !string.IsNullOrEmpty(r.ApplicationId));
+      records = records.OrderBy(r => r.Index);
+      return records.Select(r => r.ApplicationId).ToList();
     }
 
     private void SetObjectsAsReceived(Receiver receiver, string savedJsonFileName, string testDataDirectory)
