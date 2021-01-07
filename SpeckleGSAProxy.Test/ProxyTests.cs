@@ -13,7 +13,6 @@ using System.Collections;
 using Interop.Gsa_10_1;
 using Microsoft.SqlServer.Server;
 using System.Runtime.InteropServices;
-using SpeckleStructuralGSA;
 
 namespace SpeckleGSAProxy.Test
 {
@@ -79,20 +78,20 @@ namespace SpeckleGSAProxy.Test
       //Exclude these because:
       //1. for Structural1DPolylines, their application ID doesn't make its way to any GSA record, since they create records for each 
       //   "child" application ID they have in their refs
-      var excludeSpeckleTypes = new List<Type> { typeof(SpeckleStructuralClasses.Structural1DElementPolyline) };
+      var excludeSpeckleTypes = new List<string> { "Structural1DElementPolyline" };
       //2. for GSA0DElements, they could have been created from StructuralNode records when certain conditions are met, but handling this 
       //   is not important for this test, so the test data is intended to not include it
-      var excludeGsaTypes = new List<Type> { typeof(GSA0DElement) };
+      var excludeGsaTypes = new List<string> { "GSA0DElement" };
 
       var speckleKeywordMap = new Dictionary<Type, string>();
       foreach (var gsaType in receiver.dummyObjectDict.Keys.Where(k => k != null))
       {
-        if (excludeGsaTypes.Any(gt => gsaType == gt)) continue;
+        if (excludeGsaTypes.Any(gt => gsaType.Name.Equals(gt))) continue;
 
-        var kw = gsaType.GetGSAKeyword().Split('.').First();
+        var kw = GetGSAKeyword(gsaType).Split('.').First();
 
-        if ((layer == GSATargetLayer.Design && !((bool)gsaType.GetAttribute<GSAObject>("DesignLayer")))
-          || (layer == GSATargetLayer.Analysis && !((bool)gsaType.GetAttribute<GSAObject>("AnalysisLayer")))
+        if ((layer == GSATargetLayer.Design && !((bool)GetAttribute<GSAObject>(gsaType, "DesignLayer")))
+          || (layer == GSATargetLayer.Analysis && !((bool)GetAttribute<GSAObject>(gsaType, "AnalysisLayer")))
           || (string.IsNullOrEmpty(kw))
           //Avoid any one-to-many application ID issues for now - review later
           || (oneToManyAppIdKws.Any(om => om.Equals(kw)))
@@ -115,7 +114,7 @@ namespace SpeckleGSAProxy.Test
         {
           //Exclude these, as they are effectively groups of (what will become) GSA records, under another keyword
 
-          if (speckleKeywordMap.ContainsKey(t) && !excludeSpeckleTypes.Contains(t))
+          if (speckleKeywordMap.ContainsKey(t) && !excludeSpeckleTypes.Any(est => t.Name.Equals(est)))
           {
             var keyword = speckleKeywordMap[t];
             var serverAppIds = serverObjectsByType[t].Select(o => o.ApplicationId).ToList();
@@ -125,10 +124,6 @@ namespace SpeckleGSAProxy.Test
 
             Assert.Greater(cachedAppIds.Count(), 0);
 
-            if (!serverAppIds.SequenceEqual(cachedAppIds))
-            {
-              var test = 1;
-            }
             Assert.IsTrue(serverAppIds.SequenceEqual(cachedAppIds));
           }
         }
@@ -322,6 +317,21 @@ namespace SpeckleGSAProxy.Test
     }
 
     #region private_methods
+
+    private object GetAttribute<T>(object t, string attribute)
+    {
+      try
+      {
+        var attObj = (t is Type) ? Attribute.GetCustomAttribute((Type)t, typeof(T)) : Attribute.GetCustomAttribute(t.GetType(), typeof(T));
+        return typeof(T).GetProperty(attribute).GetValue(attObj);
+      }
+      catch { return null; }
+    }
+
+    private string GetGSAKeyword(object t)
+    {
+      return (string)GetAttribute<GSAObject>(t, "GSAKeyword");
+    }
 
     private List<string> GetKeywordApplicationIds(string streamId, string keyword)
     {
