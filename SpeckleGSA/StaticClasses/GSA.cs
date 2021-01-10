@@ -7,6 +7,7 @@ using SpeckleGSAInterfaces;
 using SpeckleGSAProxy;
 using SpeckleUtil;
 using System.IO;
+using System.Reflection;
 
 namespace SpeckleGSA
 {
@@ -86,10 +87,21 @@ namespace SpeckleGSA
       {
         var types = ass.GetTypes();
 
-        Type gsaStatic;
+        var reqInterfaces = new List<Type> { typeof(ISpeckleInitializer), typeof(IGSAKit) };
+
+        Type gsaStatic = null;
         try
         {
-          gsaStatic = types.FirstOrDefault(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer)) && t.GetProperties().Any(p => p.PropertyType == typeof(IGSACacheForKit)));
+          foreach (var t in types)
+          {
+            var interfaces = t.GetInterfaces();
+            if (reqInterfaces.All(ri => interfaces.Contains(ri)))
+            {
+              gsaStatic = t;
+              break;
+            }
+          }
+
           if (gsaStatic == null)
           {
             continue;
@@ -104,16 +116,17 @@ namespace SpeckleGSA
 
         try
         {
-          gsaStatic.GetProperty("Interface").SetValue(null, gsaProxy);
-          gsaStatic.GetProperty("Settings").SetValue(null, Settings);
-          gsaStatic.GetProperty("Cache").SetValue(null, gsaCache);
-          gsaStatic.GetProperty("AppUI").SetValue(null, appUi);
+          var kit = (IGSAKit)gsaStatic.GetProperty("Instance").GetValue(null);
+
+          kit.Interface = gsaProxy;
+          kit.Settings = Settings;
+          kit.Cache = (IGSACacheForKit) gsaCache;
+          kit.AppUI = appUi;
         }
         catch
         {
           Status.AddError($"Unable to fully connect to {ass.GetName().Name}.dll. Please check the versions of the kit you have installed.");
         }
-
 
         var objTypes = types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType && !t.IsAbstract).ToList();
         objTypes = objTypes.Distinct().ToList();

@@ -102,11 +102,8 @@ namespace SpeckleGSA
       bool changeDetected = false;
       do
       {
-        ExecuteWithLock(ref traversedSerialisedLock, () =>
-        {
-          currentBatch = FilteredReadTypePrereqs.Where(i => i.Value.Count(x => !traversedSerialisedTypes.Contains(x)) == 0).Select(i => i.Key).ToList();
-          currentBatch.RemoveAll(i => traversedSerialisedTypes.Contains(i));
-        });
+        currentBatch = GetNewCurrentBatch();
+        
 
 #if DEBUG
         foreach (var t in currentBatch)
@@ -155,6 +152,18 @@ namespace SpeckleGSA
 
       IsBusy = false;
       Status.ChangeStatus("Finished sending", 100);
+    }
+
+    private List<Type> GetNewCurrentBatch()
+    {
+      var currentBatch = new List<Type>();
+      ExecuteWithLock(ref traversedSerialisedLock, () =>
+      {
+        currentBatch = FilteredReadTypePrereqs.Where(i => i.Value.Count(x => !traversedSerialisedTypes.Contains(x)) == 0).Select(i => i.Key).ToList();
+        currentBatch.RemoveAll(i => traversedSerialisedTypes.Contains(i));
+      });
+
+      return currentBatch;
     }
 
     private void ProcessTypeForSending(Type t, ref bool changeDetected)

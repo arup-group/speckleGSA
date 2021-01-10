@@ -442,7 +442,7 @@ namespace SpeckleGSA
       if (existingList == null || existingList.Count() == 0)
       {
         //Either this is the first reception event, or it's not in the cache for another reason, like:
-        //The serialisation for this object didn't work (a notable example is ASSEMBLY when type is ELEMENT when Design layer is targeted)
+        //The ToSpeckle for this Application ID didn't work (a notable example is ASSEMBLY when type is ELEMENT when Design layer is targeted)
         //so mark it as previous as there is clearly an update from the stream.  For these cases, merging isn't possible.
         GSA.gsaCache.MarkAsPrevious(keyword, targetObject.ApplicationId);
       }
