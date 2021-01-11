@@ -146,7 +146,7 @@ namespace SpeckleGSAProxy.Test
         GSA.ReceiverInfo = streamIds.Select(si => new Tuple<string, string>(si, null)).ToList();
 
         //Create receiver with all streams
-        var receiver = new Receiver() { Receivers = streamIds.ToDictionary(s => s, s => (ISpeckleGSAReceiver)new TestSpeckleGSAReceiver("TestStream", "mm")) };
+        var receiver = new Receiver() { Receivers = streamIds.ToDictionary(s => s, s => (ISpeckleGSAReceiver)new TestSpeckleGSAReceiver(s, "mm")) };
         SetObjectsAsReceived(receiver, savedJsonFileNames, TestDataDirectory);
 
         GSA.gsaProxy.NewFile();
@@ -160,7 +160,7 @@ namespace SpeckleGSAProxy.Test
         //Check cache to see if object have been received
         var records = ((IGSACacheForTesting)GSA.gsaCache).Records;
         var latestGwaAfter1 = new List<string>(records.Where(r => r.Latest).Select(r => r.Gwa));
-        Assert.AreEqual(100, records.Where(r => r.Latest).Count());
+        Assert.AreEqual(99, records.Where(r => r.Latest).Count());
         Assert.AreEqual(0, records.Where(r => string.IsNullOrEmpty(r.StreamId)).Count());
         Assert.IsTrue(records.All(r => r.Gwa.Contains(r.StreamId)));
 
@@ -175,7 +175,7 @@ namespace SpeckleGSAProxy.Test
         var diff = latestGwaAfter2.Where(a2 => !latestGwaAfter1.Any(a1 => string.Equals(a1, a2, StringComparison.InvariantCultureIgnoreCase))).ToList();
         records = ((IGSACacheForTesting)GSA.gsaCache).Records;
         Assert.AreEqual(100, records.Where(r => r.Latest).Count());
-        Assert.AreEqual(110, records.Count());
+        Assert.AreEqual(109, records.Count());
 
         GSA.gsaProxy.Close();
       }
@@ -289,10 +289,10 @@ namespace SpeckleGSAProxy.Test
     }
 
 
-    [TestCase("SET\tMEMB.8:{speckle_app_id:gh/a}\t5\tTheRest", "MEMB.8", 5, "gh/a", "MEMB.8:{speckle_app_id:gh/a}\t5\tTheRest")]
-    [TestCase("MEMB.8:{speckle_app_id:gh/a}\t5\tTheRest", "MEMB.8", 5, "gh/a", "MEMB.8:{speckle_app_id:gh/a}\t5\tTheRest")]
-    [TestCase("SET_AT\t2\tLOAD_2D_THERMAL.2:{speckle_app_id:gh/a}\tTheRest", "LOAD_2D_THERMAL.2", 2, "gh/a", "LOAD_2D_THERMAL.2:{speckle_app_id:gh/a}\tTheRest")]
-    [TestCase("LOAD_2D_THERMAL.2:{speckle_app_id:gh/a}\tTheRest", "LOAD_2D_THERMAL.2", 0, "gh/a", "LOAD_2D_THERMAL.2:{speckle_app_id:gh/a}\tTheRest")]
+    [TestCase("SET\tMEMB.8:{speckle_app_id:gh/a}\t5\tTheRest", "MEMB", 5, "gh/a", "MEMB.8:{speckle_app_id:gh/a}\t5\tTheRest")]
+    [TestCase("MEMB.8:{speckle_app_id:gh/a}\t5\tTheRest", "MEMB", 5, "gh/a", "MEMB.8:{speckle_app_id:gh/a}\t5\tTheRest")]
+    [TestCase("SET_AT\t2\tLOAD_2D_THERMAL.2:{speckle_app_id:gh/a}\tTheRest", "LOAD_2D_THERMAL", 2, "gh/a", "LOAD_2D_THERMAL.2:{speckle_app_id:gh/a}\tTheRest")]
+    [TestCase("LOAD_2D_THERMAL.2:{speckle_app_id:gh/a}\tTheRest", "LOAD_2D_THERMAL", 0, "gh/a", "LOAD_2D_THERMAL.2:{speckle_app_id:gh/a}\tTheRest")]
     public void ParseGwaCommandTests(string gwa, string expKeyword, int expIndex, string expAppId, string expGwaWithoutSet)
     {
       var gsaProxy = new GSAProxy();
@@ -379,6 +379,7 @@ namespace SpeckleGSAProxy.Test
       return speckleObjects;
     }
     #endregion
+
 
     public static string[] DesignLayerKeywords = new string[] { 
       "LOAD_2D_THERMAL.2",

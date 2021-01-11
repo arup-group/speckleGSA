@@ -18,9 +18,9 @@ namespace SpeckleGSA
 	{
     public Dictionary<string, ISpeckleGSAReceiver> Receivers = new Dictionary<string, ISpeckleGSAReceiver>();
 
-    private readonly Dictionary<GSATargetLayer, Dictionary<Type, List<Type>>> FilteredWriteTypePrereqs = new Dictionary<GSATargetLayer, Dictionary<Type, List<Type>>>();
-    private readonly Dictionary<GSATargetLayer, Dictionary<Type, List<Type>>> FilteredReadTypePrereqs = new Dictionary<GSATargetLayer, Dictionary<Type, List<Type>>>();
-    private readonly List<IGSASenderDictionary> senderDictionaries = new List<IGSASenderDictionary>();
+    //private readonly Dictionary<Type, List<Type>> rxTypePrereqs;
+    //private readonly Dictionary<Type, List<Type>> txTypePrereqs;
+    //private readonly List<IGSASenderDictionary> senderDictionaries = new List<IGSASenderDictionary>();
 
     //These need to be accessed using a lock
     private object currentObjectsLock = new object();
@@ -51,7 +51,7 @@ namespace SpeckleGSA
 				return statusMessages;
 			}
 
-      GSA.CollateRxParallelisableTypes();
+      //GSA.CollateRxParallelisableTypes();
 
       ExecuteWithLock(ref currentObjectsLock, () => currentObjects.Clear());
       ExecuteWithLock(ref traversedSerialisedLock, () => traversedSerialisedTypes.Clear());
@@ -59,44 +59,38 @@ namespace SpeckleGSA
 
       Status.AddMessage("Initialising receivers");
 
+      /*
       var attributeType = typeof(GSAObject);
 
-      //The layer for this receive event is stored in GSA.Settings.TargetLayer
+      
+      rxTypePrereqs = GSA.RxParallelisableTypes
 
-      var layers = new[] { GSATargetLayer.Design, GSATargetLayer.Analysis };
-      foreach (var layer in layers)
-      {
-        FilteredWriteTypePrereqs.Add(layer, new Dictionary<Type, List<Type>>());
+        rxTypePrereqs.Add(layer, new Dictionary<Type, List<Type>>());
 
         //Filter out Prereqs that are excluded by the layer selection
         // Remove wrong layer objects from Prereqs
         var layerPrereqs = GSA.WriteTypePrereqs.Where(t => ObjectTypeMatchesLayer(t.Key, layer));
         foreach (var kvp in layerPrereqs)
         {
-          FilteredWriteTypePrereqs[layer][kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, layer)).ToList();
+          rxTypePrereqs[layer][kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, layer)).ToList();
         }
 
-        FilteredReadTypePrereqs.Add(layer, new Dictionary<Type, List<Type>>());
+        txTypePrereqs.Add(layer, new Dictionary<Type, List<Type>>());
 
         //The receiver needs the read type Prereqs too as it might need to serialise objects for merging
         layerPrereqs = GSA.ReadTypePrereqs.Where(t => ObjectTypeMatchesLayer(t.Key, layer));
         foreach (var kvp in layerPrereqs)
         {
-          FilteredReadTypePrereqs[layer][kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, layer)).ToList();
+          txTypePrereqs[layer][kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, layer)).ToList();
         }
-      }
+      */
 
       //Get references to each assembly's sender objects dictionary
-      var keywords = GetFilteredKeywords();
+      //var keywords = GetFilteredKeywords();
 
       Status.ChangeStatus("Reading GSA data into cache");
 
-      var numRowsupdated = await UpdateCache(keywords);
-
-      if (numRowsupdated > 0)
-      {
-        Status.AddMessage("Read " + numRowsupdated + " GWA lines across " + keywords.Count() + " keywords into cache");
-      }
+      var numRowsupdated = await UpdateCache();
 
       // Create receivers
       Status.ChangeStatus("Accessing streams");
@@ -135,7 +129,7 @@ namespace SpeckleGSA
       ExecuteWithLock(ref traversedSerialisedLock, () => traversedSerialisedTypes.Clear());
       ExecuteWithLock(ref traversedDeserialisedLock, () => traversedDeserialisedTypes.Clear());
 
-      senderDictionaries.Clear();
+      GSA.SenderDictionaries.Clear();
 
       // Read objects
       Status.ChangeStatus("Receiving streams");
@@ -159,6 +153,7 @@ namespace SpeckleGSA
           GSA.gsaCache.Snapshot(streamIds[i]);
         }
 
+        /*
         var gsaStaticObjects = GetAssembliesSenderDictionaries();
 
         foreach (var dict in gsaStaticObjects)
@@ -171,13 +166,10 @@ namespace SpeckleGSA
         {
           senderDictionaries[j].Clear();
         }
+        */
 
         //Process on the basis of writing to the chosen layer first.  After this call, the only objects left are those which can only be written to the other layer
         await ProcessObjectsForLayer(GSA.Settings.TargetLayer);
-
-        //For any objects still left in the collection, process on the basis of writing to the other layer
-        var otherLayer = GSA.Settings.TargetLayer == GSATargetLayer.Design ? GSATargetLayer.Analysis : GSATargetLayer.Design;
-        await ProcessObjectsForLayer(otherLayer);
 
         var toBeAddedGwa = GSA.gsaCache.GetNewGwaSetCommands();
         for (int i = 0; i < toBeAddedGwa.Count(); i++)
@@ -276,8 +268,9 @@ namespace SpeckleGSA
       return true;
     }
 
-    private Task<int> UpdateCache(List<string> keywords)
+    private Task<int> UpdateCache()
     {
+      var keywords = GSA.Keywords;
       GSA.gsaCache.Clear();
       var data = GSA.gsaProxy.GetGwaData(keywords, false);
       for (int i = 0; i < data.Count(); i++)
@@ -293,7 +286,14 @@ namespace SpeckleGSA
             : data[i].ApplicationId,
           gwaSetCommandType: data[i].GwaSetType);
       }
-      return Task.FromResult(data.Count());
+
+      var numRowsupdated = data.Count();
+      if (numRowsupdated > 0)
+      {
+        Status.AddMessage("Read " + numRowsupdated + " GWA lines across " + keywords.Count() + " keywords into cache");
+      }
+
+      return Task.FromResult(numRowsupdated);
     }
 
     //Trigger the discovery and assignment of ToNative() methods within the SpeckleCore Converter static object
@@ -321,10 +321,11 @@ namespace SpeckleGSA
 
     private List<Type> GetNewCurrentBatch(GSATargetLayer layer)
     {
+      var rxTypePrereqs = GSA.RxTypeDependencies;
       List<Type> batch = new List<Type>();
       ExecuteWithLock(ref traversedDeserialisedLock, () =>
       {
-        batch.AddRange(FilteredWriteTypePrereqs[layer].Where(i => i.Value.Count(x => !traversedDeserialisedTypes.Contains(x)) == 0).Select(i => i.Key));
+        batch.AddRange(rxTypePrereqs.Where(i => i.Value.Count(x => !traversedDeserialisedTypes.Contains(x)) == 0).Select(i => i.Key));
         batch.RemoveAll(i => traversedDeserialisedTypes.Contains(i));
       });
       return batch;
@@ -393,8 +394,9 @@ namespace SpeckleGSA
           });
         }
 
-        if (GSA.RxParallelisableTypes.Any(pt => valueType == pt))
+        if (GSA.RxParallelisableTypes.ContainsKey(valueType))
         {
+          keyword = GSA.RxParallelisableTypes[valueType];
           foreach (var tuple in targetObjects)
           {
             GSA.gsaCache.ReserveIndex(keyword, tuple.Item2.ApplicationId);
@@ -416,7 +418,7 @@ namespace SpeckleGSA
     private Task ProcessObjectsForLayer(GSATargetLayer layer)
     {
       // Write objects
-      var currentBatch = new List<Type>();
+      List<Type> currentBatch;
 
       do
       {
@@ -524,7 +526,7 @@ namespace SpeckleGSA
     //Note: this is called while the traversedSerialisedLock is in place
     private void SerialiseUpdateCacheForGSAType(GSATargetLayer layer, string keyword, Type t, object dummyObject)
     {
-      var readPrereqs = GetPrereqs(t, FilteredReadTypePrereqs[layer]);
+      var readPrereqs = GetPrereqs(t, GSA.TxTypeDependencies);
 
       //The way the readPrereqs are constructed (one linear list, not grouped by generations/batches), this cannot be parallelised
       for (int j = 0; j < readPrereqs.Count(); j++)
@@ -601,9 +603,9 @@ namespace SpeckleGSA
     private List<SpeckleObject> CollateSerialisedObjects(Type t)
     {
       var serialised = new List<SpeckleObject>();
-      for (int i = 0; i < senderDictionaries.Count(); i++)
+      for (int i = 0; i < GSA.SenderDictionaries.Count(); i++)
       {
-        var allObjects = senderDictionaries[i].GetAll();
+        var allObjects = GSA.SenderDictionaries[i].GetAll();
         serialised.AddRange(allObjects.SelectMany(kvp => kvp.Value).Select(o => (SpeckleObject) ((IGSASpeckleContainer)o).SpeckleObject));
       }
       return serialised;
@@ -638,15 +640,17 @@ namespace SpeckleGSA
       GSA.gsaProxy.UpdateViews();
     }
 
+    /*
     protected List<string> GetFilteredKeywords()
     {
       var keywords = new List<string>();
-      keywords.AddRange(GetFilteredKeywords(FilteredWriteTypePrereqs[GSATargetLayer.Design]));
-      keywords.AddRange(GetFilteredKeywords(FilteredWriteTypePrereqs[GSATargetLayer.Analysis]));
-      keywords.AddRange(GetFilteredKeywords(FilteredReadTypePrereqs[GSATargetLayer.Design]));
-      keywords.AddRange(GetFilteredKeywords(FilteredReadTypePrereqs[GSATargetLayer.Analysis]));
+      keywords.AddRange(GetFilteredKeywords(rxTypePrereqs[GSATargetLayer.Design]));
+      keywords.AddRange(GetFilteredKeywords(rxTypePrereqs[GSATargetLayer.Analysis]));
+      keywords.AddRange(GetFilteredKeywords(txTypePrereqs[GSATargetLayer.Design]));
+      keywords.AddRange(GetFilteredKeywords(txTypePrereqs[GSATargetLayer.Analysis]));
 
       return keywords.Distinct().ToList();
     }
+    */
   }
 }

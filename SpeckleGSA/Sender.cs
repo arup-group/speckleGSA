@@ -43,7 +43,7 @@ namespace SpeckleGSA
 				return statusMessages;
 			}
 
-      GSA.CollateKitSenderDictionaries();
+      //GSA.CollateKitSenderDictionaries();
 
       var startTime = DateTime.Now;      
       Status.ChangeStatus("Reading GSA data into cache");
@@ -51,13 +51,12 @@ namespace SpeckleGSA
       //Update cache
       int numRowsUpdated = 0;
       int numKeywords = 0;
-      var updatedCache = await Task.Run(() => UpdateCache(out numRowsUpdated, out numKeywords));
+      var updatedCache = await Task.Run(() => UpdateCache());
       if (!updatedCache)
       {
         Status.AddError("Error in communicating GSA - please check if the GSA file has been closed down");
         return statusMessages;
       }
-      Status.AddMessage("Read " + numRowsUpdated + " GWA lines across " + numKeywords + " keywords into cache");
 
       // Grab all GSA related object
       Status.ChangeStatus("Preparing to read GSA Objects");
@@ -308,9 +307,10 @@ namespace SpeckleGSA
       return keywords;
     }
 
-    private bool UpdateCache(out int numUpdated, out int numKeywords)
+    private bool UpdateCache()
     {
-      var keywords = SettingsToKeywords();
+      //var keywords = SettingsToKeywords();
+      var keywords = GSA.Keywords;
       GSA.gsaCache.Clear();
       try
       {
@@ -326,14 +326,15 @@ namespace SpeckleGSA
             applicationId: applicationId,
             gwaSetCommandType: data[i].GwaSetType);
         }
-        numKeywords = keywords.Count();
-        numUpdated = data.Count();
+        int numKeywords = keywords.Count();
+        int numUpdated = data.Count();
+
+        Status.AddMessage("Read " + numUpdated + " GWA lines across " + numKeywords + " keywords into cache");
+
         return true;
       }
       catch
       {
-        numKeywords = 0;
-        numUpdated = 0;
         return false;
       }
     }
@@ -342,6 +343,8 @@ namespace SpeckleGSA
     {
       var keywords = new List<string>();
 
+      var txTypePrereqs = GSA.TxTypeDependencies;
+
       //Filter out Prereqs that are excluded by the layer selection
       // Remove wrong layer objects from Prereqs
       if (GSA.Settings.SendOnlyResults)
@@ -349,7 +352,7 @@ namespace SpeckleGSA
         //Ensure the load-relatd types are into the cache too so that the load cases and combos are there to resolve the load cases listed by the user
         var bucketNames = GSA.Settings.SendOnlyResults ? new string[] { "results" } : null;
 
-        var streamLayerPrereqs = GSA.ReadTypePrereqs.Where(t =>
+        var streamLayerPrereqs = txTypePrereqs.Where(t =>
           bucketNames.Any(s => s.Equals((string)t.Key.GetAttribute("Stream"), StringComparison.InvariantCultureIgnoreCase))
           && ObjectTypeMatchesLayer(t.Key, GSA.Settings.TargetLayer));
 
@@ -374,7 +377,7 @@ namespace SpeckleGSA
           }
 
           //The load tasks and combos need to be loaded to to ensure they can be used to process the list of cases to be sent
-          var extraLoadCaseTypes = GSA.ReadTypePrereqs.Where(et => et.Key.Name.EndsWith("LoadTask", StringComparison.InvariantCultureIgnoreCase)
+          var extraLoadCaseTypes = txTypePrereqs.Where(et => et.Key.Name.EndsWith("LoadTask", StringComparison.InvariantCultureIgnoreCase)
             || et.Key.Name.EndsWith("LoadCombo", StringComparison.InvariantCultureIgnoreCase));
           if (extraLoadCaseTypes.Count() > 0)
           {
@@ -390,7 +393,7 @@ namespace SpeckleGSA
       }
       else
       {
-        var layerPrereqs = GSA.ReadTypePrereqs.Where(t => ObjectTypeMatchesLayer(t.Key, GSA.Settings.TargetLayer));
+        var layerPrereqs = txTypePrereqs.Where(t => ObjectTypeMatchesLayer(t.Key, GSA.Settings.TargetLayer));
         foreach (var kvp in layerPrereqs)
         {
           FilteredReadTypePrereqs[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, GSA.Settings.TargetLayer)).ToList();

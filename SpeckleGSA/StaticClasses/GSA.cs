@@ -16,24 +16,69 @@ namespace SpeckleGSA
   /// </summary>
   public static class GSA
   {
-    public static Settings Settings = new Settings();
+    public static List<IGSAKit> kits = new List<IGSAKit>();
 
+    public static Settings Settings = new Settings();
     public static ISpeckleObjectMerger Merger = new SpeckleObjectMerger();
     public static IGSAProxy gsaProxy = new GSAProxy();
     public static IGSACache gsaCache = new GSACache();
     public static ISpeckleGSAAppUI appUi = new SpeckleAppUI();
+    
 
-    public static List<IGSASenderDictionary> senderDictionaries;
+    public static List<IGSASenderDictionary> SenderDictionaries { get; } = kits.Select(k => k.GSASenderObjects).ToList();
+    public static Dictionary<Type, List<Type>> RxTypeDependencies
+    {
+      get
+      {
+        var d = new Dictionary<Type, List<Type>>();
+        foreach (var k in kits)
+        {
+          d = d.Concat(k.RxTypeDependencies.Where(x => !d.Keys.Contains(x.Key))).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        }
+        return d;
+      }
+    }
 
-    public static List<Type> RxParallelisableTypes;
+    public static Dictionary<Type, List<Type>> TxTypeDependencies
+    {
+      get
+      {
+        var d = new Dictionary<Type, List<Type>>();
+        foreach (var k in kits)
+        {
+          d = d.Concat(k.TxTypeDependencies.Where(x => !d.Keys.Contains(x.Key))).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        }
+        return d;
+      }
+    }
+
+    public static List<string> Keywords
+    {
+      get
+      {
+        var keywords = new List<string>();
+
+        foreach (var k in kits)
+        {
+          foreach (var kw in k.Keywords)
+          {
+            if (!keywords.Contains(kw))
+            {
+              keywords.Add(kw);
+            }
+          }
+        }
+        return keywords;
+      }
+    }
+
+    public static Dictionary<Type, string> RxParallelisableTypes => kits.Select(k => k.RxParallelisableTypes).MergeDictionaries();
 
     public static bool IsInit;
 
     public static Dictionary<string, Tuple<string, string>> SenderInfo { get; set; }
     public static List<Tuple<string, string>> ReceiverInfo { get; set; }
 
-    public static Dictionary<Type, List<Type>> WriteTypePrereqs = new Dictionary<Type, List<Type>>();
-    public static Dictionary<Type, List<Type>> ReadTypePrereqs = new Dictionary<Type, List<Type>>();
 
     public static void Init()
     {
@@ -87,7 +132,8 @@ namespace SpeckleGSA
       {
         var types = ass.GetTypes();
 
-        var reqInterfaces = new List<Type> { typeof(ISpeckleInitializer), typeof(IGSAKit) };
+        //These are the interfaces that are required for this app to recognise it as a GSA Speckle kit
+        var requiredInterfaces = new List<Type> { typeof(ISpeckleInitializer), typeof(IGSAKit) };
 
         Type gsaStatic = null;
         try
@@ -95,7 +141,7 @@ namespace SpeckleGSA
           foreach (var t in types)
           {
             var interfaces = t.GetInterfaces();
-            if (reqInterfaces.All(ri => interfaces.Contains(ri)))
+            if (requiredInterfaces.All(ri => interfaces.Contains(ri)))
             {
               gsaStatic = t;
               break;
@@ -122,6 +168,8 @@ namespace SpeckleGSA
           kit.Settings = Settings;
           kit.Cache = (IGSACacheForKit) gsaCache;
           kit.AppUI = appUi;
+
+          kits.Add(kit);
         }
         catch
         {
@@ -131,6 +179,7 @@ namespace SpeckleGSA
         var objTypes = types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType && !t.IsAbstract).ToList();
         objTypes = objTypes.Distinct().ToList();
 
+        /*
         foreach (var t in objTypes)
         {
           var prereq = t.GetAttribute("WritePrerequisite");
@@ -139,6 +188,7 @@ namespace SpeckleGSA
           prereq = t.GetAttribute("ReadPrerequisite");
           ReadTypePrereqs[t] = (prereq != null) ? ((Type[])prereq).ToList() : new List<Type>();
         }
+        */
 
         foreach (var t in speckleTypes)
         {
@@ -174,6 +224,7 @@ namespace SpeckleGSA
 
     #region kit_resources
 
+    /*
     public static bool CollateKitSenderDictionaries()
     {
       var assemblies = SpeckleInitializer.GetAssemblies().Where(a => a.GetTypes().Any(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer))));
@@ -191,7 +242,7 @@ namespace SpeckleGSA
           {
             var dict = (IGSASenderDictionary)gsaStatic.GetProperties().FirstOrDefault(p => p.PropertyType == typeof(IGSASenderDictionary)).GetValue(null);
             //This is how SpeckleGSA finds the objects in the GSASenderObjects dictionary - by finding the first property in ISpeckleInitializer which is of the specific dictionary type
-            senderDictionaries.Add(dict);
+            SenderDictionaries.Add(dict);
           }
         }
         catch (FileNotFoundException)
@@ -205,6 +256,7 @@ namespace SpeckleGSA
       }
       return true;
     }
+
     public static bool CollateRxParallelisableTypes()
     {
       var assemblies = SpeckleInitializer.GetAssemblies().Where(a => a.GetTypes().Any(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer))));
@@ -236,26 +288,24 @@ namespace SpeckleGSA
       }
       return true;
     }
+    */
 
     public static void ClearSenderDictionaries()
     {
-      foreach (var sd in senderDictionaries)
+      foreach (var sd in SenderDictionaries)
       {
         sd.Clear();
       }
     }
 
-    public static List<SpeckleObject> GetSpeckleObjectsFromSenderDictionaries()
-    {
-      return GetAllConvertedGsaObjectsByType().SelectMany(sd => sd.Value).Cast<IGSASpeckleContainer>().Select(c => (SpeckleObject) c.SpeckleObject).ToList();
-    }
+    public static List<SpeckleObject> GetSpeckleObjectsFromSenderDictionaries() => GetAllConvertedGsaObjectsByType()
+      .SelectMany(sd => sd.Value).Cast<IGSASpeckleContainer>().Select(c => (SpeckleObject) c.SpeckleObject).ToList();
 
     public static Dictionary<Type, List<object>> GetAllConvertedGsaObjectsByType()
     {
-      var gsaStaticObjects = CollateKitSenderDictionaries();
       var currentObjects = new Dictionary<Type, List<object>>();
 
-      foreach (var dict in GSA.senderDictionaries)
+      foreach (var dict in SenderDictionaries)
       {
         var allObjects = dict.GetAll();
         //Ensure alphabetical order here as this has a bearing on the order of the layers when it's sent, and therefore the order of
