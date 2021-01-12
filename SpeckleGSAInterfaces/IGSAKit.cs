@@ -5,6 +5,8 @@ namespace SpeckleGSAInterfaces
 {
   public interface IGSAKit
   {
+    void Clear();
+
     //These are set by the app, for use by the kit
     IGSASettings Settings { get; set; }
     IGSAProxy Interface { get; set; }

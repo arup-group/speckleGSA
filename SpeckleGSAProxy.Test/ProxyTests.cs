@@ -21,6 +21,10 @@ namespace SpeckleGSAProxy.Test
   {
     public static string[] savedJsonFileNames = new[] { "U7ntEJkzdZ.json", "lfsaIEYkR.json", "NaJD7d5kq.json", "UNg87ieJG.json" };
 
+    //This is the number of times some tests in this file are repeated to try to catch any intermittent failures due to parallelisation of
+    //some parts of the code
+    private int numRepeat = 10;
+
     private string TestDataDirectory { get => AppDomain.CurrentDomain.BaseDirectory.TrimEnd(new[] { '\\' }) + @"\..\..\TestData\"; }
 
     //The EC_mxfJ2p.json file has these objects (ordered for ease of reading here, this is not the order of the objects in the file):
@@ -42,14 +46,21 @@ namespace SpeckleGSAProxy.Test
       type: "Polyline/Structural1DElementPolyline",	23
     */
 
+    [SetUp]
+    public void Prepare()
+    {
+    }
+
     [TestCase(GSATargetLayer.Design, "EC_mxfJ2p.json", "m")]
     [TestCase(GSATargetLayer.Analysis, "EC_mxfJ2p.json", "m")]
-    public async Task ReceiveTestPreserveOrderContinuousMerge(GSATargetLayer layer, string fileName, string streamUnits = "mm")
+    public void ReceiveTestPreserveOrderContinuousMerge(GSATargetLayer layer, string fileName, string streamUnits = "mm")
     {
       GSA.gsaProxy = new TestProxy();
       GSA.Init();
       GSA.Settings.TargetLayer = layer;
       GSA.Settings.Units = "m";
+      GSA.kits.ForEach(k => k.Clear());
+      GSA.gsaCache.Clear();
 
       var streamIds = new[] { fileName }.Select(fn => fn.Split(new[] { '.' }).First()).ToList();
       GSA.ReceiverInfo = streamIds.Select(si => new Tuple<string, string>(si, null)).ToList();
@@ -61,7 +72,7 @@ namespace SpeckleGSAProxy.Test
       GSA.gsaProxy.NewFile();
 
       //This will load data from all streams into the cache
-      await receiver.Initialize("", "");
+      _ = receiver.Initialize("", "").Result;
 
       //RECEIVE EVENT #1: first of continuous
       receiver.Trigger(null, null);
@@ -78,7 +89,7 @@ namespace SpeckleGSAProxy.Test
       //Exclude these because:
       //1. for Structural1DPolylines, their application ID doesn't make its way to any GSA record, since they create records for each 
       //   "child" application ID they have in their refs
-      var excludeSpeckleTypes = new List<string> { "Structural1DElementPolyline" };
+      var excludeSpeckleTypes = new List<string> { "Structural1DElementPolyline", "StructuralNode" };
       //2. for GSA0DElements, they could have been created from StructuralNode records when certain conditions are met, but handling this 
       //   is not important for this test, so the test data is intended to not include it
       var excludeGsaTypes = new List<string> { "GSA0DElement" };
@@ -124,6 +135,10 @@ namespace SpeckleGSAProxy.Test
 
             Assert.Greater(cachedAppIds.Count(), 0);
 
+            if (!serverAppIds.SequenceEqual(cachedAppIds))
+            {
+              Console.WriteLine("Sequence not equal for " + t.Name);
+            }
             Assert.IsTrue(serverAppIds.SequenceEqual(cachedAppIds));
           }
         }
@@ -134,11 +149,15 @@ namespace SpeckleGSAProxy.Test
 
 
     [Test]
-    public async Task ReceiveTestContinuousMerge()
+    public void ReceiveTestContinuousMerge()
     {
-      GSA.Settings.Units = "m";
-      for (var n = 0; n < 50; n++)
+      for (var n = 0; n < numRepeat; n++)
       {
+        GSA.Settings.Units = "m";
+        GSA.Settings.TargetLayer = GSATargetLayer.Design;
+        GSA.kits.ForEach(k => k.Clear());
+        GSA.gsaCache.Clear();
+
         GSA.gsaProxy = new TestProxy();
         GSA.Init();
 
@@ -152,7 +171,7 @@ namespace SpeckleGSAProxy.Test
         GSA.gsaProxy.NewFile();
 
         //This will load data from all streams into the cache
-        await receiver.Initialize("", "");
+        _ = receiver.Initialize("", "").Result;
 
         //RECEIVE EVENT #1: first of continuous
         receiver.Trigger(null, null);
@@ -174,7 +193,7 @@ namespace SpeckleGSAProxy.Test
         var latestGwaAfter2 = new List<string>(records.Where(r => r.Latest).Select(r => r.Gwa));
         var diff = latestGwaAfter2.Where(a2 => !latestGwaAfter1.Any(a1 => string.Equals(a1, a2, StringComparison.InvariantCultureIgnoreCase))).ToList();
         records = ((IGSACacheForTesting)GSA.gsaCache).Records;
-        Assert.AreEqual(100, records.Where(r => r.Latest).Count());
+        Assert.AreEqual(99, records.Where(r => r.Latest).Count());
         Assert.AreEqual(109, records.Count());
 
         GSA.gsaProxy.Close();
@@ -182,11 +201,15 @@ namespace SpeckleGSAProxy.Test
     }
 
     [Test]
-    public async Task ReceiveTestStreamSubset()
+    public void ReceiveTestStreamSubset()
     {
-      GSA.Settings.Units = "m";
-      for (var n = 0; n < 100; n++)
+      for (var n = 0; n < numRepeat; n++)
       {
+        GSA.Settings.Units = "m";
+        GSA.Settings.TargetLayer = GSATargetLayer.Design;
+        GSA.kits.ForEach(k => k.Clear());
+        GSA.gsaCache.Clear();
+
         Debug.WriteLine("");
         Debug.WriteLine("Test run number: " + (n + 1));
         Debug.WriteLine("");
@@ -198,13 +221,13 @@ namespace SpeckleGSAProxy.Test
         GSA.ReceiverInfo = streamIds.Select(si => new Tuple<string, string>(si, null)).ToList();
 
         //Create receiver with all streams
-        var receiver = new Receiver() { Receivers = streamIds.ToDictionary(s => s, s => (ISpeckleGSAReceiver)new TestSpeckleGSAReceiver("TestStream", "mm")) };
+        var receiver = new Receiver() { Receivers = streamIds.ToDictionary(s => s, s => (ISpeckleGSAReceiver)new TestSpeckleGSAReceiver(s, "mm")) };
         SetObjectsAsReceived(receiver, savedJsonFileNames, TestDataDirectory);
 
         GSA.gsaProxy.NewFile();
 
         //This will load data from all streams into the cache
-        await receiver.Initialize("", "");
+        _ = receiver.Initialize("", "").Result;
 
         //RECEIVE EVENT #1: single
         receiver.Trigger(null, null);
@@ -218,14 +241,14 @@ namespace SpeckleGSAProxy.Test
         GSA.ReceiverInfo = streamIdsToTest.Select(si => new Tuple<string, string>(si, null)).ToList();
 
         //Yes the real SpeckleGSA does create a new receiver.  This time, create them with not all streams active
-        receiver = new Receiver() { Receivers = streamIdsToTest.ToDictionary(s => s, s => (ISpeckleGSAReceiver)new TestSpeckleGSAReceiver("TestStream", "mm")) };
+        receiver = new Receiver() { Receivers = streamIdsToTest.ToDictionary(s => s, s => (ISpeckleGSAReceiver)new TestSpeckleGSAReceiver(s, "mm")) };
 
         var records = ((IGSACacheForTesting)GSA.gsaCache).Records;
         Assert.AreEqual(3, GSA.ReceiverInfo.Count());
         Assert.AreEqual(3, receiver.Receivers.Count());
         Assert.AreEqual(4, records.Select(r => r.StreamId).Distinct().Count());
 
-        await receiver.Initialize("", "");
+        _ = receiver.Initialize("", "").Result;
 
         //Refresh with new copy of objects so they aren't the same (so the merging code isn't trying to merge each object onto itself)
         var streamObjectsTuples = ExtractObjects(savedJsonFileNames.Where(fn => streamIdsToTest.Any(ft => fn.Contains(ft))).ToArray(), TestDataDirectory);
@@ -247,7 +270,7 @@ namespace SpeckleGSAProxy.Test
         {
 
         }
-        Assert.AreEqual(98, records.Where(r => r.Latest).Count());
+        Assert.AreEqual(97, records.Where(r => r.Latest).Count());
         //-------
 
         GSA.gsaProxy.Close();
@@ -255,10 +278,13 @@ namespace SpeckleGSAProxy.Test
     }
 
     [TestCase("sjc.gwb")]
-    public async Task SendTest(string filename)
+    public void SendTest(string filename)
     {
       GSA.gsaProxy = new GSAProxy();
       GSA.Init();
+      GSA.Settings.TargetLayer = GSATargetLayer.Design;
+      GSA.kits.ForEach(k => k.Clear());
+      GSA.gsaCache.Clear();
 
       Status.MessageAdded += (s, e) => Debug.WriteLine("Message: " + e.Message);
       Status.ErrorAdded += (s, e) => Debug.WriteLine("Error: " + e.Message);
@@ -273,7 +299,7 @@ namespace SpeckleGSAProxy.Test
       var testSender = new TestSpeckleGSASender();
 
       //This will load data from all streams into the cache
-      await sender.Initialize("", "", (restApi, apiToken) => testSender);
+      _ = sender.Initialize("", "", (restApi, apiToken) => testSender).Result;
 
       //RECEIVE EVENT #1: first of continuous
       sender.Trigger();

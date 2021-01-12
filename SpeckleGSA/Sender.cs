@@ -155,14 +155,15 @@ namespace SpeckleGSA
 
     private List<Type> GetNewCurrentBatch()
     {
-      var currentBatch = new List<Type>();
+      var txTypePrereqs = GSA.TxTypeDependencies;
+      var batch = new List<Type>();
       ExecuteWithLock(ref traversedSerialisedLock, () =>
       {
-        currentBatch = FilteredReadTypePrereqs.Where(i => i.Value.Count(x => !traversedSerialisedTypes.Contains(x)) == 0).Select(i => i.Key).ToList();
-        currentBatch.RemoveAll(i => traversedSerialisedTypes.Contains(i));
+        batch = txTypePrereqs.Where(i => i.Value.Count(x => !traversedSerialisedTypes.Contains(x)) == 0).Select(i => i.Key).ToList();
+        batch.RemoveAll(i => traversedSerialisedTypes.Contains(i));
       });
 
-      return currentBatch;
+      return batch;
     }
 
     private void ProcessTypeForSending(Type t, ref bool changeDetected)

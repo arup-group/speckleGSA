@@ -23,9 +23,9 @@ namespace SpeckleGSA
     public static IGSAProxy gsaProxy = new GSAProxy();
     public static IGSACache gsaCache = new GSACache();
     public static ISpeckleGSAAppUI appUi = new SpeckleAppUI();
-    
 
-    public static List<IGSASenderDictionary> SenderDictionaries { get; } = kits.Select(k => k.GSASenderObjects).ToList();
+    public static List<IGSASenderDictionary> SenderDictionaries => kits.Select(k => k.GSASenderObjects).ToList();
+
     public static Dictionary<Type, List<Type>> RxTypeDependencies
     {
       get
@@ -168,7 +168,7 @@ namespace SpeckleGSA
           kit.Settings = Settings;
           kit.Cache = (IGSACacheForKit) gsaCache;
           kit.AppUI = appUi;
-
+          kit.Clear();
           kits.Add(kit);
         }
         catch

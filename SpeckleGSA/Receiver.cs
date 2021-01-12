@@ -115,7 +115,7 @@ namespace SpeckleGSA
 		/// <summary>
 		/// Trigger to update stream. Is called automatically when update-global ws message is received on stream.
 		/// </summary>
-		public async void Trigger(object sender, EventArgs e)
+		public void Trigger(object sender, EventArgs e)
     {
       if ((IsBusy) || (!IsInit)) return;
 
@@ -169,7 +169,7 @@ namespace SpeckleGSA
         */
 
         //Process on the basis of writing to the chosen layer first.  After this call, the only objects left are those which can only be written to the other layer
-        await ProcessObjectsForLayer(GSA.Settings.TargetLayer);
+        ProcessObjectsForLayer(GSA.Settings.TargetLayer);
 
         var toBeAddedGwa = GSA.gsaCache.GetNewGwaSetCommands();
         for (int i = 0; i < toBeAddedGwa.Count(); i++)
