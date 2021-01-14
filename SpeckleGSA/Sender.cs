@@ -273,7 +273,7 @@ namespace SpeckleGSA
       foreach (var ass in assemblies)
       {
         var types = ass.GetTypes();
-        objTypes.AddRange(types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType));
+        objTypes.AddRange(types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType && !t.IsAbstract));
       }
       return objTypes;
     }
@@ -284,7 +284,7 @@ namespace SpeckleGSA
        : (GSA.Settings.SeparateStreams)
          ? objTypes.Select(t => (string)t.GetAttribute("Stream")).Distinct().ToList()
          : new List<string>() { "Full Model" };
-      return streamNames;
+      return streamNames.Where(sn => !string.IsNullOrEmpty(sn)).ToList();
     }
 
     private void CreateStreamMap(List<Type> objTypes)

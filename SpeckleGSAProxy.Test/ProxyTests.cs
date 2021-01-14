@@ -55,12 +55,11 @@ namespace SpeckleGSAProxy.Test
     [TestCase(GSATargetLayer.Analysis, "EC_mxfJ2p.json", "m")]
     public void ReceiveTestPreserveOrderContinuousMerge(GSATargetLayer layer, string fileName, string streamUnits = "mm")
     {
+      GSA.Reset();
       GSA.gsaProxy = new TestProxy();
-      GSA.Init();
       GSA.Settings.TargetLayer = layer;
       GSA.Settings.Units = "m";
-      GSA.kits.ForEach(k => k.Clear());
-      GSA.gsaCache.Clear();
+      GSA.Init();
 
       var streamIds = new[] { fileName }.Select(fn => fn.Split(new[] { '.' }).First()).ToList();
       GSA.ReceiverInfo = streamIds.Select(si => new Tuple<string, string>(si, null)).ToList();
@@ -153,11 +152,9 @@ namespace SpeckleGSAProxy.Test
     {
       for (var n = 0; n < numRepeat; n++)
       {
+        GSA.Reset();
         GSA.Settings.Units = "m";
         GSA.Settings.TargetLayer = GSATargetLayer.Design;
-        GSA.kits.ForEach(k => k.Clear());
-        GSA.gsaCache.Clear();
-
         GSA.gsaProxy = new TestProxy();
         GSA.Init();
 
@@ -205,17 +202,17 @@ namespace SpeckleGSAProxy.Test
     {
       for (var n = 0; n < numRepeat; n++)
       {
+        GSA.Reset();
         GSA.Settings.Units = "m";
         GSA.Settings.TargetLayer = GSATargetLayer.Design;
-        GSA.kits.ForEach(k => k.Clear());
-        GSA.gsaCache.Clear();
+        GSA.gsaProxy = new TestProxy();
+        GSA.Init();
 
         Debug.WriteLine("");
         Debug.WriteLine("Test run number: " + (n + 1));
         Debug.WriteLine("");
 
-        GSA.gsaProxy = new TestProxy();
-        GSA.Init();
+        
 
         var streamIds = savedJsonFileNames.Select(fn => fn.Split(new[] { '.' }).First()).ToList();
         GSA.ReceiverInfo = streamIds.Select(si => new Tuple<string, string>(si, null)).ToList();
@@ -280,11 +277,10 @@ namespace SpeckleGSAProxy.Test
     [TestCase("sjc.gwb")]
     public void SendTest(string filename)
     {
+      GSA.Reset();
       GSA.gsaProxy = new GSAProxy();
-      GSA.Init();
       GSA.Settings.TargetLayer = GSATargetLayer.Design;
-      GSA.kits.ForEach(k => k.Clear());
-      GSA.gsaCache.Clear();
+      GSA.Init();
 
       Status.MessageAdded += (s, e) => Debug.WriteLine("Message: " + e.Message);
       Status.ErrorAdded += (s, e) => Debug.WriteLine("Error: " + e.Message);

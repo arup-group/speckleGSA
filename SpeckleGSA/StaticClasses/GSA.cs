@@ -102,6 +102,19 @@ namespace SpeckleGSA
       }
     }
 
+    public static void Reset()
+    {
+      IsInit = false;
+
+      kits = new List<IGSAKit>();
+
+      Settings = new Settings();
+      Merger = new SpeckleObjectMerger();
+      gsaProxy = new GSAProxy();
+      gsaCache = new GSACache();
+      appUi = new SpeckleAppUI();
+  }
+
     private static void InitialiseKits(out List<string> statusMessages)
     {
       statusMessages = new List<string>();
