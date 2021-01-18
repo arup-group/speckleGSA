@@ -45,8 +45,8 @@
   <ItemGroup>
     <Compile Include="GSAObject.cs" />
     <Compile Include="IGSACacheForKit.cs" />
-    <Compile Include="IGSAIndexer.cs" />
     <Compile Include="Enums.cs" />
+    <Compile Include="IGSAKit.cs" />
     <Compile Include="IGSAProxy.cs" />
     <Compile Include="IGSASenderDictionary.cs" />
     <Compile Include="IGSASettings.cs" />
