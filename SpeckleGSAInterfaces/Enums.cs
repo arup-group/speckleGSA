@@ -1,5 +1,20 @@
 ﻿namespace SpeckleGSAInterfaces
 {
+	public enum MessageLevel
+  {
+		Debug,
+		Information,
+		Error,
+		Fatal
+  }
+
+	public enum MessageIntent
+	{
+		Display,
+		TechnicalLog,
+		Telemetry
+	}
+
 	public enum GSATargetLayer
 	{
 		Design,

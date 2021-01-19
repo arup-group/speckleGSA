@@ -282,8 +282,8 @@ namespace SpeckleGSAProxy.Test
       GSA.GsaApp.Settings.TargetLayer = GSATargetLayer.Design;
       GSA.Init();
 
-      Status.MessageAdded += (s, e) => Debug.WriteLine("Message: " + e.Message);
-      Status.ErrorAdded += (s, e) => Debug.WriteLine("Error: " + e.Message);
+      //Status.MessageAdded += (s, e) => Debug.WriteLine("Message: " + e.Message);
+      //Status.ErrorAdded += (s, e) => Debug.WriteLine("Error: " + e.Message);
       Status.StatusChanged += (s, e) => Debug.WriteLine("Status: " + e.Name);
 
       GSA.SenderInfo = new Dictionary<string, Tuple<string, string>>() { { "testStream", new Tuple<string, string>("testStreamId", "testClientId") } };

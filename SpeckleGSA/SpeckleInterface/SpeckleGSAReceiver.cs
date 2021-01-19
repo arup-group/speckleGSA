@@ -119,7 +119,7 @@ namespace SpeckleGSA
           UpdateChildren();
           break;
         default:
-          Status.AddError("Unknown event: " + (string)e.EventObject.args.eventType);
+          GSA.GsaApp.gsaMessager.AddError("Unknown event: " + (string)e.EventObject.args.eventType);
           break;
       }
     }
@@ -151,7 +151,7 @@ namespace SpeckleGSA
 
 			if (!exceptionThrown && streamGetResult.Success == false)
 			{
-				Status.AddError("Failed to receive " + myReceiver.Stream.Name + "stream.");
+				GSA.GsaApp.gsaMessager.AddError("Failed to receive " + myReceiver.Stream.Name + "stream.");
 				return;
 			}
 
@@ -191,7 +191,7 @@ namespace SpeckleGSA
 				{ }
 			}
 
-			Status.AddMessage("Received " + myReceiver.Stream.Name + " stream with " + myReceiver.Stream.Objects.Count() + " objects.");
+			GSA.GsaApp.gsaMessager.AddMessage("Received " + myReceiver.Stream.Name + " stream with " + myReceiver.Stream.Objects.Count() + " objects.");
 		}
 
     /// <summary>

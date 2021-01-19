@@ -9,7 +9,8 @@ namespace SpeckleGSA
     public IGSASettings Settings { get => gsaSettings; }
     public IGSAProxy Proxy { get => gsaProxy; }
     public IGSACacheForKit Cache { get => gsaCache; }
-    public ISpeckleGSAAppUI Messager { get => appUi; }
+    public ISpeckleGSAAppUI AppUI { get => appUi; }
+    public IGSAMessager Messager { get => gsaMessager; }
 
     /// <summary>
     /// Static class which interfaces with GSA
@@ -20,6 +21,7 @@ namespace SpeckleGSA
     public GSAProxy gsaProxy = new GSAProxy();
     public GSACache gsaCache = new GSACache();
     public SpeckleAppUI appUi = new SpeckleAppUI();
+    public Messager gsaMessager = new Messager();
 
     public GsaAppResources()
     {

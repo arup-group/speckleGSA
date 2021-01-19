@@ -5,6 +5,8 @@
     IGSASettings Settings { get; }
     IGSAProxy Proxy { get; }
     IGSACacheForKit Cache { get; }
-    ISpeckleGSAAppUI Messager { get; }
+    ISpeckleGSAAppUI AppUI { get; }
+
+    IGSAMessager Messager { get; }
   }
 }

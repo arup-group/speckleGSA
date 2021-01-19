@@ -69,7 +69,8 @@ namespace SpeckleGSAUI
         }
 
         GSA.Init();
-        Status.Init(this.AddMessage, this.AddError, this.ChangeStatus);
+        GSA.GsaApp.gsaMessager.MessageAdded += this.ProcessMessage;
+        //Status.Init(this.AddMessage, this.AddError, this.ChangeStatus);
         SpeckleCore.SpeckleInitializer.Initialize();
 
         RunCLI();
@@ -193,7 +194,7 @@ namespace SpeckleGSAUI
 
         foreach (var streamInfo in nonBlankReceivers)
         {
-          Status.AddMessage("Creating receiver " + streamInfo.Item1);
+          GSA.GsaApp.gsaMessager.AddMessage("Creating receiver " + streamInfo.Item1);
           gsaReceiver.Receivers[streamInfo.Item1] = new SpeckleGSAReceiver(RestApi, ApiToken);
         }
       });
@@ -282,11 +283,19 @@ namespace SpeckleGSAUI
     /// <summary>
     /// Message handler.
     /// </summary>
-    private void AddMessage(object sender, MessageEventArgs e)
+    private void ProcessMessage(object sender, MessageEventArgs e)
     {
-      Console.WriteLine("[" + DateTime.Now.ToString("h:mm:ss tt") + "] " + e.Message);
+      if (e.Level == MessageLevel.Debug || e.Level == MessageLevel.Information)
+      {
+        Console.WriteLine("[" + DateTime.Now.ToString("h:mm:ss tt") + "] " + string.Join(" ", e.MessagePortions));
+      }
+      else
+      {
+        Console.WriteLine("[" + DateTime.Now.ToString("h:mm:ss tt") + "] ERROR: " + string.Join(" ", e.MessagePortions));
+      }
     }
 
+    /*
     /// <summary>
     /// Error message handler.
     /// </summary>
@@ -294,6 +303,7 @@ namespace SpeckleGSAUI
     {
       Console.WriteLine("[" + DateTime.Now.ToString("h:mm:ss tt") + "] ERROR: " + e.Message);
     }
+    */
 
     /// <summary>
     /// Change status handler.

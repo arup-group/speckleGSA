@@ -7,6 +7,7 @@ using SpeckleGSAInterfaces;
 using SpeckleUtil;
 using System.IO;
 using System.Reflection;
+using Serilog;
 
 namespace SpeckleGSA
 {
@@ -86,9 +87,11 @@ namespace SpeckleGSA
       SenderInfo = new Dictionary<string, Tuple<string, string>>();
       ReceiverInfo = new List<Tuple<string, string>>();
 
+      GSA.GsaApp.gsaMessager.MessageAdded += GSA.ProcessMessageForLog;
+
       IsInit = true;
 
-      Status.AddMessage("Linked to GSA.");
+      GSA.GsaApp.gsaMessager.AddMessage("Linked to GSA.");
 
       InitialiseKits(out List<string> statusMessages);
 
@@ -96,7 +99,21 @@ namespace SpeckleGSA
       {
         foreach (var msg in statusMessages)
         {
-          Status.AddMessage(msg);
+          GSA.GsaApp.gsaMessager.AddMessage(msg);
+        }
+      }
+    }
+
+    public static void ProcessMessageForLog(object sender, MessageEventArgs messageEventArgs)
+    {
+      if (messageEventArgs.Intent == MessageIntent.TechnicalLog)
+      {
+        switch (messageEventArgs.Level)
+        {
+          case MessageLevel.Debug: Log.Debug(string.Join(" ", messageEventArgs.MessagePortions)); break;
+          case MessageLevel.Information: Log.Information(string.Join(" ", messageEventArgs.MessagePortions)); break;
+          case MessageLevel.Error: Log.Error(string.Join(" ", messageEventArgs.MessagePortions)); break;
+          case MessageLevel.Fatal: Log.Fatal(string.Join(" ", messageEventArgs.MessagePortions)); break;
         }
       }
     }
@@ -168,7 +185,7 @@ namespace SpeckleGSA
         }
         catch
         {
-          Status.AddError($"Unable to fully connect to {ass.GetName().Name}.dll. Please check the versions of the kit you have installed.");
+          GSA.GsaApp.gsaMessager.AddError($"Unable to fully connect to {ass.GetName().Name}.dll. Please check the versions of the kit you have installed.");
         }
 
         var objTypes = types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType && !t.IsAbstract).ToList();
@@ -260,7 +277,7 @@ namespace SpeckleGSA
         GetSpeckleClients(emailAddress, serverAddress);
       }
 
-      Status.AddMessage("Created new file.");
+      GSA.GsaApp.gsaMessager.AddMessage("Created new file.");
     }
 
     /// <summary>
@@ -279,7 +296,7 @@ namespace SpeckleGSA
         GetSpeckleClients(emailAddress, serverAddress);
       }
 
-      Status.AddMessage("Opened new file.");
+      GSA.GsaApp.gsaMessager.AddMessage("Opened new file.");
     }
 
     /// <summary>

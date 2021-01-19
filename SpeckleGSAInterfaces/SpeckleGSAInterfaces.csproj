@@ -48,6 +48,7 @@
     <Compile Include="IGSACacheForKit.cs" />
     <Compile Include="Enums.cs" />
     <Compile Include="IGSAKit.cs" />
+    <Compile Include="IGSAMessager.cs" />
     <Compile Include="IGSAProxy.cs" />
     <Compile Include="IGSASenderDictionary.cs" />
     <Compile Include="IGSASettings.cs" />

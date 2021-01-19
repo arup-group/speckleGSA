@@ -109,8 +109,8 @@ namespace SpeckleGSAProxy.Test
       //This runs SpeckleInitializer.Initialize() and fills WriteTypePrereqs and ReadTypePrereqs
       GSA.Init();
       
-      Status.MessageAdded += (s, e) => Debug.WriteLine("Message: " + e.Message);
-      Status.ErrorAdded += (s, e) => Debug.WriteLine("Error: " + e.Message);
+      //Status.MessageAdded += (s, e) => Debug.WriteLine("Message: " + e.Message);
+      //Status.ErrorAdded += (s, e) => Debug.WriteLine("Error: " + e.Message);
       Status.StatusChanged += (s, e) => Debug.WriteLine("Status: " + e.Name);
 
       var filePath = @"C:\Users\Nic.Burgers\OneDrive - Arup\Issues\Nguyen Le\2D result\shear wall system-seismic v10.1.gwb";
@@ -159,8 +159,8 @@ namespace SpeckleGSAProxy.Test
       var response = ResponseObject.FromJson(json);
       var expectedDesignLayerSpeckleObjects = response.Resources;
 
-      Status.MessageAdded += (s, e) => Debug.WriteLine("Message: " + e.Message);
-      Status.ErrorAdded += (s, e) => Debug.WriteLine("Error: " + e.Message);
+      //Status.MessageAdded += (s, e) => Debug.WriteLine("Message: " + e.Message);
+      //Status.ErrorAdded += (s, e) => Debug.WriteLine("Error: " + e.Message);
       Status.StatusChanged += (s, e) => Debug.WriteLine("Status: " + e.Name);
 
       var filePath = @"C:\Users\Nic.Burgers\OneDrive - Arup\Issues\Nguyen Le\2D result\shear wall system-seismic v10.1.gwb";

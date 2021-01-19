@@ -148,7 +148,7 @@ namespace SpeckleGSA
         objectCounter += convertedObjects.Count;
       }
 
-      Status.AddMessage("Successfully converted: " + bucketObjects.Count() + " objects.");
+      GSA.GsaApp.gsaMessager.AddMessage("Successfully converted: " + bucketObjects.Count() + " objects.");
 
       // Prune objects with placeholders using local DB
       try

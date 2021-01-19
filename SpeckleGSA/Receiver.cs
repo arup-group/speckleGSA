@@ -47,7 +47,7 @@ namespace SpeckleGSA
       var startTime = DateTime.Now;
 			if (!GSA.IsInit)
 			{
-				Status.AddError("GSA link not found.");
+				GSA.GsaApp.gsaMessager.AddError("GSA link not found.");
 				return statusMessages;
 			}
 
@@ -57,7 +57,7 @@ namespace SpeckleGSA
       ExecuteWithLock(ref traversedSerialisedLock, () => traversedSerialisedTypes.Clear());
       ExecuteWithLock(ref traversedDeserialisedLock, () => traversedDeserialisedTypes.Clear());
 
-      Status.AddMessage("Initialising receivers");
+      GSA.GsaApp.gsaMessager.AddMessage("Initialising receivers");
 
       /*
       var attributeType = typeof(GSAObject);
@@ -104,7 +104,7 @@ namespace SpeckleGSA
 			}, Environment.ProcessorCount);
 
       TimeSpan duration = DateTime.Now - startTime;
-      Status.AddMessage("Duration of initialisation: " + duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessager.AddMessage("Duration of initialisation: " + duration.ToString(@"hh\:mm\:ss"));
 
       Status.ChangeStatus("Ready to receive");
 			IsInit = true;
@@ -137,11 +137,11 @@ namespace SpeckleGSA
       ScaleReceivedObjects();
 
       TimeSpan duration = DateTime.Now - startTime;
-      Status.AddMessage("Duration of reception from Speckle and scaling: " + duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessager.AddMessage("Duration of reception from Speckle and scaling: " + duration.ToString(@"hh\:mm\:ss"));
 
       if (currentObjects.Count() == 0)
       {
-        Status.AddMessage("No processing needed because the stream(s) contain(s) no objects");
+        GSA.GsaApp.gsaMessager.AddMessage("No processing needed because the stream(s) contain(s) no objects");
       }
       else
       {
@@ -201,7 +201,7 @@ namespace SpeckleGSA
         GSA.GsaApp.gsaProxy.UpdateViews();
 
         duration = DateTime.Now - startTime;
-        Status.AddMessage("Duration of conversion from Speckle: " + duration.ToString(@"hh\:mm\:ss"));
+        GSA.GsaApp.gsaMessager.AddMessage("Duration of conversion from Speckle: " + duration.ToString(@"hh\:mm\:ss"));
         startTime = DateTime.Now;
       }
       Status.ChangeStatus("Finished receiving", 100);
@@ -224,7 +224,7 @@ namespace SpeckleGSA
           {
             if (Receivers[key].Units == null)
             {
-              Status.AddError("stream " + key + ": No unit information could be found");
+              GSA.GsaApp.gsaMessager.AddError("stream " + key + ": No unit information could be found");
             }
             else
             {
@@ -261,7 +261,7 @@ namespace SpeckleGSA
       {
         foreach (var error in errors)
         {
-          Status.AddError(error);
+          GSA.GsaApp.gsaMessager.AddError(error);
         }
         return false;
       }
@@ -290,7 +290,7 @@ namespace SpeckleGSA
       var numRowsupdated = data.Count();
       if (numRowsupdated > 0)
       {
-        Status.AddMessage("Read " + numRowsupdated + " GWA lines across " + keywords.Count() + " keywords into cache");
+        GSA.GsaApp.gsaMessager.AddMessage("Read " + numRowsupdated + " GWA lines across " + keywords.Count() + " keywords into cache");
       }
 
       return Task.FromResult(numRowsupdated);
@@ -339,14 +339,9 @@ namespace SpeckleGSA
 
       if (string.IsNullOrEmpty(applicationId))
       {
-        if (string.IsNullOrEmpty(obj.Name))
-        {
-          GSA.GsaApp.appUi.Message(speckleTypeName + " with no name nor ApplicationId (identified by hashes)", obj.Hash);
-        }
-        else
-        {
-          GSA.GsaApp.appUi.Message(speckleTypeName + " with name but no ApplicationId (identified by name)", obj.Name);
-        }
+        GSA.GsaApp.Messager.Message(MessageIntent.Display, MessageLevel.Information, speckleTypeName +
+          ((string.IsNullOrEmpty(obj.Name)) ? " with no name nor ApplicationId (identified by hashes)" : " with no name nor ApplicationId (identified by hashes)"),
+          obj.Hash);
       }
       //Check if this application appears in the cache at all
       else
@@ -408,6 +403,9 @@ namespace SpeckleGSA
           targetObjects.ForEach(tuple => { ProcessTargetObject(tuple, speckleTypeName, t, keyword); });
         }
 
+        //Process any cached messages from the conversion code
+        GSA.GsaApp.gsaMessager.Trigger();
+
         ExecuteWithLock(ref traversedDeserialisedLock, () => traversedDeserialisedTypes.Add(t));
       }
 #if !DEBUG
@@ -459,7 +457,8 @@ namespace SpeckleGSA
         catch
         {
           //Add for summary messaging at the end of processing
-          GSA.GsaApp.appUi.Message("Unable to merge " + t.Name + " with existing objects", targetObject.ApplicationId);
+          GSA.GsaApp.Messager.Message(MessageIntent.Display, MessageLevel.Error, 
+            "Unable to merge " + t.Name + " with existing objects", targetObject.ApplicationId);
         }
       }
 
