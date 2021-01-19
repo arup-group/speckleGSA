@@ -123,7 +123,7 @@ namespace SpeckleGSA
 
       var startTime = DateTime.Now;
 
-      GSA.Settings.Units = GSA.gsaProxy.GetUnits();
+      GSA.GsaApp.Settings.Units = GSA.GsaApp.gsaProxy.GetUnits();
 
       ExecuteWithLock(ref currentObjectsLock, () => currentObjects.Clear());
       ExecuteWithLock(ref traversedSerialisedLock, () => traversedSerialisedTypes.Clear());
@@ -150,7 +150,7 @@ namespace SpeckleGSA
         var streamIds = GSA.ReceiverInfo.Select(r => r.Item1).ToList();
         for (int i = 0; i < streamIds.Count(); i++)
         {
-          GSA.gsaCache.Snapshot(streamIds[i]);
+          GSA.GsaApp.gsaCache.Snapshot(streamIds[i]);
         }
 
         /*
@@ -169,22 +169,22 @@ namespace SpeckleGSA
         */
 
         //Process on the basis of writing to the chosen layer first.  After this call, the only objects left are those which can only be written to the other layer
-        ProcessObjectsForLayer(GSA.Settings.TargetLayer);
+        ProcessObjectsForLayer(GSA.GsaApp.Settings.TargetLayer);
 
-        var toBeAddedGwa = GSA.gsaCache.GetNewGwaSetCommands();
+        var toBeAddedGwa = GSA.GsaApp.gsaCache.GetNewGwaSetCommands();
         for (int i = 0; i < toBeAddedGwa.Count(); i++)
         {
-          GSA.gsaProxy.SetGwa(toBeAddedGwa[i]);
+          GSA.GsaApp.gsaProxy.SetGwa(toBeAddedGwa[i]);
         }
 
-        var toBeDeletedGwa = GSA.gsaCache.GetExpiredData();
+        var toBeDeletedGwa = GSA.GsaApp.gsaCache.GetExpiredData();
 
         var setDeletes = toBeDeletedGwa.Where(t => t.Item4 == GwaSetCommandType.Set).ToList();
         for (int i = 0; i < setDeletes.Count(); i++)
         {
           var keyword = setDeletes[i].Item1;
           var index = setDeletes[i].Item2;
-          GSA.gsaProxy.DeleteGWA(keyword, index, GwaSetCommandType.Set);
+          GSA.GsaApp.gsaProxy.DeleteGWA(keyword, index, GwaSetCommandType.Set);
         }
 
         var setAtDeletes = toBeDeletedGwa.Where(t => t.Item4 == GwaSetCommandType.SetAt).OrderByDescending(t => t.Item2).ToList();
@@ -192,13 +192,13 @@ namespace SpeckleGSA
         {
           var keyword = setAtDeletes[i].Item1;
           var index = setAtDeletes[i].Item2;
-          GSA.gsaProxy.DeleteGWA(keyword, index, GwaSetCommandType.SetAt);
+          GSA.GsaApp.gsaProxy.DeleteGWA(keyword, index, GwaSetCommandType.SetAt);
         }
 
-        GSA.gsaProxy.Sync();
+        GSA.GsaApp.gsaProxy.Sync();
 
-        GSA.gsaProxy.UpdateCasesAndTasks();
-        GSA.gsaProxy.UpdateViews();
+        GSA.GsaApp.gsaProxy.UpdateCasesAndTasks();
+        GSA.GsaApp.gsaProxy.UpdateViews();
 
         duration = DateTime.Now - startTime;
         Status.AddMessage("Duration of conversion from Speckle: " + duration.ToString(@"hh\:mm\:ss"));
@@ -228,12 +228,12 @@ namespace SpeckleGSA
             }
             else
             {
-              double scaleFactor = (1.0).ConvertUnit(Receivers[key].Units.ShortUnitName(), GSA.Settings.Units);
+              double scaleFactor = (1.0).ConvertUnit(Receivers[key].Units.ShortUnitName(), GSA.GsaApp.Settings.Units);
               foreach (var o in receivedObjects)
               {
                 if (!string.IsNullOrEmpty(o.ApplicationId))
                 {
-                  GSA.gsaCache.SetStream(o.ApplicationId, Receivers[key].StreamId);
+                  GSA.GsaApp.gsaCache.SetStream(o.ApplicationId, Receivers[key].StreamId);
                 }
                 if (scaleFactor != 1)
                 {
@@ -271,11 +271,11 @@ namespace SpeckleGSA
     private Task<int> UpdateCache()
     {
       var keywords = GSA.Keywords;
-      GSA.gsaCache.Clear();
-      var data = GSA.gsaProxy.GetGwaData(keywords, false);
+      GSA.GsaApp.gsaCache.Clear();
+      var data = GSA.GsaApp.gsaProxy.GetGwaData(keywords, false);
       for (int i = 0; i < data.Count(); i++)
       {
-        GSA.gsaCache.Upsert(
+        GSA.GsaApp.gsaCache.Upsert(
           data[i].Keyword,
           data[i].Index,
           data[i].GwaWithoutSet,
@@ -341,11 +341,11 @@ namespace SpeckleGSA
       {
         if (string.IsNullOrEmpty(obj.Name))
         {
-          GSA.appUi.Message(speckleTypeName + " with no name nor ApplicationId (identified by hashes)", obj.Hash);
+          GSA.GsaApp.appUi.Message(speckleTypeName + " with no name nor ApplicationId (identified by hashes)", obj.Hash);
         }
         else
         {
-          GSA.appUi.Message(speckleTypeName + " with name but no ApplicationId (identified by name)", obj.Name);
+          GSA.GsaApp.appUi.Message(speckleTypeName + " with name but no ApplicationId (identified by name)", obj.Name);
         }
       }
       //Check if this application appears in the cache at all
@@ -382,7 +382,7 @@ namespace SpeckleGSA
 
         //First serialise all relevant objects into sending dictionary so that merging can happen
         var typeAppIds = targetObjects.Where(o => o.Item2.ApplicationId != null).Select(o => o.Item2.ApplicationId).ToList();
-        if (typeAppIds.Any(i => GSA.gsaCache.ApplicationIdExists(keyword, i)))
+        if (typeAppIds.Any(i => GSA.GsaApp.gsaCache.ApplicationIdExists(keyword, i)))
         {
           //Serialise all objects of this type and update traversedSerialised list
           ExecuteWithLock(ref traversedSerialisedLock, () =>
@@ -399,7 +399,7 @@ namespace SpeckleGSA
           keyword = GSA.RxParallelisableTypes[valueType];
           foreach (var tuple in targetObjects)
           {
-            GSA.gsaCache.ReserveIndex(keyword, tuple.Item2.ApplicationId);
+            GSA.GsaApp.gsaCache.ReserveIndex(keyword, tuple.Item2.ApplicationId);
           }
           Parallel.ForEach(targetObjects, tuple => { ProcessTargetObject(tuple, speckleTypeName, t, keyword); });
         }
@@ -439,14 +439,14 @@ namespace SpeckleGSA
 
     private SpeckleObject MergeAndDeserialseObject(SpeckleObject targetObject, string speckleTypeName, string keyword, Type t, string streamId)
     {
-      var existingList = GSA.gsaCache.GetSpeckleObjects(speckleTypeName, targetObject.ApplicationId, streamId: streamId);
+      var existingList = GSA.GsaApp.gsaCache.GetSpeckleObjects(speckleTypeName, targetObject.ApplicationId, streamId: streamId);
 
       if (existingList == null || existingList.Count() == 0)
       {
         //Either this is the first reception event, or it's not in the cache for another reason, like:
         //The ToSpeckle for this Application ID didn't work (a notable example is ASSEMBLY when type is ELEMENT when Design layer is targeted)
         //so mark it as previous as there is clearly an update from the stream.  For these cases, merging isn't possible.
-        GSA.gsaCache.MarkAsPrevious(keyword, targetObject.ApplicationId);
+        GSA.GsaApp.gsaCache.MarkAsPrevious(keyword, targetObject.ApplicationId);
       }
       else
       {
@@ -454,12 +454,12 @@ namespace SpeckleGSA
 
         try
         {
-          targetObject = GSA.Merger.Merge(targetObject, existing);
+          targetObject = GSA.GsaApp.Merger.Merge(targetObject, existing);
         }
         catch
         {
           //Add for summary messaging at the end of processing
-          GSA.appUi.Message("Unable to merge " + t.Name + " with existing objects", targetObject.ApplicationId);
+          GSA.GsaApp.appUi.Message("Unable to merge " + t.Name + " with existing objects", targetObject.ApplicationId);
         }
       }
 
@@ -492,10 +492,10 @@ namespace SpeckleGSA
     private bool GwaToCache(string gwaCommand, string streamId, SpeckleObject targetObject)
     {
       //At this point the SID will be filled with the application ID
-      GSA.gsaProxy.ParseGeneralGwa(gwaCommand, out string keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType, true);
+      GSA.GsaApp.gsaProxy.ParseGeneralGwa(gwaCommand, out string keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType, true);
 
-      var originalSid = GSA.gsaProxy.FormatSidTags(foundStreamId, foundApplicationId);
-      var newSid = GSA.gsaProxy.FormatSidTags(streamId, foundApplicationId);
+      var originalSid = GSA.GsaApp.gsaProxy.FormatSidTags(foundStreamId, foundApplicationId);
+      var newSid = GSA.GsaApp.gsaProxy.FormatSidTags(streamId, foundApplicationId);
 
       //If the SID tag has been set then update it with the stream
       if (string.IsNullOrEmpty(originalSid))
@@ -510,7 +510,7 @@ namespace SpeckleGSA
       }
 
       //Only cache the object against, the top-level GWA command, not the sub-commands - this is what the SID value comparision is there for
-      return GSA.gsaCache.Upsert(keyword.Split('.').First(),
+      return GSA.GsaApp.gsaCache.Upsert(keyword.Split('.').First(),
         foundIndex.Value,
         gwaWithoutSet,
         foundApplicationId,
@@ -549,7 +549,7 @@ namespace SpeckleGSA
               prereqSerialisedObjects[k].ApplicationId = applicationId;
 
               //The SpeckleTypeName of this cache entry is automatically created by the assignment of the object
-              GSA.gsaCache.AssignSpeckleObject(prereqKeyword, applicationId, prereqSerialisedObjects[k]);
+              GSA.GsaApp.gsaCache.AssignSpeckleObject(prereqKeyword, applicationId, prereqSerialisedObjects[k]);
             }
           }
           traversedSerialisedTypes.Add(readPrereqs[j]);
@@ -573,7 +573,7 @@ namespace SpeckleGSA
           serialisedObjects[j].ApplicationId = applicationId;
 
           //The SpeckleTypeName of this cache entry is automatically created by the assignment of the object
-          GSA.gsaCache.AssignSpeckleObject(keyword, serialisedObjects[j].ApplicationId, serialisedObjects[j]);
+          GSA.GsaApp.gsaCache.AssignSpeckleObject(keyword, serialisedObjects[j].ApplicationId, serialisedObjects[j]);
         }
       }
 
@@ -625,7 +625,7 @@ namespace SpeckleGSA
 
 		public void DeleteSpeckleObjects()
     {
-			var gwaToDelete = GSA.gsaCache.GetDeletableData();
+			var gwaToDelete = GSA.GsaApp.gsaCache.GetDeletableData();
       
       for (int i = 0; i < gwaToDelete.Count(); i++)
       {
@@ -634,10 +634,10 @@ namespace SpeckleGSA
         var gwa = gwaToDelete[i].Item3;
         var gwaSetCommandType = gwaToDelete[i].Item4;
 
-        GSA.gsaProxy.DeleteGWA(keyword, index, gwaSetCommandType);
+        GSA.GsaApp.gsaProxy.DeleteGWA(keyword, index, gwaSetCommandType);
       }
 
-      GSA.gsaProxy.UpdateViews();
+      GSA.GsaApp.gsaProxy.UpdateViews();
     }
 
     /*

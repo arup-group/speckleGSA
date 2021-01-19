@@ -95,7 +95,7 @@ namespace SpeckleGSA
 			if (typeof(IEnumerable).IsAssignableFrom(fieldOrPropType))
 			{
 				//Assume all enumerable values are of string type for now
-				var pieces = ((string)value).Split(new string[] { "\r\n", " ", ";", GSA.gsaProxy.GwaDelimiter.ToString() }, StringSplitOptions.RemoveEmptyEntries);
+				var pieces = ((string)value).Split(new string[] { "\r\n", " ", ";", SpeckleGSAProxy.GSAProxy.GwaDelimiter.ToString() }, StringSplitOptions.RemoveEmptyEntries);
 				var subType = fieldOrPropType.GetGenericArguments()[0];
 
 				var newList = Activator.CreateInstance(fieldOrPropType);

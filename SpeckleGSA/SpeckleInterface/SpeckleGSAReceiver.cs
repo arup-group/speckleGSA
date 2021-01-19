@@ -60,7 +60,7 @@ namespace SpeckleGSA
 				{
 					var clientResponse = myReceiver.ClientCreateAsync(new AppClient()
 					{
-						DocumentName = Path.GetFileNameWithoutExtension(GSA.gsaProxy.FilePath),
+						DocumentName = Path.GetFileNameWithoutExtension(GSA.GsaApp.gsaProxy.FilePath),
 						DocumentType = "GSA",
 						Role = "Receiver",
 						StreamId = streamID,
@@ -76,7 +76,7 @@ namespace SpeckleGSA
 				{
 					_ = myReceiver.ClientUpdateAsync(clientID, new AppClient()
 					{
-						DocumentName = Path.GetFileNameWithoutExtension(GSA.gsaProxy.FilePath),
+						DocumentName = Path.GetFileNameWithoutExtension(GSA.GsaApp.gsaProxy.FilePath),
 						Online = true,
 					}).Result;
 

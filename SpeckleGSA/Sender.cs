@@ -90,7 +90,7 @@ namespace SpeckleGSA
       var startTime = DateTime.Now;
 
       IsBusy = true;
-			GSA.Settings.Units = GSA.gsaProxy.GetUnits();
+			GSA.GsaApp.Settings.Units = GSA.GsaApp.gsaProxy.GetUnits();
 
       //Clear previously-sent objects
       GSA.ClearSenderDictionaries();
@@ -139,8 +139,8 @@ namespace SpeckleGSA
       {
         Status.ChangeStatus("Sending to stream: " + Senders[k].StreamID);
 
-        var title = GSA.gsaProxy.GetTitle();
-        var streamName = GSA.Settings.SeparateStreams ? title + "." + k : title;
+        var title = GSA.GsaApp.gsaProxy.GetTitle();
+        var streamName = GSA.GsaApp.gsaSettings.SeparateStreams ? title + "." + k : title;
 
         Senders[k].UpdateName(streamName);
         Senders[k].SendGSAObjects(streamBuckets[k]);
@@ -230,11 +230,11 @@ namespace SpeckleGSA
       var currentObjects = GSA.GetAllConvertedGsaObjectsByType();
       foreach (var kvp in currentObjects)
       {
-        var targetStream = GSA.Settings.SeparateStreams ? StreamMap[kvp.Key] : "Full Model";
+        var targetStream = GSA.GsaApp.gsaSettings.SeparateStreams ? StreamMap[kvp.Key] : "Full Model";
 
         foreach (object obj in kvp.Value)
         {
-          if (GSA.Settings.SendOnlyMeaningfulNodes)
+          if (GSA.GsaApp.gsaSettings.SendOnlyMeaningfulNodes)
           {
             if (obj.GetType().Name == "GSANode" && !(bool)obj.GetType().GetField("ForceSend").GetValue(obj))
             {
@@ -280,8 +280,8 @@ namespace SpeckleGSA
 
     private List<string> GetStreamNames(List<Type> objTypes)
     {
-      var streamNames = (GSA.Settings.SendOnlyResults) ? new List<string> { "results" }
-       : (GSA.Settings.SeparateStreams)
+      var streamNames = (GSA.GsaApp.gsaSettings.SendOnlyResults) ? new List<string> { "results" }
+       : (GSA.GsaApp.gsaSettings.SeparateStreams)
          ? objTypes.Select(t => (string)t.GetAttribute("Stream")).Distinct().ToList()
          : new List<string>() { "Full Model" };
       return streamNames.Where(sn => !string.IsNullOrEmpty(sn)).ToList();
@@ -312,14 +312,14 @@ namespace SpeckleGSA
     {
       //var keywords = SettingsToKeywords();
       var keywords = GSA.Keywords;
-      GSA.gsaCache.Clear();
+      GSA.GsaApp.gsaCache.Clear();
       try
       {
-        var data = GSA.gsaProxy.GetGwaData(keywords, false);
+        var data = GSA.GsaApp.gsaProxy.GetGwaData(keywords, false);
         for (int i = 0; i < data.Count(); i++)
         {
           var applicationId = (string.IsNullOrEmpty(data[i].ApplicationId)) ? null : data[i].ApplicationId;
-          GSA.gsaCache.Upsert(
+          GSA.GsaApp.gsaCache.Upsert(
             data[i].Keyword,
             data[i].Index,
             data[i].GwaWithoutSet,
@@ -348,19 +348,19 @@ namespace SpeckleGSA
 
       //Filter out Prereqs that are excluded by the layer selection
       // Remove wrong layer objects from Prereqs
-      if (GSA.Settings.SendOnlyResults)
+      if (GSA.GsaApp.gsaSettings.SendOnlyResults)
       {
         //Ensure the load-relatd types are into the cache too so that the load cases and combos are there to resolve the load cases listed by the user
-        var bucketNames = GSA.Settings.SendOnlyResults ? new string[] { "results" } : null;
+        var bucketNames = GSA.GsaApp.gsaSettings.SendOnlyResults ? new string[] { "results" } : null;
 
         var streamLayerPrereqs = txTypePrereqs.Where(t =>
           bucketNames.Any(s => s.Equals((string)t.Key.GetAttribute("Stream"), StringComparison.InvariantCultureIgnoreCase))
-          && ObjectTypeMatchesLayer(t.Key, GSA.Settings.TargetLayer));
+          && ObjectTypeMatchesLayer(t.Key, GSA.GsaApp.Settings.TargetLayer));
 
         foreach (var kvp in streamLayerPrereqs)
         {
           FilteredReadTypePrereqs[kvp.Key] = kvp.Value.Where(l =>
-            ObjectTypeMatchesLayer(l, GSA.Settings.TargetLayer)
+            ObjectTypeMatchesLayer(l, GSA.GsaApp.Settings.TargetLayer)
             && bucketNames.Any(s => s.Equals((string)l.GetAttribute("Stream"), StringComparison.InvariantCultureIgnoreCase))).ToList();
         }
 
@@ -394,10 +394,10 @@ namespace SpeckleGSA
       }
       else
       {
-        var layerPrereqs = txTypePrereqs.Where(t => ObjectTypeMatchesLayer(t.Key, GSA.Settings.TargetLayer));
+        var layerPrereqs = txTypePrereqs.Where(t => ObjectTypeMatchesLayer(t.Key, GSA.GsaApp.Settings.TargetLayer));
         foreach (var kvp in layerPrereqs)
         {
-          FilteredReadTypePrereqs[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, GSA.Settings.TargetLayer)).ToList();
+          FilteredReadTypePrereqs[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, GSA.GsaApp.Settings.TargetLayer)).ToList();
         }
         GetFilteredKeywords().ForEach(kw =>
         {
