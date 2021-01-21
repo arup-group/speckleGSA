@@ -107,7 +107,7 @@ namespace SpeckleGSAProxy.Test
       GSA.SenderInfo = new Dictionary<string, Tuple<string, string>>() { { "testStream", new Tuple<string, string>("testStreamId", "testClientId") } };
 
       //This runs SpeckleInitializer.Initialize() and fills WriteTypePrereqs and ReadTypePrereqs
-      GSA.Init();
+      GSA.Init("");
       
       //Status.MessageAdded += (s, e) => Debug.WriteLine("Message: " + e.Message);
       //Status.ErrorAdded += (s, e) => Debug.WriteLine("Error: " + e.Message);
@@ -151,7 +151,7 @@ namespace SpeckleGSAProxy.Test
       GSA.GsaApp = new GsaAppResources();
 
       //This runs SpeckleInitializer.Initialize() and fills WriteTypePrereqs and ReadTypePrereqs
-      GSA.Init();
+      GSA.Init("");
       GSA.SenderInfo = new Dictionary<string, Tuple<string, string>>() { { "testStream", new Tuple<string, string>("testStreamId", "testClientId") } };
 
       var json = Helper.ReadFile(designLayerExpectedFile, TestDataDirectory);

@@ -19,6 +19,8 @@ namespace SpeckleGSAProxy.Test
   [TestFixture]
   public class ProxyTests
   {
+    private List<MessageEventArgs> testMessageCache;
+
     public static string[] savedJsonFileNames = new[] { "U7ntEJkzdZ.json", "lfsaIEYkR.json", "NaJD7d5kq.json", "UNg87ieJG.json" };
 
     //This is the number of times some tests in this file are repeated to try to catch any intermittent failures due to parallelisation of
@@ -59,7 +61,7 @@ namespace SpeckleGSAProxy.Test
       GSA.GsaApp.gsaProxy = new TestProxy();
       GSA.GsaApp.Settings.TargetLayer = layer;
       GSA.GsaApp.Settings.Units = "m";
-      GSA.Init();
+      GSA.Init("");
 
       var streamIds = new[] { fileName }.Select(fn => fn.Split(new[] { '.' }).First()).ToList();
       GSA.ReceiverInfo = streamIds.Select(si => new Tuple<string, string>(si, null)).ToList();
@@ -156,7 +158,7 @@ namespace SpeckleGSAProxy.Test
         GSA.GsaApp.Settings.Units = "m";
         GSA.GsaApp.Settings.TargetLayer = GSATargetLayer.Design;
         GSA.GsaApp.gsaProxy = new TestProxy();
-        GSA.Init();
+        GSA.Init("");
 
         var streamIds = savedJsonFileNames.Select(fn => fn.Split(new[] { '.' }).First()).ToList();
         GSA.ReceiverInfo = streamIds.Select(si => new Tuple<string, string>(si, null)).ToList();
@@ -206,12 +208,11 @@ namespace SpeckleGSAProxy.Test
         GSA.GsaApp.Settings.Units = "m";
         GSA.GsaApp.Settings.TargetLayer = GSATargetLayer.Design;
         GSA.GsaApp.gsaProxy = new TestProxy();
-        GSA.Init();
+        GSA.Init("");
 
         Debug.WriteLine("");
         Debug.WriteLine("Test run number: " + (n + 1));
         Debug.WriteLine("");
-
         
 
         var streamIds = savedJsonFileNames.Select(fn => fn.Split(new[] { '.' }).First()).ToList();
@@ -249,11 +250,13 @@ namespace SpeckleGSAProxy.Test
 
         //Refresh with new copy of objects so they aren't the same (so the merging code isn't trying to merge each object onto itself)
         var streamObjectsTuples = ExtractObjects(savedJsonFileNames.Where(fn => streamIdsToTest.Any(ft => fn.Contains(ft))).ToArray(), TestDataDirectory);
+        /*
         var objectsToExclude = streamObjectsTuples.Where(t => t.Item2.Name == "LSP-Lockup" || t.Item2.Type == "Structural2DThermalLoad").ToArray();
         for (int i = 0; i < objectsToExclude.Count(); i++)
         {
           streamObjectsTuples.Remove(objectsToExclude[i]);
         }
+        */
         for (int i = 0; i < streamIdsToTest.Count(); i++)
         {
           ((TestSpeckleGSAReceiver)receiver.Receivers[streamIds[i]]).Objects = streamObjectsTuples.Where(t => t.Item1 == streamIds[i]).Select(t => t.Item2).ToList();
@@ -263,11 +266,7 @@ namespace SpeckleGSAProxy.Test
 
         //Check the other streams aren't affected by only having some active
         records = ((IGSACacheForTesting)GSA.GsaApp.gsaCache).Records;
-        if (records.Where(r => r.Latest).Count() < 98)
-        {
-
-        }
-        Assert.AreEqual(97, records.Where(r => r.Latest).Count());
+        Assert.AreEqual(105, records.Where(r => r.Latest).Count());
         //-------
 
         GSA.GsaApp.gsaProxy.Close();
@@ -280,7 +279,7 @@ namespace SpeckleGSAProxy.Test
       GSA.Reset();
       GSA.GsaApp.gsaProxy = new GSAProxy();
       GSA.GsaApp.Settings.TargetLayer = GSATargetLayer.Design;
-      GSA.Init();
+      GSA.Init("");
 
       //Status.MessageAdded += (s, e) => Debug.WriteLine("Message: " + e.Message);
       //Status.ErrorAdded += (s, e) => Debug.WriteLine("Error: " + e.Message);
@@ -332,13 +331,44 @@ namespace SpeckleGSAProxy.Test
     {
       var proxy = new GSAProxy();
       proxy.OpenFile(Path.Combine(TestDataDirectory, "Structural Demo 191010.gwb"));
+
       var data = proxy.GetGwaData(DesignLayerKeywords, false);
 
-      Assert.AreEqual(192, data.Count());
+      Assert.AreEqual(188, data.Count());
       proxy.Close();
     }
 
+    [Test]
+    public void MessageCacheTest()
+    {
+      testMessageCache = new List<MessageEventArgs>();
+
+      var messageBus = new GsaMessenger();
+      messageBus.MessageAdded += TestMessageHandler;
+
+      messageBus.CacheMessage(MessageIntent.Display, MessageLevel.Debug, "display-debug-header", "display-debug-desc1");
+      messageBus.CacheMessage(MessageIntent.Display, MessageLevel.Debug, "display-debug-header", "display-debug-desc2");
+      messageBus.CacheMessage(MessageIntent.Display, MessageLevel.Debug, "display-debug-single-desc3");
+      messageBus.CacheMessage(MessageIntent.Display, MessageLevel.Error, "display-error-header", "display-error-desc1");
+      messageBus.CacheMessage(MessageIntent.Display, MessageLevel.Error, "display-error-single-desc2");
+      messageBus.CacheMessage(MessageIntent.TechnicalLog, MessageLevel.Debug, "technicallog-header", "technicallog-debug-desc1");
+      messageBus.CacheMessage(MessageIntent.TechnicalLog, MessageLevel.Debug, "technicallog-header", "technicallog-debug-desc2");
+      messageBus.CacheMessage(MessageIntent.TechnicalLog, MessageLevel.Debug, "technicallog-header", "technicallog-debug-desc3");
+      messageBus.CacheMessage(MessageIntent.TechnicalLog, MessageLevel.Information, "technicallog-header", "technicallog-info-desc1");
+      messageBus.CacheMessage(MessageIntent.TechnicalLog, MessageLevel.Information, "technicallog-header", "technicallog-info-desc2");
+
+      messageBus.ConsolidateCache();
+      messageBus.Trigger();
+
+      Assert.AreEqual(6, testMessageCache.Count());
+    }
+
     #region private_methods
+
+    private void TestMessageHandler(object sender, MessageEventArgs mea)
+    {
+      testMessageCache.Add(mea);
+    }
 
     private object GetAttribute<T>(object t, string attribute)
     {
@@ -404,39 +434,38 @@ namespace SpeckleGSAProxy.Test
 
 
     public static string[] DesignLayerKeywords = new string[] { 
-      "LOAD_2D_THERMAL.2",
-      "ALIGN.1",
-      "PATH.1",
-      "USER_VEHICLE.1",
-      "RIGID.3",
-      "ASSEMBLY.3",
-      "LOAD_GRAVITY.3",
-      "PROP_SPR.4",
-      "ANAL.1",
-      "TASK.1",
-      "GEN_REST.2",
-      "ANAL_STAGE.3",
-      "LIST.1",
-      "LOAD_GRID_LINE.2",
-      "POLYLINE.1",
-      "GRID_SURFACE.1",
-      "GRID_PLANE.4",
-      "AXIS.1",
-      "MEMB.8",
-      "NODE.3",
-      "LOAD_GRID_AREA.2",
-      "LOAD_2D_FACE.2",
-      "EL.4",
-      "PROP_2D.6",
-      "MAT_STEEL.4",
-      "MAT_CONCRETE.17",
+      "LOAD_2D_THERMAL",
+      "ALIGN",
+      "PATH",
+      "USER_VEHICLE",
+      "RIGID",
+      "ASSEMBLY",
+      "LOAD_GRAVITY",
+      "PROP_SPR",
+      "ANAL",
+      "TASK",
+      "GEN_REST",
+      "ANAL_STAGE",
+      "LIST",
+      "LOAD_GRID_LINE",
+      "POLYLINE",
+      "GRID_SURFACE",
+      "GRID_PLANE",
+      "AXIS",
+      "MEMB",
+      "NODE",
+      "LOAD_GRID_AREA",
+      "LOAD_2D_FACE",
+      "PROP_2D",
+      "MAT_STEEL",
+      "MAT_CONCRETE",
       "LOAD_BEAM",
-      "LOAD_NODE.2",
-      "COMBINATION.1",
-      "LOAD_TITLE.2",
-      "PROP_SEC.3",
-      "PROP_MASS.2",
-      "GRID_LINE.1"
+      "LOAD_NODE",
+      "COMBINATION",
+      "LOAD_TITLE",
+      "PROP_SEC",
+      "PROP_MASS",
+      "GRID_LINE"
     };
   }
 }

@@ -39,22 +39,19 @@ namespace SpeckleGSA
 
 			if (!GSA.IsInit)
 			{
-				GSA.GsaApp.gsaMessager.AddError("GSA link not found.");
+        GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Error, "GSA link not found.");
 				return statusMessages;
 			}
-
-      //GSA.CollateKitSenderDictionaries();
 
       var startTime = DateTime.Now;      
       Status.ChangeStatus("Reading GSA data into cache");
 
       //Update cache
-      int numRowsUpdated = 0;
-      int numKeywords = 0;
       var updatedCache = await Task.Run(() => UpdateCache());
       if (!updatedCache)
       {
-        GSA.GsaApp.gsaMessager.AddError("Error in communicating GSA - please check if the GSA file has been closed down");
+        GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Error, 
+          "Error in communicating GSA - please check if the GSA file has been closed down");
         return statusMessages;
       }
 
@@ -73,7 +70,8 @@ namespace SpeckleGSA
       await CreateInitialiseSenders(streamNames, gsaSenderCreator, restApi, apiToken);
 
       TimeSpan duration = DateTime.Now - startTime;
-      GSA.GsaApp.gsaMessager.AddMessage("Duration of initialisation: " + duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Duration of initialisation: " + duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Telemetry, MessageLevel.Information, "send", "initialisation", "duration", duration.ToString(@"hh\:mm\:ss"));
       Status.ChangeStatus("Ready to stream");
       IsInit = true;
 
@@ -129,7 +127,8 @@ namespace SpeckleGSA
       var streamBuckets = CreateStreamBuckets();
 
       TimeSpan duration = DateTime.Now - startTime;
-      GSA.GsaApp.gsaMessager.AddMessage("Duration of conversion to Speckle: " + duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Duration of conversion to Speckle: " + duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Telemetry, MessageLevel.Information, "send", "conversion", "duration", duration.ToString(@"hh\:mm\:ss"));
       startTime = DateTime.Now;
 
       // Send package
@@ -147,7 +146,8 @@ namespace SpeckleGSA
       }
 
       duration = DateTime.Now - startTime;
-      GSA.GsaApp.gsaMessager.AddMessage("Duration of sending to Speckle: " + duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Duration of sending to Speckle: " + duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Telemetry, MessageLevel.Information, "send", "sending", "duration", duration.ToString(@"hh\:mm\:ss"));
 
       IsBusy = false;
       Status.ChangeStatus("Finished sending", 100);
@@ -187,7 +187,7 @@ namespace SpeckleGSA
       }
 
       //Process any cached messages from the conversion code
-      GSA.GsaApp.gsaMessager.Trigger();
+      GSA.GsaApp.gsaMessenger.Trigger();
 
       ExecuteWithLock(ref traversedSerialisedLock, () => traversedSerialisedTypes.Add(t));
     }
@@ -215,7 +215,7 @@ namespace SpeckleGSA
 
         if (!GSA.SenderInfo.ContainsKey(streamName))
         {
-          GSA.GsaApp.gsaMessager.AddMessage("Creating new sender for " + streamName);
+          GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Creating new sender for " + streamName);
           await Senders[streamName].InitializeSender(null, null, streamName);
           GSA.SenderInfo[streamName] = new Tuple<string, string>(Senders[streamName].StreamID, Senders[streamName].ClientID);
         }
@@ -333,7 +333,7 @@ namespace SpeckleGSA
         int numKeywords = keywords.Count();
         int numUpdated = data.Count();
 
-        GSA.GsaApp.gsaMessager.AddMessage("Read " + numUpdated + " GWA lines across " + numKeywords + " keywords into cache");
+        GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Read " + numUpdated + " GWA lines across " + numKeywords + " keywords into cache");
 
         return true;
       }

@@ -162,14 +162,14 @@ namespace SpeckleGSA
       {
         if (!string.IsNullOrEmpty(msgFailure))
         {
-          GSA.GsaApp.Messager.Message(MessageIntent.Display, MessageLevel.Error, msgFailure, GSA.GsaApp.gsaSettings.VerboseErrors ? ex.Message : null);
+          GSA.GsaApp.Messenger.Message(MessageIntent.Display, MessageLevel.Error, msgFailure, GSA.GsaApp.gsaSettings.VerboseErrors ? ex.Message : null);
         }
       }
       if (success)
       {
         if (!string.IsNullOrEmpty(msgSuccessful))
         {
-          GSA.GsaApp.Messager.Message(MessageIntent.Display, MessageLevel.Information, msgSuccessful);
+          GSA.GsaApp.Messenger.Message(MessageIntent.Display, MessageLevel.Information, msgSuccessful);
         }
       }
       return success;

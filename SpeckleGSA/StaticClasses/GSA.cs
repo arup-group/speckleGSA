@@ -80,18 +80,20 @@ namespace SpeckleGSA
       GsaApp = new GsaAppResources();
     }
 
-    public static void Init()
+    public static void Init(string speckleGsaAppVersion)
     {
       if (IsInit) return;
 
       SenderInfo = new Dictionary<string, Tuple<string, string>>();
       ReceiverInfo = new List<Tuple<string, string>>();
 
-      GSA.GsaApp.gsaMessager.MessageAdded += GSA.ProcessMessageForLog;
+      GSA.GsaApp.gsaMessenger.MessageAdded += GSA.ProcessMessageForLog;
+      GSA.GsaApp.gsaMessenger.MessageAdded += GSA.ProcessMessageForTelemetry;
 
       IsInit = true;
 
-      GSA.GsaApp.gsaMessager.AddMessage("Linked to GSA.");
+      GSA.GsaApp.gsaProxy.SetAppVersionForTelemetry(speckleGsaAppVersion);
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Linked to GSA.");
 
       InitialiseKits(out List<string> statusMessages);
 
@@ -99,8 +101,19 @@ namespace SpeckleGSA
       {
         foreach (var msg in statusMessages)
         {
-          GSA.GsaApp.gsaMessager.AddMessage(msg);
+          GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, msg);
         }
+      }
+    }
+
+    public static void ProcessMessageForTelemetry(object sender, MessageEventArgs messageEventArgs)
+    {
+      if (messageEventArgs.Intent == MessageIntent.Telemetry)
+      {
+        GsaApp.gsaProxy.SendTelemetry(messageEventArgs.MessagePortions);
+        //Also log all telemetry transmissions, although the log entries won't have any additional info (prefixes etc) that the proxy has
+        //been coded to add
+        Log.Debug("Telemetry: " + string.Join(" ", messageEventArgs.MessagePortions));
       }
     }
 
@@ -127,26 +140,18 @@ namespace SpeckleGSA
 
       SpeckleInitializer.Initialize();
 
-      // Run initialize receiver method in interfacer
-      var assemblies = SpeckleInitializer.GetAssemblies().Where(a => a.GetTypes().Any(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer))));
+      //Find all structural types
+      var speckleTypes = SpeckleInitializer.GetAssemblies().SelectMany(a => a.GetTypes()
+        .Where(t => typeof(SpeckleObject).IsAssignableFrom(t) && !t.IsAbstract)).ToList();
 
-      var speckleTypes = new List<Type>();
-      foreach (var assembly in assemblies)
-      {
-        var types = assembly.GetTypes();
-        foreach (var t in types)
-        {
-          if (typeof(SpeckleObject).IsAssignableFrom(t))
-          {
-            speckleTypes.Add(t);
-          }
-        }
-      }
+      // Run initialize receiver method in interfacer
+      var conversionAssemblies = SpeckleInitializer.GetAssemblies().Where(a => a.GetTypes().Any(t => t.GetInterfaces()
+        .Contains(typeof(ISpeckleInitializer))));
 
       var mappableTypes = new List<Type>();
-      foreach (var ass in assemblies)
+      foreach (var ass in conversionAssemblies)
       {
-        var types = ass.GetTypes();
+        var assemblyTypes = ass.GetTypes();
 
         //These are the interfaces that are required for this app to recognise it as a GSA Speckle kit
         var requiredInterfaces = new List<Type> { typeof(ISpeckleInitializer) };
@@ -155,10 +160,12 @@ namespace SpeckleGSA
         Type gsaStatic = null;
         try
         {
-          foreach (var t in types)
+          foreach (var t in assemblyTypes)
           {
             var interfaces = t.GetInterfaces();
-            if (requiredInterfaces.All(ri => interfaces.Contains(ri) && t.GetProperties().Any(p => requiredPropertyInterfaces.Any(pi => pi == p.PropertyType)) ))
+
+            if (requiredInterfaces.All(ri => interfaces.Contains(ri) 
+              && t.GetProperties().Any(p => requiredPropertyInterfaces.Any(pi => pi == p.PropertyType)) ))
             {
               gsaStatic = t;
               break;
@@ -185,11 +192,9 @@ namespace SpeckleGSA
         }
         catch
         {
-          GSA.GsaApp.gsaMessager.AddError($"Unable to fully connect to {ass.GetName().Name}.dll. Please check the versions of the kit you have installed.");
+          GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Error, 
+            $"Unable to fully connect to {ass.GetName().Name}.dll. Please check the versions of the kit you have installed.");
         }
-
-        var objTypes = types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType && !t.IsAbstract).ToList();
-        objTypes = objTypes.Distinct().ToList();
 
         foreach (var t in speckleTypes)
         {
@@ -277,7 +282,7 @@ namespace SpeckleGSA
         GetSpeckleClients(emailAddress, serverAddress);
       }
 
-      GSA.GsaApp.gsaMessager.AddMessage("Created new file.");
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Created new file.");
     }
 
     /// <summary>
@@ -296,7 +301,7 @@ namespace SpeckleGSA
         GetSpeckleClients(emailAddress, serverAddress);
       }
 
-      GSA.GsaApp.gsaMessager.AddMessage("Opened new file.");
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Opened new file.");
     }
 
     /// <summary>

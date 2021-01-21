@@ -48,12 +48,11 @@
     <Compile Include="IGSACacheForKit.cs" />
     <Compile Include="Enums.cs" />
     <Compile Include="IGSAKit.cs" />
-    <Compile Include="IGSAMessager.cs" />
+    <Compile Include="IGSAMessenger.cs" />
     <Compile Include="IGSAProxy.cs" />
     <Compile Include="IGSASenderDictionary.cs" />
     <Compile Include="IGSASettings.cs" />
     <Compile Include="IGSASpeckleContainer.cs" />
-    <Compile Include="ISpeckleGSAAppUI.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

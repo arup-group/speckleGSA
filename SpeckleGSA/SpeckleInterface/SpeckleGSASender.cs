@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using SpeckleCore;
+using SpeckleGSAInterfaces;
 
 namespace SpeckleGSA
 {
@@ -148,7 +149,8 @@ namespace SpeckleGSA
         objectCounter += convertedObjects.Count;
       }
 
-      GSA.GsaApp.gsaMessager.AddMessage("Successfully converted: " + bucketObjects.Count() + " objects.");
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, 
+        "Successfully converted: " + bucketObjects.Count() + " objects.");
 
       // Prune objects with placeholders using local DB
       try

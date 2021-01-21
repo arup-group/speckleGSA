@@ -47,7 +47,7 @@ namespace SpeckleGSA
       var startTime = DateTime.Now;
 			if (!GSA.IsInit)
 			{
-				GSA.GsaApp.gsaMessager.AddError("GSA link not found.");
+        GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Error, "GSA link not found.");
 				return statusMessages;
 			}
 
@@ -57,33 +57,8 @@ namespace SpeckleGSA
       ExecuteWithLock(ref traversedSerialisedLock, () => traversedSerialisedTypes.Clear());
       ExecuteWithLock(ref traversedDeserialisedLock, () => traversedDeserialisedTypes.Clear());
 
-      GSA.GsaApp.gsaMessager.AddMessage("Initialising receivers");
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Initialising receivers");
 
-      /*
-      var attributeType = typeof(GSAObject);
-
-      
-      rxTypePrereqs = GSA.RxParallelisableTypes
-
-        rxTypePrereqs.Add(layer, new Dictionary<Type, List<Type>>());
-
-        //Filter out Prereqs that are excluded by the layer selection
-        // Remove wrong layer objects from Prereqs
-        var layerPrereqs = GSA.WriteTypePrereqs.Where(t => ObjectTypeMatchesLayer(t.Key, layer));
-        foreach (var kvp in layerPrereqs)
-        {
-          rxTypePrereqs[layer][kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, layer)).ToList();
-        }
-
-        txTypePrereqs.Add(layer, new Dictionary<Type, List<Type>>());
-
-        //The receiver needs the read type Prereqs too as it might need to serialise objects for merging
-        layerPrereqs = GSA.ReadTypePrereqs.Where(t => ObjectTypeMatchesLayer(t.Key, layer));
-        foreach (var kvp in layerPrereqs)
-        {
-          txTypePrereqs[layer][kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, layer)).ToList();
-        }
-      */
 
       //Get references to each assembly's sender objects dictionary
       //var keywords = GetFilteredKeywords();
@@ -104,7 +79,8 @@ namespace SpeckleGSA
 			}, Environment.ProcessorCount);
 
       TimeSpan duration = DateTime.Now - startTime;
-      GSA.GsaApp.gsaMessager.AddMessage("Duration of initialisation: " + duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Duration of initialisation: " + duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Telemetry, MessageLevel.Information, "receive", "initialisation", "duration", duration.ToString(@"hh\:mm\:ss"));
 
       Status.ChangeStatus("Ready to receive");
 			IsInit = true;
@@ -137,11 +113,12 @@ namespace SpeckleGSA
       ScaleReceivedObjects();
 
       TimeSpan duration = DateTime.Now - startTime;
-      GSA.GsaApp.gsaMessager.AddMessage("Duration of reception from Speckle and scaling: " + duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Duration of reception from Speckle and scaling: " + duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Telemetry, MessageLevel.Information, "receive", "reception and scaling", "duration", duration.ToString(@"hh\:mm\:ss"));
 
       if (currentObjects.Count() == 0)
       {
-        GSA.GsaApp.gsaMessager.AddMessage("No processing needed because the stream(s) contain(s) no objects");
+        GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "No processing needed because the stream(s) contain(s) no objects");
       }
       else
       {
@@ -153,23 +130,7 @@ namespace SpeckleGSA
           GSA.GsaApp.gsaCache.Snapshot(streamIds[i]);
         }
 
-        /*
-        var gsaStaticObjects = GetAssembliesSenderDictionaries();
-
-        foreach (var dict in gsaStaticObjects)
-        {
-          senderDictionaries.Add(dict);
-        }
-
-        //These sender dictionaries will be used in merging and they need to be clear in order for the merging code to work
-        for (int j = 0; j < senderDictionaries.Count(); j++)
-        {
-          senderDictionaries[j].Clear();
-        }
-        */
-
-        //Process on the basis of writing to the chosen layer first.  After this call, the only objects left are those which can only be written to the other layer
-        ProcessObjectsForLayer(GSA.GsaApp.Settings.TargetLayer);
+        ProcessObjectsForLayer();
 
         var toBeAddedGwa = GSA.GsaApp.gsaCache.GetNewGwaSetCommands();
         for (int i = 0; i < toBeAddedGwa.Count(); i++)
@@ -201,7 +162,8 @@ namespace SpeckleGSA
         GSA.GsaApp.gsaProxy.UpdateViews();
 
         duration = DateTime.Now - startTime;
-        GSA.GsaApp.gsaMessager.AddMessage("Duration of conversion from Speckle: " + duration.ToString(@"hh\:mm\:ss"));
+        GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Duration of conversion from Speckle: " + duration.ToString(@"hh\:mm\:ss"));
+        GSA.GsaApp.gsaMessenger.Message(MessageIntent.Telemetry, MessageLevel.Information, "receive", "conversion", "duration", duration.ToString(@"hh\:mm\:ss"));
         startTime = DateTime.Now;
       }
       Status.ChangeStatus("Finished receiving", 100);
@@ -210,7 +172,8 @@ namespace SpeckleGSA
 
     private bool ScaleReceivedObjects()
     {
-      var errors = new ConcurrentBag<string>();
+      //var errors = new ConcurrentBag<string>();
+      int numErrors = 0;
 #if DEBUG
       foreach (var key in Receivers.Keys)
 #else
@@ -224,7 +187,8 @@ namespace SpeckleGSA
           {
             if (Receivers[key].Units == null)
             {
-              GSA.GsaApp.gsaMessager.AddError("stream " + key + ": No unit information could be found");
+              GSA.GsaApp.gsaMessenger.CacheMessage(MessageIntent.Display, MessageLevel.Error, "stream " + key + ": No unit information could be found");
+              numErrors++;
             }
             else
             {
@@ -250,13 +214,16 @@ namespace SpeckleGSA
         }
         catch (Exception ex)
         {
-          errors.Add("stream " + key + ": " + ((ex.InnerException == null) ? ex.Message : ex.InnerException.Message));
+          GSA.GsaApp.gsaMessenger.CacheMessage(MessageIntent.Display, MessageLevel.Error, 
+            "stream " + key + ": " + ((ex.InnerException == null) ? ex.Message : ex.InnerException.Message));
+          numErrors++;
         }
       }
 #if !DEBUG
       );
 #endif
-
+      GSA.GsaApp.gsaMessenger.Trigger();
+      /*
       if (errors.Count() > 0)
       {
         foreach (var error in errors)
@@ -265,7 +232,8 @@ namespace SpeckleGSA
         }
         return false;
       }
-      return true;
+      */
+      return (numErrors == 0);
     }
 
     private Task<int> UpdateCache()
@@ -290,7 +258,8 @@ namespace SpeckleGSA
       var numRowsupdated = data.Count();
       if (numRowsupdated > 0)
       {
-        GSA.GsaApp.gsaMessager.AddMessage("Read " + numRowsupdated + " GWA lines across " + keywords.Count() + " keywords into cache");
+        GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, 
+          "Read " + numRowsupdated + " GWA lines across " + keywords.Count() + " keywords into cache");
       }
 
       return Task.FromResult(numRowsupdated);
@@ -319,7 +288,7 @@ namespace SpeckleGSA
       }
     }
 
-    private List<Type> GetNewCurrentBatch(GSATargetLayer layer)
+    private List<Type> GetNewCurrentBatch()
     {
       var rxTypePrereqs = GSA.RxTypeDependencies;
       List<Type> batch = new List<Type>();
@@ -339,7 +308,7 @@ namespace SpeckleGSA
 
       if (string.IsNullOrEmpty(applicationId))
       {
-        GSA.GsaApp.Messager.Message(MessageIntent.Display, MessageLevel.Information, speckleTypeName +
+        GSA.GsaApp.Messenger.Message(MessageIntent.Display, MessageLevel.Information, speckleTypeName +
           ((string.IsNullOrEmpty(obj.Name)) ? " with no name nor ApplicationId (identified by hashes)" : " with no name nor ApplicationId (identified by hashes)"),
           obj.Hash);
       }
@@ -356,7 +325,7 @@ namespace SpeckleGSA
       }
     }
 
-    private void ProcessObjectBatch(List<Type> currentBatch, GSATargetLayer layer)
+    private void ProcessObjectBatch(List<Type> currentBatch)
     {
       //Commented this out to enable debug tests for preserving order
 #if DEBUG
@@ -384,7 +353,7 @@ namespace SpeckleGSA
           {
             if (!traversedSerialisedTypes.Contains(t))
             {
-              SerialiseUpdateCacheForGSAType(layer, keyword, t, dummyObject);
+              SerialiseUpdateCacheForGSAType(keyword, t, dummyObject);
             }
           });
         }
@@ -404,7 +373,7 @@ namespace SpeckleGSA
         }
 
         //Process any cached messages from the conversion code
-        GSA.GsaApp.gsaMessager.Trigger();
+        GSA.GsaApp.gsaMessenger.Trigger();
 
         ExecuteWithLock(ref traversedDeserialisedLock, () => traversedDeserialisedTypes.Add(t));
       }
@@ -413,14 +382,14 @@ namespace SpeckleGSA
 #endif
     }
 
-    private Task ProcessObjectsForLayer(GSATargetLayer layer)
+    private Task ProcessObjectsForLayer()
     {
       // Write objects
       List<Type> currentBatch;
 
       do
       {
-        currentBatch = GetNewCurrentBatch(layer);
+        currentBatch = GetNewCurrentBatch();
         DiscoverToNativeMethods(currentBatch);
 
         Debug.WriteLine("Ran through all types in batch to populate SpeckleCore's ToNative list");
@@ -428,7 +397,7 @@ namespace SpeckleGSA
         //A batch is a group of groups of objects by type
         //So each batch has a group of StructuralX objects + StructuralY objects, etc
 
-        ProcessObjectBatch(currentBatch, layer);
+        ProcessObjectBatch(currentBatch);
 
       } while (currentBatch.Count > 0);
 
@@ -457,7 +426,7 @@ namespace SpeckleGSA
         catch
         {
           //Add for summary messaging at the end of processing
-          GSA.GsaApp.Messager.Message(MessageIntent.Display, MessageLevel.Error, 
+          GSA.GsaApp.Messenger.Message(MessageIntent.Display, MessageLevel.Error, 
             "Unable to merge " + t.Name + " with existing objects", targetObject.ApplicationId);
         }
       }
@@ -499,12 +468,10 @@ namespace SpeckleGSA
       //If the SID tag has been set then update it with the stream
       if (string.IsNullOrEmpty(originalSid))
       {
-        gwaCommand = gwaCommand.Replace(keyword, keyword + ":" + newSid);
         gwaWithoutSet = gwaWithoutSet.Replace(keyword, keyword + ":" + newSid);
       }
       else
       {
-        gwaCommand = gwaCommand.Replace(originalSid, newSid);
         gwaWithoutSet = gwaWithoutSet.Replace(originalSid, newSid);
       }
 
@@ -523,7 +490,7 @@ namespace SpeckleGSA
     }
 
     //Note: this is called while the traversedSerialisedLock is in place
-    private void SerialiseUpdateCacheForGSAType(GSATargetLayer layer, string keyword, Type t, object dummyObject)
+    private void SerialiseUpdateCacheForGSAType(string keyword, Type t, object dummyObject)
     {
       var readPrereqs = GetPrereqs(t, GSA.TxTypeDependencies);
 
@@ -556,7 +523,7 @@ namespace SpeckleGSA
       }
 
       //This ensures the sender objects are filled within the assembly which contains the corresponding "ToSpeckle" method
-      var result = Converter.Serialise(dummyObject);
+      _ = Converter.Serialise(dummyObject);
       var serialisedObjects = CollateSerialisedObjects(t);
 
       //For these serialised objects, there should already be a match in the cache, as it was read during initialisation and updated
@@ -630,7 +597,6 @@ namespace SpeckleGSA
       {
         var keyword = gwaToDelete[i].Item1;
         var index = gwaToDelete[i].Item2;
-        var gwa = gwaToDelete[i].Item3;
         var gwaSetCommandType = gwaToDelete[i].Item4;
 
         GSA.GsaApp.gsaProxy.DeleteGWA(keyword, index, gwaSetCommandType);
@@ -638,18 +604,5 @@ namespace SpeckleGSA
 
       GSA.GsaApp.gsaProxy.UpdateViews();
     }
-
-    /*
-    protected List<string> GetFilteredKeywords()
-    {
-      var keywords = new List<string>();
-      keywords.AddRange(GetFilteredKeywords(rxTypePrereqs[GSATargetLayer.Design]));
-      keywords.AddRange(GetFilteredKeywords(rxTypePrereqs[GSATargetLayer.Analysis]));
-      keywords.AddRange(GetFilteredKeywords(txTypePrereqs[GSATargetLayer.Design]));
-      keywords.AddRange(GetFilteredKeywords(txTypePrereqs[GSATargetLayer.Analysis]));
-
-      return keywords.Distinct().ToList();
-    }
-    */
   }
 }

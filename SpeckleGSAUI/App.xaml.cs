@@ -11,6 +11,8 @@ using System.IO;
 using System.Globalization;
 using SpeckleGSAProxy;
 using SpeckleGSAInterfaces;
+using System.Deployment.Application;
+using System.Reflection;
 
 namespace SpeckleGSAUI
 {
@@ -68,8 +70,8 @@ namespace SpeckleGSAUI
             arguments.Add(arg, e.Args[index + 1].Trim(new char[] { '"' }));
         }
 
-        GSA.Init();
-        GSA.GsaApp.gsaMessager.MessageAdded += this.ProcessMessage;
+        GSA.Init(getRunningVersion().ToString());
+        GSA.GsaApp.gsaMessenger.MessageAdded += this.ProcessMessage;
         //Status.Init(this.AddMessage, this.AddError, this.ChangeStatus);
         SpeckleCore.SpeckleInitializer.Initialize();
 
@@ -194,7 +196,7 @@ namespace SpeckleGSAUI
 
         foreach (var streamInfo in nonBlankReceivers)
         {
-          GSA.GsaApp.gsaMessager.AddMessage("Creating receiver " + streamInfo.Item1);
+          GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Creating receiver " + streamInfo.Item1);
           gsaReceiver.Receivers[streamInfo.Item1] = new SpeckleGSAReceiver(RestApi, ApiToken);
         }
       });
@@ -316,5 +318,17 @@ namespace SpeckleGSAUI
         Console.WriteLine("[" + DateTime.Now.ToString("h:mm:ss tt") + "] " + e.Name + "...");
     }
     #endregion
+
+    private Version getRunningVersion()
+    {
+      try
+      {
+        return ApplicationDeployment.CurrentDeployment.CurrentVersion;
+      }
+      catch (Exception)
+      {
+        return Assembly.GetExecutingAssembly().GetName().Version;
+      }
+    }
   }
 }

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using SpeckleCore;
+using SpeckleGSAInterfaces;
 
 namespace SpeckleGSA
 {
@@ -119,7 +120,8 @@ namespace SpeckleGSA
           UpdateChildren();
           break;
         default:
-          GSA.GsaApp.gsaMessager.AddError("Unknown event: " + (string)e.EventObject.args.eventType);
+					GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Error, 
+						"Unknown event: " + (string)e.EventObject.args.eventType);
           break;
       }
     }
@@ -151,7 +153,7 @@ namespace SpeckleGSA
 
 			if (!exceptionThrown && streamGetResult.Success == false)
 			{
-				GSA.GsaApp.gsaMessager.AddError("Failed to receive " + myReceiver.Stream.Name + "stream.");
+				GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Error, "Failed to receive " + myReceiver.Stream.Name + "stream.");
 				return;
 			}
 
@@ -191,7 +193,8 @@ namespace SpeckleGSA
 				{ }
 			}
 
-			GSA.GsaApp.gsaMessager.AddMessage("Received " + myReceiver.Stream.Name + " stream with " + myReceiver.Stream.Objects.Count() + " objects.");
+			GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, 
+				"Received " + myReceiver.Stream.Name + " stream with " + myReceiver.Stream.Objects.Count() + " objects.");
 		}
 
     /// <summary>
