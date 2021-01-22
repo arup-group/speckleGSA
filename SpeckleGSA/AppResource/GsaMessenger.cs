@@ -37,6 +37,7 @@ namespace SpeckleGSA
         {
           MessageAdded?.Invoke(null, m);
         }
+        MessageCache.Clear();
       }
     }
 

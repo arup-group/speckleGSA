@@ -222,7 +222,7 @@ namespace SpeckleGSAProxy.Test
         var receiver = new Receiver() { Receivers = streamIds.ToDictionary(s => s, s => (ISpeckleGSAReceiver)new TestSpeckleGSAReceiver(s, "mm")) };
         SetObjectsAsReceived(receiver, savedJsonFileNames, TestDataDirectory);
 
-        GSA.GsaApp.gsaProxy.NewFile();
+        GSA.GsaApp.gsaProxy.NewFile(false);
 
         //This will load data from all streams into the cache
         _ = receiver.Initialize("", "").Result;
@@ -250,13 +250,6 @@ namespace SpeckleGSAProxy.Test
 
         //Refresh with new copy of objects so they aren't the same (so the merging code isn't trying to merge each object onto itself)
         var streamObjectsTuples = ExtractObjects(savedJsonFileNames.Where(fn => streamIdsToTest.Any(ft => fn.Contains(ft))).ToArray(), TestDataDirectory);
-        /*
-        var objectsToExclude = streamObjectsTuples.Where(t => t.Item2.Name == "LSP-Lockup" || t.Item2.Type == "Structural2DThermalLoad").ToArray();
-        for (int i = 0; i < objectsToExclude.Count(); i++)
-        {
-          streamObjectsTuples.Remove(objectsToExclude[i]);
-        }
-        */
         for (int i = 0; i < streamIdsToTest.Count(); i++)
         {
           ((TestSpeckleGSAReceiver)receiver.Receivers[streamIds[i]]).Objects = streamObjectsTuples.Where(t => t.Item1 == streamIds[i]).Select(t => t.Item2).ToList();
@@ -281,8 +274,6 @@ namespace SpeckleGSAProxy.Test
       GSA.GsaApp.Settings.TargetLayer = GSATargetLayer.Design;
       GSA.Init("");
 
-      //Status.MessageAdded += (s, e) => Debug.WriteLine("Message: " + e.Message);
-      //Status.ErrorAdded += (s, e) => Debug.WriteLine("Error: " + e.Message);
       Status.StatusChanged += (s, e) => Debug.WriteLine("Status: " + e.Name);
 
       GSA.SenderInfo = new Dictionary<string, Tuple<string, string>>() { { "testStream", new Tuple<string, string>("testStreamId", "testClientId") } };
