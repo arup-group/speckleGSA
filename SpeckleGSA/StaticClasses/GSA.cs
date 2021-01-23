@@ -4,44 +4,96 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using SpeckleGSAInterfaces;
-using SpeckleGSAProxy;
 using SpeckleUtil;
 using System.IO;
+using System.Reflection;
+using Serilog;
 
 namespace SpeckleGSA
 {
-  /// <summary>
-  /// Static class which interfaces with GSA
-  /// </summary>
+
   public static class GSA
   {
-    public static Settings Settings = new Settings();
-
-    public static ISpeckleObjectMerger Merger = new SpeckleObjectMerger();
-    public static IGSAProxy gsaProxy = new GSAProxy();
-    public static IGSACache gsaCache = new GSACache();
-    public static ISpeckleGSAAppUI appUi = new SpeckleAppUI();
-
-    public static List<IGSASenderDictionary> senderDictionaries;
-
-    public static bool IsInit;
+    public static List<IGSAKit> kits = new List<IGSAKit>();
+    public static GsaAppResources GsaApp = new GsaAppResources();
 
     public static Dictionary<string, Tuple<string, string>> SenderInfo { get; set; }
     public static List<Tuple<string, string>> ReceiverInfo { get; set; }
 
-    public static Dictionary<Type, List<Type>> WriteTypePrereqs = new Dictionary<Type, List<Type>>();
-    public static Dictionary<Type, List<Type>> ReadTypePrereqs = new Dictionary<Type, List<Type>>();
+    public static List<IGSASenderDictionary> SenderDictionaries => kits.Select(k => k.GSASenderObjects).ToList();
 
-    public static void Init()
+    public static bool IsInit;
+
+    public static Dictionary<Type, List<Type>> RxTypeDependencies
+    {
+      get
+      {
+        var d = new Dictionary<Type, List<Type>>();
+        foreach (var k in kits)
+        {
+          d = d.Concat(k.RxTypeDependencies.Where(x => !d.Keys.Contains(x.Key))).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        }
+        return d;
+      }
+    }
+
+    public static Dictionary<Type, List<Type>> TxTypeDependencies
+    {
+      get
+      {
+        var d = new Dictionary<Type, List<Type>>();
+        foreach (var k in kits)
+        {
+          d = d.Concat(k.TxTypeDependencies.Where(x => !d.Keys.Contains(x.Key))).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        }
+        return d;
+      }
+    }
+
+    public static List<string> Keywords
+    {
+      get
+      {
+        var keywords = new List<string>();
+
+        foreach (var k in kits)
+        {
+          foreach (var kw in k.Keywords)
+          {
+            if (!keywords.Contains(kw))
+            {
+              keywords.Add(kw);
+            }
+          }
+        }
+        return keywords;
+      }
+    }
+
+    public static Dictionary<Type, string> RxParallelisableTypes => kits.Select(k => k.RxParallelisableTypes).MergeDictionaries();
+
+    public static void Reset()
+    {
+      IsInit = false;
+
+      kits = new List<IGSAKit>();
+      GsaApp = new GsaAppResources();
+    }
+
+    public static void Init(string speckleGsaAppVersion)
     {
       if (IsInit) return;
 
       SenderInfo = new Dictionary<string, Tuple<string, string>>();
       ReceiverInfo = new List<Tuple<string, string>>();
 
+      GSA.GsaApp.gsaMessenger.MessageAdded += GSA.ProcessMessageForLog;
+      GSA.GsaApp.gsaMessenger.MessageAdded += GSA.ProcessMessageForTelemetry;
+
       IsInit = true;
 
-      Status.AddMessage("Linked to GSA.");
+      GSA.GsaApp.gsaProxy.SetAppVersionForTelemetry(speckleGsaAppVersion);
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Linked to GSA.");
 
       InitialiseKits(out List<string> statusMessages);
 
@@ -49,7 +101,32 @@ namespace SpeckleGSA
       {
         foreach (var msg in statusMessages)
         {
-          Status.AddMessage(msg);
+          GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, msg);
+        }
+      }
+    }
+
+    public static void ProcessMessageForTelemetry(object sender, MessageEventArgs messageEventArgs)
+    {
+      if (messageEventArgs.Intent == MessageIntent.Telemetry)
+      {
+        GsaApp.gsaProxy.SendTelemetry(messageEventArgs.MessagePortions);
+        //Also log all telemetry transmissions, although the log entries won't have any additional info (prefixes etc) that the proxy has
+        //been coded to add
+        Log.Debug("Telemetry: " + string.Join(" ", messageEventArgs.MessagePortions));
+      }
+    }
+
+    public static void ProcessMessageForLog(object sender, MessageEventArgs messageEventArgs)
+    {
+      if (messageEventArgs.Intent == MessageIntent.TechnicalLog)
+      {
+        switch (messageEventArgs.Level)
+        {
+          case MessageLevel.Debug: Log.Debug(string.Join(" ", messageEventArgs.MessagePortions)); break;
+          case MessageLevel.Information: Log.Information(string.Join(" ", messageEventArgs.MessagePortions)); break;
+          case MessageLevel.Error: Log.Error(string.Join(" ", messageEventArgs.MessagePortions)); break;
+          case MessageLevel.Fatal: Log.Fatal(string.Join(" ", messageEventArgs.MessagePortions)); break;
         }
       }
     }
@@ -63,31 +140,38 @@ namespace SpeckleGSA
 
       SpeckleInitializer.Initialize();
 
-      // Run initialize receiver method in interfacer
-      var assemblies = SpeckleInitializer.GetAssemblies().Where(a => a.GetTypes().Any(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer))));
+      //Find all structural types
+      var speckleTypes = SpeckleInitializer.GetAssemblies().SelectMany(a => a.GetTypes()
+        .Where(t => typeof(SpeckleObject).IsAssignableFrom(t) && !t.IsAbstract)).ToList();
 
-      var speckleTypes = new List<Type>();
-      foreach (var assembly in assemblies)
-      {
-        var types = assembly.GetTypes();
-        foreach (var t in types)
-        {
-          if (typeof(SpeckleObject).IsAssignableFrom(t))
-          {
-            speckleTypes.Add(t);
-          }
-        }
-      }
+      // Run initialize receiver method in interfacer
+      var conversionAssemblies = SpeckleInitializer.GetAssemblies().Where(a => a.GetTypes().Any(t => t.GetInterfaces()
+        .Contains(typeof(ISpeckleInitializer))));
 
       var mappableTypes = new List<Type>();
-      foreach (var ass in assemblies)
+      foreach (var ass in conversionAssemblies)
       {
-        var types = ass.GetTypes();
+        var assemblyTypes = ass.GetTypes();
 
-        Type gsaStatic;
+        //These are the interfaces that are required for this app to recognise it as a GSA Speckle kit
+        var requiredInterfaces = new List<Type> { typeof(ISpeckleInitializer) };
+        var requiredPropertyInterfaces = new List<Type> { typeof(IGSAKit) };
+
+        Type gsaStatic = null;
         try
         {
-          gsaStatic = types.FirstOrDefault(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer)) && t.GetProperties().Any(p => p.PropertyType == typeof(IGSACacheForKit)));
+          foreach (var t in assemblyTypes)
+          {
+            var interfaces = t.GetInterfaces();
+
+            if (requiredInterfaces.All(ri => interfaces.Contains(ri) 
+              && t.GetProperties().Any(p => requiredPropertyInterfaces.Any(pi => pi == p.PropertyType)) ))
+            {
+              gsaStatic = t;
+              break;
+            }
+          }
+
           if (gsaStatic == null)
           {
             continue;
@@ -102,27 +186,14 @@ namespace SpeckleGSA
 
         try
         {
-          gsaStatic.GetProperty("Interface").SetValue(null, gsaProxy);
-          gsaStatic.GetProperty("Settings").SetValue(null, Settings);
-          gsaStatic.GetProperty("Cache").SetValue(null, gsaCache);
-          gsaStatic.GetProperty("AppUI").SetValue(null, appUi);
+          var kit = (IGSAKit)gsaStatic.GetProperty("GsaKit").GetValue(null);
+          gsaStatic.GetProperty("AppResources").SetValue(null, GSA.GsaApp);
+          kits.Add(kit);
         }
         catch
         {
-          Status.AddError($"Unable to fully connect to {ass.GetName().Name}.dll. Please check the versions of the kit you have installed.");
-        }
-
-
-        var objTypes = types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType).ToList();
-        objTypes = objTypes.Distinct().ToList();
-
-        foreach (var t in objTypes)
-        {
-          var prereq = t.GetAttribute("WritePrerequisite");
-          WriteTypePrereqs[t] = (prereq != null) ? ((Type[])prereq).ToList() : new List<Type>();
-
-          prereq = t.GetAttribute("ReadPrerequisite");
-          ReadTypePrereqs[t] = (prereq != null) ? ((Type[])prereq).ToList() : new List<Type>();
+          GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Error, 
+            $"Unable to fully connect to {ass.GetName().Name}.dll. Please check the versions of the kit you have installed.");
         }
 
         foreach (var t in speckleTypes)
@@ -142,74 +213,27 @@ namespace SpeckleGSA
           }
         }
       }
-      Merger.Initialise(mappableTypes);
+      GSA.GsaApp.Merger.Initialise(mappableTypes);
     }
 
-    #region streamInfo
-    public static void RemoveUnusedStreamInfo(List<string> streamNames)
-    {
-      //Remove any streams that will no longer need to be used - if the "Separate sender streams" item has been toggled, for example
-      var senderKeysToRemove = GSA.SenderInfo.Keys.Where(k => !streamNames.Any(sn => sn.Equals(k, StringComparison.InvariantCultureIgnoreCase))).ToList();
-      foreach (var k in senderKeysToRemove)
-      {
-        SenderInfo.Remove(k);
-      }
-    }
-    #endregion
-
-    #region sender_dictionaries
-
-    public static bool SetAssembliesSenderDictionaries()
-    {
-      var assemblies = SpeckleInitializer.GetAssemblies().Where(a => a.GetTypes().Any(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer))));
-      senderDictionaries = new List<IGSASenderDictionary>();
-
-      //Now obtain the serialised (inheriting from SpeckleObject) objects
-      foreach (var ass in assemblies)
-      {
-        var types = ass.GetTypes();
-
-        try
-        {
-          var gsaStatic = types.FirstOrDefault(t => t.GetInterfaces().Contains(typeof(ISpeckleInitializer)) && t.GetProperties().Any(p => p.PropertyType == typeof(IGSACacheForKit)));
-          if (gsaStatic != null)
-          {
-            var dict = (IGSASenderDictionary)gsaStatic.GetProperties().FirstOrDefault(p => p.PropertyType == typeof(IGSASenderDictionary)).GetValue(null);
-            //This is how SpeckleGSA finds the objects in the GSASenderObjects dictionary - by finding the first property in ISpeckleInitializer which is of the specific dictionary type
-            senderDictionaries.Add(dict);
-          }
-        }
-        catch (FileNotFoundException)
-        {
-          //Swallow as it is likely to be an application SDK that a kit's conversion code references which isn't installed
-        }
-        catch (Exception e)
-        {
-          return false;
-        }
-      }
-      return true;
-    }
+    #region kit_resources
 
     public static void ClearSenderDictionaries()
     {
-      foreach (var sd in senderDictionaries)
+      foreach (var sd in SenderDictionaries)
       {
         sd.Clear();
       }
     }
 
-    public static List<SpeckleObject> GetSpeckleObjectsFromSenderDictionaries()
-    {
-      return GetAllConvertedGsaObjectsByType().SelectMany(sd => sd.Value).Cast<IGSASpeckleContainer>().Select(c => c.Value).Cast<SpeckleObject>().ToList();
-    }
+    public static List<SpeckleObject> GetSpeckleObjectsFromSenderDictionaries() => GetAllConvertedGsaObjectsByType()
+      .SelectMany(sd => sd.Value).Cast<IGSASpeckleContainer>().Select(c => (SpeckleObject)c.SpeckleObject).ToList();
 
     public static Dictionary<Type, List<object>> GetAllConvertedGsaObjectsByType()
     {
-      var gsaStaticObjects = SetAssembliesSenderDictionaries();
       var currentObjects = new Dictionary<Type, List<object>>();
 
-      foreach (var dict in GSA.senderDictionaries)
+      foreach (var dict in SenderDictionaries)
       {
         var allObjects = dict.GetAll();
         //Ensure alphabetical order here as this has a bearing on the order of the layers when it's sent, and therefore the order of
@@ -227,7 +251,19 @@ namespace SpeckleGSA
       return currentObjects;
     }
 
-  #endregion
+    #endregion
+
+    #region streamInfo
+    public static void RemoveUnusedStreamInfo(List<string> streamNames)
+    {
+      //Remove any streams that will no longer need to be used - if the "Separate sender streams" item has been toggled, for example
+      var senderKeysToRemove = GSA.SenderInfo.Keys.Where(k => !streamNames.Any(sn => sn.Equals(k, StringComparison.InvariantCultureIgnoreCase))).ToList();
+      foreach (var k in senderKeysToRemove)
+      {
+        SenderInfo.Remove(k);
+      }
+    }
+    #endregion
 
     #region File Operations
     /// <summary>
@@ -237,16 +273,16 @@ namespace SpeckleGSA
     /// <param name="serverAddress">Speckle server address</param>
     public static void NewFile(string emailAddress, string serverAddress, bool showWindow = true)
     {
-			if (!IsInit) return;
+      if (!IsInit) return;
 
-			gsaProxy.NewFile(showWindow);
+      GSA.GsaApp.gsaProxy.NewFile(showWindow);
 
       if (emailAddress != null && serverAddress != null)
       {
         GetSpeckleClients(emailAddress, serverAddress);
       }
 
-      Status.AddMessage("Created new file.");
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Created new file.");
     }
 
     /// <summary>
@@ -257,15 +293,15 @@ namespace SpeckleGSA
     /// <param name="serverAddress">Speckle server address</param>
     public static void OpenFile(string path, string emailAddress, string serverAddress, bool showWindow = true)
     {
-			if (!IsInit) return;
+      if (!IsInit) return;
 
-			gsaProxy.OpenFile(path, showWindow);
+      GSA.GsaApp.gsaProxy.OpenFile(path, showWindow);
       if (emailAddress != null && serverAddress != null)
       {
         GetSpeckleClients(emailAddress, serverAddress);
       }
 
-			Status.AddMessage("Opened new file.");
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Opened new file.");
     }
 
     /// <summary>
@@ -275,8 +311,8 @@ namespace SpeckleGSA
     {
       if (!IsInit) return;
 
-			gsaProxy.Close();
-			SenderInfo.Clear();
+      GSA.GsaApp.gsaProxy.Close();
+      SenderInfo.Clear();
       ReceiverInfo.Clear();
     }
     #endregion
@@ -293,10 +329,10 @@ namespace SpeckleGSA
       ReceiverInfo.Clear();
 
       try
-      { 
+      {
         string key = emailAddress + "&" + serverAddress.Replace(':', '&');
-				
-        string res = gsaProxy.GetTopLevelSid();
+
+        string res = GSA.GsaApp.gsaProxy.GetTopLevelSid();
 
         if (res == "")
         {
@@ -349,9 +385,9 @@ namespace SpeckleGSA
     public static bool SetSpeckleClients(string emailAddress, string serverAddress)
     {
       string key = emailAddress + "&" + serverAddress.Replace(':', '&');
-			string res = gsaProxy.GetTopLevelSid();
+      string res = GSA.GsaApp.gsaProxy.GetTopLevelSid();
 
-			List<string[]> sids = Regex.Matches(res, @"(?<={).*?(?=})").Cast<Match>()
+      List<string[]> sids = Regex.Matches(res, @"(?<={).*?(?=})").Cast<Match>()
               .Select(m => m.Value.Split(new char[] { ':' }))
               .Where(s => s.Length == 2)
               .ToList();
@@ -388,7 +424,7 @@ namespace SpeckleGSA
         sidRecord += "{" + s[0] + ":" + s[1] + "}";
       }
 
-      return gsaProxy.SetTopLevelSid(sidRecord);
+      return GSA.GsaApp.gsaProxy.SetTopLevelSid(sidRecord);
     }
     #endregion
 
@@ -402,13 +438,13 @@ namespace SpeckleGSA
     {
       var baseProps = new Dictionary<string, object>();
 
-      baseProps["units"] = Settings.Units.LongUnitName();
+      baseProps["units"] = GSA.GsaApp.Settings.Units.LongUnitName();
       // TODO: Add other units
 
-      var tolerances = gsaProxy.GetTolerances();
+      var tolerances = GSA.GsaApp.gsaProxy.GetTolerances();
 
-			var lengthTolerances = new List<double>() {
-								Convert.ToDouble(tolerances[3]), // edge
+      var lengthTolerances = new List<double>() {
+                Convert.ToDouble(tolerances[3]), // edge
                 Convert.ToDouble(tolerances[5]), // leg_length
                 Convert.ToDouble(tolerances[7])  // memb_cl_dist
             };
@@ -418,7 +454,7 @@ namespace SpeckleGSA
                 Convert.ToDouble(tolerances[6]), // meemb_orient
             };
 
-      baseProps["tolerance"] = lengthTolerances.Max().ConvertUnit("m", Settings.Units);
+      baseProps["tolerance"] = lengthTolerances.Max().ConvertUnit("m", GSA.GsaApp.Settings.Units);
       baseProps["angleTolerance"] = angleTolerances.Max().ToRadians();
 
       return baseProps;
@@ -433,7 +469,7 @@ namespace SpeckleGSA
     /// </summary>
     public static void UpdateCasesAndTasks()
     {
-			gsaProxy.UpdateCasesAndTasks();
+      GSA.GsaApp.gsaProxy.UpdateCasesAndTasks();
     }
     #endregion
   }

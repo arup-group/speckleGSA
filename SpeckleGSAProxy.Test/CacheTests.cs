@@ -99,47 +99,59 @@ namespace SpeckleGSAProxy.Test
     }
 
     [Test]
-    public async Task GenerateDesignCache()
+    public void GenerateDesignCache()
     {
-      GSA.gsaProxy = new GSAProxy();
-      GSA.gsaCache = new GSACache();
-      //This runs SpeckleInitializer.Initialize() and fills WriteTypePrereqs and ReadTypePrereqs
-      GSA.Init();
+      GSA.GsaApp = new GsaAppResources();
+      GSA.GsaApp.gsaSettings.TargetLayer = GSATargetLayer.Design;
+      GSA.GsaApp.gsaSettings.SeparateStreams = true;
       GSA.SenderInfo = new Dictionary<string, Tuple<string, string>>() { { "testStream", new Tuple<string, string>("testStreamId", "testClientId") } };
-      GSA.Settings = new Settings() { TargetLayer = GSATargetLayer.Design, SeparateStreams = true };
 
-      Status.MessageAdded += (s, e) => Debug.WriteLine("Message: " + e.Message);
-      Status.ErrorAdded += (s, e) => Debug.WriteLine("Error: " + e.Message);
+      //This runs SpeckleInitializer.Initialize() and fills WriteTypePrereqs and ReadTypePrereqs
+      GSA.Init("");
+      
+      //Status.MessageAdded += (s, e) => Debug.WriteLine("Message: " + e.Message);
+      //Status.ErrorAdded += (s, e) => Debug.WriteLine("Error: " + e.Message);
       Status.StatusChanged += (s, e) => Debug.WriteLine("Status: " + e.Name);
 
       var filePath = @"C:\Users\Nic.Burgers\OneDrive - Arup\Issues\Nguyen Le\2D result\shear wall system-seismic v10.1.gwb";
 
-      GSA.gsaProxy.OpenFile(Path.Combine(TestDataDirectory, filePath), false);
+      GSA.GsaApp.gsaProxy.OpenFile(Path.Combine(TestDataDirectory, filePath), false);
 
       var sender = new Sender();
+      bool failed = false;
+      try
+      {
 
-      //This will load data from all streams into the cache
-      await sender.Initialize("", "", (restApi, apiToken) => new TestSpeckleGSASender());
+        //This will load data from all streams into the cache
+        _ = sender.Initialize("", "", (restApi, apiToken) => new TestSpeckleGSASender()).Result;
 
-      sender.Trigger();
+        sender.Trigger();
 
-      //Each kit stores their own objects to be sent
-      var speckleObjects = GSA.GetSpeckleObjectsFromSenderDictionaries();
-      var response = new ResponseObject() { Resources = speckleObjects };
-      var jsonToWrite = JsonConvert.SerializeObject(response, Formatting.Indented);
+        //Each kit stores their own objects to be sent
+        var speckleObjects = GSA.GetSpeckleObjectsFromSenderDictionaries();
+        var response = new ResponseObject() { Resources = speckleObjects };
+        var jsonToWrite = JsonConvert.SerializeObject(response, Formatting.Indented);
 
-      Helper.WriteFile(jsonToWrite, designLayerExpectedFile, TestDataDirectory);
-
-      GSA.gsaProxy.Close();
+        Helper.WriteFile(jsonToWrite, designLayerExpectedFile, TestDataDirectory);
+      }
+      catch (Exception ex)
+      { 
+        failed = true;
+      }
+      finally
+      {
+        GSA.GsaApp.gsaProxy.Close();
+      }
+      Assert.IsFalse(failed);
     }
 
     [Test]
-    public async Task SendAnalysisThenDesign()
+    public void SendAnalysisThenDesign()
     {
-      GSA.gsaProxy = new GSAProxy();
-      GSA.gsaCache = new GSACache();
+      GSA.GsaApp = new GsaAppResources();
+
       //This runs SpeckleInitializer.Initialize() and fills WriteTypePrereqs and ReadTypePrereqs
-      GSA.Init();
+      GSA.Init("");
       GSA.SenderInfo = new Dictionary<string, Tuple<string, string>>() { { "testStream", new Tuple<string, string>("testStreamId", "testClientId") } };
 
       var json = Helper.ReadFile(designLayerExpectedFile, TestDataDirectory);
@@ -147,34 +159,43 @@ namespace SpeckleGSAProxy.Test
       var response = ResponseObject.FromJson(json);
       var expectedDesignLayerSpeckleObjects = response.Resources;
 
-      Status.MessageAdded += (s, e) => Debug.WriteLine("Message: " + e.Message);
-      Status.ErrorAdded += (s, e) => Debug.WriteLine("Error: " + e.Message);
+      //Status.MessageAdded += (s, e) => Debug.WriteLine("Message: " + e.Message);
+      //Status.ErrorAdded += (s, e) => Debug.WriteLine("Error: " + e.Message);
       Status.StatusChanged += (s, e) => Debug.WriteLine("Status: " + e.Name);
 
       var filePath = @"C:\Users\Nic.Burgers\OneDrive - Arup\Issues\Nguyen Le\2D result\shear wall system-seismic v10.1.gwb";
 
-      GSA.gsaProxy.OpenFile(Path.Combine(TestDataDirectory, filePath), false);
+      GSA.GsaApp.gsaProxy.OpenFile(Path.Combine(TestDataDirectory, filePath), false);
 
-      //RECEIVE EVENT #1: Analyis layer
-      var sender = new Sender();
-      GSA.Settings = new Settings() { TargetLayer = GSATargetLayer.Analysis, SeparateStreams = true };
-      await sender.Initialize("", "", (restApi, apiToken) => new TestSpeckleGSASender());
-      sender.Trigger();
+      bool failed = false;
+      try
+      {
+        //RECEIVE EVENT #1: Analyis layer
+        var sender = new Sender();
+        GSA.GsaApp.gsaSettings = new Settings() { TargetLayer = GSATargetLayer.Analysis, SeparateStreams = true };
+        _ = sender.Initialize("", "", (restApi, apiToken) => new TestSpeckleGSASender()).Result;
+        sender.Trigger();
 
-      //Each kit stores their own objects to be sent
-      var speckleObjects = GSA.GetSpeckleObjectsFromSenderDictionaries();
+        //Each kit stores their own objects to be sent
+        var speckleObjects = GSA.GetSpeckleObjectsFromSenderDictionaries();
 
-      //RECEIVE EVENT #2: Design layer
-      sender = new Sender();
-      GSA.Settings.TargetLayer = GSATargetLayer.Design;
-      await sender.Initialize("", "", (restApi, apiToken) => new TestSpeckleGSASender());
-      sender.Trigger();
+        //RECEIVE EVENT #2: Design layer
+        sender = new Sender();
+        GSA.GsaApp.gsaSettings.TargetLayer = GSATargetLayer.Design;
+        _ = sender.Initialize("", "", (restApi, apiToken) => new TestSpeckleGSASender()).Result;
+        sender.Trigger();
 
-      //Each kit stores their own objects to be sent
-      speckleObjects = GSA.GetSpeckleObjectsFromSenderDictionaries();
-
-      GSA.gsaProxy.Close();
-      
+        //Each kit stores their own objects to be sent
+        speckleObjects = GSA.GetSpeckleObjectsFromSenderDictionaries();
+      }
+      catch {
+        failed = true;
+      }
+      finally
+      {
+        GSA.GsaApp.gsaProxy.Close();
+      }
+      Assert.IsFalse(failed);
     }
 
   }

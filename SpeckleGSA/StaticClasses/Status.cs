@@ -8,8 +8,8 @@ namespace SpeckleGSA
   /// </summary>
   public static partial class Status
   {
-    public static event EventHandler<MessageEventArgs> MessageAdded;
-    public static event EventHandler<ErrorEventArgs> ErrorAdded;
+    //public static event EventHandler<MessageEventArgs> MessageAdded;
+    //public static event EventHandler<ErrorEventArgs> ErrorAdded;
     public static event EventHandler<StatusEventArgs> StatusChanged;
 
     private static bool IsInit;
@@ -17,21 +17,20 @@ namespace SpeckleGSA
     /// <summary>
     /// Initializes the handler.
     /// </summary>
-    /// <param name="messageHandler">Event handler for handling messages</param>
-    /// <param name="errorHandler">Event handler for handling errors</param>
     /// <param name="statusHandler">Event handler for status changes</param>
-    public static void Init(EventHandler<MessageEventArgs> messageHandler, EventHandler<ErrorEventArgs> errorHandler, EventHandler<StatusEventArgs> statusHandler)
+    public static void Init(EventHandler<StatusEventArgs> statusHandler)
     {
       if (IsInit)
         return;
 
-      MessageAdded += messageHandler;
-      ErrorAdded += errorHandler;
+      //MessageAdded += messageHandler;
+      //ErrorAdded += errorHandler;
       StatusChanged += statusHandler;
 
       IsInit = true;
     }
 
+    /*
     /// <summary>
     /// Create new message.
     /// </summary>
@@ -52,6 +51,7 @@ namespace SpeckleGSA
         ErrorAdded(null, new ErrorEventArgs(message, ex));
       }
     }
+    */
 
     /// <summary>
     /// Change the status of SpeckleGSA.

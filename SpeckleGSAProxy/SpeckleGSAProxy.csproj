@@ -131,9 +131,7 @@
     <Compile Include="GSAProxy.cs" />
     <Compile Include="IGSACache.cs" />
     <Compile Include="IGSACacheForTesting.cs" />
-    <Compile Include="Indexer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SpeckleAppUI.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SpeckleGSAInterfaces\SpeckleGSAInterfaces.csproj">

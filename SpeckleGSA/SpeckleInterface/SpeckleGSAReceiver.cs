@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using SpeckleCore;
+using SpeckleGSAInterfaces;
 
 namespace SpeckleGSA
 {
@@ -60,7 +61,7 @@ namespace SpeckleGSA
 				{
 					var clientResponse = myReceiver.ClientCreateAsync(new AppClient()
 					{
-						DocumentName = Path.GetFileNameWithoutExtension(GSA.gsaProxy.FilePath),
+						DocumentName = Path.GetFileNameWithoutExtension(GSA.GsaApp.gsaProxy.FilePath),
 						DocumentType = "GSA",
 						Role = "Receiver",
 						StreamId = streamID,
@@ -76,7 +77,7 @@ namespace SpeckleGSA
 				{
 					_ = myReceiver.ClientUpdateAsync(clientID, new AppClient()
 					{
-						DocumentName = Path.GetFileNameWithoutExtension(GSA.gsaProxy.FilePath),
+						DocumentName = Path.GetFileNameWithoutExtension(GSA.GsaApp.gsaProxy.FilePath),
 						Online = true,
 					}).Result;
 
@@ -119,7 +120,8 @@ namespace SpeckleGSA
           UpdateChildren();
           break;
         default:
-          Status.AddError("Unknown event: " + (string)e.EventObject.args.eventType);
+					GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Error, 
+						"Unknown event: " + (string)e.EventObject.args.eventType);
           break;
       }
     }
@@ -151,7 +153,7 @@ namespace SpeckleGSA
 
 			if (!exceptionThrown && streamGetResult.Success == false)
 			{
-				Status.AddError("Failed to receive " + myReceiver.Stream.Name + "stream.");
+				GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Error, "Failed to receive " + myReceiver.Stream.Name + "stream.");
 				return;
 			}
 
@@ -191,7 +193,8 @@ namespace SpeckleGSA
 				{ }
 			}
 
-			Status.AddMessage("Received " + myReceiver.Stream.Name + " stream with " + myReceiver.Stream.Objects.Count() + " objects.");
+			GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, 
+				"Received " + myReceiver.Stream.Name + " stream with " + myReceiver.Stream.Objects.Count() + " objects.");
 		}
 
     /// <summary>
