@@ -101,22 +101,21 @@ namespace SpeckleGSAProxy.Test
     [Test]
     public void GenerateDesignCache()
     {
-      GSA.gsaProxy = new GSAProxy();
-      GSA.gsaCache = new GSACache();
-      GSA.Settings.TargetLayer = GSATargetLayer.Design;
-      GSA.Settings.SeparateStreams = true;
+      GSA.GsaApp = new GsaAppResources();
+      GSA.GsaApp.gsaSettings.TargetLayer = GSATargetLayer.Design;
+      GSA.GsaApp.gsaSettings.SeparateStreams = true;
       GSA.SenderInfo = new Dictionary<string, Tuple<string, string>>() { { "testStream", new Tuple<string, string>("testStreamId", "testClientId") } };
 
       //This runs SpeckleInitializer.Initialize() and fills WriteTypePrereqs and ReadTypePrereqs
-      GSA.Init();
+      GSA.Init("");
       
-      Status.MessageAdded += (s, e) => Debug.WriteLine("Message: " + e.Message);
-      Status.ErrorAdded += (s, e) => Debug.WriteLine("Error: " + e.Message);
+      //Status.MessageAdded += (s, e) => Debug.WriteLine("Message: " + e.Message);
+      //Status.ErrorAdded += (s, e) => Debug.WriteLine("Error: " + e.Message);
       Status.StatusChanged += (s, e) => Debug.WriteLine("Status: " + e.Name);
 
       var filePath = @"C:\Users\Nic.Burgers\OneDrive - Arup\Issues\Nguyen Le\2D result\shear wall system-seismic v10.1.gwb";
 
-      GSA.gsaProxy.OpenFile(Path.Combine(TestDataDirectory, filePath), false);
+      GSA.GsaApp.gsaProxy.OpenFile(Path.Combine(TestDataDirectory, filePath), false);
 
       var sender = new Sender();
       bool failed = false;
@@ -141,7 +140,7 @@ namespace SpeckleGSAProxy.Test
       }
       finally
       {
-        GSA.gsaProxy.Close();
+        GSA.GsaApp.gsaProxy.Close();
       }
       Assert.IsFalse(failed);
     }
@@ -149,10 +148,10 @@ namespace SpeckleGSAProxy.Test
     [Test]
     public void SendAnalysisThenDesign()
     {
-      GSA.gsaProxy = new GSAProxy();
-      GSA.gsaCache = new GSACache();
+      GSA.GsaApp = new GsaAppResources();
+
       //This runs SpeckleInitializer.Initialize() and fills WriteTypePrereqs and ReadTypePrereqs
-      GSA.Init();
+      GSA.Init("");
       GSA.SenderInfo = new Dictionary<string, Tuple<string, string>>() { { "testStream", new Tuple<string, string>("testStreamId", "testClientId") } };
 
       var json = Helper.ReadFile(designLayerExpectedFile, TestDataDirectory);
@@ -160,20 +159,20 @@ namespace SpeckleGSAProxy.Test
       var response = ResponseObject.FromJson(json);
       var expectedDesignLayerSpeckleObjects = response.Resources;
 
-      Status.MessageAdded += (s, e) => Debug.WriteLine("Message: " + e.Message);
-      Status.ErrorAdded += (s, e) => Debug.WriteLine("Error: " + e.Message);
+      //Status.MessageAdded += (s, e) => Debug.WriteLine("Message: " + e.Message);
+      //Status.ErrorAdded += (s, e) => Debug.WriteLine("Error: " + e.Message);
       Status.StatusChanged += (s, e) => Debug.WriteLine("Status: " + e.Name);
 
       var filePath = @"C:\Users\Nic.Burgers\OneDrive - Arup\Issues\Nguyen Le\2D result\shear wall system-seismic v10.1.gwb";
 
-      GSA.gsaProxy.OpenFile(Path.Combine(TestDataDirectory, filePath), false);
+      GSA.GsaApp.gsaProxy.OpenFile(Path.Combine(TestDataDirectory, filePath), false);
 
       bool failed = false;
       try
       {
         //RECEIVE EVENT #1: Analyis layer
         var sender = new Sender();
-        GSA.Settings = new Settings() { TargetLayer = GSATargetLayer.Analysis, SeparateStreams = true };
+        GSA.GsaApp.gsaSettings = new Settings() { TargetLayer = GSATargetLayer.Analysis, SeparateStreams = true };
         _ = sender.Initialize("", "", (restApi, apiToken) => new TestSpeckleGSASender()).Result;
         sender.Trigger();
 
@@ -182,7 +181,7 @@ namespace SpeckleGSAProxy.Test
 
         //RECEIVE EVENT #2: Design layer
         sender = new Sender();
-        GSA.Settings.TargetLayer = GSATargetLayer.Design;
+        GSA.GsaApp.gsaSettings.TargetLayer = GSATargetLayer.Design;
         _ = sender.Initialize("", "", (restApi, apiToken) => new TestSpeckleGSASender()).Result;
         sender.Trigger();
 
@@ -194,7 +193,7 @@ namespace SpeckleGSAProxy.Test
       }
       finally
       {
-        GSA.gsaProxy.Close();
+        GSA.GsaApp.gsaProxy.Close();
       }
       Assert.IsFalse(failed);
     }

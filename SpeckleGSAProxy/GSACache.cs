@@ -499,14 +499,15 @@ namespace SpeckleGSAProxy
         var kw = keyword.Split('.').First();
         if (recordsByKeyword.ContainsKey(kw) && applicationIds != null)
         {
-          matchingRecords.AddRange(recordsByKeyword[kw].Where(r => r.Index > 0 && applicationIds.Any(id => r.ApplicationId.EqualsWithoutSpaces(id))));
+          matchingRecords.AddRange(recordsByKeyword[kw].Where(r => r.Index > 0 && applicationIds.Any(id => r.ApplicationId.EqualsWithoutSpaces(id))
+            && r.Latest));
         }
 
         if (matchingRecords.Count() == 0)
         {
           return new List<int?>();
         }
-        return matchingRecords.Select(r => (int?)r.Index).ToList();
+        return matchingRecords.Select(r => (int?)r.Index).Distinct().ToList();
       });
     }
 

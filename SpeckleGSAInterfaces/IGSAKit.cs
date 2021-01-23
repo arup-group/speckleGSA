@@ -7,11 +7,13 @@ namespace SpeckleGSAInterfaces
   {
     void Clear();
 
+    /*
     //These are set by the app, for use by the kit
     IGSASettings Settings { get; set; }
     IGSAProxy Interface { get; set; }
     IGSACacheForKit Cache { get; set; }
     ISpeckleGSAAppUI AppUI { get; set; }
+    */
 
     //These are set by the kit, for use by the app
 
