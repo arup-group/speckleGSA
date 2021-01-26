@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using SpeckleCore;
+using SpeckleGSAInterfaces;
 
 namespace SpeckleGSA
 {
@@ -62,7 +63,7 @@ namespace SpeckleGSA
         {
           var clientResponse = mySender.ClientCreateAsync(new AppClient()
           {
-            DocumentName = Path.GetFileNameWithoutExtension(GSA.gsaProxy.FilePath),
+            DocumentName = Path.GetFileNameWithoutExtension(GSA.GsaApp.gsaProxy.FilePath),
             DocumentType = "GSA",
             Role = "Sender",
             StreamId = this.StreamID,
@@ -85,7 +86,7 @@ namespace SpeckleGSA
         {
           var clientResponse = await mySender.ClientUpdateAsync(clientID, new AppClient()
           {
-            DocumentName = Path.GetFileNameWithoutExtension(GSA.gsaProxy.FilePath),
+            DocumentName = Path.GetFileNameWithoutExtension(GSA.GsaApp.gsaProxy.FilePath),
             Online = true,
           });
 
@@ -148,7 +149,8 @@ namespace SpeckleGSA
         objectCounter += convertedObjects.Count;
       }
 
-      Status.AddMessage("Successfully converted: " + bucketObjects.Count() + " objects.");
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, 
+        "Successfully converted: " + bucketObjects.Count() + " objects.");
 
       // Prune objects with placeholders using local DB
       try

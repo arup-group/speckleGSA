@@ -11,6 +11,8 @@ using System.IO;
 using System.Globalization;
 using SpeckleGSAProxy;
 using SpeckleGSAInterfaces;
+using System.Deployment.Application;
+using System.Reflection;
 
 namespace SpeckleGSAUI
 {
@@ -68,8 +70,9 @@ namespace SpeckleGSAUI
             arguments.Add(arg, e.Args[index + 1].Trim(new char[] { '"' }));
         }
 
-        GSA.Init();
-        Status.Init(this.AddMessage, this.AddError, this.ChangeStatus);
+        GSA.Init(getRunningVersion().ToString());
+        GSA.GsaApp.gsaMessenger.MessageAdded += this.ProcessMessage;
+        //Status.Init(this.AddMessage, this.AddError, this.ChangeStatus);
         SpeckleCore.SpeckleInitializer.Initialize();
 
         RunCLI();
@@ -145,7 +148,7 @@ namespace SpeckleGSAUI
       else
       {
         GSA.NewFile(EmailAddress, RestApi, false);
-				GSA.gsaProxy.SaveAs(arguments["file"]);
+				GSA.GsaApp.gsaProxy.SaveAs(arguments["file"]);
       }
 
       // We will receive all the things!
@@ -173,14 +176,14 @@ namespace SpeckleGSAUI
       if (arguments.ContainsKey("layer"))
         if (arguments["layer"].ToLower() == "analysis")
         {
-					GSA.Settings.TargetLayer = GSATargetLayer.Analysis;
+					GSA.GsaApp.Settings.TargetLayer = GSATargetLayer.Analysis;
         }
       
       if (arguments.ContainsKey("nodeAllowance"))
       {
         try
         {
-					GSA.Settings.CoincidentNodeAllowance = Convert.ToDouble(arguments["nodeAllowance"]);
+					GSA.GsaApp.Settings.CoincidentNodeAllowance = Convert.ToDouble(arguments["nodeAllowance"]);
         }
         catch { }
       }
@@ -193,7 +196,7 @@ namespace SpeckleGSAUI
 
         foreach (var streamInfo in nonBlankReceivers)
         {
-          Status.AddMessage("Creating receiver " + streamInfo.Item1);
+          GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Creating receiver " + streamInfo.Item1);
           gsaReceiver.Receivers[streamInfo.Item1] = new SpeckleGSAReceiver(RestApi, ApiToken);
         }
       });
@@ -202,7 +205,7 @@ namespace SpeckleGSAUI
       gsaReceiver.Trigger(null, null);
       gsaReceiver.Dispose();
 
-			GSA.gsaProxy.SaveAs(arguments["file"]);
+			GSA.GsaApp.gsaProxy.SaveAs(arguments["file"]);
 			GSA.Close();
 
       Console.WriteLine("Receiving complete");
@@ -213,54 +216,54 @@ namespace SpeckleGSAUI
       if (arguments.ContainsKey("layer"))
         if (arguments["layer"].ToLower() == "analysis")
         {
-					GSA.Settings.TargetLayer = GSATargetLayer.Analysis;
+					GSA.GsaApp.Settings.TargetLayer = GSATargetLayer.Analysis;
 				}
 
       if (arguments.ContainsKey("sendAllNodes"))
-				GSA.Settings.SendOnlyMeaningfulNodes = false;
+				GSA.GsaApp.gsaSettings.SendOnlyMeaningfulNodes = false;
 
       if (arguments.ContainsKey("separateStreams"))
-				GSA.Settings.SeparateStreams = true;
+				GSA.GsaApp.gsaSettings.SeparateStreams = true;
 
       if (arguments.ContainsKey("resultOnly"))
-				GSA.Settings.SendOnlyResults = true;
+				GSA.GsaApp.gsaSettings.SendOnlyResults = true;
 
       if (arguments.ContainsKey("resultUnembedded"))
-				GSA.Settings.EmbedResults = false;
+				GSA.GsaApp.gsaSettings.EmbedResults = false;
 
       if (arguments.ContainsKey("resultInLocalAxis"))
-				GSA.Settings.ResultInLocalAxis = true;
+				GSA.GsaApp.gsaSettings.ResultInLocalAxis = true;
 
       if (arguments.ContainsKey("result1DNumPosition"))
       {
         try
         {
-					GSA.Settings.Result1DNumPosition = Convert.ToInt32(arguments["result1DNumPosition"]);
+					GSA.GsaApp.Settings.Result1DNumPosition = Convert.ToInt32(arguments["result1DNumPosition"]);
         }
         catch { }
       }
 
       if (arguments.ContainsKey("result"))
       {
-				GSA.Settings.SendResults = true;
+				GSA.GsaApp.gsaSettings.SendResults = true;
 
         var results = arguments["result"].Split(new char[] { ',' }).Select(x => x.Replace("\"", ""));
 
         foreach (string r in results)
         {
           if (Result.NodalResultMap.ContainsKey(r))
-						GSA.Settings.NodalResults[r] = Result.NodalResultMap[r];
+						GSA.GsaApp.Settings.NodalResults[r] = Result.NodalResultMap[r];
           else if (Result.Element1DResultMap.ContainsKey(r))
-						GSA.Settings.Element1DResults[r] = Result.Element1DResultMap[r];
+						GSA.GsaApp.Settings.Element1DResults[r] = Result.Element1DResultMap[r];
           else if (Result.Element2DResultMap.ContainsKey(r))
-						GSA.Settings.Element2DResults[r] = Result.Element2DResultMap[r];
+						GSA.GsaApp.Settings.Element2DResults[r] = Result.Element2DResultMap[r];
           else if (Result.MiscResultMap.ContainsKey(r))
-						GSA.Settings.MiscResults[r] = Result.MiscResultMap[r];
+						GSA.GsaApp.Settings.MiscResults[r] = Result.MiscResultMap[r];
         }
       }
 
       if (arguments.ContainsKey("resultCases"))
-				GSA.Settings.ResultCases = arguments["resultCases"].Split(new char[] { ',' }).ToList();
+				GSA.GsaApp.Settings.ResultCases = arguments["resultCases"].Split(new char[] { ',' }).ToList();
       
       GSA.GetSpeckleClients(EmailAddress, RestApi);
       var gsaSender = new Sender();
@@ -269,7 +272,7 @@ namespace SpeckleGSAUI
       gsaSender.Trigger();
       gsaSender.Dispose();
 
-			GSA.gsaProxy.SaveAs(arguments["file"]);
+			GSA.GsaApp.gsaProxy.SaveAs(arguments["file"]);
 			GSA.Close();
 
       Console.WriteLine("Sending complete");
@@ -282,11 +285,19 @@ namespace SpeckleGSAUI
     /// <summary>
     /// Message handler.
     /// </summary>
-    private void AddMessage(object sender, MessageEventArgs e)
+    private void ProcessMessage(object sender, MessageEventArgs e)
     {
-      Console.WriteLine("[" + DateTime.Now.ToString("h:mm:ss tt") + "] " + e.Message);
+      if (e.Level == MessageLevel.Debug || e.Level == MessageLevel.Information)
+      {
+        Console.WriteLine("[" + DateTime.Now.ToString("h:mm:ss tt") + "] " + string.Join(" ", e.MessagePortions));
+      }
+      else
+      {
+        Console.WriteLine("[" + DateTime.Now.ToString("h:mm:ss tt") + "] ERROR: " + string.Join(" ", e.MessagePortions));
+      }
     }
 
+    /*
     /// <summary>
     /// Error message handler.
     /// </summary>
@@ -294,6 +305,7 @@ namespace SpeckleGSAUI
     {
       Console.WriteLine("[" + DateTime.Now.ToString("h:mm:ss tt") + "] ERROR: " + e.Message);
     }
+    */
 
     /// <summary>
     /// Change status handler.
@@ -306,5 +318,17 @@ namespace SpeckleGSAUI
         Console.WriteLine("[" + DateTime.Now.ToString("h:mm:ss tt") + "] " + e.Name + "...");
     }
     #endregion
+
+    private Version getRunningVersion()
+    {
+      try
+      {
+        return ApplicationDeployment.CurrentDeployment.CurrentVersion;
+      }
+      catch (Exception)
+      {
+        return Assembly.GetExecutingAssembly().GetName().Version;
+      }
+    }
   }
 }

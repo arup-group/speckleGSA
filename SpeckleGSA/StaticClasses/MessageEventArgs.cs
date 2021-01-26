@@ -1,19 +1,19 @@
-﻿using System;
+﻿using SpeckleGSAInterfaces;
+using System;
 
 namespace SpeckleGSA
 {
   public class MessageEventArgs : EventArgs
   {
-    private readonly string message;
-
-    public MessageEventArgs(string message)
+    public MessageEventArgs(MessageIntent intent, MessageLevel level, params string[] messagePortions)
     {
-      this.message = message;
+      this.MessagePortions = messagePortions;
+      this.Intent = intent;
+      this.Level = level;
     }
 
-    public string Message
-    {
-      get { return message; }
-    }
+    public string[] MessagePortions { get; }
+    public MessageIntent Intent { get; }
+    public MessageLevel Level { get; }
   }
 }

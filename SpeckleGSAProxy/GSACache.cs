@@ -101,11 +101,18 @@ namespace SpeckleGSAProxy
     public List<string> GetNewGwaSetCommands() => ExecuteWithLock(() =>
       {
         var retList = new List<string>();
-        foreach (var r in records.Where(r => r.Previous == false && r.Latest == true))
+
+        //Ensure records within each keyword group is ordered by index
+        var latestRecords = records.Where(r => r.Previous == false && r.Latest == true);
+        var latestRecordsByKeyword = latestRecords.GroupBy(r => r.Keyword).ToDictionary(g => g.Key, g => g.ToList());
+        foreach (var kw in latestRecordsByKeyword.Keys)
         {
-          retList.Add((r.GwaSetCommandType == GwaSetCommandType.SetAt)
+          foreach (var r in latestRecordsByKeyword[kw].OrderBy(r => r.Index))
+          {
+            retList.Add((r.GwaSetCommandType == GwaSetCommandType.SetAt)
             ? string.Join(GSAProxy.GwaDelimiter.ToString(), new[] { "SET_AT", r.Index.ToString(), r.Gwa })
             : r.Gwa);
+          }
         }
         return retList;
       });
@@ -492,14 +499,15 @@ namespace SpeckleGSAProxy
         var kw = keyword.Split('.').First();
         if (recordsByKeyword.ContainsKey(kw) && applicationIds != null)
         {
-          matchingRecords.AddRange(recordsByKeyword[kw].Where(r => r.Index > 0 && applicationIds.Any(id => r.ApplicationId.EqualsWithoutSpaces(id))));
+          matchingRecords.AddRange(recordsByKeyword[kw].Where(r => r.Index > 0 && applicationIds.Any(id => r.ApplicationId.EqualsWithoutSpaces(id))
+            && r.Latest));
         }
 
         if (matchingRecords.Count() == 0)
         {
           return new List<int?>();
         }
-        return matchingRecords.Select(r => (int?)r.Index).ToList();
+        return matchingRecords.Select(r => (int?)r.Index).Distinct().ToList();
       });
     }
 

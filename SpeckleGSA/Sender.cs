@@ -39,25 +39,21 @@ namespace SpeckleGSA
 
 			if (!GSA.IsInit)
 			{
-				Status.AddError("GSA link not found.");
+        GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Error, "GSA link not found.");
 				return statusMessages;
 			}
-
-      GSA.SetAssembliesSenderDictionaries();
 
       var startTime = DateTime.Now;      
       Status.ChangeStatus("Reading GSA data into cache");
 
       //Update cache
-      int numRowsUpdated = 0;
-      int numKeywords = 0;
-      var updatedCache = await Task.Run(() => UpdateCache(out numRowsUpdated, out numKeywords));
+      var updatedCache = await Task.Run(() => UpdateCache());
       if (!updatedCache)
       {
-        Status.AddError("Error in communicating GSA - please check if the GSA file has been closed down");
+        GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Error, 
+          "Error in communicating GSA - please check if the GSA file has been closed down");
         return statusMessages;
       }
-      Status.AddMessage("Read " + numRowsUpdated + " GWA lines across " + numKeywords + " keywords into cache");
 
       // Grab all GSA related object
       Status.ChangeStatus("Preparing to read GSA Objects");
@@ -74,7 +70,8 @@ namespace SpeckleGSA
       await CreateInitialiseSenders(streamNames, gsaSenderCreator, restApi, apiToken);
 
       TimeSpan duration = DateTime.Now - startTime;
-      Status.AddMessage("Duration of initialisation: " + duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Duration of initialisation: " + duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Telemetry, MessageLevel.Information, "send", "initialisation", "duration", duration.ToString(@"hh\:mm\:ss"));
       Status.ChangeStatus("Ready to stream");
       IsInit = true;
 
@@ -91,7 +88,7 @@ namespace SpeckleGSA
       var startTime = DateTime.Now;
 
       IsBusy = true;
-			GSA.Settings.Units = GSA.gsaProxy.GetUnits();
+			GSA.GsaApp.Settings.Units = GSA.GsaApp.gsaProxy.GetUnits();
 
       //Clear previously-sent objects
       GSA.ClearSenderDictionaries();
@@ -102,11 +99,8 @@ namespace SpeckleGSA
       bool changeDetected = false;
       do
       {
-        ExecuteWithLock(ref traversedSerialisedLock, () =>
-        {
-          currentBatch = FilteredReadTypePrereqs.Where(i => i.Value.Count(x => !traversedSerialisedTypes.Contains(x)) == 0).Select(i => i.Key).ToList();
-          currentBatch.RemoveAll(i => traversedSerialisedTypes.Contains(i));
-        });
+        currentBatch = GetNewCurrentBatch();
+        
 
 #if DEBUG
         foreach (var t in currentBatch)
@@ -133,7 +127,8 @@ namespace SpeckleGSA
       var streamBuckets = CreateStreamBuckets();
 
       TimeSpan duration = DateTime.Now - startTime;
-      Status.AddMessage("Duration of conversion to Speckle: " + duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Duration of conversion to Speckle: " + duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Telemetry, MessageLevel.Information, "send", "conversion", "duration", duration.ToString(@"hh\:mm\:ss"));
       startTime = DateTime.Now;
 
       // Send package
@@ -143,18 +138,32 @@ namespace SpeckleGSA
       {
         Status.ChangeStatus("Sending to stream: " + Senders[k].StreamID);
 
-        var title = GSA.gsaProxy.GetTitle();
-        var streamName = GSA.Settings.SeparateStreams ? title + "." + k : title;
+        var title = GSA.GsaApp.gsaProxy.GetTitle();
+        var streamName = GSA.GsaApp.gsaSettings.SeparateStreams ? title + "." + k : title;
 
         Senders[k].UpdateName(streamName);
         Senders[k].SendGSAObjects(streamBuckets[k]);
       }
 
       duration = DateTime.Now - startTime;
-      Status.AddMessage("Duration of sending to Speckle: " + duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Duration of sending to Speckle: " + duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Telemetry, MessageLevel.Information, "send", "sending", "duration", duration.ToString(@"hh\:mm\:ss"));
 
       IsBusy = false;
       Status.ChangeStatus("Finished sending", 100);
+    }
+
+    private List<Type> GetNewCurrentBatch()
+    {
+      var txTypePrereqs = GSA.TxTypeDependencies;
+      var batch = new List<Type>();
+      ExecuteWithLock(ref traversedSerialisedLock, () =>
+      {
+        batch = txTypePrereqs.Where(i => i.Value.Count(x => !traversedSerialisedTypes.Contains(x)) == 0).Select(i => i.Key).ToList();
+        batch.RemoveAll(i => traversedSerialisedTypes.Contains(i));
+      });
+
+      return batch;
     }
 
     private void ProcessTypeForSending(Type t, ref bool changeDetected)
@@ -176,6 +185,9 @@ namespace SpeckleGSA
       {
         changeDetected = true;
       }
+
+      //Process any cached messages from the conversion code
+      GSA.GsaApp.gsaMessenger.Trigger();
 
       ExecuteWithLock(ref traversedSerialisedLock, () => traversedSerialisedTypes.Add(t));
     }
@@ -203,7 +215,7 @@ namespace SpeckleGSA
 
         if (!GSA.SenderInfo.ContainsKey(streamName))
         {
-          Status.AddMessage("Creating new sender for " + streamName);
+          GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Creating new sender for " + streamName);
           await Senders[streamName].InitializeSender(null, null, streamName);
           GSA.SenderInfo[streamName] = new Tuple<string, string>(Senders[streamName].StreamID, Senders[streamName].ClientID);
         }
@@ -221,11 +233,11 @@ namespace SpeckleGSA
       var currentObjects = GSA.GetAllConvertedGsaObjectsByType();
       foreach (var kvp in currentObjects)
       {
-        var targetStream = GSA.Settings.SeparateStreams ? StreamMap[kvp.Key] : "Full Model";
+        var targetStream = GSA.GsaApp.gsaSettings.SeparateStreams ? StreamMap[kvp.Key] : "Full Model";
 
         foreach (object obj in kvp.Value)
         {
-          if (GSA.Settings.SendOnlyMeaningfulNodes)
+          if (GSA.GsaApp.gsaSettings.SendOnlyMeaningfulNodes)
           {
             if (obj.GetType().Name == "GSANode" && !(bool)obj.GetType().GetField("ForceSend").GetValue(obj))
             {
@@ -264,18 +276,18 @@ namespace SpeckleGSA
       foreach (var ass in assemblies)
       {
         var types = ass.GetTypes();
-        objTypes.AddRange(types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType));
+        objTypes.AddRange(types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType && !t.IsAbstract));
       }
       return objTypes;
     }
 
     private List<string> GetStreamNames(List<Type> objTypes)
     {
-      var streamNames = (GSA.Settings.SendOnlyResults) ? new List<string> { "results" }
-       : (GSA.Settings.SeparateStreams)
+      var streamNames = (GSA.GsaApp.gsaSettings.SendOnlyResults) ? new List<string> { "results" }
+       : (GSA.GsaApp.gsaSettings.SeparateStreams)
          ? objTypes.Select(t => (string)t.GetAttribute("Stream")).Distinct().ToList()
          : new List<string>() { "Full Model" };
-      return streamNames;
+      return streamNames.Where(sn => !string.IsNullOrEmpty(sn)).ToList();
     }
 
     private void CreateStreamMap(List<Type> objTypes)
@@ -299,17 +311,18 @@ namespace SpeckleGSA
       return keywords;
     }
 
-    private bool UpdateCache(out int numUpdated, out int numKeywords)
+    private bool UpdateCache()
     {
-      var keywords = SettingsToKeywords();
-      GSA.gsaCache.Clear();
+      //var keywords = SettingsToKeywords();
+      var keywords = GSA.Keywords;
+      GSA.GsaApp.gsaCache.Clear();
       try
       {
-        var data = GSA.gsaProxy.GetGwaData(keywords, false);
+        var data = GSA.GsaApp.gsaProxy.GetGwaData(keywords, false);
         for (int i = 0; i < data.Count(); i++)
         {
           var applicationId = (string.IsNullOrEmpty(data[i].ApplicationId)) ? null : data[i].ApplicationId;
-          GSA.gsaCache.Upsert(
+          GSA.GsaApp.gsaCache.Upsert(
             data[i].Keyword,
             data[i].Index,
             data[i].GwaWithoutSet,
@@ -317,14 +330,15 @@ namespace SpeckleGSA
             applicationId: applicationId,
             gwaSetCommandType: data[i].GwaSetType);
         }
-        numKeywords = keywords.Count();
-        numUpdated = data.Count();
+        int numKeywords = keywords.Count();
+        int numUpdated = data.Count();
+
+        GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Read " + numUpdated + " GWA lines across " + numKeywords + " keywords into cache");
+
         return true;
       }
       catch
       {
-        numKeywords = 0;
-        numUpdated = 0;
         return false;
       }
     }
@@ -333,21 +347,23 @@ namespace SpeckleGSA
     {
       var keywords = new List<string>();
 
+      var txTypePrereqs = GSA.TxTypeDependencies;
+
       //Filter out Prereqs that are excluded by the layer selection
       // Remove wrong layer objects from Prereqs
-      if (GSA.Settings.SendOnlyResults)
+      if (GSA.GsaApp.gsaSettings.SendOnlyResults)
       {
         //Ensure the load-relatd types are into the cache too so that the load cases and combos are there to resolve the load cases listed by the user
-        var bucketNames = GSA.Settings.SendOnlyResults ? new string[] { "results" } : null;
+        var bucketNames = GSA.GsaApp.gsaSettings.SendOnlyResults ? new string[] { "results" } : null;
 
-        var streamLayerPrereqs = GSA.ReadTypePrereqs.Where(t =>
+        var streamLayerPrereqs = txTypePrereqs.Where(t =>
           bucketNames.Any(s => s.Equals((string)t.Key.GetAttribute("Stream"), StringComparison.InvariantCultureIgnoreCase))
-          && ObjectTypeMatchesLayer(t.Key, GSA.Settings.TargetLayer));
+          && ObjectTypeMatchesLayer(t.Key, GSA.GsaApp.Settings.TargetLayer));
 
         foreach (var kvp in streamLayerPrereqs)
         {
           FilteredReadTypePrereqs[kvp.Key] = kvp.Value.Where(l =>
-            ObjectTypeMatchesLayer(l, GSA.Settings.TargetLayer)
+            ObjectTypeMatchesLayer(l, GSA.GsaApp.Settings.TargetLayer)
             && bucketNames.Any(s => s.Equals((string)l.GetAttribute("Stream"), StringComparison.InvariantCultureIgnoreCase))).ToList();
         }
 
@@ -365,7 +381,7 @@ namespace SpeckleGSA
           }
 
           //The load tasks and combos need to be loaded to to ensure they can be used to process the list of cases to be sent
-          var extraLoadCaseTypes = GSA.ReadTypePrereqs.Where(et => et.Key.Name.EndsWith("LoadTask", StringComparison.InvariantCultureIgnoreCase)
+          var extraLoadCaseTypes = txTypePrereqs.Where(et => et.Key.Name.EndsWith("LoadTask", StringComparison.InvariantCultureIgnoreCase)
             || et.Key.Name.EndsWith("LoadCombo", StringComparison.InvariantCultureIgnoreCase));
           if (extraLoadCaseTypes.Count() > 0)
           {
@@ -381,10 +397,10 @@ namespace SpeckleGSA
       }
       else
       {
-        var layerPrereqs = GSA.ReadTypePrereqs.Where(t => ObjectTypeMatchesLayer(t.Key, GSA.Settings.TargetLayer));
+        var layerPrereqs = txTypePrereqs.Where(t => ObjectTypeMatchesLayer(t.Key, GSA.GsaApp.Settings.TargetLayer));
         foreach (var kvp in layerPrereqs)
         {
-          FilteredReadTypePrereqs[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, GSA.Settings.TargetLayer)).ToList();
+          FilteredReadTypePrereqs[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, GSA.GsaApp.Settings.TargetLayer)).ToList();
         }
         GetFilteredKeywords().ForEach(kw =>
         {
