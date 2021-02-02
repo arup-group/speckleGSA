@@ -136,6 +136,8 @@ namespace SpeckleGSA
 
       foreach (var k in streamBuckets.Keys)
       {
+        if (!Senders.ContainsKey(k)) continue;
+
         Status.ChangeStatus("Sending to stream: " + Senders[k].StreamID);
 
         var title = GSA.GsaApp.gsaProxy.GetTitle();
@@ -173,18 +175,23 @@ namespace SpeckleGSA
         Status.ChangeStatus("Reading " + t.Name);
       }
 
-      //The SpeckleStructural kit actually does serialisation (calling of ToSpeckle()) by type, not individual object.  This is due to
-      //GSA offering bulk GET based on type.
-      //So if the ToSpeckle() call for the type is successful it does all the objects of that type and returns SpeckleObject.
-      //If there is an error, then the SpeckleCore Converter.Serialise will return SpeckleNull.  
-      //The converted objects are stored in the kit in its own collection, not returned by Serialise() here.
-      var dummyObject = Activator.CreateInstance(t);
-      var result = Converter.Serialise(dummyObject);
-
-      if (!(result is SpeckleNull))
+      try
       {
-        changeDetected = true;
+        //The SpeckleStructural kit actually does serialisation (calling of ToSpeckle()) by type, not individual object.  This is due to
+        //GSA offering bulk GET based on type.
+        //So if the ToSpeckle() call for the type is successful it does all the objects of that type and returns SpeckleObject.
+        //If there is an error, then the SpeckleCore Converter.Serialise will return SpeckleNull.  
+        //The converted objects are stored in the kit in its own collection, not returned by Serialise() here.
+        var dummyObject = Activator.CreateInstance(t);
+        var result = Converter.Serialise(dummyObject);
+
+        if (!(result is SpeckleNull))
+        {
+          changeDetected = true;
+        }
+
       }
+      catch { }
 
       //Process any cached messages from the conversion code
       GSA.GsaApp.gsaMessenger.Trigger();

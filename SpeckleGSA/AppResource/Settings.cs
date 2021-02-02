@@ -24,7 +24,7 @@ namespace SpeckleGSA
 		public double CoincidentNodeAllowance { get; set; } = 0.1;
 		public bool SendOnlyResults { get; set; } = false;
 
-		public bool SendResults = false;
+		public bool SendResults { get; set; } = false;
 
 		private int loggingthreshold = 3;
 
