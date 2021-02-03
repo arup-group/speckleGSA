@@ -121,12 +121,25 @@ namespace SpeckleGSA
     {
       if (messageEventArgs.Intent == MessageIntent.TechnicalLog)
       {
-        switch (messageEventArgs.Level)
+        if (messageEventArgs.Exception == null)
         {
-          case MessageLevel.Debug: Log.Debug(string.Join(" ", messageEventArgs.MessagePortions)); break;
-          case MessageLevel.Information: Log.Information(string.Join(" ", messageEventArgs.MessagePortions)); break;
-          case MessageLevel.Error: Log.Error(string.Join(" ", messageEventArgs.MessagePortions)); break;
-          case MessageLevel.Fatal: Log.Fatal(string.Join(" ", messageEventArgs.MessagePortions)); break;
+          switch (messageEventArgs.Level)
+          {
+            case MessageLevel.Debug: Log.Debug(string.Join(" ", messageEventArgs.MessagePortions)); break;
+            case MessageLevel.Information: Log.Information(string.Join(" ", messageEventArgs.MessagePortions)); break;
+            case MessageLevel.Error: Log.Error(string.Join(" ", messageEventArgs.MessagePortions)); break;
+            case MessageLevel.Fatal: Log.Fatal(string.Join(" ", messageEventArgs.MessagePortions)); break;
+          }
+        }
+        else
+        {
+          switch (messageEventArgs.Level)
+          {
+            case MessageLevel.Debug: Log.Debug(messageEventArgs.Exception, string.Join(" ", messageEventArgs.MessagePortions)); break;
+            case MessageLevel.Information: Log.Information(messageEventArgs.Exception, string.Join(" ", messageEventArgs.MessagePortions)); break;
+            case MessageLevel.Error: Log.Error(messageEventArgs.Exception, string.Join(" ", messageEventArgs.MessagePortions)); break;
+            case MessageLevel.Fatal: Log.Fatal(messageEventArgs.Exception, string.Join(" ", messageEventArgs.MessagePortions)); break;
+          }
         }
       }
     }
