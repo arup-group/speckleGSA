@@ -13,6 +13,15 @@ namespace SpeckleGSA
     private List<MessageEventArgs> MessageCache = new List<MessageEventArgs>();
 
     //For use by the kits, which will store the messages to be triggered later
+    public bool CacheMessage(MessageIntent intent, MessageLevel level, Exception ex, params string[] messagePortions)
+    {
+      lock (syncLock)
+      {
+        MessageCache.Add(new MessageEventArgs(intent, level, ex, messagePortions));
+      }
+      return true;
+    }
+
     public bool CacheMessage(MessageIntent intent, MessageLevel level, params string[] messagePortions)
     {
       lock (syncLock)
@@ -47,8 +56,10 @@ namespace SpeckleGSA
       //Currently just recognises the first two levels of message portions
       lock (syncLock)
       {
-        var msgGroups = MessageCache.GroupBy(m => new { m.Intent, m.Level }).ToDictionary(g => g.Key, g => g.ToList());
+        //Any message with exceptions shouldn't be consolidated
+        newCache.AddRange(MessageCache.Where(m => m.Exception != null));
 
+        var msgGroups = MessageCache.Where(m => m.Exception == null).GroupBy(m => new { m.Intent, m.Level }).ToDictionary(g => g.Key, g => g.ToList());
         foreach (var gk in msgGroups.Keys)
         {
           var msgDict = new Dictionary<string, List<string>>();
