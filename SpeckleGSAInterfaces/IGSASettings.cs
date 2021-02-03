@@ -14,6 +14,7 @@ namespace SpeckleGSAInterfaces
 		Dictionary<string, Tuple<int, int, List<string>>> Element2DResults { get; set; }
 		Dictionary<string, Tuple<string, int, int, List<string>>> MiscResults { get; set; } 
 
+		bool SendResults { get; set; }
 		List<string> ResultCases { get; set; }
 		bool ResultInLocalAxis { get; set; }
 		int Result1DNumPosition { get; set; }
