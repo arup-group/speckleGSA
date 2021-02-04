@@ -37,6 +37,12 @@ namespace SpeckleGSA
       return true;
     }
 
+    public bool Message(MessageIntent intent, MessageLevel level, Exception ex, params string[] messagePortions)
+    {
+      MessageAdded?.Invoke(null, new MessageEventArgs(intent, level, ex, messagePortions));
+      return true;
+    }
+
     public void Trigger()
     {
       ConsolidateCache();

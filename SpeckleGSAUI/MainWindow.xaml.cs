@@ -142,26 +142,6 @@ namespace SpeckleGSAUI
       Status.Init(this.ChangeStatus);
       GSA.GsaApp.gsaMessenger.MessageAdded += this.ProcessMessageForUI;
 
-      /*
-      //Add further event handling delegates - this time for logging - to the status events
-      Status.MessageAdded += (sender, eventArgs) => { Log.Information(eventArgs.Message); };
-      Status.ErrorAdded += (sender, eventArgs) => 
-      {
-        if (eventArgs.Exception == null)
-        {
-          Log.Error(eventArgs.Message);
-        }
-        else
-        {
-          Log.Error(eventArgs.Exception, eventArgs.Message);
-          if (eventArgs.Exception.InnerException != null)
-          {
-            Log.Error(eventArgs.Exception.InnerException, eventArgs.Message);
-          }
-        }
-      };
-      */
-
       MessagePane.ItemsSource = Messages;
 
       SpeckleCore.SpeckleInitializer.Initialize();

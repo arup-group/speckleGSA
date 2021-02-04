@@ -163,6 +163,7 @@ namespace SpeckleGSA
         if (!string.IsNullOrEmpty(msgFailure))
         {
           GSA.GsaApp.Messenger.Message(MessageIntent.Display, MessageLevel.Error, msgFailure, GSA.GsaApp.gsaSettings.VerboseErrors ? ex.Message : null);
+          GSA.GsaApp.Messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, ex, msgFailure);
         }
       }
       if (success)
