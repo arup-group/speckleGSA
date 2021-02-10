@@ -5,7 +5,7 @@ namespace SpeckleGSA
 {
   public class MessageEventArgs : EventArgs
   {
-    public string[] MessagePortions { get; }
+    public string[] MessagePortions { get; set; }
     public MessageIntent Intent { get; }
     public MessageLevel Level { get; }
 

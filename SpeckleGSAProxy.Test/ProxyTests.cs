@@ -48,19 +48,14 @@ namespace SpeckleGSAProxy.Test
       type: "Polyline/Structural1DElementPolyline",	23
     */
 
-    [SetUp]
-    public void Prepare()
-    {
-    }
-
     [TestCase(GSATargetLayer.Design, "EC_mxfJ2p.json", "m")]
     [TestCase(GSATargetLayer.Analysis, "EC_mxfJ2p.json", "m")]
     public void ReceiveTestPreserveOrderContinuousMerge(GSATargetLayer layer, string fileName, string streamUnits = "mm")
     {
       GSA.Reset();
       GSA.GsaApp.gsaProxy = new TestProxy();
-      GSA.GsaApp.Settings.TargetLayer = layer;
-      GSA.GsaApp.Settings.Units = "m";
+      GSA.GsaApp.gsaSettings.TargetLayer = layer;
+      GSA.GsaApp.gsaSettings.Units = "m";
       GSA.Init("");
 
       var streamIds = new[] { fileName }.Select(fn => fn.Split(new[] { '.' }).First()).ToList();
@@ -70,7 +65,7 @@ namespace SpeckleGSAProxy.Test
       var receiver = new Receiver() { Receivers = streamIds.ToDictionary(s => s, s => (ISpeckleGSAReceiver)new TestSpeckleGSAReceiver(s, streamUnits)) };
       SetObjectsAsReceived(receiver, fileName, TestDataDirectory);
 
-      GSA.GsaApp.gsaProxy.NewFile();
+      GSA.GsaApp.gsaProxy.NewFile(false);
 
       //This will load data from all streams into the cache
       _ = receiver.Initialize("", "").Result;
@@ -155,8 +150,8 @@ namespace SpeckleGSAProxy.Test
       for (var n = 0; n < numRepeat; n++)
       {
         GSA.Reset();
-        GSA.GsaApp.Settings.Units = "m";
-        GSA.GsaApp.Settings.TargetLayer = GSATargetLayer.Design;
+        GSA.GsaApp.gsaSettings.Units = "m";
+        GSA.GsaApp.gsaSettings.TargetLayer = GSATargetLayer.Design;
         GSA.GsaApp.gsaProxy = new TestProxy();
         GSA.Init("");
 
@@ -167,7 +162,7 @@ namespace SpeckleGSAProxy.Test
         var receiver = new Receiver() { Receivers = streamIds.ToDictionary(s => s, s => (ISpeckleGSAReceiver)new TestSpeckleGSAReceiver(s, "mm")) };
         SetObjectsAsReceived(receiver, savedJsonFileNames, TestDataDirectory);
 
-        GSA.GsaApp.gsaProxy.NewFile();
+        GSA.GsaApp.gsaProxy.NewFile(false);
 
         //This will load data from all streams into the cache
         _ = receiver.Initialize("", "").Result;
@@ -200,13 +195,32 @@ namespace SpeckleGSAProxy.Test
     }
 
     [Test]
+    public void ForgetSIDTest()
+    {
+      GSA.Reset();
+      GSA.GsaApp.gsaProxy = new GSAProxy();
+      GSA.GsaApp.gsaSettings.TargetLayer = GSATargetLayer.Design;
+      GSA.GsaApp.gsaSettings.Units = "m";
+      GSA.Init("");
+
+      GSA.GsaApp.gsaProxy.NewFile(false);
+
+      GSA.GsaApp.gsaProxy.SetGwa("LOAD_2D_THERMAL.2:{testTag:testValue}\tGeneral\tG48 G49 G50 G51 G52\t3\tDZ\t239\t509");
+      GSA.GsaApp.gsaProxy.Sync();
+
+      var gwaData = GSA.GsaApp.gsaProxy.GetGwaData(new[] { "LOAD_2D_THERMAL" }, true);
+
+      GSA.GsaApp.gsaProxy.Close();
+    }
+
+    [Test]
     public void ReceiveTestStreamSubset()
     {
       for (var n = 0; n < numRepeat; n++)
       {
         GSA.Reset();
-        GSA.GsaApp.Settings.Units = "m";
-        GSA.GsaApp.Settings.TargetLayer = GSATargetLayer.Design;
+        GSA.GsaApp.gsaSettings.Units = "m";
+        GSA.GsaApp.gsaSettings.TargetLayer = GSATargetLayer.Design;
         GSA.GsaApp.gsaProxy = new TestProxy();
         GSA.Init("");
 
@@ -255,7 +269,11 @@ namespace SpeckleGSAProxy.Test
           ((TestSpeckleGSAReceiver)receiver.Receivers[streamIds[i]]).Objects = streamObjectsTuples.Where(t => t.Item1 == streamIds[i]).Select(t => t.Item2).ToList();
         }
 
+        var kwGroupsBefore = ((IGSACacheForTesting)GSA.GsaApp.gsaCache).Records.Where(r => r.Latest).GroupBy(r => r.Keyword).ToDictionary(g => g, g => g.ToList());
+
         receiver.Trigger(null, null);
+
+        var kwGroupsAfter = ((IGSACacheForTesting)GSA.GsaApp.gsaCache).Records.Where(r => r.Latest).GroupBy(r => r.Keyword).ToDictionary(g => g, g => g.ToList());
 
         //Check the other streams aren't affected by only having some active
         records = ((IGSACacheForTesting)GSA.GsaApp.gsaCache).Records;
@@ -271,7 +289,7 @@ namespace SpeckleGSAProxy.Test
     {
       GSA.Reset();
       GSA.GsaApp.gsaProxy = new GSAProxy();
-      GSA.GsaApp.Settings.TargetLayer = GSATargetLayer.Design;
+      GSA.GsaApp.gsaSettings.TargetLayer = GSATargetLayer.Design;
       GSA.Init("");
 
       Status.StatusChanged += (s, e) => Debug.WriteLine("Status: " + e.Name);
@@ -280,7 +298,7 @@ namespace SpeckleGSAProxy.Test
 
       var sender = new Sender();
 
-      GSA.GsaApp.gsaProxy.OpenFile(Path.Combine(TestDataDirectory, filename), true);
+      GSA.GsaApp.gsaProxy.OpenFile(Path.Combine(TestDataDirectory, filename), false);
 
       var testSender = new TestSpeckleGSASender();
 
@@ -321,7 +339,7 @@ namespace SpeckleGSAProxy.Test
     public void TestProxyGetDataForCache()
     {
       var proxy = new GSAProxy();
-      proxy.OpenFile(Path.Combine(TestDataDirectory, "Structural Demo 191010.gwb"));
+      proxy.OpenFile(Path.Combine(TestDataDirectory, "Structural Demo 191010.gwb"), false);
 
       var data = proxy.GetGwaData(DesignLayerKeywords, false);
 

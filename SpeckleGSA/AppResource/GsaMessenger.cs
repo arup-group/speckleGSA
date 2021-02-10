@@ -12,7 +12,16 @@ namespace SpeckleGSA
     private readonly object syncLock = new object();
     private List<MessageEventArgs> MessageCache = new List<MessageEventArgs>();
 
-    //For use by the kits, which will store the messages to be triggered later
+    public int TriggeredMessageCount { get; private set; } = 0;
+
+    public void ResetTriggeredMessageCount()
+    {
+      lock (syncLock)
+      {
+        TriggeredMessageCount = 0;
+      }
+    }
+
     public bool CacheMessage(MessageIntent intent, MessageLevel level, Exception ex, params string[] messagePortions)
     {
       lock (syncLock)
@@ -33,13 +42,31 @@ namespace SpeckleGSA
 
     public bool Message(MessageIntent intent, MessageLevel level, params string[] messagePortions)
     {
-      MessageAdded?.Invoke(null, new MessageEventArgs(intent, level, messagePortions));
+      if (intent == MessageIntent.TechnicalLog)
+      {
+        //Currently cache these so that the app has the provision to add more context before it's logged
+        CacheMessage(intent, level, messagePortions);
+      }
+      else
+      {
+        MessageAdded?.Invoke(null, new MessageEventArgs(intent, level, messagePortions));
+        TriggeredMessageCount++;
+      }
       return true;
     }
 
     public bool Message(MessageIntent intent, MessageLevel level, Exception ex, params string[] messagePortions)
     {
-      MessageAdded?.Invoke(null, new MessageEventArgs(intent, level, ex, messagePortions));
+      if (intent == MessageIntent.TechnicalLog)
+      {
+        //Currently cache these so that the app has the provision to add more context before it's logged
+        CacheMessage(intent, level, ex, messagePortions);
+      }
+      else
+      {
+        MessageAdded?.Invoke(null, new MessageEventArgs(intent, level, ex, messagePortions));
+        TriggeredMessageCount++;
+      }
       return true;
     }
 
@@ -51,6 +78,7 @@ namespace SpeckleGSA
         foreach (var m in MessageCache)
         {
           MessageAdded?.Invoke(null, m);
+          TriggeredMessageCount++;
         }
         MessageCache.Clear();
       }

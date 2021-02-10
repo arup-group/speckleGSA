@@ -19,7 +19,7 @@ namespace SpeckleGSA
     private SpeckleApiClient myReceiver;
 
     private readonly string apiToken;
-    private readonly string serverAddress;
+    //private readonly string serverAddress;
 
     public event EventHandler<EventArgs> UpdateGlobalTrigger;
 
@@ -30,6 +30,8 @@ namespace SpeckleGSA
 
 		public string StreamId { get => myReceiver == null ? "" : myReceiver.Stream.StreamId; }
 
+		//public string ServerAddress { get => serverAddress; }
+
     /// <summary>
     /// Create SpeckleGSAReceiver object.
     /// </summary>
@@ -38,7 +40,6 @@ namespace SpeckleGSA
     public SpeckleGSAReceiver(string serverAddress, string apiToken)
     {
       this.apiToken = apiToken;
-			this.serverAddress = serverAddress;
       myReceiver = new SpeckleApiClient() { BaseUrl = serverAddress.ToString() };
 
       //SpeckleInitializer.Initialize();
@@ -99,7 +100,7 @@ namespace SpeckleGSA
     {
       UpdateGlobal();
 
-      return myReceiver.Stream.Objects.Where(o => o != null && !(o is SpecklePlaceholder)).ToList();
+      return myReceiver.Stream.Objects.Where(o => o != null && !(o is SpecklePlaceholder)).Distinct().ToList();
     }
 
     /// <summary>

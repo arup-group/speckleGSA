@@ -566,7 +566,8 @@ namespace SpeckleGSAUI
         ReceiveButtonPath.Data = Geometry.Parse(PAUSE_BUTTON);
         ReceiveButtonPath.Fill = Brushes.DimGray;
 
-        GSA.GsaApp.Settings.TargetLayer = (ReceiverLayerToggle.IsChecked.Value) ? GSATargetLayer.Analysis : GSA.GsaApp.gsaSettings.TargetLayer = GSATargetLayer.Design;
+        GSA.GsaApp.gsaSettings.TargetLayer = (ReceiverLayerToggle.IsChecked.Value) ? GSATargetLayer.Analysis : GSA.GsaApp.gsaSettings.TargetLayer = GSATargetLayer.Design;
+        GSA.GsaApp.gsaSettings.ServerAddress = RestApi;
 
         ReceiverLayerToggle.IsEnabled = false;
         ReceiverContinuousToggle.IsEnabled = false;
@@ -585,6 +586,7 @@ namespace SpeckleGSAUI
         }
 
         gsaReceiver = new Receiver();
+
         try
         {
           await Task.Run(() =>

@@ -14,6 +14,8 @@ namespace SpeckleGSAProxy.Test
 
     public string StreamId { get; private set; }
 
+    public string ServerAddress => "https://test.speckle.works";
+
     public event EventHandler<EventArgs> UpdateGlobalTrigger;
 
     public TestSpeckleGSAReceiver(string streamId, string units)
@@ -35,5 +37,7 @@ namespace SpeckleGSAProxy.Test
     public async Task InitializeReceiver(string streamID, string clientID = "")
     {
     }
+
+    public string ObjectUrl(string id) => HelperFunctions.Combine(ServerAddress, "object/" + id);
   }
 }

@@ -88,7 +88,7 @@ namespace SpeckleGSA
       var startTime = DateTime.Now;
 
       IsBusy = true;
-			GSA.GsaApp.Settings.Units = GSA.GsaApp.gsaProxy.GetUnits();
+			GSA.GsaApp.gsaSettings.Units = GSA.GsaApp.gsaProxy.GetUnits();
 
       //Clear previously-sent objects
       GSA.ClearSenderDictionaries();

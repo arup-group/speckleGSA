@@ -5,8 +5,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using SpeckleGSAInterfaces;
 using SpeckleUtil;
-using System.IO;
-using System.Reflection;
 using Serilog;
 
 namespace SpeckleGSA
@@ -87,12 +85,15 @@ namespace SpeckleGSA
       SenderInfo = new Dictionary<string, Tuple<string, string>>();
       ReceiverInfo = new List<Tuple<string, string>>();
 
-      GSA.GsaApp.gsaMessenger.MessageAdded += GSA.ProcessMessageForLog;
-      GSA.GsaApp.gsaMessenger.MessageAdded += GSA.ProcessMessageForTelemetry;
-
       IsInit = true;
 
+      GSA.GsaApp.gsaMessenger.MessageAdded += GSA.ProcessMessageForLog;
+
+      //Avoid sending telemetry when debugging this code
+#if !DEBUG
+      GSA.GsaApp.gsaMessenger.MessageAdded += GSA.ProcessMessageForTelemetry;
       GSA.GsaApp.gsaProxy.SetAppVersionForTelemetry(speckleGsaAppVersion);
+#endif
       GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Linked to GSA.");
 
       InitialiseKits(out List<string> statusMessages);
@@ -229,7 +230,7 @@ namespace SpeckleGSA
       GSA.GsaApp.Merger.Initialise(mappableTypes);
     }
 
-    #region kit_resources
+#region kit_resources
 
     public static void ClearSenderDictionaries()
     {
@@ -264,9 +265,9 @@ namespace SpeckleGSA
       return currentObjects;
     }
 
-    #endregion
+#endregion
 
-    #region streamInfo
+#region streamInfo
     public static void RemoveUnusedStreamInfo(List<string> streamNames)
     {
       //Remove any streams that will no longer need to be used - if the "Separate sender streams" item has been toggled, for example
@@ -276,9 +277,9 @@ namespace SpeckleGSA
         SenderInfo.Remove(k);
       }
     }
-    #endregion
+#endregion
 
-    #region File Operations
+#region File Operations
     /// <summary>
     /// Creates a new GSA file. Email address and server address is needed for logging purposes.
     /// </summary>
@@ -328,9 +329,9 @@ namespace SpeckleGSA
       SenderInfo.Clear();
       ReceiverInfo.Clear();
     }
-    #endregion
+#endregion
 
-    #region Speckle Client
+#region Speckle Client
     /// <summary>
     /// Extracts sender and receiver streams associated with the account.
     /// </summary>
@@ -439,9 +440,9 @@ namespace SpeckleGSA
 
       return GSA.GsaApp.gsaProxy.SetTopLevelSid(sidRecord);
     }
-    #endregion
+#endregion
 
-    #region Document Properties
+#region Document Properties
 
     /// <summary>
     /// Extracts the base properties of the Speckle stream.
@@ -473,9 +474,9 @@ namespace SpeckleGSA
       return baseProps;
     }
 
-    #endregion
+#endregion
 
-    #region Views
+#region Views
 
     /// <summary>
     /// Update GSA case and task links. This should be called at the end of changes.
@@ -484,6 +485,6 @@ namespace SpeckleGSA
     {
       GSA.GsaApp.gsaProxy.UpdateCasesAndTasks();
     }
-    #endregion
+#endregion
   }
 }

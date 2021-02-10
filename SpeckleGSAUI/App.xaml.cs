@@ -41,50 +41,55 @@ namespace SpeckleGSAUI
       else
       {
         AttachConsole(-1);
-        cliMode = e.Args[0];
-        if (cliMode == "-h")
-        {
-          Console.WriteLine("\n");
-          Console.WriteLine("Usage: SpeckleGSAUI.exe <command>\n\n" +
-            "where <command> is one of: receiver, sender\n\n");
-          Console.Write("SpeckleGSAUI.exe <command> -h\thelp on <command>\n");
-					Current.Shutdown();
-          return;
-        }
-        if (cliMode != "receiver" && cliMode != "sender")
-        {
-          Console.WriteLine("Unable to parse command");
-					Current.Shutdown();
-          return;
-        }
 
-        for (int index = 1; index < e.Args.Length; index += 2)
-        {
-          string arg = e.Args[index].Replace("-", "");
-          if (e.Args.Length <= index + 1 || e.Args[index + 1].StartsWith("-"))
-          {
-            arguments.Add(arg, "true");
-            index--;
-          }
-          else
-            arguments.Add(arg, e.Args[index + 1].Trim(new char[] { '"' }));
-        }
-
-        GSA.Init(getRunningVersion().ToString());
-        GSA.GsaApp.gsaMessenger.MessageAdded += this.ProcessMessage;
-        //Status.Init(this.AddMessage, this.AddError, this.ChangeStatus);
-        SpeckleCore.SpeckleInitializer.Initialize();
-
-        RunCLI();
-
-				Current.Shutdown();
+        RunCLI(e.Args);
 
         return;
       }
     }
 
-    private void RunCLI()
+    public void RunCLI(params string[] args)
     {
+      CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+      CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
+
+      cliMode = args[0];
+      if (cliMode == "-h")
+      {
+        Console.WriteLine("\n");
+        Console.WriteLine("Usage: SpeckleGSAUI.exe <command>\n\n" +
+          "where <command> is one of: receiver, sender\n\n");
+        Console.Write("SpeckleGSAUI.exe <command> -h\thelp on <command>\n");
+        Current.Shutdown();
+        return;
+      }
+      if (cliMode != "receiver" && cliMode != "sender")
+      {
+        Console.WriteLine("Unable to parse command");
+        Current.Shutdown();
+        return;
+      }
+
+      for (int index = 1; index < args.Length; index += 2)
+      {
+        string arg = args[index].Replace("-", "");
+        if (args.Length <= index + 1 || args[index + 1].StartsWith("-"))
+        {
+          arguments.Add(arg, "true");
+          index--;
+        }
+        else
+          arguments.Add(arg, args[index + 1].Trim(new char[] { '"' }));
+      }
+
+      GSA.Init(getRunningVersion().ToString());
+      GSA.GsaApp.gsaMessenger.MessageAdded += this.ProcessMessage;
+      //Status.Init(this.AddMessage, this.AddError, this.ChangeStatus);
+      SpeckleCore.SpeckleInitializer.Initialize();
+
+      //This will create the logger
+      GSA.GsaApp.gsaSettings.LoggingMinimumLevel = 4;  //Debug
+
       if (cliMode == "receiver" && arguments.ContainsKey("h"))
       {
         Console.WriteLine("\n");
@@ -158,6 +163,8 @@ namespace SpeckleGSAUI
       {
         CLISender();
       }
+
+      Current.Shutdown();
     }
 
     public void CLIReceiver()
@@ -176,14 +183,14 @@ namespace SpeckleGSAUI
       if (arguments.ContainsKey("layer"))
         if (arguments["layer"].ToLower() == "analysis")
         {
-					GSA.GsaApp.Settings.TargetLayer = GSATargetLayer.Analysis;
+					GSA.GsaApp.gsaSettings.TargetLayer = GSATargetLayer.Analysis;
         }
       
       if (arguments.ContainsKey("nodeAllowance"))
       {
         try
         {
-					GSA.GsaApp.Settings.CoincidentNodeAllowance = Convert.ToDouble(arguments["nodeAllowance"]);
+					GSA.GsaApp.gsaSettings.CoincidentNodeAllowance = Convert.ToDouble(arguments["nodeAllowance"]);
         }
         catch { }
       }
@@ -216,7 +223,7 @@ namespace SpeckleGSAUI
       if (arguments.ContainsKey("layer"))
         if (arguments["layer"].ToLower() == "analysis")
         {
-					GSA.GsaApp.Settings.TargetLayer = GSATargetLayer.Analysis;
+					GSA.GsaApp.gsaSettings.TargetLayer = GSATargetLayer.Analysis;
 				}
 
       if (arguments.ContainsKey("sendAllNodes"))
@@ -238,7 +245,7 @@ namespace SpeckleGSAUI
       {
         try
         {
-					GSA.GsaApp.Settings.Result1DNumPosition = Convert.ToInt32(arguments["result1DNumPosition"]);
+					GSA.GsaApp.gsaSettings.Result1DNumPosition = Convert.ToInt32(arguments["result1DNumPosition"]);
         }
         catch { }
       }
@@ -263,7 +270,7 @@ namespace SpeckleGSAUI
       }
 
       if (arguments.ContainsKey("resultCases"))
-				GSA.GsaApp.Settings.ResultCases = arguments["resultCases"].Split(new char[] { ',' }).ToList();
+				GSA.GsaApp.gsaSettings.ResultCases = arguments["resultCases"].Split(new char[] { ',' }).ToList();
       
       GSA.GetSpeckleClients(EmailAddress, RestApi);
       var gsaSender = new Sender();
@@ -289,23 +296,13 @@ namespace SpeckleGSAUI
     {
       if (e.Level == MessageLevel.Debug || e.Level == MessageLevel.Information)
       {
-        Console.WriteLine("[" + DateTime.Now.ToString("h:mm:ss tt") + "] " + string.Join(" ", e.MessagePortions));
+        Console.WriteLine("[" + DateTime.Now.ToString("h:mm:ss tt") + "] " + string.Join(" ", e.MessagePortions.Where(mp => !string.IsNullOrEmpty(mp))));
       }
       else
       {
-        Console.WriteLine("[" + DateTime.Now.ToString("h:mm:ss tt") + "] ERROR: " + string.Join(" ", e.MessagePortions));
+        Console.WriteLine("[" + DateTime.Now.ToString("h:mm:ss tt") + "] ERROR: " + string.Join(" ", e.MessagePortions.Where(mp => !string.IsNullOrEmpty(mp))));
       }
     }
-
-    /*
-    /// <summary>
-    /// Error message handler.
-    /// </summary>
-    private void AddError(object sender, SpeckleGSA.ErrorEventArgs e)
-    {
-      Console.WriteLine("[" + DateTime.Now.ToString("h:mm:ss tt") + "] ERROR: " + e.Message);
-    }
-    */
 
     /// <summary>
     /// Change status handler.
@@ -313,9 +310,13 @@ namespace SpeckleGSAUI
     private void ChangeStatus(object sender, StatusEventArgs e)
     {
       if (e.Percent >= 0 & e.Percent <= 100)
+      {
         Console.WriteLine("[" + DateTime.Now.ToString("h:mm:ss tt") + "] " + e.Name + " : " + e.Percent);
+      }
       else
+      {
         Console.WriteLine("[" + DateTime.Now.ToString("h:mm:ss tt") + "] " + e.Name + "...");
+      }
     }
     #endregion
 
