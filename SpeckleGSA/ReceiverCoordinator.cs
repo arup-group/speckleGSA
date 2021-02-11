@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using Serilog;
 using SpeckleCore;
 using SpeckleGSAInterfaces;
 using SpeckleGSAProxy;
@@ -15,15 +11,17 @@ namespace SpeckleGSA
 	/// <summary>
 	/// Responsible for reading and writing Speckle streams.
 	/// </summary>
-	public class Receiver : BaseReceiverSender
+	public class ReceiverCoordinator
 	{
-    public Dictionary<string, ISpeckleGSAReceiver> Receivers = new Dictionary<string, ISpeckleGSAReceiver>();
+    public bool IsInit = false;
+    public bool IsBusy = false;
+
+    public Dictionary<string, IStreamReceiver> Receivers = new Dictionary<string, IStreamReceiver>();
 
     //These need to be accessed using a lock
-    private object currentObjectsLock = new object();
     private object traversedSerialisedLock = new object();
     private object traversedDeserialisedLock = new object();
-    //private readonly List<Tuple<string, SpeckleObject>> currentObjects = new List<Tuple<string, SpeckleObject>>();
+
     private readonly List<Type> traversedSerialisedTypes = new List<Type>();
     private readonly List<Type> traversedDeserialisedTypes = new List<Type>();
 
@@ -35,7 +33,7 @@ namespace SpeckleGSA
     /// <param name="restApi">Server address</param>
     /// <param name="apiToken">API token of account</param>
     /// <returns>Task</returns>
-    public async Task<List<string>> Initialize(string restApi, string apiToken)
+    public async Task<List<string>> Initialize()
 		{
 			var statusMessages = new List<string>();
 
@@ -47,10 +45,6 @@ namespace SpeckleGSA
         GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Error, "GSA link not found.");
 				return statusMessages;
 			}
-
-      //ExecuteWithLock(ref currentObjectsLock, () => currentObjects.Clear());
-      ExecuteWithLock(ref traversedSerialisedLock, () => traversedSerialisedTypes.Clear());
-      ExecuteWithLock(ref traversedDeserialisedLock, () => traversedDeserialisedTypes.Clear());
 
       GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Initialising receivers");
 
@@ -92,8 +86,14 @@ namespace SpeckleGSA
 
       GSA.GsaApp.gsaSettings.Units = GSA.GsaApp.gsaProxy.GetUnits();
 
-      ExecuteWithLock(ref traversedSerialisedLock, () => traversedSerialisedTypes.Clear());
-      ExecuteWithLock(ref traversedDeserialisedLock, () => traversedDeserialisedTypes.Clear());
+      lock (traversedSerialisedLock)
+      {
+        traversedSerialisedTypes.Clear();
+      }
+      lock (traversedDeserialisedLock)
+      {
+        traversedDeserialisedTypes.Clear();
+      }
 
       GSA.SenderDictionaries.Clear();
 
@@ -242,11 +242,11 @@ namespace SpeckleGSA
       {
         //A batch is a group of groups of objects by type
         currentTypeBatch = new List<Type>();
-        ExecuteWithLock(ref traversedDeserialisedLock, () =>
+        lock (traversedDeserialisedLock)
         {
           currentTypeBatch.AddRange(rxTypePrereqs.Where(i => i.Value.Count(x => !traversedDeserialisedTypes.Contains(x)) == 0).Select(i => i.Key));
           currentTypeBatch.RemoveAll(i => traversedDeserialisedTypes.Contains(i));
-        });
+        };
 
         var batchErrors = ProcessTypeBatch(currentTypeBatch, rxObjs);
         numErrors += batchErrors;
@@ -323,13 +323,13 @@ namespace SpeckleGSA
           if (typeAppIds.Any(i => GSA.GsaApp.gsaCache.ApplicationIdExists(keyword, i)))
           {
             //Serialise all objects of this type and update traversedSerialised list
-            ExecuteWithLock(ref traversedSerialisedLock, () =>
+            lock (traversedSerialisedLock)
             {
               if (!traversedSerialisedTypes.Contains(t))
               {
                 SerialiseUpdateCacheForGSAType(keyword, t, dummyObject);
               }
-            });
+            }
           }
 
           GSA.GsaApp.gsaMessenger.Trigger();
@@ -360,7 +360,10 @@ namespace SpeckleGSA
           GSA.GsaApp.gsaMessenger.Trigger();
         }
 
-        ExecuteWithLock(ref traversedDeserialisedLock, () => traversedDeserialisedTypes.Add(t));
+        lock (traversedDeserialisedLock)
+        {
+          traversedDeserialisedTypes.Add(t);
+        }
       }
 #if !DEBUG
       );

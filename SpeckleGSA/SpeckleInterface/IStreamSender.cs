@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace SpeckleGSA
 {
-  public interface ISpeckleGSASender
+  public interface IStreamSender
   {
     string StreamID { get; }
     string ClientID { get; }

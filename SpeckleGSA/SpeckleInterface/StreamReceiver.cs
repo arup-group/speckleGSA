@@ -11,7 +11,7 @@ namespace SpeckleGSA
 	/// <summary>
 	/// Receive objects from a stream.
 	/// </summary>
-	public class SpeckleGSAReceiver : ISpeckleGSAReceiver
+	public class StreamReceiver : IStreamReceiver
   {
 		//This was chosen to cause typical message payloads of round 100-300k to be sent from the server
     const int MAX_OBJ_REQUEST_COUNT = 1000;
@@ -19,12 +19,8 @@ namespace SpeckleGSA
     private SpeckleApiClient myReceiver;
 
     private readonly string apiToken;
-    //private readonly string serverAddress;
 
     public event EventHandler<EventArgs> UpdateGlobalTrigger;
-
-    //public string StreamID { get => myReceiver == null ? null : myReceiver.StreamId; }
-    //public string StreamName { get => myReceiver == null ? null : myReceiver.Stream.Name; }
 
     public string Units { get => myReceiver == null ? null : myReceiver.Stream.BaseProperties["units"]; }
 
@@ -37,7 +33,7 @@ namespace SpeckleGSA
     /// </summary>
     /// <param name="serverAddress">Server address</param>
     /// <param name="apiToken">API token</param>
-    public SpeckleGSAReceiver(string serverAddress, string apiToken)
+    public StreamReceiver(string serverAddress, string apiToken)
     {
       this.apiToken = apiToken;
       myReceiver = new SpeckleApiClient() { BaseUrl = serverAddress.ToString() };

@@ -1,10 +1,8 @@
-﻿using Interop.Gsa_10_1;
-using SpeckleCore;
+﻿using SpeckleCore;
 using SpeckleGSAInterfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 
 namespace SpeckleGSA
@@ -12,13 +10,14 @@ namespace SpeckleGSA
   /// <summary>
   /// Responsible for reading and sending GSA models.
   /// </summary>
-  public class Sender : BaseReceiverSender
+  public class SenderCoordinator
   {
-    public Dictionary<Type, string> StreamMap;
+    public bool IsInit = false;
+    public bool IsBusy = false;
 
-    private Dictionary<string, ISpeckleGSASender> Senders;
+    private Dictionary<Type, string> StreamMap;
 
-    private readonly Dictionary<Type, List<Type>> FilteredReadTypePrereqs = new Dictionary<Type, List<Type>>();
+    private Dictionary<string, IStreamSender> Senders;
 
     //These need to be accessed using a lock
     private object traversedSerialisedLock = new object();
@@ -31,7 +30,7 @@ namespace SpeckleGSA
     /// <param name="restApi">Server address</param>
     /// <param name="apiToken">API token of account</param>
     /// <returns>Task</returns>
-    public async Task<List<string>> Initialize(string restApi, string apiToken, Func<string, string, ISpeckleGSASender> gsaSenderCreator)
+    public async Task<List<string>> Initialize(string restApi, string apiToken, Func<string, string, IStreamSender> gsaSenderCreator)
     {
 			var statusMessages = new List<string>();
 
@@ -159,11 +158,11 @@ namespace SpeckleGSA
     {
       var txTypePrereqs = GSA.TxTypeDependencies;
       var batch = new List<Type>();
-      ExecuteWithLock(ref traversedSerialisedLock, () =>
+      lock (traversedSerialisedLock)
       {
         batch = txTypePrereqs.Where(i => i.Value.Count(x => !traversedSerialisedTypes.Contains(x)) == 0).Select(i => i.Key).ToList();
         batch.RemoveAll(i => traversedSerialisedTypes.Contains(i));
-      });
+      }
 
       return batch;
     }
@@ -196,7 +195,10 @@ namespace SpeckleGSA
       //Process any cached messages from the conversion code
       GSA.GsaApp.gsaMessenger.Trigger();
 
-      ExecuteWithLock(ref traversedSerialisedLock, () => traversedSerialisedTypes.Add(t));
+      lock (traversedSerialisedLock)
+      {
+        traversedSerialisedTypes.Add(t);
+      }
     }
 
     /// <summary>
@@ -210,11 +212,11 @@ namespace SpeckleGSA
       }
     }
 
-    private async Task CreateInitialiseSenders(List<string> streamNames, Func<string, string, ISpeckleGSASender> GSASenderCreator, string restApi, string apiToken)
+    private async Task CreateInitialiseSenders(List<string> streamNames, Func<string, string, IStreamSender> GSASenderCreator, string restApi, string apiToken)
     {
       GSA.RemoveUnusedStreamInfo(streamNames);
 
-      Senders = new Dictionary<string, ISpeckleGSASender>();
+      Senders = new Dictionary<string, IStreamSender>();
 
       foreach (string streamName in streamNames)
       {
@@ -310,17 +312,8 @@ namespace SpeckleGSA
       }
     }
 
-  protected List<string> GetFilteredKeywords()
-    {
-      var keywords = new List<string>();
-      keywords.AddRange(GetFilteredKeywords(FilteredReadTypePrereqs));
-
-      return keywords;
-    }
-
     private bool UpdateCache()
     {
-      //var keywords = SettingsToKeywords();
       var keywords = GSA.Keywords;
       GSA.GsaApp.gsaCache.Clear();
       try
@@ -348,77 +341,6 @@ namespace SpeckleGSA
       {
         return false;
       }
-    }
-
-    private List<string> SettingsToKeywords()
-    {
-      var keywords = new List<string>();
-
-      var txTypePrereqs = GSA.TxTypeDependencies;
-
-      //Filter out Prereqs that are excluded by the layer selection
-      // Remove wrong layer objects from Prereqs
-      if (GSA.GsaApp.gsaSettings.SendOnlyResults)
-      {
-        //Ensure the load-relatd types are into the cache too so that the load cases and combos are there to resolve the load cases listed by the user
-        var bucketNames = GSA.GsaApp.gsaSettings.SendOnlyResults ? new string[] { "results" } : null;
-
-        var streamLayerPrereqs = txTypePrereqs.Where(t =>
-          bucketNames.Any(s => s.Equals((string)t.Key.GetAttribute("Stream"), StringComparison.InvariantCultureIgnoreCase))
-          && ObjectTypeMatchesLayer(t.Key, GSA.GsaApp.Settings.TargetLayer));
-
-        foreach (var kvp in streamLayerPrereqs)
-        {
-          FilteredReadTypePrereqs[kvp.Key] = kvp.Value.Where(l =>
-            ObjectTypeMatchesLayer(l, GSA.GsaApp.Settings.TargetLayer)
-            && bucketNames.Any(s => s.Equals((string)l.GetAttribute("Stream"), StringComparison.InvariantCultureIgnoreCase))).ToList();
-        }
-
-        //If only results then the keywords for the objects which have results still need to be retrieved.  Note these are different
-        //to the keywords of the types to be sent (which, being result objects, are blank in this case).
-        foreach (var t in FilteredReadTypePrereqs.Keys)
-        {
-          var subKeywords = (string[])t.GetAttribute("SubGSAKeywords");
-          foreach (var skw in subKeywords)
-          {
-            if (skw.Length > 0 && !keywords.Contains(skw))
-            {
-              keywords.Add(skw);
-            }
-          }
-
-          //The load tasks and combos need to be loaded to to ensure they can be used to process the list of cases to be sent
-          var extraLoadCaseTypes = txTypePrereqs.Where(et => et.Key.Name.EndsWith("LoadTask", StringComparison.InvariantCultureIgnoreCase)
-            || et.Key.Name.EndsWith("LoadCombo", StringComparison.InvariantCultureIgnoreCase));
-          if (extraLoadCaseTypes.Count() > 0)
-          {
-            GetFilteredKeywords(extraLoadCaseTypes).ForEach(kw =>
-            {
-              if (!keywords.Contains(kw))
-              {
-                keywords.Add(kw);
-              }
-            });
-          }
-        }
-      }
-      else
-      {
-        var layerPrereqs = txTypePrereqs.Where(t => ObjectTypeMatchesLayer(t.Key, GSA.GsaApp.Settings.TargetLayer));
-        foreach (var kvp in layerPrereqs)
-        {
-          FilteredReadTypePrereqs[kvp.Key] = kvp.Value.Where(l => ObjectTypeMatchesLayer(l, GSA.GsaApp.Settings.TargetLayer)).ToList();
-        }
-        GetFilteredKeywords().ForEach(kw =>
-        {
-          if (!keywords.Contains(kw))
-          {
-            keywords.Add(kw);
-          }
-        });
-      }
-
-      return keywords;
     }
   }
 }

@@ -14,9 +14,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
-using SpeckleGSAProxy;
-using Serilog;
-using Serilog.Events;
 
 namespace SpeckleGSAUI
 {
@@ -40,8 +37,8 @@ namespace SpeckleGSAUI
     public string RestApi;
     public string ApiToken;
 
-    public Sender gsaSender;
-    public Receiver gsaReceiver;
+    public SenderCoordinator gsaSenderCoordinator;
+    public ReceiverCoordinator gsaReceiverCoordinator;
 
     public Timer triggerTimer;
 
@@ -62,8 +59,8 @@ namespace SpeckleGSAUI
 
       Messages = new ObservableCollection<string>();
 
-      gsaSender = new Sender();
-      gsaReceiver = new Receiver();
+      gsaSenderCoordinator = new SenderCoordinator();
+      gsaReceiverCoordinator = new ReceiverCoordinator();
 
       triggerTimer = new Timer();
       status = UIStatus.IDLE;
@@ -380,8 +377,8 @@ namespace SpeckleGSAUI
             SendStream(sender, e);
             return;
           }
-          gsaSender = new Sender();
-          var statusMessages = await gsaSender.Initialize(RestApi, ApiToken, (restApi, apiToken) => new SpeckleGSASender(restApi, apiToken));
+          gsaSenderCoordinator = new SenderCoordinator();
+          var statusMessages = await gsaSenderCoordinator.Initialize(RestApi, ApiToken, (restApi, apiToken) => new StreamSender(restApi, apiToken));
           GSA.SetSpeckleClients(EmailAddress, RestApi);
           
         }
@@ -420,7 +417,7 @@ namespace SpeckleGSAUI
         {
           try
           {
-            await Task.Run(() => gsaSender.Trigger())
+            await Task.Run(() => gsaSenderCoordinator.Trigger())
               .ContinueWith(res =>
               {
                 Application.Current.Dispatcher.BeginInvoke(
@@ -451,7 +448,7 @@ namespace SpeckleGSAUI
       }
       else if (status == UIStatus.SENDING)
       {
-        gsaSender.Dispose();
+        gsaSenderCoordinator.Dispose();
         status = UIStatus.IDLE;
         SendButtonPath.Data = Geometry.Parse(PLAY_BUTTON);
         SendButtonPath.Fill = (SolidColorBrush)FindResource("PrimaryHueMidBrush");
@@ -469,7 +466,7 @@ namespace SpeckleGSAUI
     {
       try
       {
-        gsaSender.Trigger();
+        gsaSenderCoordinator.Trigger();
         Application.Current.Dispatcher.BeginInvoke(
           DispatcherPriority.Background,
           new Action(() => UpdateClientLists()
@@ -585,7 +582,7 @@ namespace SpeckleGSAUI
           return;
         }
 
-        gsaReceiver = new Receiver();
+        gsaReceiverCoordinator = new ReceiverCoordinator();
 
         try
         {
@@ -596,10 +593,10 @@ namespace SpeckleGSAUI
              foreach (var streamInfo in nonBlankReceivers)
              {
                GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Creating receiver " + streamInfo.Item1);
-               gsaReceiver.Receivers[streamInfo.Item1] = new SpeckleGSAReceiver(RestApi, ApiToken);
+               gsaReceiverCoordinator.Receivers[streamInfo.Item1] = new StreamReceiver(RestApi, ApiToken);
              }
            });
-          await gsaReceiver.Initialize(RestApi, ApiToken);
+          await gsaReceiverCoordinator.Initialize();
         }
         catch (Exception ex)
         {
@@ -614,13 +611,7 @@ namespace SpeckleGSAUI
           {
             await Task.Run(() =>
             {
-              gsaReceiver.Trigger(null, null);
-              /*
-              foreach (var m in ((SpeckleAppUI)GSA.GsaApp.appUi).GroupMessages())
-              {
-                GSA.GsaApp.gsaMessager.AddMessage(m);
-              }
-              */
+              gsaReceiverCoordinator.Trigger(null, null);
             })
               .ContinueWith(res =>
               {
@@ -644,7 +635,7 @@ namespace SpeckleGSAUI
         {
           try
           {
-            await Task.Run(() => gsaReceiver.Trigger(null, null));
+            await Task.Run(() => gsaReceiverCoordinator.Trigger(null, null));
           }
           catch (Exception ex)
           {
@@ -670,11 +661,11 @@ namespace SpeckleGSAUI
           MessageBoxResult result = MessageBox.Show("Bake received objects permanently? ", "SpeckleGSA", MessageBoxButton.YesNo, MessageBoxImage.Question);
           if (result != MessageBoxResult.Yes)
           {
-            gsaReceiver.DeleteSpeckleObjects();
+            gsaReceiverCoordinator.DeleteSpeckleObjects();
           }
         }
 
-        gsaReceiver.Dispose();
+        gsaReceiverCoordinator.Dispose();
       }
       ReceiveButton.IsEnabled = true;
     }

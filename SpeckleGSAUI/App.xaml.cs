@@ -196,7 +196,7 @@ namespace SpeckleGSAUI
       }
 
       GSA.GetSpeckleClients(EmailAddress, RestApi);
-      var gsaReceiver = new Receiver();
+      var gsaReceiverCoordinator = new ReceiverCoordinator();
       Task.Run(() =>
       {
         var nonBlankReceivers = GSA.ReceiverInfo.Where(r => !string.IsNullOrEmpty(r.Item1)).ToList();
@@ -204,13 +204,13 @@ namespace SpeckleGSAUI
         foreach (var streamInfo in nonBlankReceivers)
         {
           GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Creating receiver " + streamInfo.Item1);
-          gsaReceiver.Receivers[streamInfo.Item1] = new SpeckleGSAReceiver(RestApi, ApiToken);
+          gsaReceiverCoordinator.Receivers[streamInfo.Item1] = new StreamReceiver(RestApi, ApiToken);
         }
       });
-      Task.Run(() => gsaReceiver.Initialize(RestApi, ApiToken)).Wait();
+      Task.Run(() => gsaReceiverCoordinator.Initialize()).Wait();
       GSA.SetSpeckleClients(EmailAddress, RestApi);
-      gsaReceiver.Trigger(null, null);
-      gsaReceiver.Dispose();
+      gsaReceiverCoordinator.Trigger(null, null);
+      gsaReceiverCoordinator.Dispose();
 
 			GSA.GsaApp.gsaProxy.SaveAs(arguments["file"]);
 			GSA.Close();
@@ -273,11 +273,11 @@ namespace SpeckleGSAUI
 				GSA.GsaApp.gsaSettings.ResultCases = arguments["resultCases"].Split(new char[] { ',' }).ToList();
       
       GSA.GetSpeckleClients(EmailAddress, RestApi);
-      var gsaSender = new Sender();
-      Task.Run(() => gsaSender.Initialize(RestApi, ApiToken, (restApi, apiToken) => new SpeckleGSASender(restApi, apiToken))).Wait();
+      var gsaSenderCoordinator = new SenderCoordinator();
+      Task.Run(() => gsaSenderCoordinator.Initialize(RestApi, ApiToken, (restApi, apiToken) => new StreamSender(restApi, apiToken))).Wait();
       GSA.SetSpeckleClients(EmailAddress, RestApi);
-      gsaSender.Trigger();
-      gsaSender.Dispose();
+      gsaSenderCoordinator.Trigger();
+      gsaSenderCoordinator.Dispose();
 
 			GSA.GsaApp.gsaProxy.SaveAs(arguments["file"]);
 			GSA.Close();

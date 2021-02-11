@@ -12,15 +12,15 @@ namespace SpeckleGSA
 	/// <summary>
 	/// Packages and sends objects as a stream.
 	/// </summary>
-	public class SpeckleGSASender : ISpeckleGSASender
+	public class StreamSender : IStreamSender
   {
     const double MAX_BUCKET_SIZE = 1000000;
 
-    public string StreamName { get => mySender == null ? null : mySender.Stream.Name; }
-    public string StreamID { get => mySender == null ? null : mySender.StreamId; }
-    public string ClientID { get => mySender == null ? null : mySender.ClientId; }
+    public string StreamName { get => apiClient == null ? null : apiClient.Stream.Name; }
+    public string StreamID { get => apiClient == null ? null : apiClient.StreamId; }
+    public string ClientID { get => apiClient == null ? null : apiClient.ClientId; }
 
-    private readonly SpeckleApiClient mySender;
+    private readonly SpeckleApiClient apiClient;
     private readonly string apiToken;
 
     /// <summary>
@@ -28,11 +28,11 @@ namespace SpeckleGSA
     /// </summary>
     /// <param name="serverAddress">Server address</param>
     /// <param name="apiToken">API token</param>
-    public SpeckleGSASender(string serverAddress, string apiToken)
+    public StreamSender(string serverAddress, string apiToken)
     {
       this.apiToken = apiToken;
 
-      mySender = new SpeckleApiClient() { BaseUrl = serverAddress.ToString() };
+      apiClient = new SpeckleApiClient() { BaseUrl = serverAddress.ToString() };
 
       //SpeckleInitializer.Initialize();
       LocalContext.Init();
@@ -46,22 +46,22 @@ namespace SpeckleGSA
     /// <returns>Task</returns>
     public async Task InitializeSender(string streamID = "", string clientID = "", string streamName = "")
     {
-      mySender.AuthToken = apiToken;
+      apiClient.AuthToken = apiToken;
 
       if (string.IsNullOrEmpty(clientID))
       {
         HelperFunctions.tryCatchWithEvents(() =>
         {
-          var streamResponse = mySender.StreamCreateAsync(new SpeckleStream()).Result;
+          var streamResponse = apiClient.StreamCreateAsync(new SpeckleStream()).Result;
 
-          mySender.Stream = streamResponse.Resource;
-          mySender.StreamId = streamResponse.Resource.StreamId;
+          apiClient.Stream = streamResponse.Resource;
+          apiClient.StreamId = streamResponse.Resource.StreamId;
         },
         "", "Unable to create stream on the server");
 
         HelperFunctions.tryCatchWithEvents(() =>
         {
-          var clientResponse = mySender.ClientCreateAsync(new AppClient()
+          var clientResponse = apiClient.ClientCreateAsync(new AppClient()
           {
             DocumentName = Path.GetFileNameWithoutExtension(GSA.GsaApp.gsaProxy.FilePath),
             DocumentType = "GSA",
@@ -69,35 +69,35 @@ namespace SpeckleGSA
             StreamId = this.StreamID,
             Online = true,
           }).Result;
-          mySender.ClientId = clientResponse.Resource._id;
+          apiClient.ClientId = clientResponse.Resource._id;
         }, "", "Unable to create client on the server");
       }
       else
       {
         HelperFunctions.tryCatchWithEvents(() =>
         {
-          var streamResponse = mySender.StreamGetAsync(streamID, null).Result;
+          var streamResponse = apiClient.StreamGetAsync(streamID, null).Result;
 
-          mySender.Stream = streamResponse.Resource;
-          mySender.StreamId = streamResponse.Resource.StreamId;
+          apiClient.Stream = streamResponse.Resource;
+          apiClient.StreamId = streamResponse.Resource.StreamId;
         }, "", "Unable to get stream response");
 
         HelperFunctions.tryCatchWithEvents(async () =>
         {
-          var clientResponse = await mySender.ClientUpdateAsync(clientID, new AppClient()
+          var clientResponse = await apiClient.ClientUpdateAsync(clientID, new AppClient()
           {
             DocumentName = Path.GetFileNameWithoutExtension(GSA.GsaApp.gsaProxy.FilePath),
             Online = true,
           });
 
-          mySender.ClientId = clientID;
+          apiClient.ClientId = clientID;
         }, "", "Unable to update client on the server");
       }
 
-      mySender.Stream.Name = streamName;
+      apiClient.Stream.Name = streamName;
 
-      HelperFunctions.tryCatchWithEvents(() => mySender.SetupWebsocket(), "", "Unable to set up web socket");
-      HelperFunctions.tryCatchWithEvents(() => mySender.JoinRoom("stream", streamID), "", "Uable to join web socket");
+      HelperFunctions.tryCatchWithEvents(() => apiClient.SetupWebsocket(), "", "Unable to set up web socket");
+      HelperFunctions.tryCatchWithEvents(() => apiClient.JoinRoom("stream", streamID), "", "Uable to join web socket");
     }
 
     /// <summary>
@@ -106,9 +106,9 @@ namespace SpeckleGSA
     /// <param name="streamName">Stream name</param>
     public void UpdateName(string streamName)
     {
-      mySender.StreamUpdateAsync(mySender.StreamId, new SpeckleStream() { Name = streamName });
+      apiClient.StreamUpdateAsync(apiClient.StreamId, new SpeckleStream() { Name = streamName });
 
-      mySender.Stream.Name = streamName;
+      apiClient.Stream.Name = streamName;
     }
 
     /// <summary>
@@ -155,7 +155,7 @@ namespace SpeckleGSA
       // Prune objects with placeholders using local DB
       try
       {
-        LocalContext.PruneExistingObjects(bucketObjects, mySender.BaseUrl);
+        LocalContext.PruneExistingObjects(bucketObjects, apiClient.BaseUrl);
       }
       catch { }
 
@@ -172,7 +172,7 @@ namespace SpeckleGSA
         {
           HelperFunctions.tryCatchWithEvents(() =>
           {
-            ResponseObject res = mySender.ObjectCreateAsync(payload, 20000).Result;
+            ResponseObject res = apiClient.ObjectCreateAsync(payload, 20000).Result;
 
             for (int i = 0; i < payload.Count(); i++)
             {
@@ -185,7 +185,7 @@ namespace SpeckleGSA
           {
             foreach (SpeckleObject obj in payload)
             {
-              HelperFunctions.tryCatchWithEvents(() => LocalContext.AddSentObject(obj, mySender.BaseUrl), "", "Error in updating local db");
+              HelperFunctions.tryCatchWithEvents(() => LocalContext.AddSentObject(obj, apiClient.BaseUrl), "", "Error in updating local db");
             }
           });
         }
@@ -213,23 +213,23 @@ namespace SpeckleGSA
 
       var updateResult = HelperFunctions.tryCatchWithEvents(() => 
       { 
-        _ = mySender.StreamUpdateAsync(StreamID, updateStream).Result; 
+        _ = apiClient.StreamUpdateAsync(StreamID, updateStream).Result; 
       },
         "Successfully sent " + updateStream.Objects.Count() + " objects on stream " + StreamID,
         "Failed to complete sending " + updateStream.Objects.Count() + " objects on stream " + StreamID);
 
       if (updateResult)
       {
-        mySender.Stream.Layers = updateStream.Layers.ToList();
-        mySender.Stream.Objects = placeholders;
+        apiClient.Stream.Layers = updateStream.Layers.ToList();
+        apiClient.Stream.Objects = placeholders;
       }
 
-      HelperFunctions.tryCatchWithEvents(() => mySender.BroadcastMessage("stream", StreamID, new { eventType = "update-global" }),
+      HelperFunctions.tryCatchWithEvents(() => apiClient.BroadcastMessage("stream", StreamID, new { eventType = "update-global" }),
         "", "Failed to broadcast update-global message on stream " + StreamID);
 
       HelperFunctions.tryCatchWithEvents(() => 
       { 
-        _ = mySender.StreamCloneAsync(StreamID).Result; 
+        _ = apiClient.StreamCloneAsync(StreamID).Result; 
       }, "", "Failed to clone " + StreamID);
     }
 
@@ -310,7 +310,7 @@ namespace SpeckleGSA
     /// </summary>
     public void Dispose()
     {
-      HelperFunctions.tryCatchWithEvents(() => { _ = mySender.ClientUpdateAsync(mySender.ClientId, new AppClient() { Online = false }).Result; },
+      HelperFunctions.tryCatchWithEvents(() => { _ = apiClient.ClientUpdateAsync(apiClient.ClientId, new AppClient() { Online = false }).Result; },
         "", "Unable to update client on server with offline status");
     }
   }
