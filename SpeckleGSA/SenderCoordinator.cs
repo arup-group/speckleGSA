@@ -61,7 +61,15 @@ namespace SpeckleGSA
       var objTypes = GetAssembliesTypes();
       var streamNames = GetStreamNames(objTypes);
 
-      CreateStreamMap(objTypes);
+      StreamMap = new Dictionary<Type, string>();
+      foreach (Type t in objTypes)
+      {
+        var streamAttribute = t.GetAttribute("Stream");
+        if (streamAttribute != null)
+        {
+          StreamMap[t] = (string)streamAttribute;
+        }
+      }
 
       // Create the streams
       Status.ChangeStatus("Creating streams");
@@ -92,28 +100,7 @@ namespace SpeckleGSA
       //Clear previously-sent objects
       GSA.ClearSenderDictionaries();
 
-      // Read objects
-      var currentBatch = new List<Type>();
-
-      bool changeDetected = false;
-      do
-      {
-        currentBatch = GetNewCurrentBatch();
-        
-
-#if DEBUG
-        foreach (var t in currentBatch)
-        {
-          ProcessTypeForSending(t, ref changeDetected);
-        }
-#else
-        Parallel.ForEach(currentBatch, t =>
-        {
-          ProcessTypeForSending(t, ref changeDetected);
-        }
-        );
-#endif
-      } while (currentBatch.Count > 0);
+      var changeDetected = ProcessTxObjects();
 
       if (!changeDetected)
       {
@@ -133,17 +120,24 @@ namespace SpeckleGSA
       // Send package
       Status.ChangeStatus("Sending to Server");
 
-      foreach (var k in streamBuckets.Keys)
+      int numErrors = 0;
+      var sendingTasks = new List<Task>();
+      foreach (var k in streamBuckets.Keys.Where(k => Senders.ContainsKey(k)))
       {
-        if (!Senders.ContainsKey(k)) continue;
-
         Status.ChangeStatus("Sending to stream: " + Senders[k].StreamID);
 
         var title = GSA.GsaApp.gsaProxy.GetTitle();
         var streamName = GSA.GsaApp.gsaSettings.SeparateStreams ? title + "." + k : title;
 
         Senders[k].UpdateName(streamName);
-        Senders[k].SendGSAObjects(streamBuckets[k]);
+        numErrors += Senders[k].SendGSAObjects(streamBuckets[k]);
+      }
+      GSA.GsaApp.gsaMessenger.Trigger();
+
+      if (numErrors > 0)
+      {
+        GSA.GsaApp.Messenger.Message(MessageIntent.Display, MessageLevel.Error,
+          numErrors + " errors found with sending to the server. Refer to the .txt log file(s) in " + AppDomain.CurrentDomain.BaseDirectory);
       }
 
       duration = DateTime.Now - startTime;
@@ -154,26 +148,95 @@ namespace SpeckleGSA
       Status.ChangeStatus("Finished sending", 100);
     }
 
-    private List<Type> GetNewCurrentBatch()
+    private bool ProcessTxObjects()
     {
+      int numErrors = 0;
+
       var txTypePrereqs = GSA.TxTypeDependencies;
+
+      // Read objects
       var batch = new List<Type>();
-      lock (traversedSerialisedLock)
+
+      bool anyChangeDetected = false;
+
+      do
       {
-        batch = txTypePrereqs.Where(i => i.Value.Count(x => !traversedSerialisedTypes.Contains(x)) == 0).Select(i => i.Key).ToList();
-        batch.RemoveAll(i => traversedSerialisedTypes.Contains(i));
+        batch = new List<Type>();
+        lock (traversedSerialisedLock)
+        {
+          batch = txTypePrereqs.Where(i => i.Value.Count(x => !traversedSerialisedTypes.Contains(x)) == 0).Select(i => i.Key).ToList();
+          batch.RemoveAll(i => traversedSerialisedTypes.Contains(i));
+        }
+
+        var batchErrors = ProcessTypeBatch(batch, out bool changeDetected);
+        if (changeDetected)
+        {
+          anyChangeDetected = true;
+        }
+        numErrors += batchErrors;
+
+      } while (batch.Count > 0);
+
+      if (numErrors > 0)
+      {
+        GSA.GsaApp.Messenger.Message(MessageIntent.Display, MessageLevel.Error,
+          numErrors + " processing errors found. Refer to the .txt log file(s) in " + AppDomain.CurrentDomain.BaseDirectory);
       }
 
-      return batch;
+      return anyChangeDetected;
     }
 
-    private void ProcessTypeForSending(Type t, ref bool changeDetected)
+    private int ProcessTypeBatch(List<Type> batch, out bool changeDetected)
     {
-      if (changeDetected) // This will skip the first read but it avoids flickering
+      //This method assumes it's not run in parallel
+      GSA.GsaApp.gsaMessenger.ResetTriggeredMessageCount();
+
+#if DEBUG
+      changeDetected = false;
+
+      foreach (var t in batch)
       {
-        Status.ChangeStatus("Reading " + t.Name);
+        SerialiseType(t, ref changeDetected);
+
+        if (changeDetected) // This will skip the first read but it avoids flickering
+        {
+          Status.ChangeStatus("Reading " + t.Name);
+        }
+      }
+#else
+      var changeLock = new object();
+      var parallelChangeDetected = false;
+      Parallel.ForEach(batch, t =>
+      {
+        bool changed = false;
+        SerialiseType(t, ref changed);
+
+        if (changed) // This will skip the first read but it avoids flickering
+        {
+          lock (changeLock)
+          {
+            parallelChangeDetected = true;
+          }
+          Status.ChangeStatus("Reading " + t.Name);          
+        }
+      }      
+      );
+      changeDetected = parallelChangeDetected;
+#endif
+
+      //Process any cached messages from the conversion code
+      GSA.GsaApp.gsaMessenger.Trigger();
+
+      lock (traversedSerialisedLock)
+      {
+        traversedSerialisedTypes.AddRange(batch);
       }
 
+      return GSA.GsaApp.gsaMessenger.TriggeredMessageCount;
+    }
+
+    private void SerialiseType(Type t, ref bool changeDetected)
+    {
       try
       {
         //The SpeckleStructural kit actually does serialisation (calling of ToSpeckle()) by type, not individual object.  This is due to
@@ -188,17 +251,8 @@ namespace SpeckleGSA
         {
           changeDetected = true;
         }
-
       }
       catch { }
-
-      //Process any cached messages from the conversion code
-      GSA.GsaApp.gsaMessenger.Trigger();
-
-      lock (traversedSerialisedLock)
-      {
-        traversedSerialisedTypes.Add(t);
-      }
     }
 
     /// <summary>
@@ -297,19 +351,6 @@ namespace SpeckleGSA
          ? objTypes.Select(t => (string)t.GetAttribute("Stream")).Distinct().ToList()
          : new List<string>() { "Full Model" };
       return streamNames.Where(sn => !string.IsNullOrEmpty(sn)).ToList();
-    }
-
-    private void CreateStreamMap(List<Type> objTypes)
-    {
-      StreamMap = new Dictionary<Type, string>();
-      foreach (Type t in objTypes)
-      {
-        var streamAttribute = t.GetAttribute("Stream");
-        if (streamAttribute != null)
-        {
-          StreamMap[t] = (string)streamAttribute;
-        }
-      }
     }
 
     private bool UpdateCache()

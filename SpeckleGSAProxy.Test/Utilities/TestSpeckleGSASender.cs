@@ -34,7 +34,7 @@ namespace SpeckleGSAProxy.Test
     }
 
     //objects by layer name
-    public void SendGSAObjects(Dictionary<string, List<object>> value)
+    public int SendGSAObjects(Dictionary<string, List<object>> value)
     {
       foreach (var key in value.Keys)
       {
@@ -43,7 +43,8 @@ namespace SpeckleGSAProxy.Test
           sentObjects.Add(key, new List<object>());
         }
         sentObjects[key].AddRange(value[key]);
-      } 
+      }
+      return 0;
     }
 
     public void UpdateName(string streamName)

@@ -10,7 +10,7 @@ namespace SpeckleGSA
 
     Task InitializeSender(string streamID = "", string clientID = "", string streamName = "");
     void UpdateName(string streamName);
-    void SendGSAObjects(Dictionary<string, List<object>> value);
+    int SendGSAObjects(Dictionary<string, List<object>> value);
     void Dispose();
   }
 }
