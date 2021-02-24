@@ -123,38 +123,22 @@ namespace SpeckleGSA
       if (ex.InnerException != null && ex.InnerException is SpeckleException)
       {
         var se = (SpeckleException)ex.InnerException;
-        var headers = new List<string>();
-        foreach (var hk in se.Headers.Keys)
-        {
-          headers.Add(hk + ":" + string.Join(",", se.Headers[hk]));
-        }
-        speckleExceptionContext.AddRange(new[] {"Response=" + se.Response, "StatusCode=" + se.StatusCode, "Headers=" + string.Join(";", headers)});
+        speckleExceptionContext.AddRange(new[] {"Response=" + se.Response, "StatusCode=" + se.StatusCode });
       }
       return speckleExceptionContext;
     }
 
-    /// <summary>
-    /// Send objects to stream.
-    /// </summary>
-    /// <param name="payloadObjects">Dictionary of lists of objects indexed by layer name</param>
-    public int SendGSAObjects(Dictionary<string, List<object>> payloadObjects)
+    private void GroupIntoLayers(Dictionary<string, List<object>> payloadObjects, out List<Layer> layers, out List<SpeckleObject> bucketObjects)
     {
       // Convert and set up layers
-      List<SpeckleObject> bucketObjects = new List<SpeckleObject>();
-      List<Layer> layers = new List<Layer>();
+      bucketObjects = new List<SpeckleObject>();
+      layers = new List<Layer>();
 
       int objectCounter = 0;
       int orderIndex = 0;
 
-      var baseUrl = apiClient.BaseUrl;
-
-      foreach (KeyValuePair<string, List<object>> kvp in payloadObjects)
+      foreach (KeyValuePair<string, List<object>> kvp in payloadObjects.Where(kvp => kvp.Value.Count() > 0))
       {
-        if (kvp.Value.Count() == 0)
-        {
-          continue;
-        }
-
         var convertedObjects = kvp.Value.Select(v => (SpeckleObject)v).ToList();
 
         if (convertedObjects != null && convertedObjects.Count() > 0)
@@ -173,16 +157,237 @@ namespace SpeckleGSA
         bucketObjects.AddRange(convertedObjects);
         objectCounter += convertedObjects.Count;
       }
+    }
 
-      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information,
-        "Successfully prepared " + bucketObjects.Count() + " objects to be sent");
+    private void DetermineObjectsToBeSent(List<SpeckleObject> bucketObjects, string baseUrl, out List<SpeckleObject> toBeSentObjects)
+    {
+      //There is the possibility that placeholders with null database IDs are saved to the sent objects database
+      //(the reason for this is not certain yet).  When this happens, PruneExistingObjects returns some placeholders which have
+      //neither database ID nor hash.  As the method removes the link between Hashes and database IDs, there is no way to determine 
+      //which objects were represented in the database with null database IDs.
 
-      // Prune objects with placeholders using local DB
+      //To figure this out, run the method one object at a time.
+      toBeSentObjects = new List<SpeckleObject>();
+      foreach (var bo in bucketObjects)
+      {
+        // Prune objects with placeholders using local DB
+        var foundInSentCache = false;
+        try
+        {
+          var singleItemList = new List<SpeckleObject>() { bo };
+          LocalContext.PruneExistingObjects(singleItemList, baseUrl);
+          foundInSentCache = (singleItemList.First()._id != null);
+          if (foundInSentCache)
+          {
+            bo._id = singleItemList.First()._id;
+          }
+        }
+        catch { }
+
+        if (!foundInSentCache)
+        {
+          toBeSentObjects.Add(bo);
+        }
+      }
+    }
+
+    private void UpdateStreamWithIds(List<Layer> layers, List<SpeckleObject> bucketObjects, ref int numErrors)
+    {
+      // Update stream with payload
+      var placeholders = new List<SpeckleObject>();
+
+      foreach (string id in bucketObjects.Select(bo => bo._id))
+      {
+        placeholders.Add(new SpecklePlaceholder() { _id = id });
+      }
+
+      SpeckleStream updateStream = new SpeckleStream
+      {
+        Layers = layers,
+        Objects = placeholders,
+        Name = StreamName,
+        BaseProperties = GSA.GetBaseProperties()
+      };
+
       try
       {
-        LocalContext.PruneExistingObjects(bucketObjects, baseUrl);
+        _ = apiClient.StreamUpdateAsync(StreamID, updateStream).Result;
+        apiClient.Stream.Layers = updateStream.Layers.ToList();
+        apiClient.Stream.Objects = placeholders;
+        GSA.GsaApp.gsaMessenger.CacheMessage(MessageIntent.Display, MessageLevel.Information, "Updated the stream's object list on the server", StreamID);
       }
-      catch { }
+      catch (Exception ex)
+      {
+        numErrors++;
+        GSA.GsaApp.gsaMessenger.CacheMessage(MessageIntent.Display, MessageLevel.Error, "Updating the stream's object list on the server", StreamID);
+        var speckleExceptionContext = ExtractSpeckleExceptionContext(ex);
+        var errContext = speckleExceptionContext.Concat(new[] { "Error updating the stream's object list on the server", "StreamId=" + StreamID });
+        GSA.GsaApp.gsaMessenger.CacheMessage(MessageIntent.TechnicalLog, MessageLevel.Error, ex, errContext.ToArray());
+      }
+
+      return;
+    }
+
+    private void CreateObjectsOnServer(List<SpeckleObject> bucketObjects, string baseUrl, ref int numErrors)
+    {
+      // Separate objects into sizeable payloads
+      var payloads = CreatePayloads(bucketObjects);
+
+      if (bucketObjects.Count(o => o.Type == "Placeholder") == bucketObjects.Count)
+      {
+        numErrors = 0;
+        return;
+      }
+
+      var payloadTasks = payloads.Select(p => apiClient.ObjectCreateAsync(p, 30000)).ToArray();
+
+      // Send objects which are in payload and add to local DB with updated IDs
+      //foreach (List<SpeckleObject> payload in payloads)
+      for (var j = 0; j < payloads.Count(); j++)
+      {
+        ResponseObject res = null;
+        try
+        {
+          res = payloadTasks[j].Result;
+        }
+        catch (Exception ex)
+        {
+          numErrors++;
+          var speckleExceptionContext = ExtractSpeckleExceptionContext(ex);
+          var errContext = speckleExceptionContext.Concat(new[] { "StreamId=" + StreamID,
+                "Error in updating the server with a payload of " + payloads[j].Count() + " objects" });
+          GSA.GsaApp.gsaMessenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, ex, errContext.ToArray());
+        }
+
+        if (res != null && res.Resources.Count() > 0)
+        {
+          for (int i = 0; i < payloads[j].Count(); i++)
+          {
+            payloads[j][i]._id = res.Resources[i]._id;
+          }
+        }
+
+        Task.Run(() =>
+        {
+          foreach (SpeckleObject obj in payloads[j].Where(o => o.Hash != null && o._id != null))
+          {
+            HelperFunctions.tryCatchWithEvents(() => LocalContext.AddSentObject(obj, baseUrl), "", "Error in updating local db");
+          }
+        });
+      }
+
+      int successfulPayloads = payloads.Count() - numErrors;
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information,
+          "Successfully sent " + successfulPayloads + "/" + payloads.Count() + " payloads to the server");
+      GSA.GsaApp.gsaMessenger.CacheMessage(MessageIntent.TechnicalLog, MessageLevel.Information, "Sent payloads to server", 
+        "NumSuccessful=" + successfulPayloads, "NumErrored=" + numErrors);
+    }
+
+    private void BroadcastStreamUpdate(ref int numErrors)
+    {
+      try
+      {
+        apiClient.BroadcastMessage("stream", StreamID, new { eventType = "update-global" });
+      }
+      catch (Exception ex)
+      {
+        numErrors++;
+        var speckleExceptionContext = ExtractSpeckleExceptionContext(ex);
+        var errContext = speckleExceptionContext.Concat(new[] { "Failed to broadcast update-global message on stream", "StreamId=" + StreamID });
+        GSA.GsaApp.gsaMessenger.CacheMessage(MessageIntent.TechnicalLog, MessageLevel.Error, ex, errContext.ToArray());
+      }
+    }
+
+    private void CloneStream(ref int numErrors)
+    {
+      try
+      {
+        _ = apiClient.StreamCloneAsync(StreamID).Result;
+      }
+      catch (Exception ex)
+      {
+        numErrors++;
+        var speckleExceptionContext = ExtractSpeckleExceptionContext(ex);
+        var errContext = speckleExceptionContext.Concat(new[] { "Failed to clone", "StreamId=" + StreamID });
+        GSA.GsaApp.gsaMessenger.CacheMessage(MessageIntent.TechnicalLog, MessageLevel.Error, ex, errContext.ToArray());
+      }
+    }
+
+    /// <summary>
+    /// Send objects to stream.
+    /// </summary>
+    /// <param name="payloadObjects">Dictionary of lists of objects indexed by layer name</param>
+    public int SendGSAObjects(Dictionary<string, List<object>> payloadObjects)
+    {
+      var baseUrl = apiClient.BaseUrl;
+
+      GroupIntoLayers(payloadObjects, out List<Layer> layers, out List<SpeckleObject> bucketObjects);
+
+      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information,
+        "Successfully grouped " + bucketObjects.Count() + " objects into " + layers.Count() + " layers");
+
+      DetermineObjectsToBeSent(bucketObjects, baseUrl, out List<SpeckleObject> changedObjects);
+
+      int numErrors = 0;
+
+      var numChanged = changedObjects.Count();
+      var numUnchanged = bucketObjects.Count() - numChanged;
+      if (numChanged == 0)
+      {
+        GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information,
+          "All " + numUnchanged + " objects are unchanged on the server for stream " + StreamID);
+      }
+      else
+      {
+        CreateObjectsOnServer(changedObjects, baseUrl, ref numErrors);
+
+        GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information,
+          "Created/updated " + numChanged + " on the server for stream " + StreamID + " (the other " + numUnchanged + " were pre-existing/unchanged)");
+      }
+      GSA.GsaApp.gsaMessenger.CacheMessage(MessageIntent.TechnicalLog, MessageLevel.Information, "Sent stream", "StreamId=" + StreamID,
+        "NumCreated=" + (numChanged - numErrors), "NumErrors=" + numErrors, "NumFoundInSentCache=" + numUnchanged);
+
+      UpdateStreamWithIds(layers, bucketObjects, ref numErrors);
+
+      BroadcastStreamUpdate(ref numErrors);
+
+      CloneStream(ref numErrors);
+
+      GSA.GsaApp.gsaMessenger.Trigger();
+
+      return numErrors;
+
+      //------------
+
+      //There is the possibility that placeholders with null database IDs are saved to the sent objects database
+      //(the reason for this is not certain yet).  When this happens, PruneExistingObjects returns some placeholders which have
+      //neither database ID nor hash.  As the method removes the link between Hashes and database IDs, there is no way to determine 
+      //which objects were represented in the database with null database IDs.
+
+      //To figure this out, run the method one object at a time.
+      var bucketObjectsPrevSent = new List<SpeckleObject>();
+      foreach (var bo in bucketObjects)
+      {
+        // Prune objects with placeholders using local DB
+        var foundInSentCache = false;
+        try
+        {
+          var singleItemList = new List<SpeckleObject>() { bo };
+          LocalContext.PruneExistingObjects(singleItemList, baseUrl);
+          foundInSentCache = (singleItemList.First()._id != null);
+        }
+        catch { }
+
+        if (foundInSentCache)
+        {
+          bucketObjectsPrevSent.Add(bo);
+        }
+      }
+
+      foreach (var bops in bucketObjectsPrevSent)
+      {
+        bucketObjects.Remove(bops);
+      }
 
       // Store IDs of objects to add to stream
       List<string> objectsInStream = new List<string>();
@@ -190,7 +395,7 @@ namespace SpeckleGSA
       // Separate objects into sizeable payloads
       var payloads = CreatePayloads(bucketObjects);
 
-      int numErrors = 0;
+      
 
       if (bucketObjects.Count(o => o.Type == "Placeholder") < bucketObjects.Count)
       {
@@ -228,7 +433,10 @@ namespace SpeckleGSA
           {
             foreach (SpeckleObject obj in payloads[j])
             {
-              HelperFunctions.tryCatchWithEvents(() => LocalContext.AddSentObject(obj, baseUrl), "", "Error in updating local db");
+              if (obj.Hash != null && obj._id != null)
+              {
+                HelperFunctions.tryCatchWithEvents(() => LocalContext.AddSentObject(obj, baseUrl), "", "Error in updating local db");
+              }
             }
           });
         }
@@ -378,6 +586,16 @@ namespace SpeckleGSA
       }
 
       payloadDict = payloadDict.OrderByDescending(o => o.Item1).ToList();
+
+      for (var i = 0; i < payloadDict.Count(); i++)
+      {
+        var groupedByType = payloadDict[i].Item2.GroupBy(o => o.Type).ToDictionary(o => o.Key, o => o.ToList());
+        var numByTypeSummaries = groupedByType.Keys.Select(k => string.Join(":", k, groupedByType[k].Count())).ToList();
+        GSA.GsaApp.gsaMessenger.CacheMessage(MessageIntent.TechnicalLog, MessageLevel.Debug,
+          "Details for payload #" + (i + 1) + "/" + payloadDict.Count(), "TotalEstimatedSize=" + payloadDict[i].Item1,
+          "NumObjectsByType=" + string.Join(";", numByTypeSummaries));
+      }
+
       return payloadDict.Select(d => d.Item2).ToList();
     }
 

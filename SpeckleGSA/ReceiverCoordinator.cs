@@ -108,6 +108,8 @@ namespace SpeckleGSA
 
       foreach (var streamId in Receivers.Keys)
       {
+        var streamObjects = Receivers[streamId].GetObjects();
+
         double factor = 1;
         if (Receivers[streamId].Units == null)
         {
@@ -119,7 +121,7 @@ namespace SpeckleGSA
           factor = (1.0).ConvertUnit(Receivers[streamId].Units.ShortUnitName(), units);
         }
 
-        foreach (var o in Receivers[streamId].GetObjects())
+        foreach (var o in streamObjects)
         {
           if (string.IsNullOrEmpty(o.ApplicationId))
           {
@@ -220,6 +222,39 @@ namespace SpeckleGSA
       return Task.FromResult(numRowsupdated);
     }
 
+    private Dictionary<Type, List<SpeckleObject>> CollateRxObjectsByType(List<SpeckleObject> rxObjs)
+    {
+      var rxTypePrereqs = GSA.RxTypeDependencies;
+      var rxSpeckleTypes = rxObjs.Select(k => k.GetType()).Distinct().ToList();
+
+      ///[ GSA type , [ SpeckleObjects ]]
+      var d = new Dictionary<Type, List<SpeckleObject>>();
+      foreach (var o in rxObjs)
+      {
+        var speckleType = o.GetType();
+
+        var matchingGsaTypes = rxTypePrereqs.Keys.Where(t => dummyObjectDict[t].SpeckleObject.GetType() == speckleType);
+        if (matchingGsaTypes.Count() == 0)
+        {
+          matchingGsaTypes = rxTypePrereqs.Keys.Where(t => speckleType.IsSubclassOf(dummyObjectDict[t].SpeckleObject.GetType()));
+        }
+
+        if (matchingGsaTypes.Count() == 0)
+        {
+          continue;
+        }
+
+        var gsaType = matchingGsaTypes.First();
+        if (!d.ContainsKey(gsaType))
+        {
+          d.Add(gsaType, new List<SpeckleObject>());
+        }
+        d[gsaType].Add(o);
+      }
+
+      return d;
+    }
+
     private Task ProcessRxObjects(List<SpeckleObject> rxObjs)
     {
       // Write objects
@@ -236,6 +271,8 @@ namespace SpeckleGSA
       var rxGsaContainerTypes = rxTypePrereqs.Keys.Where(t => rxSpeckleTypes.Any(st => st == dummyObjectDict[t].SpeckleObject.GetType())).ToList();
       DiscoverToNativeMethods(rxGsaContainerTypes);
 
+      var rxObjsByType = CollateRxObjectsByType(rxObjs);
+
       //These are IGSASpeckleContainer types
       List<Type> currentTypeBatch;
       do
@@ -248,7 +285,7 @@ namespace SpeckleGSA
           currentTypeBatch.RemoveAll(i => traversedDeserialisedTypes.Contains(i));
         };
 
-        var batchErrors = ProcessTypeBatch(currentTypeBatch, rxObjs);
+        var batchErrors = ProcessTypeBatch(currentTypeBatch, rxObjsByType);
         numErrors += batchErrors;
 
       } while (currentTypeBatch.Count > 0);
@@ -291,12 +328,17 @@ namespace SpeckleGSA
       );
     }
 
-    private int ProcessTypeBatch(List<Type> currentBatch, List<SpeckleObject> rxObjs)
+    //private int ProcessTypeBatch(List<Type> currentBatch, List<SpeckleObject> rxObjs, out List<SpeckleObject> processedObjs)
+    private int ProcessTypeBatch(List<Type> currentBatch, Dictionary<Type, List<SpeckleObject>> rxObjsByType)
     {
       var streamIds = Receivers.Keys.ToList();
 
       //This method assumes it's not run in parallel
       GSA.GsaApp.gsaMessenger.ResetTriggeredMessageCount();
+
+      //Create new dictionary instance in case the original ever gets modified
+      var batchRxObsByType = rxObjsByType.Keys.Where(t => currentBatch.Contains(t)).ToDictionary(t => t, t => rxObjsByType[t]);
+      var batchLock = new object();
 
       //Commented this out to enable debug tests for preserving order
 #if DEBUG
@@ -308,9 +350,13 @@ namespace SpeckleGSA
         var dummyObject = dummyObjectDict[t];
         var valueType = t.GetProperty("Value").GetValue(dummyObject).GetType();
 
-        var currentObjects = rxObjs.Where(o => o.GetType() == valueType).ToList();
+        List<SpeckleObject> currentObjects = null;
+        lock (batchLock)
+        {
+          currentObjects = batchRxObsByType.ContainsKey(t) ? rxObjsByType[t] : null;
+        }
 
-        if (currentObjects.Count() > 0)
+        if (currentObjects != null && currentObjects.Count() > 0)
         {
           Status.ChangeStatus("Writing " + t.Name);
 
@@ -334,6 +380,7 @@ namespace SpeckleGSA
 
           GSA.GsaApp.gsaMessenger.Trigger();
           
+          /*
           if (GSA.RxParallelisableTypes.ContainsKey(valueType))
           {
             var numErrorLock = new object();
@@ -349,6 +396,7 @@ namespace SpeckleGSA
             });
           }
           else
+          */
           {
             currentObjects.ForEach(o =>
             {

@@ -108,7 +108,7 @@ namespace SpeckleGSA
         IsBusy = false;
         return;
       }
-
+        
       // Separate objects into streams
       var streamBuckets = CreateStreamBuckets();
 
