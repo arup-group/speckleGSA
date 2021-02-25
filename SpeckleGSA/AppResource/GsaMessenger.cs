@@ -90,10 +90,11 @@ namespace SpeckleGSA
       //Currently just recognises the first two levels of message portions
       lock (syncLock)
       {
+        var excludedFromConsolidation = MessageCache.Where(m => m.Exception != null || m.Intent == MessageIntent.TechnicalLog);
         //Let log messages not be consolidated
-        newCache.AddRange(MessageCache.Where(m => m.Intent != MessageIntent.TechnicalLog));
+        newCache.AddRange(excludedFromConsolidation);
 
-        var msgGroups = MessageCache.Where(m => m.Exception == null).GroupBy(m => new { m.Intent, m.Level }).ToDictionary(g => g.Key, g => g.ToList());
+        var msgGroups = MessageCache.Except(excludedFromConsolidation).GroupBy(m => new { m.Intent, m.Level }).ToDictionary(g => g.Key, g => g.ToList());
         foreach (var gk in msgGroups.Keys)
         {
           var msgDict = new Dictionary<string, List<string>>();

@@ -369,7 +369,7 @@ namespace SpeckleGSAProxy.Test
       messageBus.ConsolidateCache();
       messageBus.Trigger();
 
-      Assert.AreEqual(6, testMessageCache.Count());
+      Assert.AreEqual(9, testMessageCache.Count());
     }
 
     #region private_methods
