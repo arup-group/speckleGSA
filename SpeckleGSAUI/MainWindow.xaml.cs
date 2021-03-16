@@ -14,8 +14,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
-using SpeckleStructuralClasses;
-using SpeckleStructuralGSA;
 using SpeckleInterface;
 
 namespace SpeckleGSAUI
@@ -53,11 +51,6 @@ namespace SpeckleGSAUI
     public MainWindow()
     {
       InitializeComponent();
-
-#if DEBUG
-      var assignmentToForceModuleLoading1 = Structural1DElementType.Beam;
-      var assignmentToForceModuleLoading2 = GSA2DElementLayer.Middle;
-#endif
 
       var speckleGsaAppVersion = getRunningVersion();
       mainWindow.Title = mainWindow.Title + " - " + speckleGsaAppVersion;
