@@ -194,7 +194,7 @@ namespace SpeckleGSA
     private int ProcessTypeBatch(List<Type> batch, out bool changeDetected)
     {
       //This method assumes it's not run in parallel
-      GSA.GsaApp.gsaMessenger.ResetTriggeredMessageCount();
+      GSA.GsaApp.gsaMessenger.ResetLoggedMessageCount();
 
 #if DEBUG
       changeDetected = false;
@@ -237,7 +237,7 @@ namespace SpeckleGSA
         traversedSerialisedTypes.AddRange(batch);
       }
 
-      return GSA.GsaApp.gsaMessenger.TriggeredMessageCount;
+      return GSA.GsaApp.gsaMessenger.LoggedMessageCount;
     }
 
     private void SerialiseType(Type t, ref bool changeDetected)

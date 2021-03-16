@@ -383,7 +383,7 @@ namespace SpeckleInterface
 
       try
       {
-        _ = apiClient.StreamUpdateAsync(StreamId, updateStream, apiTimeoutOverride).Result;
+        _ = apiClient.StreamUpdateAsync(StreamId, updateStream).Result;
         apiClient.Stream.Layers = updateStream.Layers.ToList();
         apiClient.Stream.Objects = placeholders;
         messenger.Message(MessageIntent.Display, MessageLevel.Information, "Updated the stream's object list on the server", StreamId);

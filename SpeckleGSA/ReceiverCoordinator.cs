@@ -335,7 +335,7 @@ namespace SpeckleGSA
       var streamIds = Receivers.Keys.ToList();
 
       //This method assumes it's not run in parallel
-      GSA.GsaApp.gsaMessenger.ResetTriggeredMessageCount();
+      GSA.GsaApp.gsaMessenger.ResetLoggedMessageCount();
 
       //Create new dictionary instance in case the original ever gets modified
       var batchRxObsByType = rxObjsByType.Keys.Where(t => currentBatch.Contains(t)).ToDictionary(t => t, t => rxObjsByType[t]);
@@ -381,7 +381,6 @@ namespace SpeckleGSA
 
           GSA.GsaApp.gsaMessenger.Trigger();
           
-          /*
           if (GSA.RxParallelisableTypes.ContainsKey(valueType))
           {
             var numErrorLock = new object();
@@ -397,7 +396,6 @@ namespace SpeckleGSA
             });
           }
           else
-          */
           {
             currentObjects.ForEach(o =>
             {
@@ -418,7 +416,7 @@ namespace SpeckleGSA
       );
 #endif
 
-      return GSA.GsaApp.gsaMessenger.TriggeredMessageCount;
+      return GSA.GsaApp.gsaMessenger.LoggedMessageCount;
     }
 
     //Return number of errors

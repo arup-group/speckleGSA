@@ -285,7 +285,7 @@ namespace SpeckleGSAProxy.Test
 
         //Check the other streams aren't affected by only having some active
         records = ((IGSACacheForTesting)GSA.GsaApp.gsaCache).Records;
-        Assert.AreEqual(105, records.Where(r => r.Latest).Count());
+        Assert.AreEqual(101, records.Where(r => r.Latest).Count());
         //-------
 
         GSA.GsaApp.gsaProxy.Close();

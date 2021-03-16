@@ -13,13 +13,13 @@ namespace SpeckleGSA
     private readonly object syncLock = new object();
     private List<MessageEventArgs> MessageCache = new List<MessageEventArgs>();
 
-    public int TriggeredMessageCount { get; private set; } = 0;
+    public int LoggedMessageCount { get; private set; } = 0;
 
-    public void ResetTriggeredMessageCount()
+    public void ResetLoggedMessageCount()
     {
       lock (syncLock)
       {
-        TriggeredMessageCount = 0;
+        LoggedMessageCount = 0;
       }
     }
 
@@ -51,7 +51,6 @@ namespace SpeckleGSA
       else
       {
         MessageAdded?.Invoke(null, new MessageEventArgs(intent, level, messagePortions));
-        TriggeredMessageCount++;
       }
       return true;
     }
@@ -66,7 +65,6 @@ namespace SpeckleGSA
       else
       {
         MessageAdded?.Invoke(null, new MessageEventArgs(intent, level, ex, messagePortions));
-        TriggeredMessageCount++;
       }
       return true;
     }
@@ -79,7 +77,10 @@ namespace SpeckleGSA
         foreach (var m in MessageCache)
         {
           MessageAdded?.Invoke(null, m);
-          TriggeredMessageCount++;
+          if (m.Intent == SpeckleGSAInterfaces.MessageIntent.TechnicalLog)
+          {
+            this.LoggedMessageCount++;
+          }
         }
         MessageCache.Clear();
       }
