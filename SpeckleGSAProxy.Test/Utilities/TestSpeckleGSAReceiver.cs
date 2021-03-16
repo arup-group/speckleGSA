@@ -1,5 +1,6 @@
 ﻿using SpeckleCore;
 using SpeckleGSA;
+using SpeckleInterface;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -34,10 +35,10 @@ namespace SpeckleGSAProxy.Test
       return Objects; 
     }
 
-    public async Task InitializeReceiver(string streamID, string clientID = "")
+    public string ObjectUrl(string id) => HelperFunctions.Combine(ServerAddress, "object/" + id);
+
+    public async Task InitializeReceiver(string streamID, string documentName, string clientID = "")
     {
     }
-
-    public string ObjectUrl(string id) => HelperFunctions.Combine(ServerAddress, "object/" + id);
   }
 }

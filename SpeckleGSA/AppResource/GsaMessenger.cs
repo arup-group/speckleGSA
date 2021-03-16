@@ -1,11 +1,12 @@
 ﻿using SpeckleGSAInterfaces;
+using SpeckleInterface;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace SpeckleGSA
 {
-  public class GsaMessenger : IGSAMessenger
+  public class GsaMessenger : IGSAMessenger, ISpeckleAppMessenger
   {
     public event EventHandler<MessageEventArgs> MessageAdded;
 
@@ -22,7 +23,7 @@ namespace SpeckleGSA
       }
     }
 
-    public bool CacheMessage(MessageIntent intent, MessageLevel level, Exception ex, params string[] messagePortions)
+    public bool CacheMessage(SpeckleGSAInterfaces.MessageIntent intent, SpeckleGSAInterfaces.MessageLevel level, Exception ex, params string[] messagePortions)
     {
       lock (syncLock)
       {
@@ -31,7 +32,7 @@ namespace SpeckleGSA
       return true;
     }
 
-    public bool CacheMessage(MessageIntent intent, MessageLevel level, params string[] messagePortions)
+    public bool CacheMessage(SpeckleGSAInterfaces.MessageIntent intent, SpeckleGSAInterfaces.MessageLevel level, params string[] messagePortions)
     {
       lock (syncLock)
       {
@@ -40,9 +41,9 @@ namespace SpeckleGSA
       return true;
     }
 
-    public bool Message(MessageIntent intent, MessageLevel level, params string[] messagePortions)
+    public bool Message(SpeckleGSAInterfaces.MessageIntent intent, SpeckleGSAInterfaces.MessageLevel level, params string[] messagePortions)
     {
-      if (intent == MessageIntent.TechnicalLog)
+      if (intent == SpeckleGSAInterfaces.MessageIntent.TechnicalLog)
       {
         //Currently cache these so that the app has the provision to add more context before it's logged
         CacheMessage(intent, level, messagePortions);
@@ -55,9 +56,9 @@ namespace SpeckleGSA
       return true;
     }
 
-    public bool Message(MessageIntent intent, MessageLevel level, Exception ex, params string[] messagePortions)
+    public bool Message(SpeckleGSAInterfaces.MessageIntent intent, SpeckleGSAInterfaces.MessageLevel level, Exception ex, params string[] messagePortions)
     {
-      if (intent == MessageIntent.TechnicalLog)
+      if (intent == SpeckleGSAInterfaces.MessageIntent.TechnicalLog)
       {
         //Currently cache these so that the app has the provision to add more context before it's logged
         CacheMessage(intent, level, ex, messagePortions);
@@ -90,7 +91,7 @@ namespace SpeckleGSA
       //Currently just recognises the first two levels of message portions
       lock (syncLock)
       {
-        var excludedFromConsolidation = MessageCache.Where(m => m.Exception != null || m.Intent == MessageIntent.TechnicalLog);
+        var excludedFromConsolidation = MessageCache.Where(m => m.Exception != null || m.Intent == SpeckleGSAInterfaces.MessageIntent.TechnicalLog);
         //Let log messages not be consolidated
         newCache.AddRange(excludedFromConsolidation);
 
@@ -133,5 +134,32 @@ namespace SpeckleGSA
         MessageCache = newCache;
       }
     }
+
+    public bool Message(SpeckleInterface.MessageIntent intent, SpeckleInterface.MessageLevel level, params string[] messagePortions)
+    {
+      return Message(Convert(intent), Convert(level), messagePortions);
+    }
+
+    public bool Message(SpeckleInterface.MessageIntent intent, SpeckleInterface.MessageLevel level, Exception ex, params string[] messagePortions)
+    {
+      return Message(Convert(intent), Convert(level), ex, messagePortions);
+    }
+
+    SpeckleGSAInterfaces.MessageIntent Convert(SpeckleInterface.MessageIntent mi)
+      => (new Dictionary<SpeckleInterface.MessageIntent, SpeckleGSAInterfaces.MessageIntent>()
+      { 
+        { SpeckleInterface.MessageIntent.Display, SpeckleGSAInterfaces.MessageIntent.Display },
+        { SpeckleInterface.MessageIntent.TechnicalLog, SpeckleGSAInterfaces.MessageIntent.TechnicalLog },
+        { SpeckleInterface.MessageIntent.Telemetry, SpeckleGSAInterfaces.MessageIntent.Telemetry }
+      })[mi];
+
+    SpeckleGSAInterfaces.MessageLevel Convert(SpeckleInterface.MessageLevel ml)
+      => (new Dictionary<SpeckleInterface.MessageLevel, SpeckleGSAInterfaces.MessageLevel>()
+      {
+        { SpeckleInterface.MessageLevel.Debug, SpeckleGSAInterfaces.MessageLevel.Debug },
+        { SpeckleInterface.MessageLevel.Information, SpeckleGSAInterfaces.MessageLevel.Information },
+        { SpeckleInterface.MessageLevel.Error, SpeckleGSAInterfaces.MessageLevel.Error },
+        { SpeckleInterface.MessageLevel.Fatal, SpeckleGSAInterfaces.MessageLevel.Fatal },
+      })[ml];
   }
 }

@@ -1,7 +1,9 @@
 ﻿using SpeckleCore;
 using SpeckleGSAInterfaces;
+using SpeckleInterface;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -38,7 +40,7 @@ namespace SpeckleGSA
 
 			if (!GSA.IsInit)
 			{
-        GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Error, "GSA link not found.");
+        GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, "GSA link not found.");
 				return statusMessages;
 			}
 
@@ -49,7 +51,7 @@ namespace SpeckleGSA
       var updatedCache = await Task.Run(() => UpdateCache());
       if (!updatedCache)
       {
-        GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Error, 
+        GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, 
           "Error in communicating GSA - please check if the GSA file has been closed down");
         return statusMessages;
       }
@@ -74,11 +76,14 @@ namespace SpeckleGSA
       // Create the streams
       Status.ChangeStatus("Creating streams");
 
+      // The units are key for the stream
+      GSA.GsaApp.gsaSettings.Units = GSA.GsaApp.gsaProxy.GetUnits();
+
       await CreateInitialiseSenders(streamNames, gsaSenderCreator, restApi, apiToken);
 
       TimeSpan duration = DateTime.Now - startTime;
-      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Duration of initialisation: " + duration.ToString(@"hh\:mm\:ss"));
-      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Telemetry, MessageLevel.Information, "send", "initialisation", "duration", duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "Duration of initialisation: " + duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Telemetry, SpeckleGSAInterfaces.MessageLevel.Information, "send", "initialisation", "duration", duration.ToString(@"hh\:mm\:ss"));
       Status.ChangeStatus("Ready to stream");
       IsInit = true;
 
@@ -113,8 +118,8 @@ namespace SpeckleGSA
       var streamBuckets = CreateStreamBuckets();
 
       TimeSpan duration = DateTime.Now - startTime;
-      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Duration of conversion to Speckle: " + duration.ToString(@"hh\:mm\:ss"));
-      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Telemetry, MessageLevel.Information, "send", "conversion", "duration", duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "Duration of conversion to Speckle: " + duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Telemetry, SpeckleGSAInterfaces.MessageLevel.Information, "send", "conversion", "duration", duration.ToString(@"hh\:mm\:ss"));
       startTime = DateTime.Now;
 
       // Send package
@@ -124,25 +129,25 @@ namespace SpeckleGSA
       var sendingTasks = new List<Task>();
       foreach (var k in streamBuckets.Keys.Where(k => Senders.ContainsKey(k)))
       {
-        Status.ChangeStatus("Sending to stream: " + Senders[k].StreamID);
+        Status.ChangeStatus("Sending to stream: " + Senders[k].StreamId);
 
         var title = GSA.GsaApp.gsaProxy.GetTitle();
         var streamName = GSA.GsaApp.gsaSettings.SeparateStreams ? title + "." + k : title;
 
         Senders[k].UpdateName(streamName);
-        numErrors += Senders[k].SendGSAObjects(streamBuckets[k]);
+        numErrors += Senders[k].SendObjects(streamBuckets[k]);
+        GSA.GsaApp.gsaMessenger.Trigger();
       }
-      GSA.GsaApp.gsaMessenger.Trigger();
 
       if (numErrors > 0)
       {
-        GSA.GsaApp.Messenger.Message(MessageIntent.Display, MessageLevel.Error,
+        GSA.GsaApp.Messenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error,
           numErrors + " errors found with sending to the server. Refer to the .txt log file(s) in " + AppDomain.CurrentDomain.BaseDirectory);
       }
 
       duration = DateTime.Now - startTime;
-      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Duration of sending to Speckle: " + duration.ToString(@"hh\:mm\:ss"));
-      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Telemetry, MessageLevel.Information, "send", "sending", "duration", duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "Duration of sending to Speckle: " + duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Telemetry, SpeckleGSAInterfaces.MessageLevel.Information, "send", "sending", "duration", duration.ToString(@"hh\:mm\:ss"));
 
       IsBusy = false;
       Status.ChangeStatus("Finished sending", 100);
@@ -179,7 +184,7 @@ namespace SpeckleGSA
 
       if (numErrors > 0)
       {
-        GSA.GsaApp.Messenger.Message(MessageIntent.Display, MessageLevel.Error,
+        GSA.GsaApp.Messenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error,
           numErrors + " processing errors found. Refer to the .txt log file(s) in " + AppDomain.CurrentDomain.BaseDirectory);
       }
 
@@ -272,33 +277,42 @@ namespace SpeckleGSA
 
       Senders = new Dictionary<string, IStreamSender>();
 
+      var baseProps = GSA.GetBaseProperties();
+      if (!Enum.TryParse(baseProps["units"].ToString(), true, out BasePropertyUnits basePropertyUnits))
+      {
+        basePropertyUnits = BasePropertyUnits.Millimetres;
+      }
+      var tolerance = Math.Round((double)baseProps["tolerance"], 8);
+      var angleTolerance = Math.Round((double)baseProps["angleTolerance"], 6);
+      var documentName = Path.GetFileNameWithoutExtension(GSA.GsaApp.gsaProxy.FilePath);
+
       foreach (string streamName in streamNames)
       {
         Senders[streamName] = GSASenderCreator(restApi, apiToken);
 
         if (!GSA.SenderInfo.ContainsKey(streamName))
         {
-          GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Creating new sender for " + streamName);
-          await Senders[streamName].InitializeSender(null, null, streamName);
-          GSA.SenderInfo[streamName] = new Tuple<string, string>(Senders[streamName].StreamID, Senders[streamName].ClientID);
+          GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "Creating new sender for " + streamName);
+          await Senders[streamName].InitializeSender(documentName, basePropertyUnits, tolerance, angleTolerance, streamName: streamName);
+          GSA.SenderInfo[streamName] = new Tuple<string, string>(Senders[streamName].StreamId, Senders[streamName].ClientId);
         }
         else
         {
-          await Senders[streamName].InitializeSender(GSA.SenderInfo[streamName].Item1, GSA.SenderInfo[streamName].Item2, streamName);
+          await Senders[streamName].InitializeSender(documentName, basePropertyUnits, tolerance, angleTolerance, GSA.SenderInfo[streamName].Item1, GSA.SenderInfo[streamName].Item2, streamName);
         }
       }
     }
 
-    private Dictionary<string, Dictionary<string, List<object>>> CreateStreamBuckets()
+    private Dictionary<string, Dictionary<string, List<SpeckleObject>>> CreateStreamBuckets()
     {
-      var streamBuckets = new Dictionary<string, Dictionary<string, List<object>>>();
+      var streamBuckets = new Dictionary<string, Dictionary<string, List<SpeckleObject>>>();
 
       var currentObjects = GSA.GetAllConvertedGsaObjectsByType();
       foreach (var kvp in currentObjects)
       {
         var targetStream = GSA.GsaApp.gsaSettings.SeparateStreams ? StreamMap[kvp.Key] : "Full Model";
 
-        foreach (object obj in kvp.Value)
+        foreach (IGSASpeckleContainer obj in kvp.Value)
         {
           if (GSA.GsaApp.gsaSettings.SendOnlyMeaningfulNodes)
           {
@@ -307,13 +321,14 @@ namespace SpeckleGSA
               continue;
             }
           }
-          object insideVal = obj.GetType().GetProperty("Value").GetValue(obj);
+          //var insideVal = (SpeckleObject)obj.GetType().GetProperty("Value").GetValue(obj);
+          var insideVal = (SpeckleObject) obj.SpeckleObject;
 
-          ((SpeckleObject)insideVal).GenerateHash();
+          insideVal.GenerateHash();
 
           if (!streamBuckets.ContainsKey(targetStream))
           {
-            streamBuckets[targetStream] = new Dictionary<string, List<object>>();
+            streamBuckets[targetStream] = new Dictionary<string, List<SpeckleObject>>();
           }
 
           if (streamBuckets[targetStream].ContainsKey(insideVal.GetType().Name))
@@ -322,7 +337,7 @@ namespace SpeckleGSA
           }
           else
           {
-            streamBuckets[targetStream][insideVal.GetType().Name] = new List<object>() { insideVal };
+            streamBuckets[targetStream][insideVal.GetType().Name] = new List<SpeckleObject>() { insideVal };
           }
         }
       }
@@ -374,7 +389,7 @@ namespace SpeckleGSA
         int numKeywords = keywords.Count();
         int numUpdated = data.Count();
 
-        GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Read " + numUpdated + " GWA lines across " + numKeywords + " keywords into cache");
+        GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "Read " + numUpdated + " GWA lines across " + numKeywords + " keywords into cache");
 
         return true;
       }

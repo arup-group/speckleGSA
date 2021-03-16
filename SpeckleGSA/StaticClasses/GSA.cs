@@ -243,23 +243,34 @@ namespace SpeckleGSA
     public static List<SpeckleObject> GetSpeckleObjectsFromSenderDictionaries() => GetAllConvertedGsaObjectsByType()
       .SelectMany(sd => sd.Value).Cast<IGSASpeckleContainer>().Select(c => (SpeckleObject)c.SpeckleObject).ToList();
 
-    public static Dictionary<Type, List<object>> GetAllConvertedGsaObjectsByType()
+    public static Dictionary<Type, List<IGSASpeckleContainer>> GetAllConvertedGsaObjectsByType()
     {
-      var currentObjects = new Dictionary<Type, List<object>>();
+      var currentObjects = new Dictionary<Type, List<IGSASpeckleContainer>>();
 
       foreach (var dict in SenderDictionaries)
       {
-        var allObjects = dict.GetAll();
-        //Ensure alphabetical order here as this has a bearing on the order of the layers when it's sent, and therefore the order of
-        //the layers as displayed in GH.  Note the type names here are the GSA ones (e.g. GSAGravityLoading) not the StructuralClasses ones
-        var sortedKeys = allObjects.Keys.OrderBy(k => k.Name);
-        foreach (var t in sortedKeys)
+        try
         {
-          if (!currentObjects.ContainsKey(t))
+          var allObjects = dict.GetAll();
+          //Ensure alphabetical order here as this has a bearing on the order of the layers when it's sent, and therefore the order of
+          //the layers as displayed in GH.  Note the type names here are the GSA ones (e.g. GSAGravityLoading) not the StructuralClasses ones
+          var sortedKeys = allObjects.Keys.OrderBy(k => k.Name);
+          foreach (var t in sortedKeys)
           {
-            currentObjects[t] = new List<object>();
+            var objsToAdd = allObjects.ContainsKey(t) ? allObjects[t].Select(o => (IGSASpeckleContainer)o).ToList() : new List<IGSASpeckleContainer>();
+            if (objsToAdd.Count() > 0)
+            {
+              if (!currentObjects.ContainsKey(t))
+              {
+                currentObjects.Add(t, new List<IGSASpeckleContainer>());
+              }
+              currentObjects[t].AddRange(objsToAdd);
+            }
           }
-          currentObjects[t].AddRange(allObjects[t]);
+        }
+        catch (Exception ex)
+        {
+
         }
       }
       return currentObjects;
