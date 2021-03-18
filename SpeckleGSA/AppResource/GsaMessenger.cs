@@ -43,7 +43,9 @@ namespace SpeckleGSA
 
     public bool Message(SpeckleGSAInterfaces.MessageIntent intent, SpeckleGSAInterfaces.MessageLevel level, params string[] messagePortions)
     {
-      if (intent == SpeckleGSAInterfaces.MessageIntent.TechnicalLog)
+      if ((intent == SpeckleGSAInterfaces.MessageIntent.TechnicalLog)
+        //TO DO: review this assumption that messages with 2 portions are to be consolidated
+        || (intent == SpeckleGSAInterfaces.MessageIntent.Display && messagePortions.Count() == 2))  
       {
         //Currently cache these so that the app has the provision to add more context before it's logged
         CacheMessage(intent, level, messagePortions);
@@ -127,7 +129,7 @@ namespace SpeckleGSA
               }
               else
               {
-                newCache.Add(new MessageEventArgs(gk.Intent, gk.Level, k, string.Join(", ", msgDict[k])));
+                newCache.Add(new MessageEventArgs(gk.Intent, gk.Level, k, string.Join(",", msgDict[k])));
               }
             }
           }

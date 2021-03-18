@@ -184,10 +184,6 @@
       <Project>{88ae85c3-1966-4b71-8c91-242c80dce6d4}</Project>
       <Name>SpeckleGSAProxy</Name>
     </ProjectReference>
-    <ProjectReference Include="..\SpeckleInterface\SpeckleInterface.csproj">
-      <Project>{ca38dd0e-4a12-4b5b-9544-62b6ffc0bb25}</Project>
-      <Name>SpeckleInterface</Name>
-    </ProjectReference>
     <ProjectReference Include="..\SpeckleUtil\SpeckleUtil.csproj">
       <Project>{c8c902f6-550a-4ac9-84e3-d4f9085260b1}</Project>
       <Name>SpeckleUtil</Name>

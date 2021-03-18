@@ -18,6 +18,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleGSAProxy.Test", "Spe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleUtil", "SpeckleUtil\SpeckleUtil.csproj", "{C8C902F6-550A-4AC9-84E3-D4F9085260B1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleInterface", "SpeckleInterface\SpeckleInterface.csproj", "{CA38DD0E-4A12-4B5B-9544-62B6FFC0BB25}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -74,6 +76,14 @@ Global
 		{C8C902F6-550A-4AC9-84E3-D4F9085260B1}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C8C902F6-550A-4AC9-84E3-D4F9085260B1}.Release|x64.ActiveCfg = Release|Any CPU
 		{C8C902F6-550A-4AC9-84E3-D4F9085260B1}.Release|x64.Build.0 = Release|Any CPU
+		{CA38DD0E-4A12-4B5B-9544-62B6FFC0BB25}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CA38DD0E-4A12-4B5B-9544-62B6FFC0BB25}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CA38DD0E-4A12-4B5B-9544-62B6FFC0BB25}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{CA38DD0E-4A12-4B5B-9544-62B6FFC0BB25}.Debug|x64.Build.0 = Debug|Any CPU
+		{CA38DD0E-4A12-4B5B-9544-62B6FFC0BB25}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CA38DD0E-4A12-4B5B-9544-62B6FFC0BB25}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CA38DD0E-4A12-4B5B-9544-62B6FFC0BB25}.Release|x64.ActiveCfg = Release|Any CPU
+		{CA38DD0E-4A12-4B5B-9544-62B6FFC0BB25}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
