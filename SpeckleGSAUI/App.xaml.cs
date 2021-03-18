@@ -13,6 +13,7 @@ using SpeckleGSAProxy;
 using SpeckleGSAInterfaces;
 using System.Deployment.Application;
 using System.Reflection;
+using SpeckleInterface;
 
 namespace SpeckleGSAUI
 {
@@ -203,8 +204,8 @@ namespace SpeckleGSAUI
 
         foreach (var streamInfo in nonBlankReceivers)
         {
-          GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Creating receiver " + streamInfo.Item1);
-          gsaReceiverCoordinator.Receivers[streamInfo.Item1] = new StreamReceiver(RestApi, ApiToken);
+          GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "Creating receiver " + streamInfo.Item1);
+          gsaReceiverCoordinator.Receivers[streamInfo.Item1] = new StreamReceiver(RestApi, ApiToken, GSA.GsaApp.gsaMessenger);
         }
       });
       Task.Run(() => gsaReceiverCoordinator.Initialize()).Wait();
@@ -274,7 +275,7 @@ namespace SpeckleGSAUI
       
       GSA.GetSpeckleClients(EmailAddress, RestApi);
       var gsaSenderCoordinator = new SenderCoordinator();
-      Task.Run(() => gsaSenderCoordinator.Initialize(RestApi, ApiToken, (restApi, apiToken) => new StreamSender(restApi, apiToken))).Wait();
+      Task.Run(() => gsaSenderCoordinator.Initialize(RestApi, ApiToken, (restApi, apiToken) => new StreamSender(restApi, apiToken, GSA.GsaApp.gsaMessenger))).Wait();
       GSA.SetSpeckleClients(EmailAddress, RestApi);
       gsaSenderCoordinator.Trigger();
       gsaSenderCoordinator.Dispose();
@@ -294,7 +295,7 @@ namespace SpeckleGSAUI
     /// </summary>
     private void ProcessMessage(object sender, MessageEventArgs e)
     {
-      if (e.Level == MessageLevel.Debug || e.Level == MessageLevel.Information)
+      if (e.Level == SpeckleGSAInterfaces.MessageLevel.Debug || e.Level == SpeckleGSAInterfaces.MessageLevel.Information)
       {
         Console.WriteLine("[" + DateTime.Now.ToString("h:mm:ss tt") + "] " + string.Join(" ", e.MessagePortions.Where(mp => !string.IsNullOrEmpty(mp))));
       }

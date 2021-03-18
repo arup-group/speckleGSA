@@ -246,6 +246,10 @@
       <Project>{6d8ca3ad-e530-4cda-af79-9715a7583f4f}</Project>
       <Name>SpeckleGSA</Name>
     </ProjectReference>
+    <ProjectReference Include="..\SpeckleInterface\SpeckleInterface.csproj">
+      <Project>{ca38dd0e-4a12-4b5b-9544-62b6ffc0bb25}</Project>
+      <Name>SpeckleInterface</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Resource Include="icon.ico" />

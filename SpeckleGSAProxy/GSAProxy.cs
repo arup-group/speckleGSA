@@ -414,7 +414,7 @@ namespace SpeckleGSAProxy
           {
             ParseGeneralGwa(gwaRecord, out string keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType);
 
-            if (keyword.Equals(setAtKeywords[i], StringComparison.InvariantCultureIgnoreCase))
+            if (keyword.ContainsCaseInsensitive(setAtKeywords[i]))
             {
               var originalSid = "";
               if (string.IsNullOrEmpty(foundStreamId))

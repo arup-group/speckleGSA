@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using SpeckleCore;
 using SpeckleGSAInterfaces;
 using SpeckleGSAProxy;
+using SpeckleInterface;
 
 namespace SpeckleGSA
 {
@@ -42,11 +43,11 @@ namespace SpeckleGSA
       var startTime = DateTime.Now;
 			if (!GSA.IsInit)
 			{
-        GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Error, "GSA link not found.");
+        GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, "GSA link not found.");
 				return statusMessages;
 			}
 
-      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Initialising receivers");
+      GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "Initialising receivers");
 
       Status.ChangeStatus("Reading GSA data into cache");
 
@@ -64,8 +65,8 @@ namespace SpeckleGSA
 			}, Environment.ProcessorCount);
 
       TimeSpan duration = DateTime.Now - startTime;
-      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Duration of initialisation: " + duration.ToString(@"hh\:mm\:ss"));
-      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Telemetry, MessageLevel.Information, "receive", "initialisation", "duration", duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "Duration of initialisation: " + duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Telemetry, SpeckleGSAInterfaces.MessageLevel.Information, "receive", "initialisation", "duration", duration.ToString(@"hh\:mm\:ss"));
 
       Status.ChangeStatus("Ready to receive");
 			IsInit = true;
@@ -114,7 +115,7 @@ namespace SpeckleGSA
         if (Receivers[streamId].Units == null)
         {
           //Let the user know if any streams have no unit information
-          GSA.GsaApp.gsaMessenger.CacheMessage(MessageIntent.Display, MessageLevel.Error, "Streams with no unit information", streamId);
+          GSA.GsaApp.gsaMessenger.CacheMessage(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, "Streams with no unit information", streamId);
         }
         else
         {
@@ -125,7 +126,7 @@ namespace SpeckleGSA
         {
           if (string.IsNullOrEmpty(o.ApplicationId))
           {
-            GSA.GsaApp.gsaMessenger.CacheMessage(MessageIntent.Display, MessageLevel.Information, o.GetType().Name + ((string.IsNullOrEmpty(o.Name))
+            GSA.GsaApp.gsaMessenger.CacheMessage(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, o.GetType().Name + ((string.IsNullOrEmpty(o.Name))
               ? " with no name nor ApplicationId (identified by hashes)" : " with no name nor ApplicationId (identified by hashes)"), o.Hash);
           }
           else
@@ -138,8 +139,8 @@ namespace SpeckleGSA
             }
             catch (Exception ex)
             {
-              GSA.GsaApp.gsaMessenger.CacheMessage(MessageIntent.Display, MessageLevel.Error, "Scaling issue for objects with _ids on stream: " + streamId, o._id);
-              GSA.GsaApp.gsaMessenger.CacheMessage(MessageIntent.TechnicalLog, MessageLevel.Error, ex, "Scaling issue", "StreamId=" + streamId, "_id=" + o._id);
+              GSA.GsaApp.gsaMessenger.CacheMessage(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, "Scaling issue for objects with _ids on stream: " + streamId, o._id);
+              GSA.GsaApp.gsaMessenger.CacheMessage(SpeckleGSAInterfaces.MessageIntent.TechnicalLog, SpeckleGSAInterfaces.MessageLevel.Error, ex, "Scaling issue", "StreamId=" + streamId, "_id=" + o._id);
             }
 
             //Populate the cache with stream IDs - review if this is needed anymroe
@@ -152,12 +153,12 @@ namespace SpeckleGSA
       GSA.GsaApp.gsaMessenger.Trigger();
 
       TimeSpan duration = DateTime.Now - startTime;
-      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Duration of reception from Speckle and scaling: " + duration.ToString(@"hh\:mm\:ss"));
-      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Telemetry, MessageLevel.Information, "receive", "reception and scaling", "duration", duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "Duration of reception from Speckle and scaling: " + duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Telemetry, SpeckleGSAInterfaces.MessageLevel.Information, "receive", "reception and scaling", "duration", duration.ToString(@"hh\:mm\:ss"));
 
       if (rxObjs.Count() == 0)
       {
-        GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "No processing needed because the stream(s) contain(s) no objects");
+        GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "No processing needed because the stream(s) contain(s) no objects");
         Status.ChangeStatus("Finished receiving", 100);
         IsBusy = false;
         return;
@@ -185,8 +186,8 @@ namespace SpeckleGSA
       GSA.GsaApp.gsaProxy.UpdateViews();
 
       duration = DateTime.Now - startTime;
-      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Duration of conversion from Speckle: " + duration.ToString(@"hh\:mm\:ss"));
-      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Telemetry, MessageLevel.Information, "receive", "conversion", "duration", duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "Duration of conversion from Speckle: " + duration.ToString(@"hh\:mm\:ss"));
+      GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Telemetry, SpeckleGSAInterfaces.MessageLevel.Information, "receive", "conversion", "duration", duration.ToString(@"hh\:mm\:ss"));
       startTime = DateTime.Now;
 
       Status.ChangeStatus("Finished receiving", 100);
@@ -215,7 +216,7 @@ namespace SpeckleGSA
       var numRowsupdated = data.Count();
       if (numRowsupdated > 0)
       {
-        GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, 
+        GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, 
           "Read " + numRowsupdated + " GWA lines across " + keywords.Count() + " keywords into cache");
       }
 
@@ -292,7 +293,7 @@ namespace SpeckleGSA
 
       if (numErrors > 0)
       {
-        GSA.GsaApp.Messenger.Message(MessageIntent.Display, MessageLevel.Error, 
+        GSA.GsaApp.Messenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, 
           numErrors + " processing errors found. Refer to the .txt log file(s) in " + AppDomain.CurrentDomain.BaseDirectory);
       }
 
@@ -334,7 +335,7 @@ namespace SpeckleGSA
       var streamIds = Receivers.Keys.ToList();
 
       //This method assumes it's not run in parallel
-      GSA.GsaApp.gsaMessenger.ResetTriggeredMessageCount();
+      GSA.GsaApp.gsaMessenger.ResetLoggedMessageCount();
 
       //Create new dictionary instance in case the original ever gets modified
       var batchRxObsByType = rxObjsByType.Keys.Where(t => currentBatch.Contains(t)).ToDictionary(t => t, t => rxObjsByType[t]);
@@ -380,7 +381,6 @@ namespace SpeckleGSA
 
           GSA.GsaApp.gsaMessenger.Trigger();
           
-          /*
           if (GSA.RxParallelisableTypes.ContainsKey(valueType))
           {
             var numErrorLock = new object();
@@ -396,7 +396,6 @@ namespace SpeckleGSA
             });
           }
           else
-          */
           {
             currentObjects.ForEach(o =>
             {
@@ -417,7 +416,7 @@ namespace SpeckleGSA
       );
 #endif
 
-      return GSA.GsaApp.gsaMessenger.TriggeredMessageCount;
+      return GSA.GsaApp.gsaMessenger.LoggedMessageCount;
     }
 
     //Return number of errors
@@ -460,7 +459,7 @@ namespace SpeckleGSA
         }
         catch (Exception ex)
         {
-          GSA.GsaApp.Messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, ex,
+          GSA.GsaApp.Messenger.Message(SpeckleGSAInterfaces.MessageIntent.TechnicalLog, SpeckleGSAInterfaces.MessageLevel.Error, ex,
             HelperFunctions.Combine("Error with merging received with existing counterpart", errContext).ToArray());
         }
       }
@@ -471,7 +470,7 @@ namespace SpeckleGSA
 
       if (deserialiseReturn is Exception)
       {
-        GSA.GsaApp.Messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, (Exception)deserialiseReturn, errContext.ToArray());
+        GSA.GsaApp.Messenger.Message(SpeckleGSAInterfaces.MessageIntent.TechnicalLog, SpeckleGSAInterfaces.MessageLevel.Error, (Exception)deserialiseReturn, errContext.ToArray());
       }
       else
       {
@@ -490,7 +489,7 @@ namespace SpeckleGSA
             }
             catch (Exception ex)
             {
-              GSA.GsaApp.Messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, ex, errContext.ToArray());
+              GSA.GsaApp.Messenger.Message(SpeckleGSAInterfaces.MessageIntent.TechnicalLog, SpeckleGSAInterfaces.MessageLevel.Error, ex, errContext.ToArray());
             }
           }
         }
