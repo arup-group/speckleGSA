@@ -117,15 +117,15 @@ namespace SpeckleGSAProxy.Test
 
       GSA.GsaApp.gsaProxy.OpenFile(Path.Combine(TestDataDirectory, filePath), false);
 
-      var sender = new Sender();
+      var senderCoordinator = new SenderCoordinator();
       bool failed = false;
       try
       {
 
         //This will load data from all streams into the cache
-        _ = sender.Initialize("", "", (restApi, apiToken) => new TestSpeckleGSASender()).Result;
+        _ = senderCoordinator.Initialize("", "", (restApi, apiToken) => new TestSpeckleGSASender()).Result;
 
-        sender.Trigger();
+        senderCoordinator.Trigger();
 
         //Each kit stores their own objects to be sent
         var speckleObjects = GSA.GetSpeckleObjectsFromSenderDictionaries();
@@ -171,7 +171,7 @@ namespace SpeckleGSAProxy.Test
       try
       {
         //RECEIVE EVENT #1: Analyis layer
-        var sender = new Sender();
+        var sender = new SenderCoordinator();
         GSA.GsaApp.gsaSettings = new Settings() { TargetLayer = GSATargetLayer.Analysis, SeparateStreams = true };
         _ = sender.Initialize("", "", (restApi, apiToken) => new TestSpeckleGSASender()).Result;
         sender.Trigger();
@@ -180,7 +180,7 @@ namespace SpeckleGSAProxy.Test
         var speckleObjects = GSA.GetSpeckleObjectsFromSenderDictionaries();
 
         //RECEIVE EVENT #2: Design layer
-        sender = new Sender();
+        sender = new SenderCoordinator();
         GSA.GsaApp.gsaSettings.TargetLayer = GSATargetLayer.Design;
         _ = sender.Initialize("", "", (restApi, apiToken) => new TestSpeckleGSASender()).Result;
         sender.Trigger();

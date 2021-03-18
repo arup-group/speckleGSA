@@ -4,45 +4,33 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using SpeckleCore;
-using SpeckleGSAInterfaces;
 
-namespace SpeckleGSA
+namespace SpeckleInterface
 {
 	/// <summary>
 	/// Receive objects from a stream.
 	/// </summary>
-	public class SpeckleGSAReceiver : ISpeckleGSAReceiver
+	public class StreamReceiver : StreamBase, IStreamReceiver
   {
 		//This was chosen to cause typical message payloads of round 100-300k to be sent from the server
     const int MAX_OBJ_REQUEST_COUNT = 1000;
 
-    private SpeckleApiClient myReceiver;
-
-    private readonly string apiToken;
-    private readonly string serverAddress;
-
     public event EventHandler<EventArgs> UpdateGlobalTrigger;
 
-    //public string StreamID { get => myReceiver == null ? null : myReceiver.StreamId; }
-    //public string StreamName { get => myReceiver == null ? null : myReceiver.Stream.Name; }
+    public string Units { get => apiClient == null ? null : apiClient.Stream.BaseProperties["units"]; }
 
-    public string Units { get => myReceiver == null ? null : myReceiver.Stream.BaseProperties["units"]; }
+		public string StreamId { get => apiClient == null ? "" : apiClient.Stream.StreamId; }
 
-		public string StreamId { get => myReceiver == null ? "" : myReceiver.Stream.StreamId; }
+		//public string ServerAddress { get => serverAddress; }
 
     /// <summary>
     /// Create SpeckleGSAReceiver object.
     /// </summary>
     /// <param name="serverAddress">Server address</param>
     /// <param name="apiToken">API token</param>
-    public SpeckleGSAReceiver(string serverAddress, string apiToken)
+    public StreamReceiver(string serverAddress, string apiToken, ISpeckleAppMessenger messenger) : base(serverAddress, apiToken, messenger)
     {
-      this.apiToken = apiToken;
-			this.serverAddress = serverAddress;
-      myReceiver = new SpeckleApiClient() { BaseUrl = serverAddress.ToString() };
 
-      //SpeckleInitializer.Initialize();
-      LocalContext.Init();
     }
 
     /// <summary>
@@ -50,45 +38,45 @@ namespace SpeckleGSA
     /// </summary>
     /// <param name="streamID">Stream ID of stream</param>
     /// <returns>Task</returns>
-    public async Task InitializeReceiver(string streamID, string clientID = "")
+    public async Task InitializeReceiver(string streamID, string documentName, string clientID = "")
     {
-      myReceiver.StreamId = streamID;
-      myReceiver.AuthToken = apiToken;
+      apiClient.StreamId = streamID;
+      apiClient.AuthToken = apiToken;
 
       if (string.IsNullOrEmpty(clientID))
       {
-				HelperFunctions.tryCatchWithEvents(() =>
+				tryCatchWithEvents(() =>
 				{
-					var clientResponse = myReceiver.ClientCreateAsync(new AppClient()
+					var clientResponse = apiClient.ClientCreateAsync(new AppClient()
 					{
-						DocumentName = Path.GetFileNameWithoutExtension(GSA.GsaApp.gsaProxy.FilePath),
+						DocumentName = documentName,
 						DocumentType = "GSA",
 						Role = "Receiver",
 						StreamId = streamID,
 						Online = true,
 					}).Result;
 
-					myReceiver.ClientId = clientResponse.Resource._id;
+					apiClient.ClientId = clientResponse.Resource._id;
 				}, "", "Unable to create client on server");
       }
       else
       {
-				HelperFunctions.tryCatchWithEvents(() =>
+				tryCatchWithEvents(() =>
 				{
-					_ = myReceiver.ClientUpdateAsync(clientID, new AppClient()
+					_ = apiClient.ClientUpdateAsync(clientID, new AppClient()
 					{
-						DocumentName = Path.GetFileNameWithoutExtension(GSA.GsaApp.gsaProxy.FilePath),
+						DocumentName = documentName,
 						Online = true,
 					}).Result;
 
-					myReceiver.ClientId = clientID;
+					apiClient.ClientId = clientID;
 				}, "", "Unable to update client on server");
       }
 
-      myReceiver.SetupWebsocket();
-      myReceiver.JoinRoom("stream", streamID);
+      apiClient.SetupWebsocket();
+      apiClient.JoinRoom("stream", streamID);
 
-      myReceiver.OnWsMessage += OnWsMessage;
+      apiClient.OnWsMessage += OnWsMessage;
     }
 
 		/// <summary>
@@ -99,7 +87,7 @@ namespace SpeckleGSA
     {
       UpdateGlobal();
 
-      return myReceiver.Stream.Objects.Where(o => o != null && !(o is SpecklePlaceholder)).ToList();
+      return apiClient.Stream.Objects.Where(o => o != null && !(o is SpecklePlaceholder)).Distinct().ToList();
     }
 
     /// <summary>
@@ -120,7 +108,7 @@ namespace SpeckleGSA
           UpdateChildren();
           break;
         default:
-					GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Error, 
+					messenger.Message(MessageIntent.Display, MessageLevel.Error, 
 						"Unknown event: " + (string)e.EventObject.args.eventType);
           break;
       }
@@ -131,10 +119,10 @@ namespace SpeckleGSA
     /// </summary>
     public void UpdateChildren()
     {
-			HelperFunctions.tryCatchWithEvents(() =>
+			tryCatchWithEvents(() =>
 			{
-				var result = myReceiver.StreamGetAsync(myReceiver.StreamId, "fields=children").Result;
-				myReceiver.Stream.Children = result.Resource.Children;
+				var result = apiClient.StreamGetAsync(apiClient.StreamId, "fields=children").Result;
+				apiClient.Stream.Children = result.Resource.Children;
 			}, "", "Unable to get children of stream");
     }
 
@@ -146,26 +134,26 @@ namespace SpeckleGSA
 			// Try to get stream
 			ResponseStream streamGetResult = null;
 
-			var exceptionThrown = HelperFunctions.tryCatchWithEvents(() =>
+			var exceptionThrown = tryCatchWithEvents(() =>
 			{
-				streamGetResult = myReceiver.StreamGetAsync(myReceiver.StreamId, null).Result;
+				streamGetResult = apiClient.StreamGetAsync(apiClient.StreamId, null).Result;
 			}, "", "Unable to get stream info from server");
 
 			if (!exceptionThrown && streamGetResult.Success == false)
 			{
-				GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Error, "Failed to receive " + myReceiver.Stream.Name + "stream.");
+				messenger.Message(MessageIntent.Display, MessageLevel.Error, "Failed to receive " + apiClient.Stream.Name + "stream.");
 				return;
 			}
 
-			myReceiver.Stream = streamGetResult.Resource;
+			apiClient.Stream = streamGetResult.Resource;
 
 			// Store stream data in local DB
-			HelperFunctions.tryCatchWithEvents(() =>
+			tryCatchWithEvents(() =>
 			{
-				LocalContext.AddOrUpdateStream(myReceiver.Stream, myReceiver.BaseUrl);
+				LocalContext.AddOrUpdateStream(apiClient.Stream, apiClient.BaseUrl);
 			}, "", "Unable to add or update stream details into local database");
 
-			string[] payload = myReceiver.Stream.Objects.Where(o => o.Type == "Placeholder").Select(o => o._id).ToArray();
+			string[] payload = apiClient.Stream.Objects.Where(o => o.Type == "Placeholder").Select(o => o._id).ToArray();
 
 			List<SpeckleObject> receivedObjects = new List<SpeckleObject>();
 
@@ -174,9 +162,9 @@ namespace SpeckleGSA
 			{
 				string[] partialPayload = payload.Skip(i).Take(MAX_OBJ_REQUEST_COUNT).ToArray();
 
-				HelperFunctions.tryCatchWithEvents(() =>
+				tryCatchWithEvents(() =>
 				{
-					ResponseObject response = myReceiver.ObjectGetBulkAsync(partialPayload, "omit=displayValue").Result;
+					ResponseObject response = apiClient.ObjectGetBulkAsync(partialPayload, "omit=displayValue").Result;
 
 					receivedObjects.AddRange(response.Resources);
 				}, "", "Unable to get objects for stream in bulk");
@@ -184,17 +172,17 @@ namespace SpeckleGSA
 
 			foreach (SpeckleObject obj in receivedObjects)
 			{
-				int streamLoc = myReceiver.Stream.Objects.FindIndex(o => o._id == obj._id);
+				int streamLoc = apiClient.Stream.Objects.FindIndex(o => o._id == obj._id);
 				try
 				{
-					myReceiver.Stream.Objects[streamLoc] = obj;
+					apiClient.Stream.Objects[streamLoc] = obj;
 				}
 				catch
 				{ }
 			}
 
-			GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, 
-				"Received " + myReceiver.Stream.Name + " stream with " + myReceiver.Stream.Objects.Count() + " objects.");
+			messenger.Message(MessageIntent.Display, MessageLevel.Information, 
+				"Received " + apiClient.Stream.Name + " stream with " + apiClient.Stream.Objects.Count() + " objects.");
 		}
 
     /// <summary>
@@ -202,9 +190,9 @@ namespace SpeckleGSA
     /// </summary>
     public void Dispose()
     {
-			HelperFunctions.tryCatchWithEvents(() =>
+			tryCatchWithEvents(() =>
 			{
-				_ = myReceiver.ClientUpdateAsync(myReceiver.ClientId, new AppClient() { Online = false }).Result;
+				_ = apiClient.ClientUpdateAsync(apiClient.ClientId, new AppClient() { Online = false }).Result;
 			}, "", "Unable to update client on server");
     }
   }

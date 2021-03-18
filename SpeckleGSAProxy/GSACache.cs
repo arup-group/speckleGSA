@@ -408,6 +408,24 @@ namespace SpeckleGSAProxy
       return (ResolveIndex(keyword, applicationId) > 0);
     }
 
+    public void RemoveFromProvisional(string keyword, string applicationId)
+    {
+      ExecuteWithLock(() =>
+      {
+        var kw = keyword.Split('.').First();
+        if (provisionals.ContainsKey(kw) && !string.IsNullOrEmpty(applicationId))
+        {
+          var matching = provisionals[kw].Where(kvp => kvp.Value == applicationId);
+          if (matching != null && matching.Count() > 0)
+          {
+            var index = matching.Select(kvp => kvp.Key).FirstOrDefault();
+
+            RemoveFromProvisional(kw, index);
+          }
+        }
+      });
+    }
+
     public int ResolveIndex(string keyword, string applicationId = "")
     {
       return ExecuteWithLock(() =>

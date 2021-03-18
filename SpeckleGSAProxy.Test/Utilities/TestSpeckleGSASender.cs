@@ -1,4 +1,6 @@
-﻿using SpeckleGSA;
+﻿using SpeckleCore;
+using SpeckleGSA;
+using SpeckleInterface;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -8,23 +10,24 @@ using System.Threading.Tasks;
 
 namespace SpeckleGSAProxy.Test
 {
-  class TestSpeckleGSASender : ISpeckleGSASender
+  class TestSpeckleGSASender : IStreamSender
   {
     private string clientId;
     private string streamId;
     private string streamName;
     public Dictionary<string, List<object>> sentObjects = new Dictionary<string, List<object>>();
 
-    public string StreamID { get => streamId; }
+    public string StreamId { get => streamId; }
 
-    public string ClientID { get => clientId; }
+    public string ClientId { get => clientId; }
 
     public void Dispose()
     {
       ;
     }
 
-    public Task InitializeSender(string streamID = "", string clientID = "", string streamName = "")
+    public Task InitializeSender(string documentName, BasePropertyUnits units, double tolerance, double angleTolerance, string streamID = "",
+      string clientID = "", string streamName = "")
     {
       this.streamId = streamID;
       this.clientId = clientID;
@@ -34,7 +37,7 @@ namespace SpeckleGSAProxy.Test
     }
 
     //objects by layer name
-    public void SendGSAObjects(Dictionary<string, List<object>> value)
+    public int SendObjects(Dictionary<string, List<SpeckleObject>> value, int maxPayloadBytes = 0, int apiTimeoutOverride = 0, int numParallel = 0)
     {
       foreach (var key in value.Keys)
       {
@@ -43,7 +46,8 @@ namespace SpeckleGSAProxy.Test
           sentObjects.Add(key, new List<object>());
         }
         sentObjects[key].AddRange(value[key]);
-      } 
+      }
+      return 0;
     }
 
     public void UpdateName(string streamName)

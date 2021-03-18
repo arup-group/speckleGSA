@@ -347,3 +347,9 @@ healthchecksdb
 
 # Exclude files created by of previous merges
 *.orig
+
+# Exclude Excel
+*.xls*
+
+# By default don't include CSV files
+*.csv

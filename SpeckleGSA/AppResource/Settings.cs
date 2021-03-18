@@ -4,19 +4,19 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http.Headers;
 using System.Reflection;
 
 namespace SpeckleGSA
 {
-	/// <summary>
-	/// Static class to store settings.
-	/// </summary>
-	public class Settings : IGSASettings
+  /// <summary>
+  /// Static class to store settings.
+  /// </summary>
+  public class Settings : IGSASettings
 	{
     public bool SendOnlyMeaningfulNodes = true;
     public bool SeparateStreams = false;
     public int PollingRate = 2000;
+		public string ServerAddress = "";
 
 		//Default values for properties specified in the interface
 		public string Units { get; set; }
@@ -29,6 +29,18 @@ namespace SpeckleGSA
 		private int loggingthreshold = 3;
 
 		public bool VerboseErrors = false;
+
+		public string ObjectUrl(string id)
+		{
+			string objectUrl = "";
+			try
+			{
+				var baseAddress = ServerAddress.TrimEnd('/').EndsWith("/api") ? ServerAddress : HelperFunctions.Combine(ServerAddress, "api");
+				objectUrl = HelperFunctions.Combine(baseAddress, "objects/" + id);
+			}
+			catch { }
+			return objectUrl;
+		}
 
 		//Using an integer scale at the moment from 0 to 5, which can be mapped to individual loggers
 		public int LoggingMinimumLevel
