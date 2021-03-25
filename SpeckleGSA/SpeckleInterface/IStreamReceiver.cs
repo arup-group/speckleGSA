@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace SpeckleGSA
 {
-  public interface ISpeckleGSAReceiver
+  public interface IStreamReceiver
   {
     string Units { get; }
     string StreamId { get; }

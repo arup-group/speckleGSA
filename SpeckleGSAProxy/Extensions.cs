@@ -1,6 +1,7 @@
 ﻿using SpeckleGSAInterfaces;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -35,6 +36,12 @@ namespace SpeckleGSAProxy
 		public static string[] ListSplit(this string list, char delimiter)
 		{
 			return Regex.Split(list, delimiter + "(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+		}
+
+
+		public static bool ContainsCaseInsensitive(this string a, string b)
+    {
+			return (a.IndexOf(b, StringComparison.OrdinalIgnoreCase) >= 0);
 		}
 		#endregion
 

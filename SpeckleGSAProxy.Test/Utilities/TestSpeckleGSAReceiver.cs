@@ -1,18 +1,21 @@
 ﻿using SpeckleCore;
 using SpeckleGSA;
+using SpeckleInterface;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace SpeckleGSAProxy.Test
 {
-  internal class TestSpeckleGSAReceiver : ISpeckleGSAReceiver
+  internal class TestSpeckleGSAReceiver : IStreamReceiver
   {
     public string Units { get; private set; }
 
     public List<SpeckleObject> Objects { get; set; }
 
     public string StreamId { get; private set; }
+
+    public string ServerAddress => "https://test.speckle.works";
 
     public event EventHandler<EventArgs> UpdateGlobalTrigger;
 
@@ -32,7 +35,9 @@ namespace SpeckleGSAProxy.Test
       return Objects; 
     }
 
-    public async Task InitializeReceiver(string streamID, string clientID = "")
+    public string ObjectUrl(string id) => HelperFunctions.Combine(ServerAddress, "object/" + id);
+
+    public async Task InitializeReceiver(string streamID, string documentName, string clientID = "")
     {
     }
   }
