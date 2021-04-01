@@ -13,7 +13,7 @@ namespace SpeckleGSA.UI.Models
     Single
   }
 
-  public enum GsaFileStatus
+  public enum GsaLoadedFileType
   {
     None,
     NewFile,
@@ -22,7 +22,7 @@ namespace SpeckleGSA.UI.Models
 
   public enum AppState
   {
-    NotLoggedIn,
+    NotLoggedIn = 0,
     ActiveLoggingIn,
     ActiveRetrievingStreamList,
     LoggedInNotLinkedToGsa,  
@@ -31,6 +31,7 @@ namespace SpeckleGSA.UI.Models
     SendingWaiting,
     ActiveSending,
     OpeningFile,
+    SavingFile,
     Ready   // when not continuously sending or receiving: between send/receive events, this is the regular state of being
   }
 

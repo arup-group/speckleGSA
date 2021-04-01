@@ -17,8 +17,8 @@ namespace SpeckleGSA.UI.ViewModels
     public event PropertyChangedEventHandler PropertyChanged;
     protected void NotifyPropertyChanged(String info) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(info));
 
-    public Coordinator Coordinator { get; set; } = new Coordinator();
-
+    public Coordinator Coordinator { get; } = new Coordinator();
+    public StateMachine StateMachine { get; } = new StateMachine();
     public double ProcessingProgress { get; set; }
 
     #region command_properties
@@ -35,16 +35,26 @@ namespace SpeckleGSA.UI.ViewModels
     public DelegateCommand<object> AddCandidateStreamId { get; set; }
     #endregion
     
-    public string StateSummary { get => appDateDict[Coordinator.AppState]; }
+    public string StateSummary { get => appDateDict[StateMachine.State]; }
 
     public string CurrentlyOpenFileName 
     { 
-      get => Coordinator.FileStatus == GsaFileStatus.None ? "No file is currently open" : Coordinator.FileStatus == GsaFileStatus.NewFile ? "New file" : Coordinator.FilePath; 
+      get => Coordinator.FileStatus == GsaLoadedFileType.None ? "No file is currently open" : Coordinator.FileStatus == GsaLoadedFileType.NewFile ? "New file" : Coordinator.FilePath; 
     }
 
     public List<string> DisplayLogLines { get => Coordinator.DisplayLog.DisplayLogItems.Select(i => string.Join(" - ", i.TimeStamp.ToString("dd/MM/yyyy HH:mm:ss"), i.Description)).ToList(); }
 
     public ObservableCollection<StreamListItem> ServerStreamListItems { get => new ObservableCollection<StreamListItem>(Coordinator.ServerStreamList.StreamListItems); }
+    public StreamListItem SelectedStreamItem
+    {
+      get => selectedStream; set
+      {
+        selectedStream = value;
+        ReceiveSelectedStreamCommand.RaiseCanExecuteChanged();
+      }
+    }
+    private StreamListItem selectedStream = null;
+
     public ObservableCollection<StreamListItem> ReceiverStreamListItems { get => new ObservableCollection<StreamListItem>(Coordinator.ReceiverCoordinator.StreamList.StreamListItems);  }
     public ObservableCollection<StreamListItem> SenderStreamListItems { get => new ObservableCollection<StreamListItem>(Coordinator.SenderCoordinator.StreamList.StreamListItems); }
     public ObservableCollection<ResultSettingItem> ResultSettingItems 
@@ -80,6 +90,7 @@ namespace SpeckleGSA.UI.ViewModels
       { AppState.SendingWaiting, "Waiting for next send event"},
       { AppState.ActiveSending, "Sending"},
       { AppState.OpeningFile, "Opening file" },
+      { AppState.SavingFile, "Saving file" },
       { AppState.Ready, "Ready" } };
 
     private readonly Progress<int> overallProgress = new Progress<int>();
@@ -100,82 +111,72 @@ namespace SpeckleGSA.UI.ViewModels
       ConnectToServerCommand = new DelegateCommand<object>(
         async (o) =>
         {
-          var prevState = Coordinator.AppState;
-
-          SetAppState(AppState.ActiveLoggingIn);
+          StateMachine.StartedLoggingIn();;
 
           Coordinator.Account = await Task.Run(() => Commands.Login());
           NotifyPropertyChanged("Account");
 
-          SetAppState(AppState.ActiveRetrievingStreamList);
+          StateMachine.LoggedIn();
+          StateMachine.StartedUpdatingStreams();
 
           Coordinator.ServerStreamList = await Task.Run(() => Commands.GetStreamList());
           NotifyPropertyChanged("ServerStreamListItems");
 
-          SetAppState(prevState);
+          StateMachine.StoppedUpdatingStreams();
         },
         (o) => true);
 
       UpdateStreamListCommand = new DelegateCommand<object>(
         async (o) =>
         {
-          var prevState = Coordinator.AppState;
-
-          SetAppState(AppState.ActiveRetrievingStreamList);
+          StateMachine.StartedUpdatingStreams();
 
           Coordinator.ServerStreamList = await Task.Run(() => Commands.GetStreamList());
           NotifyPropertyChanged("ServerStreamListItems");
 
-          SetAppState(prevState);
+          StateMachine.StoppedUpdatingStreams();
         },
         (o) => true);
 
       ReceiveSelectedStreamCommand = new DelegateCommand<object>(
         async (o) =>
         {
-          SetAppState(AppState.ActiveReceiving);
+          StateMachine.EnteredReceivingMode(StreamMethod);
           var result = await Task.Run(() => Commands.Receive(numProcessingItemsProgress, overallProgress, loggingProgress));
-          SetAppState(AppState.Ready);
+          StateMachine.StoppedReceiving();
         },
-        (o) => true);
+        (o) => (SelectedStreamItem != null));
 
       NewFileCommand = new DelegateCommand<object>(
         async (o) =>
         {
-          var prevState = Coordinator.AppState;
-          SetAppState(AppState.OpeningFile);
+          StateMachine.StartedOpeningFile();
           var result = await Task.Run(() => Commands.NewFile());
           if (result)
           {
-            Coordinator.FileStatus = GsaFileStatus.NewFile;
+            Coordinator.FileStatus = GsaLoadedFileType.NewFile;
             NotifyPropertyChanged("CurrentlyOpenFileName");
-
-            SetAppState(AppState.Ready);
           }
-          else
-          {
-            SetAppState(prevState);
-          }
+          StateMachine.OpenedFile();
         },
         (o) => true);
 
       OpenFileCommand = new DelegateCommand<object>(
         async (o) =>
         {
-          var prevState = Coordinator.AppState;
-          SetAppState(AppState.OpeningFile);
+          StateMachine.StartedOpeningFile();
           var filePath = await Task.Run(() => Commands.OpenFile());
           if (string.IsNullOrEmpty(filePath))
           {
-            SetAppState(prevState); 
+            StateMachine.CancelledOpeningFile();
           }
           else
           {
-            Coordinator.FileStatus = GsaFileStatus.ExistingFile;
+            Coordinator.FileStatus = GsaLoadedFileType.ExistingFile;
             Coordinator.FilePath = filePath;
             NotifyPropertyChanged("CurrentlyOpenFileName");
 
-            SetAppState(AppState.Ready);
+            StateMachine.OpenedFile();
           }
         }, 
         (o) => true);
@@ -183,9 +184,9 @@ namespace SpeckleGSA.UI.ViewModels
       ReceiveCommand = new DelegateCommand<object>(
         async (o) =>
         {
-          SetAppState(AppState.ActiveReceiving);
+          StateMachine.EnteredReceivingMode(StreamMethod);
           var result = await Task.Run(() => Commands.Receive(numProcessingItemsProgress, overallProgress, loggingProgress));
-          SetAppState(AppState.Ready);
+          StateMachine.StoppedReceiving();
         },
         (o) => true);
 
@@ -225,9 +226,18 @@ namespace SpeckleGSA.UI.ViewModels
       SendCommand = new DelegateCommand<object>(
         async (o) =>
         {
-          SetAppState(AppState.ActiveSending);
+          StateMachine.EnteredSendingMode(StreamMethod);
           var result = await Task.Run(() => Commands.Send(streamCreationProgress, numProcessingItemsProgress, overallProgress, loggingProgress));
-          SetAppState(AppState.Ready);
+          StateMachine.StoppedSending();
+        },
+        (o) => true);
+
+      SaveAndCloseCommand = new DelegateCommand<object>(
+        async (o) =>
+        {
+          StateMachine.StartedSavingFile();
+          var result = await Task.Run(() => Commands.SaveFile());
+          StateMachine.StoppedSavingFile();
         },
         (o) => true);
     }
@@ -248,12 +258,6 @@ namespace SpeckleGSA.UI.ViewModels
     {
       ProcessingProgress = e;
       NotifyPropertyChanged("ProcessingProgress");
-    }
-
-    private void SetAppState(AppState newAppState)
-    {
-      Coordinator.AppState = newAppState;
-      NotifyPropertyChanged("StateSummary");
     }
   }
 }

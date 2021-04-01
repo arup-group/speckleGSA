@@ -75,6 +75,7 @@
     <Compile Include="ViewModels\Commands.cs" />
     <Compile Include="Utilities\EnumConverter.cs" />
     <Compile Include="ViewModels\MainWindowViewModel.cs" />
+    <Compile Include="Models\StateMachine.cs" />
     <Compile Include="Views\MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </Compile>

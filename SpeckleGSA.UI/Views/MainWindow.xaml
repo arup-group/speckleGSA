@@ -77,7 +77,7 @@
 					<DataGrid Grid.Row="0" Grid.ColumnSpan="2"
 							CanUserSortColumns="False" AutoGenerateColumns="False" IsReadOnly="True"
 							SelectionMode="Extended" RowHeaderWidth="0"	GridLinesVisibility="None"
-							ItemsSource="{Binding ServerStreamListItems}">
+							ItemsSource="{Binding ServerStreamListItems}" SelectedItem="{Binding SelectedStreamItem}">
 						<DataGrid.Columns>
 							<DataGridTextColumn Header="StreamName" Width="*" Binding="{Binding StreamName}" />
 							<DataGridTextColumn Header="StreamId" Width="*" Binding="{Binding StreamId}"/>

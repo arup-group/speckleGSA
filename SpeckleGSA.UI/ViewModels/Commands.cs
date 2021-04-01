@@ -60,5 +60,11 @@ namespace SpeckleGSA.UI.ViewModels
       loggingProgress.Report(new DisplayLogItem("Done third thing"));
       return true;
     }
+
+    public static bool SaveFile()
+    {
+      Thread.Sleep(1000);
+      return true;
+    }
   }
 }
