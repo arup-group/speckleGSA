@@ -3,9 +3,14 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+				xmlns:local="clr-namespace:SpeckleGSA.UI.ViewModels" 
+				xmlns:localUtilities="clr-namespace:SpeckleGSA.UI.Utilities"
 				DataContext="{StaticResource MainWindowViewModel}"
         mc:Ignorable="d" FontSize="13" WindowStartupLocation="CenterScreen"
         Title="MainWindow" Height="720" Width="700" FontFamily="Arial">
+	<Window.Resources>
+		<localUtilities:EnumConverter x:Key="EnumConverter" />
+	</Window.Resources>
 	<Grid>
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="10" />
@@ -53,6 +58,7 @@
 						Command="{Binding ConnectToServerCommand}"/>
 
 		<TabControl Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3">
+			<!-- Server tab -->
 			<TabItem>
 				<TabItem.Header>
 					<StackPanel Orientation="Vertical">
@@ -93,10 +99,15 @@
 							</Style>
 						</DataGrid.CellStyle>
 					</DataGrid>
-					<Button Grid.Row="1" Grid.Column="0" HorizontalAlignment="Left" Content="Update Stream list" Padding="5" Margin="5" />
-					<Button Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right" Content="Receive Selected Stream" Padding="5" Margin="5" />
+					<Button Grid.Row="1" Grid.Column="0" HorizontalAlignment="Left" Content="Update Stream list" 
+									Padding="5" Margin="5" 
+									Command="{Binding UpdateStreamListCommand}"/>
+					<Button Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right" Content="Receive Selected Stream" 
+									Padding="5" Margin="5" 
+									Command="{Binding ReceiveSelectedStreamCommand}"/>
 				</Grid>
 			</TabItem>
+			<!-- GSA tab -->
 			<TabItem>
 				<TabItem.Header>
 					<StackPanel Orientation="Vertical">
@@ -112,40 +123,250 @@
 					<Button Grid.Row="0" Content="New File" Padding="5" Margin="5" Command="{Binding NewFileCommand}"/>
 					<Button Grid.Row="1" Content="Open File" Padding="5" Margin="5" Command="{Binding OpenFileCommand}" />
 					<StackPanel Grid.Row="2" VerticalAlignment="Center">
-						<TextBlock Text="No currently-open file linked to this instance of SpeckleGSA" 
-											 DataContext="{Binding CurrentlyOpenFileName}"/>
+						<TextBlock Text="{Binding CurrentlyOpenFileName}" />
 						<Button Content="Save and Close File" Padding="5" Margin="5" HorizontalAlignment="Left" 
 										Command="{Binding SaveAndCloseCommand}"/>
 					</StackPanel>
 				</Grid>
 			</TabItem>
-			<TabItem>
-				<TabItem.Header>
-					<StackPanel Orientation="Vertical">
-						<TextBlock Text="Receiver" />
-					</StackPanel>
-				</TabItem.Header>
-			</TabItem>
+			<!-- Sender tab -->
 			<TabItem>
 				<TabItem.Header>
 					<StackPanel Orientation="Vertical">
 						<TextBlock Text="Sender" />
 					</StackPanel>
 				</TabItem.Header>
+				<Grid>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="*"/>
+					</Grid.ColumnDefinitions>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="auto"/>
+						<RowDefinition Height="*"/>
+					</Grid.RowDefinitions>
+					<Grid Grid.Row="0" >
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*"/>
+							<ColumnDefinition Width="auto"/>
+							<ColumnDefinition Width="auto"/>
+							<ColumnDefinition Width="auto"/>
+						</Grid.ColumnDefinitions>
+						<Grid.RowDefinitions>
+							<RowDefinition Height="auto"/>
+							<RowDefinition Height="auto"/>
+						</Grid.RowDefinitions>
+						<!-- play button | option labels | radio option col 1 | radio option col 2 -->
+						<Button Grid.Column="0" Grid.Row="0" Grid.RowSpan="2" Content="Send" VerticalAlignment="Center" Padding="5"
+										Command="{Binding SendCommand}"/>
+						<TextBlock Grid.Row="0" Grid.Column="1" Text="Later to stream:" HorizontalAlignment="Right" Padding="5"/>
+						<RadioButton Grid.Row="0" Grid.Column="2" GroupName="Layer" Content="Design" Padding="5" VerticalContentAlignment="Center"
+												 IsChecked="{Binding Path=Layer, Converter={StaticResource EnumConverter}, ConverterParameter=Design}"/>
+						<RadioButton Grid.Row="0" Grid.Column="3" GroupName="Layer" Content="Analysis" Padding="5" VerticalContentAlignment="Center"
+												 IsChecked="{Binding Path=Layer, Converter={StaticResource EnumConverter}, ConverterParameter=Analysis}"/>
+						<RadioButton Grid.Row="1" Grid.Column="2" GroupName="StreamingMethod" Content="Continuous" Padding="5" VerticalContentAlignment="Center"
+												 IsChecked="{Binding Path=StreamMethod, Converter={StaticResource EnumConverter}, ConverterParameter=Continuous}"/>
+						<RadioButton Grid.Row="1" Grid.Column="3" GroupName="StreamingMethod" Content="Single" Padding="5" VerticalContentAlignment="Center"
+												 IsChecked="{Binding Path=StreamMethod, Converter={StaticResource EnumConverter}, ConverterParameter=Single}"/>
+						<TextBlock Grid.Row="1" Grid.Column="1" Text="Streaming method:" HorizontalAlignment="Right" Padding="5" />
+					</Grid>
+					<!-- Stream list -->
+					<DataGrid Grid.Row="1"
+							CanUserSortColumns="False" AutoGenerateColumns="False" IsReadOnly="True"
+							SelectionMode="Extended" RowHeaderWidth="0"	GridLinesVisibility="None"
+							ItemsSource="{Binding SenderStreamListItems}">
+						<DataGrid.Columns>
+							<DataGridTextColumn Header="StreamName" Width="*" Binding="{Binding StreamName}" />
+							<DataGridTextColumn Header="StreamId" Width="*" Binding="{Binding StreamId}"/>
+						</DataGrid.Columns>
+						<DataGrid.ContextMenu>
+							<ContextMenu>
+								<MenuItem Header="Copy streamId"/>
+								<Separator />
+								<MenuItem Header="View stream"/>
+								<MenuItem Header="View stream data"/>
+								<MenuItem Header="View object data"/>
+							</ContextMenu>
+						</DataGrid.ContextMenu>
+						<DataGrid.CellStyle>
+							<Style    TargetType="DataGridCell"
+                  BasedOn="{StaticResource {x:Type DataGridCell}}">
+								<Setter Property="BorderThickness" Value="0"/>
+								<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+							</Style>
+						</DataGrid.CellStyle>
+					</DataGrid>
+				</Grid>
 			</TabItem>
+			<!-- Receiver tab -->
+			<TabItem>
+				<TabItem.Header>
+					<StackPanel Orientation="Vertical">
+						<TextBlock Text="Receiver" />
+					</StackPanel>
+				</TabItem.Header>
+				<Grid>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="*"/>
+					</Grid.ColumnDefinitions>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="auto"/>
+						<RowDefinition Height="auto"/>
+						<RowDefinition Height="*"/>
+					</Grid.RowDefinitions>
+					<Grid Grid.Row="0" >
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*"/>
+							<ColumnDefinition Width="auto"/>
+							<ColumnDefinition Width="auto"/>
+							<ColumnDefinition Width="auto"/>
+						</Grid.ColumnDefinitions>
+						<Grid.RowDefinitions>
+							<RowDefinition Height="auto"/>
+							<RowDefinition Height="auto"/>
+						</Grid.RowDefinitions>
+						<!-- play button | option labels | radio option col 1 | radio option col 2 -->
+						<Button Grid.Column="0" Grid.Row="0" Grid.RowSpan="2" Content="Receive" VerticalAlignment="Center" Padding="5"
+										Command="{Binding ReceiveCommand}"/>
+						<TextBlock Grid.Row="0" Grid.Column="1" Text="Later to stream:" HorizontalAlignment="Right" Padding="5"/>
+						<RadioButton Grid.Row="0" Grid.Column="2" GroupName="Layer" Content="Design" Padding="5" VerticalContentAlignment="Center"
+												 IsChecked="{Binding Path=Layer, Converter={StaticResource EnumConverter}, ConverterParameter=Design}"/>
+						<RadioButton Grid.Row="0" Grid.Column="3" GroupName="Layer" Content="Analysis" Padding="5" VerticalContentAlignment="Center"
+												 IsChecked="{Binding Path=Layer, Converter={StaticResource EnumConverter}, ConverterParameter=Analysis}"/>
+						<RadioButton Grid.Row="1" Grid.Column="2" GroupName="StreamingMethod" Content="Continuous" Padding="5" VerticalContentAlignment="Center"
+												 IsChecked="{Binding Path=StreamMethod, Converter={StaticResource EnumConverter}, ConverterParameter=Continuous}"/>
+						<RadioButton Grid.Row="1" Grid.Column="3" GroupName="StreamingMethod" Content="Single" Padding="5" VerticalContentAlignment="Center"
+												 IsChecked="{Binding Path=StreamMethod, Converter={StaticResource EnumConverter}, ConverterParameter=Single}"/>
+						<TextBlock Grid.Row="1" Grid.Column="1" Text="Streaming method:" HorizontalAlignment="Right" Padding="5" />
+					</Grid>
+					<Grid Grid.Row="1">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*"/>
+							<ColumnDefinition Width="auto"/>
+							<ColumnDefinition Width="auto"/>
+							<ColumnDefinition Width="auto"/>
+						</Grid.ColumnDefinitions>
+						<TextBox Text="{Binding CandidateStreamId, Mode=TwoWay}" Grid.Column="0" VerticalContentAlignment="Center" Padding="5"/>
+						<Button Grid.Column="1" Content="Add Receiver" Padding="5" Margin="5"
+										Command="{Binding AddCandidateStreamId}"/>
+						<Button Grid.Column="2" Content="Paste Clipboard" Padding="5" Margin="5"
+										Command="{Binding PasteClipboardCommand}"/>
+						<Button Grid.Column="3" Width="auto" Content="Clear All" Padding="5" Margin="5"
+										Command="{Binding ClearReceiveStreamListCommand}"/>
+					</Grid>
+					<!-- Stream list -->
+					<DataGrid Grid.Row="2"
+							CanUserSortColumns="False" AutoGenerateColumns="False" IsReadOnly="True"
+							SelectionMode="Extended" RowHeaderWidth="0"	GridLinesVisibility="None"
+							ItemsSource="{Binding ReceiverStreamListItems}">
+						<DataGrid.Columns>
+							<DataGridTextColumn Header="StreamName" Width="*" Binding="{Binding StreamName}" />
+							<DataGridTextColumn Header="StreamId" Width="*" Binding="{Binding StreamId}"/>
+						</DataGrid.Columns>
+						<DataGrid.ContextMenu>
+							<ContextMenu>
+								<MenuItem Header="Copy streamId"/>
+								<Separator />
+								<MenuItem Header="View stream"/>
+								<MenuItem Header="View stream data"/>
+								<MenuItem Header="View object data"/>
+							</ContextMenu>
+						</DataGrid.ContextMenu>
+						<DataGrid.CellStyle>
+							<Style    TargetType="DataGridCell"
+                  BasedOn="{StaticResource {x:Type DataGridCell}}">
+								<Setter Property="BorderThickness" Value="0"/>
+								<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+							</Style>
+						</DataGrid.CellStyle>
+					</DataGrid>
+				</Grid>
+			</TabItem>
+			<!-- Settings tab -->
 			<TabItem>
 				<TabItem.Header>
 					<StackPanel Orientation="Vertical">
 						<TextBlock Text="Settings" />
 					</StackPanel>
 				</TabItem.Header>
+				<Grid>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="*"/>
+						<ColumnDefinition Width="*"/>
+					</Grid.ColumnDefinitions>
+					<StackPanel Grid.Column="0" Orientation="Vertical">
+						<GroupBox Header="Sender">
+							<StackPanel Orientation="Vertical">
+								<CheckBox Content="Send only meaningful nodes" IsChecked="{Binding SendMeaningfulNodes}" />
+								<UniformGrid Columns="2">
+									<TextBlock DockPanel.Dock="Left" Text="Polling Rate:" VerticalAlignment="Center" />
+									<TextBox Text="{Binding PollingRate}"/>
+								</UniformGrid>
+								<RadioButton GroupName="StreamContentConfig" Content="Send model with no results (one stream)" Padding="5" VerticalContentAlignment="Center"
+												 IsChecked="{Binding Path=StreamContentConfig, Converter={StaticResource EnumConverter}, ConverterParameter=ModelOnly}"/>
+								<RadioButton GroupName="StreamContentConfig" Content="Send model with embedded results (one stream)" Padding="5" VerticalContentAlignment="Center"
+												 IsChecked="{Binding Path=StreamContentConfig, Converter={StaticResource EnumConverter}, ConverterParameter=ModelWithEmbeddedResults}"/>
+								<RadioButton GroupName="StreamContentConfig" Content="Send model and tabular results (two streams)" Padding="5" VerticalContentAlignment="Center"
+												 IsChecked="{Binding Path=StreamContentConfig, Converter={StaticResource EnumConverter}, ConverterParameter=ModelWithTabularResults}"/>
+								<RadioButton  GroupName="StreamContentConfig" Content="Send only tabular results (one stream)" Padding="5" VerticalContentAlignment="Center"
+												 IsChecked="{Binding Path=StreamContentConfig, Converter={StaticResource EnumConverter}, ConverterParameter=TabularResultsOnly}"/>
+							</StackPanel>
+						</GroupBox>
+						<GroupBox Header="Receiver">
+							<StackPanel>
+								<DockPanel LastChildFill="True">
+									<TextBlock DockPanel.Dock="Left" Text="Coincident Node Allowance: " />
+									<TextBox Text="{Binding CoincidentNodeAllowance}"/>
+								</DockPanel>
+								<UniformGrid Columns="2">
+									<TextBlock Text="Distance units: "/>
+									<ComboBox ItemsSource="{Binding CoincidentNodeAllowanceUnitOptions}" SelectedValue="{Binding CoincidentNodeAllowanceUnit}" />
+								</UniformGrid>
+							</StackPanel>
+						</GroupBox>
+						<GroupBox Header="Logging">
+							<UniformGrid Columns="2">
+								<TextBlock Text="Minimum level: "/>
+								<ComboBox ItemsSource="{Binding LoggingMinimumLevelOptions}" SelectedValue="{Binding LoggingMinimumLevel}" />
+							</UniformGrid>
+						</GroupBox>
+					</StackPanel>
+
+					<GroupBox Header="Result" Grid.Column="1">
+						<Grid>
+							<Grid.RowDefinitions>
+								<RowDefinition Height="auto"/>
+								<RowDefinition Height="*"/>
+							</Grid.RowDefinitions>
+							<StackPanel Grid.Row="0" Orientation="Vertical">
+								<DockPanel LastChildFill="True">
+									<TextBlock DockPanel.Dock="Left" Text="Cases: " />
+									<TextBox Text="{Binding CasesDescription}"/>
+								</DockPanel>
+								<CheckBox Content="Results in local axis" IsChecked="{Binding SendMeaningfulNodes}" />
+								<DockPanel>
+									<TextBlock DockPanel.Dock="Left" Text="Additional Positions for 1D elements:" VerticalAlignment="Center" />
+									<TextBox Text="{Binding Additional1DPositions}"/>
+								</DockPanel>
+							</StackPanel>
+							<ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+								<ItemsControl ItemsSource="{Binding ResultSettingItems}" >
+									<ItemsControl.ItemTemplate>
+										<DataTemplate>
+											<CheckBox Content="{Binding Name}" IsChecked="{Binding Selected}" />
+										</DataTemplate>
+									</ItemsControl.ItemTemplate>
+								</ItemsControl>
+							</ScrollViewer>
+						</Grid>
+					</GroupBox>
+				</Grid>
 			</TabItem>
 		</TabControl>
 
 		<TextBlock Grid.Row="3" Grid.Column="1" Text="Message log"/>
 		<ListBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" Height="120" SelectionMode="Extended" 
 						 ItemsSource="{Binding DisplayLogLines}"/>
-		<TextBlock x:Name="State" Text="State" Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="3" HorizontalAlignment="Center"/>
+		<TextBlock x:Name="State" Text="{Binding StateSummary}" Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="3" HorizontalAlignment="Center" />
 		<ProgressBar x:Name="MainProgressBar" Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="3" Height="10" Minimum="0" Maximum="100"
 								 Foreground="Blue" Value="{Binding ProcessingProgress, Mode=OneWay}" />
 	</Grid>

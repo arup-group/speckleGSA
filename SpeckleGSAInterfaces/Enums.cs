@@ -17,6 +17,7 @@
 
 	public enum GSATargetLayer
 	{
+		None,
 		Design,
 		Analysis
 	}

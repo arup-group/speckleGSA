@@ -21,12 +21,20 @@ namespace SpeckleGSA.UI.DataAccess
       new StreamListItem("F", "Stream F"),
       new StreamListItem("G", "Stream G")
     };
+
     private static List<SpeckleAccount> rndAccountSource = new List<SpeckleAccount>
     {
       new SpeckleAccount("Aaron Aardvark", "https://hongkong.speckle.arup.com", "aaron.aardvark@arup.com"),
       new SpeckleAccount("Brian Barrelolaughs", "https://canada.speckle.arup.com", "brian.Barrelolaughs@arup.com"),
       new SpeckleAccount("Charlie Chaplin", "https://ireland.speckle.arup.com", "charlie.chaplin@arup.com"),
       new SpeckleAccount("Dan de Man", "https://australia.speckle.arup.com", "dan.deman@arup.com")
+    };
+
+    private static List<string> rndFilePaths = new List<string>
+    {
+      @"C:\Temp\Source1.gwb",
+      @"C:\Workspace\MyAwesomeFile.gwb",
+      @"C:\Repo\TestData\FirstFile.gwb"
     };
 
     public static StreamList GetStreamList()
@@ -43,10 +51,9 @@ namespace SpeckleGSA.UI.DataAccess
       return streamList;
     }
 
-    public static SpeckleAccount GetAccount()
-    {
-      return GetRandomItem(rndAccountSource);
-    }
+    public static SpeckleAccount GetAccount() => GetRandomItem(rndAccountSource);
+
+    public static string GetFilePath() => GetRandomItem(rndFilePaths);
 
     private static T GetRandomItem<T>(List<T> data)
     {

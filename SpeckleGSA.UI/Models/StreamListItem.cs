@@ -17,6 +17,12 @@ namespace SpeckleGSA.UI.Models
       this.streamName = streamName;
     }
 
+    public StreamListItem(string streamId)
+    {
+      this.streamId = streamId;
+      this.streamName = null;
+    }
+
     public string StreamName
     {
       get { return streamName; }

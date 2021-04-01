@@ -6,18 +6,37 @@ using System.Threading.Tasks;
 
 namespace SpeckleGSA.UI.Models
 {
+  public enum StreamMethod
+  {
+    None,
+    Continuous,
+    Single
+  }
+
+  public enum GsaFileStatus
+  {
+    None,
+    NewFile,
+    ExistingFile
+  }
+
   public enum AppState
   {
     NotLoggedIn,
-    LoggedIn,  //The most common state when not continuously sending or receiving: between send/receive events, this is the regular state of being
-    ReceivingWaiting,  //time between active reception in continuous mode
+    ActiveLoggingIn,
+    ActiveRetrievingStreamList,
+    LoggedInNotLinkedToGsa,  
+    ReceivingWaiting,     //time between active reception in continuous mode
     ActiveReceiving,
     SendingWaiting,
-    ActiveSending
+    ActiveSending,
+    OpeningFile,
+    Ready   // when not continuously sending or receiving: between send/receive events, this is the regular state of being
   }
 
   public enum StreamContentConfig
   {
+    None,
     ModelOnly,
     ModelWithEmbeddedResults,
     ModelWithTabularResults,
@@ -26,6 +45,7 @@ namespace SpeckleGSA.UI.Models
 
   public enum GsaUnit
   {
+    None,
     Millimetres,
     Metres,
     Inches
@@ -33,6 +53,7 @@ namespace SpeckleGSA.UI.Models
 
   public enum LoggingMinimumLevel
   {
+    None,
     Debug,
     Information,
     Error,
