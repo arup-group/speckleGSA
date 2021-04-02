@@ -171,12 +171,40 @@
 					</Grid>
 					<!-- Stream list -->
 					<DataGrid Grid.Row="1"
-							CanUserSortColumns="False" AutoGenerateColumns="False" IsReadOnly="True"
+							CanUserSortColumns="False" AutoGenerateColumns="False"
 							SelectionMode="Extended" RowHeaderWidth="0"	GridLinesVisibility="None"
-							ItemsSource="{Binding SenderStreamListItems}">
+							ItemsSource="{Binding SenderStreamListItems}" SelectedItem="{Binding SelectedStreamItem}"
+							IsEnabled="{Binding IsSendStreamListEnabled}">
 						<DataGrid.Columns>
-							<DataGridTextColumn Header="StreamName" Width="*" Binding="{Binding StreamName}" />
-							<DataGridTextColumn Header="StreamId" Width="*" Binding="{Binding StreamId}"/>
+							<!-- start trial of editable column -->
+							<DataGridTemplateColumn Header="StreamName" Width="*">
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+										<TextBlock Text="{Binding StreamName}" />
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+								<DataGridTemplateColumn.CellEditingTemplate>
+									<DataTemplate>
+										<Grid>
+											<Grid.ColumnDefinitions>
+												<ColumnDefinition Width="1*" />
+												<ColumnDefinition Width="auto" />
+											</Grid.ColumnDefinitions>
+											<TextBox x:Name="Candidate" Text="{Binding StreamName}" >
+												<TextBox.InputBindings>
+													<KeyBinding Command="{Binding DataContext.RenameStreamCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+																			CommandParameter="{Binding ElementName=Candidate, Path=Text}" Key="Return" />
+												</TextBox.InputBindings>
+											</TextBox>
+											<TextBlock Grid.Column="1" />
+										</Grid>
+									</DataTemplate>
+								</DataGridTemplateColumn.CellEditingTemplate>
+							</DataGridTemplateColumn>
+							<!-- end	-->
+							<!--<DataGridTextColumn Header="StreamName" Width="*" IsReadOnly="True" Binding="{Binding StreamName, Mode=OneWay}" />-->
+							<DataGridTextColumn Header="StreamId" Width="*" IsReadOnly="True" Binding="{Binding StreamId, Mode=OneWay}"/>
+							
 						</DataGrid.Columns>
 						<DataGrid.ContextMenu>
 							<ContextMenu>
@@ -247,7 +275,7 @@
 						</Grid.ColumnDefinitions>
 						<TextBox Text="{Binding CandidateStreamId, Mode=TwoWay}" Grid.Column="0" VerticalContentAlignment="Center" Padding="5"/>
 						<Button Grid.Column="1" Content="Add Receiver" Padding="5" Margin="5"
-										Command="{Binding AddCandidateStreamId}"/>
+										Command="{Binding AddCandidateStreamIdCommand}"/>
 						<Button Grid.Column="2" Content="Paste Clipboard" Padding="5" Margin="5"
 										Command="{Binding PasteClipboardCommand}"/>
 						<Button Grid.Column="3" Width="auto" Content="Clear All" Padding="5" Margin="5"
@@ -257,7 +285,7 @@
 					<DataGrid Grid.Row="2"
 							CanUserSortColumns="False" AutoGenerateColumns="False" IsReadOnly="True"
 							SelectionMode="Extended" RowHeaderWidth="0"	GridLinesVisibility="None"
-							ItemsSource="{Binding ReceiverStreamListItems}">
+							ItemsSource="{Binding ReceiverStreamListItems}" SelectedItem="{Binding SelectedStreamItem}">
 						<DataGrid.Columns>
 							<DataGridTextColumn Header="StreamName" Width="*" Binding="{Binding StreamName}" />
 							<DataGridTextColumn Header="StreamId" Width="*" Binding="{Binding StreamId}"/>
@@ -366,7 +394,7 @@
 		<TextBlock Grid.Row="3" Grid.Column="1" Text="Message log"/>
 		<ListBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" Height="120" SelectionMode="Extended" 
 						 ItemsSource="{Binding DisplayLogLines}"/>
-		<TextBlock x:Name="State" Text="{Binding StateSummary}" Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="3" HorizontalAlignment="Center" />
+		<TextBlock x:Name="State" Text="{Binding StateSummary, Mode=OneWay}" Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="3" HorizontalAlignment="Center" />
 		<ProgressBar x:Name="MainProgressBar" Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="3" Height="10" Minimum="0" Maximum="100"
 								 Foreground="Blue" Value="{Binding ProcessingProgress, Mode=OneWay}" />
 	</Grid>

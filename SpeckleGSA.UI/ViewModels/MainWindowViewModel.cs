@@ -19,7 +19,14 @@ namespace SpeckleGSA.UI.ViewModels
 
     public Coordinator Coordinator { get; } = new Coordinator();
     public StateMachine StateMachine { get; } = new StateMachine();
-    public double ProcessingProgress { get; set; }
+
+    public SpeckleAccount Account { get => Coordinator.Account; }
+    public GSATargetLayer Layer { get; set; } = GSATargetLayer.Design;
+    public StreamMethod StreamMethod { get => Coordinator.SenderCoordinator.StreamMethod; set { Coordinator.SenderCoordinator.StreamMethod = value; } }
+    public string CurrentlyOpenFileName
+    {
+      get => Coordinator.FileStatus == GsaLoadedFileType.None ? "No file is currently open" : Coordinator.FileStatus == GsaLoadedFileType.NewFile ? "New file" : Coordinator.FilePath;
+    }
 
     #region command_properties
     public DelegateCommand<object> ConnectToServerCommand { get; private set; }
@@ -32,18 +39,20 @@ namespace SpeckleGSA.UI.ViewModels
     public DelegateCommand<object> SendCommand { get; private set; }
     public DelegateCommand<object> PasteClipboardCommand { get; private set; }
     public DelegateCommand<object> ClearReceiveStreamListCommand { get; private set; }
-    public DelegateCommand<object> AddCandidateStreamId { get; set; }
+    public DelegateCommand<object> AddCandidateStreamIdCommand { get; private set; }
+    public DelegateCommand<object> RenameStreamCommand { get; private set; }
     #endregion
-    
-    public string StateSummary { get => appDateDict[StateMachine.State]; }
 
-    public string CurrentlyOpenFileName 
+    #region logging_and_state_members
+    public ObservableCollection<string> DisplayLogLines 
     { 
-      get => Coordinator.FileStatus == GsaLoadedFileType.None ? "No file is currently open" : Coordinator.FileStatus == GsaLoadedFileType.NewFile ? "New file" : Coordinator.FilePath; 
+      get => new ObservableCollection<string>(Coordinator.DisplayLog.DisplayLogItems.Select(i => string.Join(" - ", i.TimeStamp.ToString("dd/MM/yyyy HH:mm:ss"), i.Description))); 
     }
+    public string StateSummary { get => appDateDict[StateMachine.State]; }
+    public double ProcessingProgress { get; set; }
+    #endregion
 
-    public List<string> DisplayLogLines { get => Coordinator.DisplayLog.DisplayLogItems.Select(i => string.Join(" - ", i.TimeStamp.ToString("dd/MM/yyyy HH:mm:ss"), i.Description)).ToList(); }
-
+    #region stream_list_members
     public ObservableCollection<StreamListItem> ServerStreamListItems { get => new ObservableCollection<StreamListItem>(Coordinator.ServerStreamList.StreamListItems); }
     public StreamListItem SelectedStreamItem
     {
@@ -55,16 +64,17 @@ namespace SpeckleGSA.UI.ViewModels
     }
     private StreamListItem selectedStream = null;
 
+    public string CandidateStreamId { get; set; }
     public ObservableCollection<StreamListItem> ReceiverStreamListItems { get => new ObservableCollection<StreamListItem>(Coordinator.ReceiverCoordinator.StreamList.StreamListItems);  }
+
     public ObservableCollection<StreamListItem> SenderStreamListItems { get => new ObservableCollection<StreamListItem>(Coordinator.SenderCoordinator.StreamList.StreamListItems); }
+    #endregion
+
+    #region settings_properties
     public ObservableCollection<ResultSettingItem> ResultSettingItems 
     { 
       get => new ObservableCollection<ResultSettingItem>(Coordinator.SenderCoordinator.ResultSettings.ResultSettingItems.OrderByDescending(i => i.DefaultSelected)); 
     }
-    public SpeckleAccount Account { get => Coordinator.Account; }
-
-    public GSATargetLayer Layer { get; set; } = GSATargetLayer.Design;
-    public StreamMethod StreamMethod { get => Coordinator.SenderCoordinator.StreamMethod; set { Coordinator.SenderCoordinator.StreamMethod = value; } }
 
     public StreamContentConfig StreamContentConfig { get => Coordinator.SenderCoordinator.StreamContentConfig; set { Coordinator.SenderCoordinator.StreamContentConfig = value; } }
     public bool SendMeaningfulNodes { get; set; } = true;
@@ -75,10 +85,10 @@ namespace SpeckleGSA.UI.ViewModels
     public LoggingMinimumLevel LoggingMinimumLevel { get => Coordinator.LoggingMinimumLevel; set { Coordinator.LoggingMinimumLevel = value; } }
     public List<LoggingMinimumLevel> LoggingMinimumLevelOptions 
     { 
-      get => new List<LoggingMinimumLevel> { LoggingMinimumLevel.Debug, LoggingMinimumLevel.Information, LoggingMinimumLevel.Error, LoggingMinimumLevel.Fatal }; 
+      get => new List<LoggingMinimumLevel> { LoggingMinimumLevel.Debug, LoggingMinimumLevel.Information, LoggingMinimumLevel.Error, LoggingMinimumLevel.Fatal };
     }
-
-    public string CandidateStreamId { get; set; }
+    #endregion 
+    
 
     private readonly Dictionary<AppState, string> appDateDict = new Dictionary<AppState, string> { 
       { AppState.NotLoggedIn, "Not logged in"},
@@ -98,31 +108,42 @@ namespace SpeckleGSA.UI.ViewModels
     private readonly Progress<DisplayLogItem> loggingProgress =  new Progress<DisplayLogItem>();
     private readonly Progress<StreamListItem> streamCreationProgress = new Progress<StreamListItem>();
 
+    public bool IsSendStreamListEnabled => StateMachine.State != AppState.ActiveRenamingStream;
+
     public MainWindowViewModel()
     {
-      Coordinator.ServerStreamList = UI.DataAccess.DataAccess.GetStreamList();
-      Coordinator.Account = UI.DataAccess.DataAccess.GetAccount();
-      Coordinator.DisplayLog = new DisplayLog();
+      //Coordinator.ServerStreamList = UI.DataAccess.DataAccess.GetStreamList();
+      //Coordinator.Account = UI.DataAccess.DataAccess.GetDefaultAccount();
+      //Coordinator.DisplayLog = new DisplayLog();
 
       overallProgress.ProgressChanged += ProcessOverallProgressUpdate;
       loggingProgress.ProgressChanged += ProcessLogProgressUpdate;
       streamCreationProgress.ProgressChanged += ProcessStreamCreationProgress;
 
+      CreateCommands();
+    }
+
+    private void CreateCommands()
+    {
       ConnectToServerCommand = new DelegateCommand<object>(
         async (o) =>
         {
-          StateMachine.StartedLoggingIn();;
+          StateMachine.StartedLoggingIn(); ;
 
           Coordinator.Account = await Task.Run(() => Commands.Login());
           NotifyPropertyChanged("Account");
 
           StateMachine.LoggedIn();
+          NotifyPropertyChanged("StateSummary");
+
           StateMachine.StartedUpdatingStreams();
+          NotifyPropertyChanged("StateSummary");
 
           Coordinator.ServerStreamList = await Task.Run(() => Commands.GetStreamList());
           NotifyPropertyChanged("ServerStreamListItems");
 
           StateMachine.StoppedUpdatingStreams();
+          NotifyPropertyChanged("StateSummary");
         },
         (o) => true);
 
@@ -178,7 +199,7 @@ namespace SpeckleGSA.UI.ViewModels
 
             StateMachine.OpenedFile();
           }
-        }, 
+        },
         (o) => true);
 
       ReceiveCommand = new DelegateCommand<object>(
@@ -210,7 +231,7 @@ namespace SpeckleGSA.UI.ViewModels
         },
         (o) => true);
 
-      AddCandidateStreamId = new DelegateCommand<object>(
+      AddCandidateStreamIdCommand = new DelegateCommand<object>(
         (o) =>
         {
           if (!String.IsNullOrEmpty(CandidateStreamId))
@@ -240,7 +261,20 @@ namespace SpeckleGSA.UI.ViewModels
           StateMachine.StoppedSavingFile();
         },
         (o) => true);
+
+      RenameStreamCommand = new DelegateCommand<object>(
+        async (o) =>
+        {
+          var newStreamName = o.ToString();
+          StateMachine.StartedRenamingStream();
+          var result = await Task.Run(() => Commands.RenameStream(SelectedStreamItem.StreamId, newStreamName));
+          SelectedStreamItem.StreamName = newStreamName;
+          StateMachine.StoppedRenamingStream();
+        },
+        (o) => StateMachine.State != AppState.ActiveRenamingStream);
     }
+
+    #region progress_fns
 
     private void ProcessStreamCreationProgress(object sender, StreamListItem e)
     {
@@ -259,5 +293,6 @@ namespace SpeckleGSA.UI.ViewModels
       ProcessingProgress = e;
       NotifyPropertyChanged("ProcessingProgress");
     }
+    #endregion
   }
 }

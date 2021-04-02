@@ -8,7 +8,7 @@ namespace SpeckleGSA.UI.Models
   public class StateMachine
   {
     //Overall state - the main output of this class
-    public AppState State { get; private set; } = AppState.NotLoggedIn;
+    public AppState State { get => stateFns.Keys.FirstOrDefault(k => stateFns[k]()); }
 
     #region private_state_variables
     //Don't need previous state as the information embodied in such a variable is stored in the variables below
@@ -26,13 +26,6 @@ namespace SpeckleGSA.UI.Models
 
     private bool Is(StreamState ss, Direction dir, StreamContent cont) => (streamState == ss && streamDirection == dir && streamContent == cont);
     private bool Is(FileState fs, StreamState ss, Direction dir, StreamContent cont) => (fileState == fs && streamState == ss && streamDirection == dir && streamContent == cont);
-    private void Set(FileState fs, StreamState ss, Direction dir, StreamContent cont)
-    {
-      fileState = fs;
-      streamState = ss;
-      streamDirection = dir;
-      streamContent = cont;
-    }
     private void Set(StreamState ss, Direction dir, StreamContent cont)
     {
       streamState = ss;
@@ -57,13 +50,9 @@ namespace SpeckleGSA.UI.Models
         { AppState.SendingWaiting,             () => loggedIn && Is(FileState.Loaded, StreamState.Pending, Direction.Sending, StreamContent.Objects) },
         { AppState.ActiveSending,              () => loggedIn && Is(FileState.Loaded, StreamState.Active, Direction.Sending, StreamContent.Objects) },
         { AppState.Ready,                      () => loggedIn && Is(FileState.Loaded, StreamState.None, Direction.None, StreamContent.None) },
-        { AppState.SavingFile,                 () => Is(FileState.Saving, StreamState.None, Direction.None, StreamContent.None) }
+        { AppState.SavingFile,                 () => Is(FileState.Saving, StreamState.None, Direction.None, StreamContent.None) },
+        { AppState.ActiveRenamingStream,       () => loggedIn && Is(StreamState.Active, Direction.Sending, StreamContent.StreamInfo) }
       };
-    }
-    private AppState DetermineState()
-    {
-      var foundState = stateFns.Keys.FirstOrDefault(k => stateFns[k]());
-      return foundState;
     }
 
     public void StartedLoggingIn()
@@ -162,6 +151,22 @@ namespace SpeckleGSA.UI.Models
       if (fileState == FileState.Loading)
       {
         fileState = prevFileLoaded ? FileState.Loaded : FileState.None;
+      }
+    }
+
+    public void StartedRenamingStream()
+    {
+      if (loggedIn && fileState == FileState.Loaded && !IsOccupied)
+      {
+        Set(StreamState.Active, Direction.Sending, StreamContent.StreamInfo);
+      }
+    }
+
+    public void StoppedRenamingStream()
+    {
+      if (Is(StreamState.Active, Direction.Sending, StreamContent.StreamInfo))
+      {
+        Set(StreamState.None, Direction.None, StreamContent.None);
       }
     }
 

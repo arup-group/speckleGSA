@@ -53,6 +53,8 @@ namespace SpeckleGSA.UI.DataAccess
 
     public static SpeckleAccount GetAccount() => GetRandomItem(rndAccountSource);
 
+    public static SpeckleAccount GetDefaultAccount() => null;
+
     public static string GetFilePath() => GetRandomItem(rndFilePaths);
 
     private static T GetRandomItem<T>(List<T> data)

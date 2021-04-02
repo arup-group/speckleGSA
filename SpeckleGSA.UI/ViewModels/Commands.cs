@@ -66,5 +66,11 @@ namespace SpeckleGSA.UI.ViewModels
       Thread.Sleep(1000);
       return true;
     }
+
+    public static bool RenameStream(string streamId, string newStreamName)
+    {
+      Thread.Sleep(1000);
+      return true;
+    }
   }
 }

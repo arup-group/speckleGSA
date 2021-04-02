@@ -32,7 +32,8 @@ namespace SpeckleGSA.UI.Models
     ActiveSending,
     OpeningFile,
     SavingFile,
-    Ready   // when not continuously sending or receiving: between send/receive events, this is the regular state of being
+    Ready,   // when not continuously sending or receiving: between send/receive events, this is the regular state of being
+    ActiveRenamingStream
   }
 
   public enum StreamContentConfig
