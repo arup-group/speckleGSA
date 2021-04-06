@@ -8,6 +8,8 @@ using SpeckleGSA.UI.Utilities;
 using System.ComponentModel;
 using System.Windows;
 using SpeckleGSAInterfaces;
+using System.Reflection;
+using System.Windows.Input;
 
 namespace SpeckleGSA.UI.ViewModels
 {
@@ -21,8 +23,10 @@ namespace SpeckleGSA.UI.ViewModels
     public StateMachine StateMachine { get; } = new StateMachine();
 
     public SpeckleAccount Account { get => Coordinator.Account; }
-    public GSATargetLayer Layer { get; set; } = GSATargetLayer.Design;
-    public StreamMethod StreamMethod { get => Coordinator.SenderCoordinator.StreamMethod; set { Coordinator.SenderCoordinator.StreamMethod = value; } }
+    public GSATargetLayer ReceiveLayer { get; set; } = GSATargetLayer.Design;
+    public GSATargetLayer SendLayer { get; set; } = GSATargetLayer.Design;
+    public StreamMethod ReceiveStreamMethod { get => Coordinator.ReceiverCoordinator.StreamMethod; set => Refresh(() => Coordinator.ReceiverCoordinator.StreamMethod = value); }
+    public StreamMethod SendStreamMethod { get => Coordinator.SenderCoordinator.StreamMethod; set => Refresh(() => Coordinator.SenderCoordinator.StreamMethod = value); }
     public string CurrentlyOpenFileName
     {
       get => Coordinator.FileStatus == GsaLoadedFileType.None ? "No file is currently open" : Coordinator.FileStatus == GsaLoadedFileType.NewFile ? "New file" : Coordinator.FilePath;
@@ -41,12 +45,15 @@ namespace SpeckleGSA.UI.ViewModels
     public DelegateCommand<object> ClearReceiveStreamListCommand { get; private set; }
     public DelegateCommand<object> AddCandidateStreamIdCommand { get; private set; }
     public DelegateCommand<object> RenameStreamCommand { get; private set; }
+
+    public string ReceiveButtonText { get => (ReceiveStreamMethod == StreamMethod.Continuous && StateMachine.State == AppState.ReceivingWaiting) ? "Stop" : "Receive"; }
+    public string SendButtonText { get => (SendStreamMethod == StreamMethod.Continuous && StateMachine.State == AppState.SendingWaiting) ? "Stop" : "Send"; }
     #endregion
 
     #region logging_and_state_members
-    public ObservableCollection<string> DisplayLogLines 
-    { 
-      get => new ObservableCollection<string>(Coordinator.DisplayLog.DisplayLogItems.Select(i => string.Join(" - ", i.TimeStamp.ToString("dd/MM/yyyy HH:mm:ss"), i.Description))); 
+    public ObservableCollection<string> DisplayLogLines
+    {
+      get => new ObservableCollection<string>(Coordinator.DisplayLog.DisplayLogItems.Select(i => string.Join(" - ", i.TimeStamp.ToString("dd/MM/yyyy HH:mm:ss"), i.Description)));
     }
     public string StateSummary { get => appDateDict[StateMachine.State]; }
     public double ProcessingProgress { get; set; }
@@ -65,15 +72,15 @@ namespace SpeckleGSA.UI.ViewModels
     private StreamListItem selectedStream = null;
 
     public string CandidateStreamId { get; set; }
-    public ObservableCollection<StreamListItem> ReceiverStreamListItems { get => new ObservableCollection<StreamListItem>(Coordinator.ReceiverCoordinator.StreamList.StreamListItems);  }
+    public ObservableCollection<StreamListItem> ReceiverStreamListItems { get => new ObservableCollection<StreamListItem>(Coordinator.ReceiverCoordinator.StreamList.StreamListItems); }
 
     public ObservableCollection<StreamListItem> SenderStreamListItems { get => new ObservableCollection<StreamListItem>(Coordinator.SenderCoordinator.StreamList.StreamListItems); }
     #endregion
 
     #region settings_properties
-    public ObservableCollection<ResultSettingItem> ResultSettingItems 
-    { 
-      get => new ObservableCollection<ResultSettingItem>(Coordinator.SenderCoordinator.ResultSettings.ResultSettingItems.OrderByDescending(i => i.DefaultSelected)); 
+    public ObservableCollection<ResultSettingItem> ResultSettingItems
+    {
+      get => new ObservableCollection<ResultSettingItem>(Coordinator.SenderCoordinator.ResultSettings.ResultSettingItems.OrderByDescending(i => i.DefaultSelected));
     }
 
     public StreamContentConfig StreamContentConfig { get => Coordinator.SenderCoordinator.StreamContentConfig; set { Coordinator.SenderCoordinator.StreamContentConfig = value; } }
@@ -83,30 +90,44 @@ namespace SpeckleGSA.UI.ViewModels
     public List<GsaUnit> CoincidentNodeAllowanceUnitOptions { get => new List<GsaUnit> { GsaUnit.Millimetres, GsaUnit.Metres, GsaUnit.Inches }; }
     public GsaUnit CoincidentNodeAllowanceUnit { get => Coordinator.ReceiverCoordinator.CoincidentNodeUnits; set { Coordinator.ReceiverCoordinator.CoincidentNodeUnits = value; } }
     public LoggingMinimumLevel LoggingMinimumLevel { get => Coordinator.LoggingMinimumLevel; set { Coordinator.LoggingMinimumLevel = value; } }
-    public List<LoggingMinimumLevel> LoggingMinimumLevelOptions 
-    { 
+    public List<LoggingMinimumLevel> LoggingMinimumLevelOptions
+    {
       get => new List<LoggingMinimumLevel> { LoggingMinimumLevel.Debug, LoggingMinimumLevel.Information, LoggingMinimumLevel.Error, LoggingMinimumLevel.Fatal };
     }
-    #endregion 
-    
+    #endregion
 
-    private readonly Dictionary<AppState, string> appDateDict = new Dictionary<AppState, string> { 
-      { AppState.NotLoggedIn, "Not logged in"},
+
+    private readonly Dictionary<AppState, string> appDateDict = new Dictionary<AppState, string> {
+      { AppState.NotLoggedIn, "Not logged in and no link to active GSA file"},
+      { AppState.NotLoggedInLinkedToGsa, "Not logged in but linked to active GSA file"},
       { AppState.ActiveLoggingIn, "Logging in"},
       { AppState.ActiveRetrievingStreamList, "Retrieving streams" },
-      { AppState.LoggedInNotLinkedToGsa, "Logged in"},
+      { AppState.LoggedInNotLinkedToGsa, "Logged in but not linked to active GSA file"},
       { AppState.ReceivingWaiting, "Waiting for next receive event"},
       { AppState.ActiveReceiving, "Receiving"},
       { AppState.SendingWaiting, "Waiting for next send event"},
       { AppState.ActiveSending, "Sending"},
       { AppState.OpeningFile, "Opening file" },
       { AppState.SavingFile, "Saving file" },
+      { AppState.ActiveRenamingStream, "Renaming stream" },
       { AppState.Ready, "Ready" } };
+
+    private readonly Dictionary<int, MainTab> TabData = new Dictionary<int, MainTab>
+    { 
+      { 0, MainTab.Server },
+      { 1, MainTab.GSA },
+      { 2, MainTab.Sender },
+      { 3, MainTab.Receiver },
+      { 4, MainTab.Settings }
+    };
+    
+    public int SelectedTabIndex { get; set; }
 
     private readonly Progress<int> overallProgress = new Progress<int>();
     private readonly Progress<int> numProcessingItemsProgress = new Progress<int>();
     private readonly Progress<DisplayLogItem> loggingProgress =  new Progress<DisplayLogItem>();
     private readonly Progress<StreamListItem> streamCreationProgress = new Progress<StreamListItem>();
+    private List<DelegateCommandBase> cmds; //Filled in using Reflection and used in bulk updating of CanExecute bindings
 
     public bool IsSendStreamListEnabled => StateMachine.State != AppState.ActiveRenamingStream;
 
@@ -128,88 +149,94 @@ namespace SpeckleGSA.UI.ViewModels
       ConnectToServerCommand = new DelegateCommand<object>(
         async (o) =>
         {
-          StateMachine.StartedLoggingIn(); ;
+          Refresh(() => StateMachine.StartedLoggingIn());
 
           Coordinator.Account = await Task.Run(() => Commands.Login());
-          NotifyPropertyChanged("Account");
 
-          StateMachine.LoggedIn();
-          NotifyPropertyChanged("StateSummary");
+          Refresh(() => StateMachine.LoggedIn());
 
-          StateMachine.StartedUpdatingStreams();
-          NotifyPropertyChanged("StateSummary");
+          Refresh(() => StateMachine.StartedUpdatingStreams());
 
           Coordinator.ServerStreamList = await Task.Run(() => Commands.GetStreamList());
-          NotifyPropertyChanged("ServerStreamListItems");
 
-          StateMachine.StoppedUpdatingStreams();
-          NotifyPropertyChanged("StateSummary");
+          Refresh(() => StateMachine.StoppedUpdatingStreams());
         },
-        (o) => true);
+        (o) => !StateMachine.IsOccupied);
 
       UpdateStreamListCommand = new DelegateCommand<object>(
         async (o) =>
         {
-          StateMachine.StartedUpdatingStreams();
+          Refresh(() => StateMachine.StartedUpdatingStreams());
 
           Coordinator.ServerStreamList = await Task.Run(() => Commands.GetStreamList());
-          NotifyPropertyChanged("ServerStreamListItems");
 
-          StateMachine.StoppedUpdatingStreams();
+          Refresh(() => StateMachine.StoppedUpdatingStreams());
         },
-        (o) => true);
+        (o) => !StateMachine.IsOccupied && StateMachine.State != AppState.NotLoggedIn);
 
       ReceiveSelectedStreamCommand = new DelegateCommand<object>(
         async (o) =>
         {
-          StateMachine.EnteredReceivingMode(StreamMethod);
+          SelectedTabIndex = (int)MainTab.Receiver;
+
+          Coordinator.ReceiverCoordinator.StreamList.StreamListItems.Clear();
+          Coordinator.ReceiverCoordinator.StreamList.StreamListItems.Add(SelectedStreamItem);
+
+          Refresh(() => StateMachine.EnteredReceivingMode(ReceiveStreamMethod));
+
           var result = await Task.Run(() => Commands.Receive(numProcessingItemsProgress, overallProgress, loggingProgress));
-          StateMachine.StoppedReceiving();
+
+          Refresh(() => StateMachine.StoppedReceiving());
         },
-        (o) => (SelectedStreamItem != null));
+        (o) => StateMachine.State == AppState.Ready && (SelectedStreamItem != null));
 
       NewFileCommand = new DelegateCommand<object>(
         async (o) =>
         {
-          StateMachine.StartedOpeningFile();
+          Refresh(() => StateMachine.StartedOpeningFile());
           var result = await Task.Run(() => Commands.NewFile());
           if (result)
           {
             Coordinator.FileStatus = GsaLoadedFileType.NewFile;
-            NotifyPropertyChanged("CurrentlyOpenFileName");
           }
-          StateMachine.OpenedFile();
+          Refresh(() => StateMachine.OpenedFile());
         },
-        (o) => true);
+        (o) => !StateMachine.IsOccupied);
 
       OpenFileCommand = new DelegateCommand<object>(
         async (o) =>
         {
-          StateMachine.StartedOpeningFile();
+          Refresh(() => StateMachine.StartedOpeningFile());
           var filePath = await Task.Run(() => Commands.OpenFile());
           if (string.IsNullOrEmpty(filePath))
           {
-            StateMachine.CancelledOpeningFile();
+            Refresh(() => StateMachine.CancelledOpeningFile());
           }
           else
           {
             Coordinator.FileStatus = GsaLoadedFileType.ExistingFile;
             Coordinator.FilePath = filePath;
-            NotifyPropertyChanged("CurrentlyOpenFileName");
 
-            StateMachine.OpenedFile();
+            Refresh(() => StateMachine.OpenedFile());
           }
         },
-        (o) => true);
+        (o) => !StateMachine.IsOccupied);
 
       ReceiveCommand = new DelegateCommand<object>(
         async (o) =>
         {
-          StateMachine.EnteredReceivingMode(StreamMethod);
-          var result = await Task.Run(() => Commands.Receive(numProcessingItemsProgress, overallProgress, loggingProgress));
-          StateMachine.StoppedReceiving();
+          if (StateMachine.State == AppState.ReceivingWaiting)
+          {
+            Refresh(() => StateMachine.StoppedReceiving());
+          }
+          else
+          {
+            Refresh(() => StateMachine.EnteredReceivingMode(ReceiveStreamMethod));
+            var result = await Task.Run(() => Commands.Receive(numProcessingItemsProgress, overallProgress, loggingProgress));
+            Refresh(() => StateMachine.StoppedReceiving());
+          }
         },
-        (o) => true);
+        (o) => StateMachine.State == AppState.ReceivingWaiting || (ReceiverStreamListItems.Count() > 0 && StateMachine.State == AppState.Ready));
 
       PasteClipboardCommand = new DelegateCommand<object>(
         (o) =>
@@ -219,17 +246,17 @@ namespace SpeckleGSA.UI.ViewModels
           {
             Coordinator.ReceiverCoordinator.StreamList.StreamListItems.Add(new StreamListItem(p, null));
           }
-          NotifyPropertyChanged("ReceiverStreamListItems");
+          Refresh();
         },
-        (o) => true);
+        (o) => !StateMachine.IsOccupied && StateMachine.State == AppState.Ready);
 
       ClearReceiveStreamListCommand = new DelegateCommand<object>(
         (o) =>
         {
           Coordinator.ReceiverCoordinator.StreamList.StreamListItems.Clear();
-          NotifyPropertyChanged("ReceiverStreamListItems");
+          Refresh();
         },
-        (o) => true);
+        (o) => !StateMachine.IsOccupied && ReceiverStreamListItems.Count() > 0);
 
       AddCandidateStreamIdCommand = new DelegateCommand<object>(
         (o) =>
@@ -239,39 +266,59 @@ namespace SpeckleGSA.UI.ViewModels
             Coordinator.ReceiverCoordinator.StreamList.StreamListItems.Add(new StreamListItem(CandidateStreamId, null));
             CandidateStreamId = "";
           }
-          NotifyPropertyChanged("CandidateStreamId");
-          NotifyPropertyChanged("ReceiverStreamListItems");
+          Refresh();
         },
-        (o) => true);
+        (o) => !StateMachine.IsOccupied && StateMachine.State == AppState.Ready);
 
       SendCommand = new DelegateCommand<object>(
         async (o) =>
         {
-          StateMachine.EnteredSendingMode(StreamMethod);
-          var result = await Task.Run(() => Commands.Send(streamCreationProgress, numProcessingItemsProgress, overallProgress, loggingProgress));
-          StateMachine.StoppedSending();
+          if (StateMachine.State == AppState.SendingWaiting)
+          {
+            Refresh(() => StateMachine.StoppedSending());
+          }
+          else
+          {
+            Refresh(() => StateMachine.EnteredSendingMode(SendStreamMethod));
+            var result = await Task.Run(() => Commands.Send(streamCreationProgress, numProcessingItemsProgress, overallProgress, loggingProgress));
+            Refresh(() => StateMachine.StoppedSending());
+          }
         },
-        (o) => true);
+        (o) => StateMachine.State == AppState.SendingWaiting || StateMachine.State == AppState.Ready);
 
       SaveAndCloseCommand = new DelegateCommand<object>(
         async (o) =>
         {
-          StateMachine.StartedSavingFile();
+          Refresh(() => StateMachine.StartedSavingFile());
           var result = await Task.Run(() => Commands.SaveFile());
-          StateMachine.StoppedSavingFile();
+          Refresh(() => StateMachine.StoppedSavingFile());
         },
-        (o) => true);
+        (o) => !StateMachine.IsOccupied && StateMachine.State == AppState.Ready);
 
       RenameStreamCommand = new DelegateCommand<object>(
         async (o) =>
         {
           var newStreamName = o.ToString();
-          StateMachine.StartedRenamingStream();
-          var result = await Task.Run(() => Commands.RenameStream(SelectedStreamItem.StreamId, newStreamName));
+          Refresh(() => StateMachine.StartedRenamingStream());
+          var result = await Task.Run(() => Commands.RenameStream(SelectedStreamItem.StreamId, newStreamName, overallProgress, loggingProgress));
           SelectedStreamItem.StreamName = newStreamName;
-          StateMachine.StoppedRenamingStream();
+          Refresh(() => StateMachine.StoppedRenamingStream());
         },
-        (o) => StateMachine.State != AppState.ActiveRenamingStream);
+        (o) => !StateMachine.IsOccupied);  //There is no visual button linked to this command so the CanExecute condition can be less strict 
+
+      cmds = new List<DelegateCommandBase>();
+      Type myType = this.GetType();
+      IList<PropertyInfo> props = new List<PropertyInfo>(myType.GetProperties());
+
+      var baseType = typeof(DelegateCommandBase);
+      foreach (PropertyInfo prop in props)
+      {
+        if (prop.PropertyType.IsSubclassOf(baseType))
+        {
+          var cmd = (DelegateCommandBase)prop.GetValue(this, null);
+          cmds.Add(cmd);
+        }
+      }
     }
 
     #region progress_fns
@@ -294,5 +341,14 @@ namespace SpeckleGSA.UI.ViewModels
       NotifyPropertyChanged("ProcessingProgress");
     }
     #endregion
+
+    private void Refresh(Action stateUpdateFn = null)
+    {
+      stateUpdateFn?.Invoke();
+
+      cmds.ForEach(cmd => cmd.RaiseCanExecuteChanged());
+      ProcessingProgress = 0;
+      NotifyPropertyChanged(null);
+    }
   }
 }

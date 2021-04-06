@@ -9,8 +9,8 @@ namespace SpeckleGSA.UI.Models
 {
   public class ReceiverCoordinator
   {
-    public GSATargetLayer TargetLayer { get; set; }
-    public StreamMethod StreamMethod { get; set; }
+    public GSATargetLayer TargetLayer { get; set; } = GSATargetLayer.Design;
+    public StreamMethod StreamMethod { get; set; } = StreamMethod.Single;
     public StreamList StreamList { get; set; } = new StreamList();
 
     public double CoincidentNodeAllowance { get; set; } = 0.01;

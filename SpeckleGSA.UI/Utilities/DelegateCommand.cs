@@ -1,8 +1,19 @@
 ﻿using System;
+using System.Windows.Input;
 
 namespace SpeckleGSA.UI.Utilities
 {
-  public class DelegateCommand<T> : System.Windows.Input.ICommand where T : class
+  public abstract class DelegateCommandBase
+  {
+    public event EventHandler CanExecuteChanged;
+
+    public void RaiseCanExecuteChanged()
+    {
+      CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+    }
+  }
+
+  public class DelegateCommand<T> : DelegateCommandBase, ICommand where T : class
   {
     private readonly Predicate<T> _canExecute;
     private readonly Action<T> _execute;
@@ -29,13 +40,6 @@ namespace SpeckleGSA.UI.Utilities
     public void Execute(object parameter)
     {
       _execute((T)parameter);
-    }
-
-    public event EventHandler CanExecuteChanged;
-
-    public void RaiseCanExecuteChanged()
-    {
-      CanExecuteChanged?.Invoke(this, EventArgs.Empty);
     }
   }
 }

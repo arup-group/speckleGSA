@@ -9,7 +9,7 @@ namespace SpeckleGSA.UI.Models
 {
   public class SenderCoordinator
   {
-    public GSATargetLayer TargetLayer { get; set; }
+    public GSATargetLayer TargetLayer { get; set; } = GSATargetLayer.Analysis;
     public StreamMethod StreamMethod { get; set; } = StreamMethod.Single;
     public StreamList StreamList { get; set; } = new StreamList();
 

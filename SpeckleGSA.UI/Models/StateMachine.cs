@@ -9,6 +9,7 @@ namespace SpeckleGSA.UI.Models
   {
     //Overall state - the main output of this class
     public AppState State { get => stateFns.Keys.FirstOrDefault(k => stateFns[k]()); }
+    public bool IsOccupied { get => (streamState == StreamState.Active || streamState == StreamState.Pending || fileState == FileState.Loading || fileState == FileState.Saving); }
 
     #region private_state_variables
     //Don't need previous state as the information embodied in such a variable is stored in the variables below
@@ -22,7 +23,6 @@ namespace SpeckleGSA.UI.Models
     #endregion
 
     #region private_condition_fns
-    private bool IsOccupied { get => (streamState == StreamState.Active || streamState == StreamState.Pending || fileState == FileState.Loading || fileState == FileState.Saving); }
 
     private bool Is(StreamState ss, Direction dir, StreamContent cont) => (streamState == ss && streamDirection == dir && streamContent == cont);
     private bool Is(FileState fs, StreamState ss, Direction dir, StreamContent cont) => (fileState == fs && streamState == ss && streamDirection == dir && streamContent == cont);
@@ -40,7 +40,8 @@ namespace SpeckleGSA.UI.Models
     {
       stateFns = new Dictionary<AppState, Func<bool>>()
       {
-        { AppState.NotLoggedIn,                () => !loggedIn },
+        { AppState.NotLoggedIn,                () => !loggedIn && !IsOccupied && fileState != FileState.Loaded },
+        { AppState.NotLoggedInLinkedToGsa,     () => !loggedIn && !IsOccupied && fileState == FileState.Loaded },
         { AppState.ActiveLoggingIn,            () => !loggedIn && Is(StreamState.Active, Direction.Receiving, StreamContent.Accounts) },
         { AppState.ActiveRetrievingStreamList, () => !loggedIn && Is(StreamState.Active, Direction.Receiving, StreamContent.StreamInfo) },
         { AppState.LoggedInNotLinkedToGsa,     () => loggedIn && fileState != FileState.Loaded && !IsOccupied },
@@ -176,7 +177,7 @@ namespace SpeckleGSA.UI.Models
       {
         this.streamMethod = streamMethod;
         //StreamState won't be None as that is filtered out by the IsOccupied check
-        Set((streamMethod == StreamMethod.Single) ? StreamState.Active : StreamState.Pending, direction, StreamContent.Objects);
+        Set(StreamState.Active, direction, StreamContent.Objects);
       }
     }
 

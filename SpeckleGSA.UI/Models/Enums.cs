@@ -23,6 +23,7 @@ namespace SpeckleGSA.UI.Models
   public enum AppState
   {
     NotLoggedIn = 0,
+    NotLoggedInLinkedToGsa,
     ActiveLoggingIn,
     ActiveRetrievingStreamList,
     LoggedInNotLinkedToGsa,  
@@ -60,5 +61,14 @@ namespace SpeckleGSA.UI.Models
     Information,
     Error,
     Fatal
+  }
+
+  public enum MainTab
+  {
+    Server = 0,
+    GSA = 1,
+    Sender = 2,
+    Receiver = 3,
+    Settings = 4
   }
 }
