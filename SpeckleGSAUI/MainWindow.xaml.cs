@@ -218,13 +218,15 @@ namespace SpeckleGSAUI
                   DispatcherPriority.Background,
                   new Action(() =>
                   {
-                    List<Tuple<string, string>> streams = res.Result;
+                    List<StreamBasicData> streams = res.Result;
                     if (streams != null)
                     {
                       streams.Reverse();
                       StreamList.Items.Clear();
-                      foreach (Tuple<string, string> t in streams)
-                        StreamList.Items.Add(t);
+                      foreach (StreamBasicData sbd in streams)
+                      {
+                        StreamList.Items.Add(new Tuple<string, string>(sbd.Name, sbd.StreamId));
+                      }
                     }
                   }
                   ));

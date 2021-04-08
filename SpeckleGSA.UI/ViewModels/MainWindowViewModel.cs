@@ -150,8 +150,8 @@ namespace SpeckleGSA.UI.ViewModels
       InitialLoadCommand = new DelegateCommand<object>(
        async (o) =>
        {
-         Coordinator.Init();
          Refresh(() => StateMachine.StartedLoggingIn());
+         Coordinator.Init();
          try
          {
            //This will throw an exception if there is no default account
@@ -160,6 +160,7 @@ namespace SpeckleGSA.UI.ViewModels
            {
              Coordinator.Account = new SpeckleAccountForUI("", account.RestApi, account.Email, account.Token);
 
+             ((IProgress<DisplayLogItem>)loggingProgress).Report(new DisplayLogItem("Logged in to default account at: " + account.RestApi));
              GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "Logged in to default account at: " + account.RestApi);
            }
          }
@@ -168,13 +169,26 @@ namespace SpeckleGSA.UI.ViewModels
            GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, "No default account found - press the Login button to login/select an account");
          }
 
+         try
+         {
+           var accountName = await SpeckleStreamManager.GetClientName(Coordinator.Account.ServerUrl, Coordinator.Account.Token);
+           if (!string.IsNullOrEmpty(accountName))
+           {
+             Coordinator.Account.ClientName = accountName;
+           }
+         }
+         catch
+         {
+           GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, "Unable to get name of account");
+         }
+
          if (Coordinator.Account != null && Coordinator.Account.IsValid)
          {
            var streamData = await SpeckleStreamManager.GetStreams(Coordinator.Account.ServerUrl, Coordinator.Account.Token);
            Coordinator.ServerStreamList.StreamListItems.Clear();
-           foreach (var t in streamData)
+           foreach (var sd in streamData)
            {
-             Coordinator.ServerStreamList.StreamListItems.Add(new StreamListItem(t.Item2, t.Item1));
+             Coordinator.ServerStreamList.StreamListItems.Add(new StreamListItem(sd.StreamId, sd.Name));
            }
            Refresh(() => StateMachine.LoggedIn());
          }
