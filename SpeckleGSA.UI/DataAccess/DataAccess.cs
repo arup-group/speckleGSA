@@ -22,12 +22,12 @@ namespace SpeckleGSA.UI.DataAccess
       new StreamListItem("G", "Stream G")
     };
 
-    private static List<SpeckleAccount> rndAccountSource = new List<SpeckleAccount>
+    private static List<SpeckleAccountForUI> rndAccountSource = new List<SpeckleAccountForUI>
     {
-      new SpeckleAccount("Aaron Aardvark", "https://hongkong.speckle.arup.com", "aaron.aardvark@arup.com"),
-      new SpeckleAccount("Brian Barrelolaughs", "https://canada.speckle.arup.com", "brian.Barrelolaughs@arup.com"),
-      new SpeckleAccount("Charlie Chaplin", "https://ireland.speckle.arup.com", "charlie.chaplin@arup.com"),
-      new SpeckleAccount("Dan de Man", "https://australia.speckle.arup.com", "dan.deman@arup.com")
+      new SpeckleAccountForUI("Aaron Aardvark", "https://hongkong.speckle.arup.com", "aaron.aardvark@arup.com", "token1"),
+      new SpeckleAccountForUI("Brian Barrelolaughs", "https://canada.speckle.arup.com", "brian.Barrelolaughs@arup.com", "token2"),
+      new SpeckleAccountForUI("Charlie Chaplin", "https://ireland.speckle.arup.com", "charlie.chaplin@arup.com", "token3"),
+      new SpeckleAccountForUI("Dan de Man", "https://australia.speckle.arup.com", "dan.deman@arup.com", "token4")
     };
 
     private static List<string> rndFilePaths = new List<string>
@@ -51,9 +51,9 @@ namespace SpeckleGSA.UI.DataAccess
       return streamList;
     }
 
-    public static SpeckleAccount GetAccount() => GetRandomItem(rndAccountSource);
+    public static SpeckleAccountForUI GetAccount() => GetRandomItem(rndAccountSource);
 
-    public static SpeckleAccount GetDefaultAccount() => null;
+    public static SpeckleAccountForUI GetDefaultAccount() => null;
 
     public static string GetFilePath() => GetRandomItem(rndFilePaths);
 

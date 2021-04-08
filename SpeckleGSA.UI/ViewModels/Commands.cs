@@ -22,7 +22,7 @@ namespace SpeckleGSA.UI.ViewModels
       return DataAccess.DataAccess.GetFilePath();
     }
 
-    public static SpeckleAccount Login()
+    public static SpeckleAccountForUI Login()
     {
       return DataAccess.DataAccess.GetAccount();
     }

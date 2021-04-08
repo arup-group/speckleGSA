@@ -2,16 +2,23 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-				xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+				xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+				xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 				xmlns:local="clr-namespace:SpeckleGSA.UI.ViewModels" 
 				xmlns:localUtilities="clr-namespace:SpeckleGSA.UI.Utilities"
 				DataContext="{StaticResource MainWindowViewModel}"
         mc:Ignorable="d" FontSize="13" WindowStartupLocation="CenterScreen"
-        Title="MainWindow" Height="720" Width="700" FontFamily="Arial">
+        Title="{Binding Title}" Height="720" Width="700" FontFamily="Arial" 
+				  >
 	<Window.Resources>
 		<localUtilities:EnumConverter x:Key="EnumConverter" />
 	</Window.Resources>
+	<i:Interaction.Triggers>
+		<i:EventTrigger EventName="Loaded">
+			<i:InvokeCommandAction Command="{Binding InitialLoadCommand}" />
+		</i:EventTrigger>
+	</i:Interaction.Triggers>
 	<Grid>
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="10" />
@@ -188,15 +195,15 @@
 								<DataGridTemplateColumn.CellEditingTemplate>
 									<DataTemplate>
 										<TextBox x:Name="Candidate" Text="{Binding StreamName}" >
-											<i:Interaction.Behaviors>
+											<b:Interaction.Behaviors>
 												<localUtilities:TextBoxEnterKeyUpdateBehaviour />
-											</i:Interaction.Behaviors>
-											<i:Interaction.Triggers>
+											</b:Interaction.Behaviors>
+											<b:Interaction.Triggers>
 												<localUtilities:EnterKeyDownEventTrigger EventName="KeyDown">
-													<i:InvokeCommandAction Command="{Binding DataContext.RenameStreamCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+													<b:InvokeCommandAction Command="{Binding DataContext.RenameStreamCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
 																									 CommandParameter="{Binding ElementName=Candidate, Path=Text}"/>
 												</localUtilities:EnterKeyDownEventTrigger>
-											</i:Interaction.Triggers>
+											</b:Interaction.Triggers>
 										</TextBox>
 									</DataTemplate>
 								</DataGridTemplateColumn.CellEditingTemplate>
@@ -337,7 +344,7 @@
 												 IsChecked="{Binding Path=StreamContentConfig, Converter={StaticResource EnumConverter}, ConverterParameter=TabularResultsOnly}"/>
 							</StackPanel>
 						</GroupBox>
-						<GroupBox Header="Receiver">
+						<GroupBox Header="Receiver" Margin="5">
 							<StackPanel Margin="5">
 								<DockPanel LastChildFill="True">
 									<TextBlock DockPanel.Dock="Left" Text="Coincident Node Allowance: " Margin="0 5"/>
@@ -351,7 +358,7 @@
 							</StackPanel>
 						</GroupBox>
 						<GroupBox Header="Logging" Margin="5">
-							<UniformGrid Columns="2">
+							<UniformGrid Columns="2" >
 								<TextBlock Text="Minimum level: " Margin="0 5"/>
 								<ComboBox ItemsSource="{Binding LoggingMinimumLevelOptions}" SelectedValue="{Binding LoggingMinimumLevel}" 
 													VerticalContentAlignment="Center"/>
@@ -359,7 +366,7 @@
 						</GroupBox>
 					</StackPanel>
 
-					<GroupBox Header="Result" Grid.Column="1">
+					<GroupBox Header="Results" Grid.Column="1" Margin="5">
 						<Grid>
 							<Grid.RowDefinitions>
 								<RowDefinition Height="auto"/>

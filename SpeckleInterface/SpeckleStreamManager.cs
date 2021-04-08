@@ -28,7 +28,9 @@ namespace SpeckleInterface
       List<Tuple<string, string>> ret = new List<Tuple<string, string>>();
 
       foreach (SpeckleStream s in response.Resources)
+      {
         ret.Add(new Tuple<string, string>(s.Name, s.StreamId));
+      }
 
       return ret;
     }

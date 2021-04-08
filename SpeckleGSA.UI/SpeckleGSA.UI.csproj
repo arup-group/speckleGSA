@@ -35,11 +35,22 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.Expression.Interactions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Windows.Interactivity.WPF.2.0.20525\lib\net40\Microsoft.Expression.Interactions.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.Xaml.Behaviors, Version=1.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Xaml.Behaviors.Wpf.1.1.31\lib\net45\Microsoft.Xaml.Behaviors.dll</HintPath>
     </Reference>
+    <Reference Include="SpeckleCore, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Resource\SpeckleCore.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Windows.Interactivity, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Windows.Interactivity.WPF.2.0.20525\lib\net40\System.Windows.Interactivity.dll</HintPath>
+    </Reference>
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Core" />
@@ -61,16 +72,16 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Models\SpeckleAccount.cs" />
+    <Compile Include="Models\SpeckleAccountForUI.cs" />
     <Compile Include="DataAccess\DataAccess.cs" />
-    <Compile Include="Models\Coordinator.cs" />
+    <Compile Include="Models\CoordinatorForUI.cs" />
     <Compile Include="Models\DisplayLog.cs" />
     <Compile Include="Models\DisplayLogItem.cs" />
     <Compile Include="Models\Enums.cs" />
-    <Compile Include="Models\ReceiverCoordinator.cs" />
+    <Compile Include="Models\ReceiverCoordinatorForUI.cs" />
     <Compile Include="Models\ResultSettingItem.cs" />
     <Compile Include="Models\ResultSettings.cs" />
-    <Compile Include="Models\SenderCoordinator.cs" />
+    <Compile Include="Models\SenderCoordinatorForUI.cs" />
     <Compile Include="Models\StreamList.cs" />
     <Compile Include="Models\StreamListItem.cs" />
     <Compile Include="Utilities\DelegateCommand.cs" />
@@ -125,6 +136,10 @@
     <ProjectReference Include="..\SpeckleGSA\SpeckleGSA.csproj">
       <Project>{6d8ca3ad-e530-4cda-af79-9715a7583f4f}</Project>
       <Name>SpeckleGSA</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SpeckleInterface\SpeckleInterface.csproj">
+      <Project>{ca38dd0e-4a12-4b5b-9544-62b6ffc0bb25}</Project>
+      <Name>SpeckleInterface</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

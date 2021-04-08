@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace SpeckleGSA.UI.Models
 {
-  public class ReceiverCoordinator
+  public class ReceiverCoordinatorForUI
   {
     public GSATargetLayer TargetLayer { get; set; } = GSATargetLayer.Design;
     public StreamMethod StreamMethod { get; set; } = StreamMethod.Single;

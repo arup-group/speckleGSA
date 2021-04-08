@@ -10,6 +10,8 @@ using System.Windows;
 using SpeckleGSAInterfaces;
 using System.Reflection;
 using System.Windows.Input;
+using SpeckleInterface;
+using SpeckleCore;
 
 namespace SpeckleGSA.UI.ViewModels
 {
@@ -19,20 +21,23 @@ namespace SpeckleGSA.UI.ViewModels
     public event PropertyChangedEventHandler PropertyChanged;
     protected void NotifyPropertyChanged(String info) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(info));
 
-    public Coordinator Coordinator { get; } = new Coordinator();
+    public CoordinatorForUI Coordinator { get; } = new CoordinatorForUI();
     public StateMachine StateMachine { get; } = new StateMachine();
 
-    public SpeckleAccount Account { get => Coordinator.Account; }
+    public string Title { get => "SpeckleGSA - " + Coordinator.RunningVersion; }
+
+    public SpeckleAccountForUI Account { get => Coordinator.Account; }
     public GSATargetLayer ReceiveLayer { get; set; } = GSATargetLayer.Design;
     public GSATargetLayer SendLayer { get; set; } = GSATargetLayer.Design;
-    public StreamMethod ReceiveStreamMethod { get => Coordinator.ReceiverCoordinator.StreamMethod; set => Refresh(() => Coordinator.ReceiverCoordinator.StreamMethod = value); }
-    public StreamMethod SendStreamMethod { get => Coordinator.SenderCoordinator.StreamMethod; set => Refresh(() => Coordinator.SenderCoordinator.StreamMethod = value); }
+    public StreamMethod ReceiveStreamMethod { get => Coordinator.ReceiverCoordinatorForUI.StreamMethod; set => Refresh(() => Coordinator.ReceiverCoordinatorForUI.StreamMethod = value); }
+    public StreamMethod SendStreamMethod { get => Coordinator.SenderCoordinatorForUI.StreamMethod; set => Refresh(() => Coordinator.SenderCoordinatorForUI.StreamMethod = value); }
     public string CurrentlyOpenFileName
     {
       get => Coordinator.FileStatus == GsaLoadedFileType.None ? "No file is currently open" : Coordinator.FileStatus == GsaLoadedFileType.NewFile ? "New file" : Coordinator.FilePath;
     }
 
     #region command_properties
+    public DelegateCommand<object> InitialLoadCommand { get; set; }
     public DelegateCommand<object> ConnectToServerCommand { get; private set; }
     public DelegateCommand<object> UpdateStreamListCommand { get; private set; }
     public DelegateCommand<object> ReceiveSelectedStreamCommand { get; private set; }
@@ -72,23 +77,23 @@ namespace SpeckleGSA.UI.ViewModels
     private StreamListItem selectedStream = null;
 
     public string CandidateStreamId { get; set; }
-    public ObservableCollection<StreamListItem> ReceiverStreamListItems { get => new ObservableCollection<StreamListItem>(Coordinator.ReceiverCoordinator.StreamList.StreamListItems); }
+    public ObservableCollection<StreamListItem> ReceiverStreamListItems { get => new ObservableCollection<StreamListItem>(Coordinator.ReceiverCoordinatorForUI.StreamList.StreamListItems); }
 
-    public ObservableCollection<StreamListItem> SenderStreamListItems { get => new ObservableCollection<StreamListItem>(Coordinator.SenderCoordinator.StreamList.StreamListItems); }
+    public ObservableCollection<StreamListItem> SenderStreamListItems { get => new ObservableCollection<StreamListItem>(Coordinator.SenderCoordinatorForUI.StreamList.StreamListItems); }
     #endregion
 
     #region settings_properties
     public ObservableCollection<ResultSettingItem> ResultSettingItems
     {
-      get => new ObservableCollection<ResultSettingItem>(Coordinator.SenderCoordinator.ResultSettings.ResultSettingItems.OrderByDescending(i => i.DefaultSelected));
+      get => new ObservableCollection<ResultSettingItem>(Coordinator.SenderCoordinatorForUI.ResultSettings.ResultSettingItems.OrderByDescending(i => i.DefaultSelected));
     }
 
-    public StreamContentConfig StreamContentConfig { get => Coordinator.SenderCoordinator.StreamContentConfig; set { Coordinator.SenderCoordinator.StreamContentConfig = value; } }
+    public StreamContentConfig StreamContentConfig { get => Coordinator.SenderCoordinatorForUI.StreamContentConfig; set { Coordinator.SenderCoordinatorForUI.StreamContentConfig = value; } }
     public bool SendMeaningfulNodes { get; set; } = true;
     public double PollingRate { get; set; } = (double)2000;
-    public double CoincidentNodeAllowance { get => Coordinator.ReceiverCoordinator.CoincidentNodeAllowance; set { Coordinator.ReceiverCoordinator.CoincidentNodeAllowance = value; } }
+    public double CoincidentNodeAllowance { get => Coordinator.ReceiverCoordinatorForUI.CoincidentNodeAllowance; set { Coordinator.ReceiverCoordinatorForUI.CoincidentNodeAllowance = value; } }
     public List<GsaUnit> CoincidentNodeAllowanceUnitOptions { get => new List<GsaUnit> { GsaUnit.Millimetres, GsaUnit.Metres, GsaUnit.Inches }; }
-    public GsaUnit CoincidentNodeAllowanceUnit { get => Coordinator.ReceiverCoordinator.CoincidentNodeUnits; set { Coordinator.ReceiverCoordinator.CoincidentNodeUnits = value; } }
+    public GsaUnit CoincidentNodeAllowanceUnit { get => Coordinator.ReceiverCoordinatorForUI.CoincidentNodeUnits; set { Coordinator.ReceiverCoordinatorForUI.CoincidentNodeUnits = value; } }
     public LoggingMinimumLevel LoggingMinimumLevel { get => Coordinator.LoggingMinimumLevel; set { Coordinator.LoggingMinimumLevel = value; } }
     public List<LoggingMinimumLevel> LoggingMinimumLevelOptions
     {
@@ -133,10 +138,6 @@ namespace SpeckleGSA.UI.ViewModels
 
     public MainWindowViewModel()
     {
-      //Coordinator.ServerStreamList = UI.DataAccess.DataAccess.GetStreamList();
-      //Coordinator.Account = UI.DataAccess.DataAccess.GetDefaultAccount();
-      //Coordinator.DisplayLog = new DisplayLog();
-
       overallProgress.ProgressChanged += ProcessOverallProgressUpdate;
       loggingProgress.ProgressChanged += ProcessLogProgressUpdate;
       streamCreationProgress.ProgressChanged += ProcessStreamCreationProgress;
@@ -146,6 +147,43 @@ namespace SpeckleGSA.UI.ViewModels
 
     private void CreateCommands()
     {
+      InitialLoadCommand = new DelegateCommand<object>(
+       async (o) =>
+       {
+         Coordinator.Init();
+         Refresh(() => StateMachine.StartedLoggingIn());
+         try
+         {
+           //This will throw an exception if there is no default account
+           var account = LocalContext.GetDefaultAccount();
+           if (account != null)
+           {
+             Coordinator.Account = new SpeckleAccountForUI("", account.RestApi, account.Email, account.Token);
+
+             GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "Logged in to default account at: " + account.RestApi);
+           }
+         }
+         catch
+         {
+           GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, "No default account found - press the Login button to login/select an account");
+         }
+
+         if (Coordinator.Account != null && Coordinator.Account.IsValid)
+         {
+           var streamData = await SpeckleStreamManager.GetStreams(Coordinator.Account.ServerUrl, Coordinator.Account.Token);
+           Coordinator.ServerStreamList.StreamListItems.Clear();
+           foreach (var t in streamData)
+           {
+             Coordinator.ServerStreamList.StreamListItems.Add(new StreamListItem(t.Item2, t.Item1));
+           }
+           Refresh(() => StateMachine.LoggedIn());
+         }
+         else
+         {
+           Refresh(() => StateMachine.CancelledLoggingIn());
+         }
+       });
+
       ConnectToServerCommand = new DelegateCommand<object>(
         async (o) =>
         {
@@ -179,8 +217,8 @@ namespace SpeckleGSA.UI.ViewModels
         {
           SelectedTabIndex = (int)MainTab.Receiver;
 
-          Coordinator.ReceiverCoordinator.StreamList.StreamListItems.Clear();
-          Coordinator.ReceiverCoordinator.StreamList.StreamListItems.Add(SelectedStreamItem);
+          Coordinator.ReceiverCoordinatorForUI.StreamList.StreamListItems.Clear();
+          Coordinator.ReceiverCoordinatorForUI.StreamList.StreamListItems.Add(SelectedStreamItem);
 
           Refresh(() => StateMachine.EnteredReceivingMode(ReceiveStreamMethod));
 
@@ -244,7 +282,7 @@ namespace SpeckleGSA.UI.ViewModels
           var paste = Clipboard.GetText(TextDataFormat.Text).Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Select(p => p.Trim()).ToList();
           foreach (string p in paste)
           {
-            Coordinator.ReceiverCoordinator.StreamList.StreamListItems.Add(new StreamListItem(p, null));
+            Coordinator.ReceiverCoordinatorForUI.StreamList.StreamListItems.Add(new StreamListItem(p, null));
           }
           Refresh();
         },
@@ -253,7 +291,7 @@ namespace SpeckleGSA.UI.ViewModels
       ClearReceiveStreamListCommand = new DelegateCommand<object>(
         (o) =>
         {
-          Coordinator.ReceiverCoordinator.StreamList.StreamListItems.Clear();
+          Coordinator.ReceiverCoordinatorForUI.StreamList.StreamListItems.Clear();
           Refresh();
         },
         (o) => !StateMachine.IsOccupied && ReceiverStreamListItems.Count() > 0);
@@ -263,7 +301,7 @@ namespace SpeckleGSA.UI.ViewModels
         {
           if (!String.IsNullOrEmpty(CandidateStreamId))
           {
-            Coordinator.ReceiverCoordinator.StreamList.StreamListItems.Add(new StreamListItem(CandidateStreamId, null));
+            Coordinator.ReceiverCoordinatorForUI.StreamList.StreamListItems.Add(new StreamListItem(CandidateStreamId, null));
             CandidateStreamId = "";
           }
           Refresh();
@@ -325,7 +363,7 @@ namespace SpeckleGSA.UI.ViewModels
 
     private void ProcessStreamCreationProgress(object sender, StreamListItem e)
     {
-      Coordinator.SenderCoordinator.StreamList.StreamListItems.Add(e);
+      Coordinator.SenderCoordinatorForUI.StreamList.StreamListItems.Add(e);
       NotifyPropertyChanged("SenderStreamListItems");
     }
 
