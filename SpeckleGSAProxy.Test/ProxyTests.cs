@@ -302,7 +302,7 @@ namespace SpeckleGSAProxy.Test
 
       Status.StatusChanged += (s, e) => Debug.WriteLine("Status: " + e.Name);
 
-      GSA.SenderInfo = new Dictionary<string, Tuple<string, string>>() { { "testStream", new Tuple<string, string>("testStreamId", "testClientId") } };
+      GSA.SenderInfo = new Dictionary<string, SidSpeckleRecord>() { { "testStream", new SidSpeckleRecord("testStreamId", "testStream", "testClientId") } };
 
       var sender = new SenderCoordinator();
 

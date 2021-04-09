@@ -265,7 +265,7 @@ namespace SpeckleGSA
     /// </summary>
     public void Dispose()
     {
-      foreach (KeyValuePair<string, Tuple<string, string>> kvp in GSA.SenderInfo)
+      foreach (KeyValuePair<string, SidSpeckleRecord> kvp in GSA.SenderInfo)
       {
         Senders[kvp.Key].Dispose();
       }
@@ -294,11 +294,11 @@ namespace SpeckleGSA
         {
           GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "Creating new sender for " + streamName);
           await Senders[streamName].InitializeSender(documentName, basePropertyUnits, tolerance, angleTolerance, streamName: streamName);
-          GSA.SenderInfo[streamName] = new Tuple<string, string>(Senders[streamName].StreamId, Senders[streamName].ClientId);
+          GSA.SenderInfo[streamName] = new SidSpeckleRecord(Senders[streamName].StreamId, streamName, Senders[streamName].ClientId);
         }
         else
         {
-          await Senders[streamName].InitializeSender(documentName, basePropertyUnits, tolerance, angleTolerance, GSA.SenderInfo[streamName].Item1, GSA.SenderInfo[streamName].Item2, streamName);
+          await Senders[streamName].InitializeSender(documentName, basePropertyUnits, tolerance, angleTolerance, GSA.SenderInfo[streamName].StreamId, GSA.SenderInfo[streamName].ClientId, streamName);
         }
       }
     }

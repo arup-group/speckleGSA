@@ -27,8 +27,20 @@ namespace SpeckleGSA.UI.ViewModels
     public string Title { get => "SpeckleGSA - " + Coordinator.RunningVersion; }
 
     public SpeckleAccountForUI Account { get => Coordinator.Account; }
-    public GSATargetLayer ReceiveLayer { get; set; } = GSATargetLayer.Design;
-    public GSATargetLayer SendLayer { get; set; } = GSATargetLayer.Design;
+    public GSATargetLayer ReceiveLayer
+    {
+      get => Coordinator.ReceiverCoordinatorForUI.TargetLayer; 
+      set
+      {
+        Refresh(() => Coordinator.ReceiverCoordinatorForUI.TargetLayer = value);
+      }
+    }
+    public GSATargetLayer SendLayer { get => Coordinator.SenderCoordinatorForUI.TargetLayer; 
+      set 
+      {
+        Refresh(() => Coordinator.SenderCoordinatorForUI.TargetLayer = value);
+      } 
+    }
     public StreamMethod ReceiveStreamMethod { get => Coordinator.ReceiverCoordinatorForUI.StreamMethod; set => Refresh(() => Coordinator.ReceiverCoordinatorForUI.StreamMethod = value); }
     public StreamMethod SendStreamMethod { get => Coordinator.SenderCoordinatorForUI.StreamMethod; set => Refresh(() => Coordinator.SenderCoordinatorForUI.StreamMethod = value); }
     public string CurrentlyOpenFileName
@@ -151,45 +163,11 @@ namespace SpeckleGSA.UI.ViewModels
        async (o) =>
        {
          Refresh(() => StateMachine.StartedLoggingIn());
-         Coordinator.Init();
-         try
-         {
-           //This will throw an exception if there is no default account
-           var account = LocalContext.GetDefaultAccount();
-           if (account != null)
-           {
-             Coordinator.Account = new SpeckleAccountForUI("", account.RestApi, account.Email, account.Token);
 
-             ((IProgress<DisplayLogItem>)loggingProgress).Report(new DisplayLogItem("Logged in to default account at: " + account.RestApi));
-             GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "Logged in to default account at: " + account.RestApi);
-           }
-         }
-         catch
-         {
-           GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, "No default account found - press the Login button to login/select an account");
-         }
+         var loaded = await Task.Run(() => Commands.InitialLoadAsync(Coordinator, loggingProgress));
 
-         try
+         if (loaded)
          {
-           var accountName = await SpeckleStreamManager.GetClientName(Coordinator.Account.ServerUrl, Coordinator.Account.Token);
-           if (!string.IsNullOrEmpty(accountName))
-           {
-             Coordinator.Account.ClientName = accountName;
-           }
-         }
-         catch
-         {
-           GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, "Unable to get name of account");
-         }
-
-         if (Coordinator.Account != null && Coordinator.Account.IsValid)
-         {
-           var streamData = await SpeckleStreamManager.GetStreams(Coordinator.Account.ServerUrl, Coordinator.Account.Token);
-           Coordinator.ServerStreamList.StreamListItems.Clear();
-           foreach (var sd in streamData)
-           {
-             Coordinator.ServerStreamList.StreamListItems.Add(new StreamListItem(sd.StreamId, sd.Name));
-           }
            Refresh(() => StateMachine.LoggedIn());
          }
          else
@@ -259,17 +237,14 @@ namespace SpeckleGSA.UI.ViewModels
         async (o) =>
         {
           Refresh(() => StateMachine.StartedOpeningFile());
-          var filePath = await Task.Run(() => Commands.OpenFile());
-          if (string.IsNullOrEmpty(filePath))
+          var opened = await Task.Run(() => Commands.OpenFile(Coordinator));
+          if (opened)
           {
-            Refresh(() => StateMachine.CancelledOpeningFile());
+            Refresh(() => StateMachine.OpenedFile());
           }
           else
           {
-            Coordinator.FileStatus = GsaLoadedFileType.ExistingFile;
-            Coordinator.FilePath = filePath;
-
-            Refresh(() => StateMachine.OpenedFile());
+            Refresh(() => StateMachine.CancelledOpeningFile());
           }
         },
         (o) => !StateMachine.IsOccupied);
@@ -332,7 +307,7 @@ namespace SpeckleGSA.UI.ViewModels
           else
           {
             Refresh(() => StateMachine.EnteredSendingMode(SendStreamMethod));
-            var result = await Task.Run(() => Commands.Send(streamCreationProgress, numProcessingItemsProgress, overallProgress, loggingProgress));
+            var result = await Task.Run(() => Commands.SendAsync(Coordinator.Account, Coordinator.SenderCoordinatorForUI.TargetLayer, streamCreationProgress, numProcessingItemsProgress, overallProgress, loggingProgress));
             Refresh(() => StateMachine.StoppedSending());
           }
         },

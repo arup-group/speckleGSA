@@ -104,7 +104,7 @@ namespace SpeckleGSAProxy.Test
       GSA.GsaApp = new GsaAppResources();
       GSA.GsaApp.gsaSettings.TargetLayer = GSATargetLayer.Design;
       GSA.GsaApp.gsaSettings.SeparateStreams = true;
-      GSA.SenderInfo = new Dictionary<string, Tuple<string, string>>() { { "testStream", new Tuple<string, string>("testStreamId", "testClientId") } };
+      GSA.SenderInfo = new Dictionary<string, SidSpeckleRecord>() { { "testStream", new SidSpeckleRecord("testStreamId", "testStream", "testClientId") } };
 
       //This runs SpeckleInitializer.Initialize() and fills WriteTypePrereqs and ReadTypePrereqs
       GSA.Init("");
@@ -152,7 +152,7 @@ namespace SpeckleGSAProxy.Test
 
       //This runs SpeckleInitializer.Initialize() and fills WriteTypePrereqs and ReadTypePrereqs
       GSA.Init("");
-      GSA.SenderInfo = new Dictionary<string, Tuple<string, string>>() { { "testStream", new Tuple<string, string>("testStreamId", "testClientId") } };
+      GSA.SenderInfo = new Dictionary<string, SidSpeckleRecord>() { { "testStream", new SidSpeckleRecord("testStreamId", "testStream", "testClientId") } };
 
       var json = Helper.ReadFile(designLayerExpectedFile, TestDataDirectory);
 

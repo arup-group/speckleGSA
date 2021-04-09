@@ -15,7 +15,7 @@ namespace SpeckleGSA
     public static List<IGSAKit> kits = new List<IGSAKit>();
     public static GsaAppResources GsaApp = new GsaAppResources();
 
-    public static Dictionary<string, Tuple<string, string>> SenderInfo { get; set; }
+    public static Dictionary<string, SidSpeckleRecord> SenderInfo { get; set; }  // [ Stream Name, [ StreamId, Client Id ]
     public static List<Tuple<string, string>> ReceiverInfo { get; set; }
 
     public static List<IGSASenderDictionary> SenderDictionaries => kits.Select(k => k.GSASenderObjects).ToList();
@@ -82,7 +82,7 @@ namespace SpeckleGSA
     {
       if (IsInit) return;
 
-      SenderInfo = new Dictionary<string, Tuple<string, string>>();
+      SenderInfo = new Dictionary<string, SidSpeckleRecord>();
       ReceiverInfo = new List<Tuple<string, string>>();
 
       IsInit = true;
@@ -378,7 +378,7 @@ namespace SpeckleGSA
 
           for (int i = 0; i < senders.Length; i += 3)
           {
-            SenderInfo[senders[i]] = new Tuple<string, string>(senders[i + 1], senders[i + 2]);
+            SenderInfo[senders[i]] = new SidSpeckleRecord(senders[i + 1], senders[i], senders[i + 2]);
           }
         }
 
@@ -420,11 +420,11 @@ namespace SpeckleGSA
       sids.RemoveAll(S => S[0] == "SpeckleSender&" + key || S[0] == "SpeckleReceiver&" + key || string.IsNullOrEmpty(S[1]));
 
       List<string> senderList = new List<string>();
-      foreach (KeyValuePair<string, Tuple<string, string>> kvp in SenderInfo)
+      foreach (KeyValuePair<string, SidSpeckleRecord> kvp in SenderInfo)
       {
         senderList.Add(kvp.Key);
-        senderList.Add(kvp.Value.Item1);
-        senderList.Add(kvp.Value.Item2);
+        senderList.Add(kvp.Value.StreamId);
+        senderList.Add(kvp.Value.ClientId);
       }
 
       List<string> receiverList = new List<string>();

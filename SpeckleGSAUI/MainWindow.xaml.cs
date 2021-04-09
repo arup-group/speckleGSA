@@ -790,8 +790,8 @@ namespace SpeckleGSAUI
       ReceiverStreams.Items.Clear();
 
       if (GSA.SenderInfo != null)
-        foreach (KeyValuePair<string, Tuple<string, string>> sender in GSA.SenderInfo)
-          SenderStreams.Items.Add(new Tuple<string, string>(sender.Key, sender.Value.Item1));
+        foreach (KeyValuePair<string, SidSpeckleRecord> sender in GSA.SenderInfo)
+          SenderStreams.Items.Add(new Tuple<string, string>(sender.Key, sender.Value.StreamId));
 
       if (GSA.ReceiverInfo != null)
         foreach (Tuple<string, string> receiver in GSA.ReceiverInfo)
