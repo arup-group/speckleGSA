@@ -22,8 +22,10 @@ namespace SpeckleInterface
     private int numParallelApiRequests = DEFAULT_PARALLEL_API_REQUESTS;
 
     private BasePropertyUnits units;
-    double tolerance;
-    double angleTolerance;
+    private double tolerance;
+    private double angleTolerance;
+    private IProgress<int> incrementProgress;
+    private IProgress<int> totalProgress;
 
     private Dictionary<string, object> BaseProperties  { get => new Dictionary<string, object>()
     {
@@ -48,14 +50,16 @@ namespace SpeckleInterface
     /// <param name="streamId">Stream ID of stream. If no stream ID is given, a new stream is created.</param>
     /// <param name="streamName">Stream name</param>
     /// <returns>Task</returns>
-    public async Task InitializeSender(string documentName, BasePropertyUnits units, double tolerance, double angleTolerance, 
-      string streamId = "", string clientId = "", string streamName = "")
+    public void InitializeSender(string documentName, BasePropertyUnits units, double tolerance, double angleTolerance, 
+      string streamId = "", string clientId = "", string streamName = "", IProgress<int> totalProgress = null, IProgress<int> incrementProgress = null)
     {
       apiClient.AuthToken = apiToken;
 
       this.units = units;
       this.tolerance = tolerance;
       this.angleTolerance = angleTolerance;
+      this.totalProgress = totalProgress;
+      this.incrementProgress = incrementProgress;
 
       if (string.IsNullOrEmpty(clientId))
       {
@@ -158,8 +162,7 @@ namespace SpeckleInterface
 
       GroupIntoLayers(payloadObjects, out List<Layer> layers, out List<SpeckleObject> bucketObjects);
 
-      messenger.Message(MessageIntent.Display, MessageLevel.Information,
-        "Successfully grouped " + bucketObjects.Count() + " objects into " + layers.Count() + " layers");
+      messenger.Message(MessageIntent.Display, MessageLevel.Information, "Successfully grouped " + bucketObjects.Count() + " objects into " + layers.Count() + " layers");
 
       DetermineObjectsToBeSent(bucketObjects, baseUrl, out List<SpeckleObject> changedObjects);
 
@@ -169,8 +172,7 @@ namespace SpeckleInterface
       var numUnchanged = bucketObjects.Count() - numChanged;
       if (numChanged == 0)
       {
-        messenger.Message(MessageIntent.Display, MessageLevel.Information,
-          "All " + numUnchanged + " objects are unchanged on the server for stream " + StreamId);
+        messenger.Message(MessageIntent.Display, MessageLevel.Information, "All " + numUnchanged + " objects are unchanged on the server for stream " + StreamId);
       }
       else
       {
@@ -405,6 +407,11 @@ namespace SpeckleInterface
       // Separate objects into sizeable payloads
       var payloads = CreatePayloads(bucketObjects);
 
+      if (totalProgress != null)
+      {
+        totalProgress.Report(payloads.Count());
+      }
+
       if (bucketObjects.Count(o => o.Type == "Placeholder") == bucketObjects.Count)
       {
         numErrors = 0;
@@ -439,6 +446,10 @@ namespace SpeckleInterface
         try
         {
           res = apiClient.ObjectCreateAsync(payloads[j], apiTimeoutOverride).Result;
+          if (incrementProgress != null)
+          {
+            incrementProgress.Report(1);
+          }
         }
         catch (Exception ex)
         {

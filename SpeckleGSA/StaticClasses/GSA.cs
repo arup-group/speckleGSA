@@ -16,7 +16,7 @@ namespace SpeckleGSA
     public static GsaAppResources GsaApp = new GsaAppResources();
 
     public static Dictionary<string, SidSpeckleRecord> SenderInfo { get; set; }  // [ Stream Name, [ StreamId, Client Id ]
-    public static List<Tuple<string, string>> ReceiverInfo { get; set; }
+    public static List<SidSpeckleRecord> ReceiverInfo { get; set; }
 
     public static List<IGSASenderDictionary> SenderDictionaries => kits.Select(k => k.GSASenderObjects).ToList();
 
@@ -83,7 +83,7 @@ namespace SpeckleGSA
       if (IsInit) return;
 
       SenderInfo = new Dictionary<string, SidSpeckleRecord>();
-      ReceiverInfo = new List<Tuple<string, string>>();
+      ReceiverInfo = new List<SidSpeckleRecord>();
 
       IsInit = true;
 
@@ -388,7 +388,7 @@ namespace SpeckleGSA
 
           for (int i = 0; i < receivers.Length; i += 2)
           {
-            ReceiverInfo.Add(new Tuple<string, string>(receivers[i], receivers[i + 1]));
+            ReceiverInfo.Add(new SidSpeckleRecord(receivers[i], receivers[i + 1]));
           }
         }
         return true;
@@ -428,10 +428,10 @@ namespace SpeckleGSA
       }
 
       List<string> receiverList = new List<string>();
-      foreach (Tuple<string, string> t in ReceiverInfo)
+      foreach (var t in ReceiverInfo)
       {
-        receiverList.Add(t.Item1);
-        receiverList.Add(t.Item2);
+        receiverList.Add(t.StreamId);
+        receiverList.Add(t.StreamName);
       }
 
       if (senderList.Count() > 0)

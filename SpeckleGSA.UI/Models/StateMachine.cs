@@ -9,14 +9,18 @@ namespace SpeckleGSA.UI.Models
   {
     //Overall state - the main output of this class
     public AppState State { get => stateFns.Keys.FirstOrDefault(k => stateFns[k]()); }
-    public bool IsOccupied { get => (streamState == StreamState.Active || streamState == StreamState.Pending || fileState == FileState.Loading || fileState == FileState.Saving); }
+    public bool StreamFileIsOccupied { get => ((StreamState == StreamState.Active || StreamState == StreamState.Pending) && (streamContent == StreamContent.Objects)); }
+    public bool StreamIsOccupied { get => ((StreamState == StreamState.Active || StreamState == StreamState.Pending) 
+        && (streamContent == StreamContent.Accounts || streamContent == StreamContent.StreamInfo)); }
+    public bool FileIsOccupied { get => (FileState == FileState.Loading || FileState == FileState.Saving); }
+    public FileState FileState { get; set; } = FileState.None;
+    public StreamState StreamState { get; set; } = StreamState.None;
 
     #region private_state_variables
     //Don't need previous state as the information embodied in such a variable is stored in the variables below
     private bool loggedIn = false;
     private bool prevFileLoaded = false;
-    private StreamState streamState = StreamState.None;
-    private FileState fileState = FileState.None;
+    
     private StreamMethod streamMethod = StreamMethod.None;
     private Direction streamDirection = Direction.None;
     private StreamContent streamContent = StreamContent.None;
@@ -24,11 +28,11 @@ namespace SpeckleGSA.UI.Models
 
     #region private_condition_fns
 
-    private bool Is(StreamState ss, Direction dir, StreamContent cont) => (streamState == ss && streamDirection == dir && streamContent == cont);
-    private bool Is(FileState fs, StreamState ss, Direction dir, StreamContent cont) => (fileState == fs && streamState == ss && streamDirection == dir && streamContent == cont);
+    private bool Is(StreamState ss, Direction dir, StreamContent cont) => (StreamState == ss && streamDirection == dir && streamContent == cont);
+    private bool Is(FileState fs, StreamState ss, Direction dir, StreamContent cont) => (FileState == fs && StreamState == ss && streamDirection == dir && streamContent == cont);
     private void Set(StreamState ss, Direction dir, StreamContent cont)
     {
-      streamState = ss;
+      StreamState = ss;
       streamDirection = dir;
       streamContent = cont;
     }
@@ -40,12 +44,12 @@ namespace SpeckleGSA.UI.Models
     {
       stateFns = new Dictionary<AppState, Func<bool>>()
       {
-        { AppState.NotLoggedIn,                () => !loggedIn && !IsOccupied && fileState != FileState.Loaded },
-        { AppState.NotLoggedInLinkedToGsa,     () => !loggedIn && !IsOccupied && fileState == FileState.Loaded },
+        { AppState.NotLoggedIn,                () => !loggedIn && !StreamFileIsOccupied && FileState != FileState.Loaded },
+        { AppState.NotLoggedInLinkedToGsa,     () => !loggedIn && !StreamFileIsOccupied && FileState == FileState.Loaded },
         { AppState.ActiveLoggingIn,            () => !loggedIn && Is(StreamState.Active, Direction.Receiving, StreamContent.Accounts) },
         { AppState.ActiveRetrievingStreamList, () => !loggedIn && Is(StreamState.Active, Direction.Receiving, StreamContent.StreamInfo) },
-        { AppState.LoggedInNotLinkedToGsa,     () => loggedIn && fileState != FileState.Loaded && !IsOccupied },
-        { AppState.OpeningFile,                () => fileState == FileState.Loading },
+        { AppState.LoggedInNotLinkedToGsa,     () => loggedIn && FileState != FileState.Loaded && !StreamFileIsOccupied },
+        { AppState.OpeningFile,                () => FileState == FileState.Loading },
         { AppState.ReceivingWaiting,           () => loggedIn && Is(FileState.Loaded, StreamState.Pending, Direction.Receiving, StreamContent.Objects) },
         { AppState.ActiveReceiving,            () => loggedIn && Is(FileState.Loaded, StreamState.Active, Direction.Receiving, StreamContent.Objects) },
         { AppState.SendingWaiting,             () => loggedIn && Is(FileState.Loaded, StreamState.Pending, Direction.Sending, StreamContent.Objects) },
@@ -58,7 +62,7 @@ namespace SpeckleGSA.UI.Models
 
     public void StartedLoggingIn()
     {
-      if (!loggedIn && !IsOccupied)
+      if (!loggedIn && !StreamFileIsOccupied)
       {
         //No need to change the state of the file, nor the loggedIn boolean as that serves as the "previous" logged-in state, useful if the logging in is cancelled
         Set(StreamState.Active, Direction.Receiving, StreamContent.Accounts);
@@ -97,7 +101,7 @@ namespace SpeckleGSA.UI.Models
 
     public void StartedUpdatingStreams()
     {
-      if (loggedIn && !IsOccupied)
+      if (loggedIn && !StreamFileIsOccupied)
       {
         //File state isn't relevant here
         Set(StreamState.Active, Direction.Receiving, StreamContent.StreamInfo);
@@ -115,49 +119,49 @@ namespace SpeckleGSA.UI.Models
 
     public void StartedSavingFile()
     {
-      if (fileState == FileState.Loaded && !IsOccupied)
+      if (FileState == FileState.Loaded && !StreamFileIsOccupied)
       {
         //logged in state isn't strictly relevant here
-        this.fileState = FileState.Saving;
+        this.FileState = FileState.Saving;
       }
     }
 
     public void StoppedSavingFile()
     {
-      if (fileState == FileState.Saving)
+      if (FileState == FileState.Saving)
       {
-        fileState = FileState.None;
+        FileState = FileState.None;
       }
     }
 
     public void StartedOpeningFile()
     {
-      if (!IsOccupied)
+      if (!FileIsOccupied)
       {
-        fileState = FileState.Loading;
+        FileState = FileState.Loading;
       }
     }
 
     public void OpenedFile()
     {
-      if (fileState == FileState.Loading)
+      if (FileState == FileState.Loading)
       {
-        fileState = FileState.Loaded;
+        FileState = FileState.Loaded;
         prevFileLoaded = true;
       }
     }
 
     public void CancelledOpeningFile()
     {
-      if (fileState == FileState.Loading)
+      if (FileState == FileState.Loading)
       {
-        fileState = prevFileLoaded ? FileState.Loaded : FileState.None;
+        FileState = prevFileLoaded ? FileState.Loaded : FileState.None;
       }
     }
 
     public void StartedRenamingStream()
     {
-      if (loggedIn && fileState == FileState.Loaded && !IsOccupied)
+      if (loggedIn && FileState == FileState.Loaded && !StreamFileIsOccupied)
       {
         Set(StreamState.Active, Direction.Sending, StreamContent.StreamInfo);
       }
@@ -173,7 +177,7 @@ namespace SpeckleGSA.UI.Models
 
     private void EnteredStreamingMode(Direction direction, StreamMethod streamMethod)
     {
-      if (loggedIn && fileState == FileState.Loaded && !IsOccupied)
+      if (loggedIn && FileState == FileState.Loaded && !StreamFileIsOccupied)
       {
         this.streamMethod = streamMethod;
         //StreamState won't be None as that is filtered out by the IsOccupied check
@@ -216,20 +220,21 @@ namespace SpeckleGSA.UI.Models
       Objects
     }
 
-    private enum StreamState
-    {
-      None,
-      Active,
-      Pending
-    }
-
-    private enum FileState
-    {
-      None,
-      Loading,
-      Saving,
-      Loaded
-    }
     #endregion
+  }
+
+  public enum StreamState
+  {
+    None,
+    Active,
+    Pending
+  }
+
+  public enum FileState
+  {
+    None,
+    Loading,
+    Saving,
+    Loaded
   }
 }

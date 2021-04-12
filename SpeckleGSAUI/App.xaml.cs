@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Data;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -9,7 +8,6 @@ using System.Windows;
 using SpeckleGSA;
 using System.IO;
 using System.Globalization;
-using SpeckleGSAProxy;
 using SpeckleGSAInterfaces;
 using System.Deployment.Application;
 using System.Reflection;
@@ -80,7 +78,9 @@ namespace SpeckleGSAUI
           index--;
         }
         else
+        {
           arguments.Add(arg, args[index + 1].Trim(new char[] { '"' }));
+        }
       }
 
       GSA.Init(getRunningVersion().ToString());
@@ -150,11 +150,13 @@ namespace SpeckleGSAUI
 
       // GSA File
       if (File.Exists(arguments["file"]))
+      {
         GSA.OpenFile(arguments["file"], EmailAddress, RestApi, false);
+      }
       else
       {
         GSA.NewFile(EmailAddress, RestApi, false);
-				GSA.GsaApp.gsaProxy.SaveAs(arguments["file"]);
+        GSA.GsaApp.gsaProxy.SaveAs(arguments["file"]);
       }
 
       // We will receive all the things!
@@ -178,14 +180,18 @@ namespace SpeckleGSAUI
 
       var streamIds = arguments["streamIDs"].Split(new char[] { ',' });
       foreach (string id in streamIds)
-        GSA.ReceiverInfo.Add(new Tuple<string, string>(id, null));
+      {
+        GSA.ReceiverInfo.Add(new SidSpeckleRecord(id, null));
+      }
       GSA.SetSpeckleClients(EmailAddress, RestApi);
 
       if (arguments.ContainsKey("layer"))
+      {
         if (arguments["layer"].ToLower() == "analysis")
         {
-					GSA.GsaApp.gsaSettings.TargetLayer = GSATargetLayer.Analysis;
+          GSA.GsaApp.gsaSettings.TargetLayer = GSATargetLayer.Analysis;
         }
+      }
       
       if (arguments.ContainsKey("nodeAllowance"))
       {
@@ -200,15 +206,15 @@ namespace SpeckleGSAUI
       var gsaReceiverCoordinator = new ReceiverCoordinator();
       Task.Run(() =>
       {
-        var nonBlankReceivers = GSA.ReceiverInfo.Where(r => !string.IsNullOrEmpty(r.Item1)).ToList();
+        var nonBlankReceivers = GSA.ReceiverInfo.Where(r => !string.IsNullOrEmpty(r.StreamId)).ToList();
 
         foreach (var streamInfo in nonBlankReceivers)
         {
-          GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "Creating receiver " + streamInfo.Item1);
-          gsaReceiverCoordinator.Receivers[streamInfo.Item1] = new StreamReceiver(RestApi, ApiToken, GSA.GsaApp.gsaMessenger);
+          GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "Creating receiver " + streamInfo.StreamId);
+          gsaReceiverCoordinator.StreamReceivers[streamInfo.StreamId] = new StreamReceiver(RestApi, ApiToken, GSA.GsaApp.gsaMessenger);
         }
       });
-      Task.Run(() => gsaReceiverCoordinator.Initialize()).Wait();
+      gsaReceiverCoordinator.Initialize(new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>());
       GSA.SetSpeckleClients(EmailAddress, RestApi);
       gsaReceiverCoordinator.Trigger(null, null);
       gsaReceiverCoordinator.Dispose();
@@ -260,22 +266,33 @@ namespace SpeckleGSAUI
         foreach (string r in results)
         {
           if (Result.NodalResultMap.ContainsKey(r))
-						GSA.GsaApp.Settings.NodalResults[r] = Result.NodalResultMap[r];
+          {
+            GSA.GsaApp.Settings.NodalResults[r] = Result.NodalResultMap[r];
+          }
           else if (Result.Element1DResultMap.ContainsKey(r))
-						GSA.GsaApp.Settings.Element1DResults[r] = Result.Element1DResultMap[r];
+          {
+            GSA.GsaApp.Settings.Element1DResults[r] = Result.Element1DResultMap[r];
+          }
           else if (Result.Element2DResultMap.ContainsKey(r))
-						GSA.GsaApp.Settings.Element2DResults[r] = Result.Element2DResultMap[r];
+          {
+            GSA.GsaApp.Settings.Element2DResults[r] = Result.Element2DResultMap[r];
+          }
           else if (Result.MiscResultMap.ContainsKey(r))
-						GSA.GsaApp.Settings.MiscResults[r] = Result.MiscResultMap[r];
+          {
+            GSA.GsaApp.Settings.MiscResults[r] = Result.MiscResultMap[r];
+          }
         }
       }
 
       if (arguments.ContainsKey("resultCases"))
-				GSA.GsaApp.gsaSettings.ResultCases = arguments["resultCases"].Split(new char[] { ',' }).ToList();
+      {
+        GSA.GsaApp.gsaSettings.ResultCases = arguments["resultCases"].Split(new char[] { ',' }).ToList();
+      }
       
       GSA.GetSpeckleClients(EmailAddress, RestApi);
       var gsaSenderCoordinator = new SenderCoordinator();
-      Task.Run(() => gsaSenderCoordinator.Initialize(RestApi, ApiToken, (restApi, apiToken) => new StreamSender(restApi, apiToken, GSA.GsaApp.gsaMessenger))).Wait();
+      gsaSenderCoordinator.Initialize(RestApi, ApiToken, (restApi, apiToken) 
+        => new StreamSender(restApi, apiToken, GSA.GsaApp.gsaMessenger), new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>());
       GSA.SetSpeckleClients(EmailAddress, RestApi);
       gsaSenderCoordinator.Trigger();
       gsaSenderCoordinator.Dispose();

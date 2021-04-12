@@ -99,7 +99,7 @@ namespace SpeckleGSAProxy.Test
     }
 
     [Test]
-    public void GenerateDesignCache()
+    public async Task GenerateDesignCacheAsync()
     {
       GSA.GsaApp = new GsaAppResources();
       GSA.GsaApp.gsaSettings.TargetLayer = GSATargetLayer.Design;
@@ -123,7 +123,7 @@ namespace SpeckleGSAProxy.Test
       {
 
         //This will load data from all streams into the cache
-        _ = senderCoordinator.Initialize("", "", (restApi, apiToken) => new TestSpeckleGSASender()).Result;
+        senderCoordinator.Initialize("", "", (restApi, apiToken) => new TestSpeckleGSASender(), new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>());
 
         senderCoordinator.Trigger();
 
@@ -146,7 +146,7 @@ namespace SpeckleGSAProxy.Test
     }
 
     [Test]
-    public void SendAnalysisThenDesign()
+    public async Task SendAnalysisThenDesignAsync()
     {
       GSA.GsaApp = new GsaAppResources();
 
@@ -173,7 +173,7 @@ namespace SpeckleGSAProxy.Test
         //RECEIVE EVENT #1: Analyis layer
         var sender = new SenderCoordinator();
         GSA.GsaApp.gsaSettings = new Settings() { TargetLayer = GSATargetLayer.Analysis, SeparateStreams = true };
-        _ = sender.Initialize("", "", (restApi, apiToken) => new TestSpeckleGSASender()).Result;
+        sender.Initialize("", "", (restApi, apiToken) => new TestSpeckleGSASender(), new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>());
         sender.Trigger();
 
         //Each kit stores their own objects to be sent
@@ -182,7 +182,7 @@ namespace SpeckleGSAProxy.Test
         //RECEIVE EVENT #2: Design layer
         sender = new SenderCoordinator();
         GSA.GsaApp.gsaSettings.TargetLayer = GSATargetLayer.Design;
-        _ = sender.Initialize("", "", (restApi, apiToken) => new TestSpeckleGSASender()).Result;
+        sender.Initialize("", "", (restApi, apiToken) => new TestSpeckleGSASender(), new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>());
         sender.Trigger();
 
         //Each kit stores their own objects to be sent

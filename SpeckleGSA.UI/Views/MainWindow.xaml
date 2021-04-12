@@ -375,7 +375,7 @@
 							<StackPanel Grid.Row="0" Orientation="Vertical" Margin="5">
 								<DockPanel LastChildFill="True">
 									<TextBlock DockPanel.Dock="Left" Text="Cases: " Margin="0 5 5 5" />
-									<TextBox Text="{Binding CasesDescription}"/>
+									<TextBox Text="{Binding CasesDescription, Mode=OneWayToSource}"/>
 								</DockPanel>
 								<CheckBox Content="Results in local axis" IsChecked="{Binding SendMeaningfulNodes}" Margin="0 5"/>
 								<DockPanel>

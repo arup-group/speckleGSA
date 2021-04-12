@@ -126,6 +126,7 @@
     <Compile Include="Models\StreamListItem.cs" />
     <Compile Include="Utilities\DelegateCommand.cs" />
     <Compile Include="Utilities\EnterKeyDownEventTrigger.cs" />
+    <Compile Include="Utilities\ProgressMessenger.cs" />
     <Compile Include="Utilities\TextBoxEnterKeyUpdateBehaviour.cs" />
     <Compile Include="ViewModels\Commands.cs" />
     <Compile Include="Utilities\EnumConverter.cs" />

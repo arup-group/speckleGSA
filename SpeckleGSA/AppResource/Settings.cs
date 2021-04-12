@@ -72,10 +72,10 @@ namespace SpeckleGSA
 			}
 		}
 
-		public Dictionary<string, Tuple<int, int, List<string>>> NodalResults { get; set; } = new Dictionary<string, Tuple<int, int, List<string>>>();
-		public Dictionary<string, Tuple<int, int, List<string>>> Element1DResults { get; set; } = new Dictionary<string, Tuple<int, int, List<string>>>();
-		public Dictionary<string, Tuple<int, int, List<string>>> Element2DResults { get; set; } = new Dictionary<string, Tuple<int, int, List<string>>>();
-		public Dictionary<string, Tuple<string, int, int, List<string>>> MiscResults { get; set; } = new Dictionary<string, Tuple<string, int, int, List<string>>>();
+		public Dictionary<string, IGSAResultParams> NodalResults { get; set; } = new Dictionary<string, IGSAResultParams>();
+		public Dictionary<string, IGSAResultParams> Element1DResults { get; set; } = new Dictionary<string, IGSAResultParams>();
+		public Dictionary<string, IGSAResultParams> Element2DResults { get; set; } = new Dictionary<string, IGSAResultParams>();
+		public Dictionary<string, IGSAResultParams> MiscResults { get; set; } = new Dictionary<string, IGSAResultParams>();
 
 		public List<string> ResultCases { get; set; } = new List<string>();
 		public bool ResultInLocalAxis { get; set; } = false;

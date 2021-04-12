@@ -380,7 +380,8 @@ namespace SpeckleGSAUI
             return;
           }
           gsaSenderCoordinator = new SenderCoordinator();
-          var statusMessages = await gsaSenderCoordinator.Initialize(RestApi, ApiToken, (restApi, apiToken) => new StreamSender(restApi, apiToken, GSA.GsaApp.gsaMessenger));
+          gsaSenderCoordinator.Initialize(RestApi, ApiToken, (restApi, apiToken) => new StreamSender(restApi, apiToken, GSA.GsaApp.gsaMessenger), 
+            new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>());
           GSA.SetSpeckleClients(EmailAddress, RestApi);
           
         }
@@ -495,7 +496,7 @@ namespace SpeckleGSAUI
       if (ReceiverTextbox.Text != "")
       {
         var streamId = ReceiverTextbox.Text.Trim();
-        GSA.ReceiverInfo.Add(new Tuple<string, string>(streamId, null));
+        GSA.ReceiverInfo.Add(new SidSpeckleRecord(streamId, null));
         if (!GSA.SetSpeckleClients(EmailAddress, RestApi))
         {
           GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, 
@@ -518,7 +519,7 @@ namespace SpeckleGSAUI
       foreach (string p in paste)
       {
         var streamId = p.Trim();
-        GSA.ReceiverInfo.Add(new Tuple<string, string>(streamId, null));
+        GSA.ReceiverInfo.Add(new SidSpeckleRecord(streamId, null));
       }
       if (!GSA.SetSpeckleClients(EmailAddress, RestApi))
       {
@@ -590,15 +591,15 @@ namespace SpeckleGSAUI
         {
           await Task.Run(() =>
            {
-             var nonBlankReceivers = GSA.ReceiverInfo.Where(r => !string.IsNullOrEmpty(r.Item1)).ToList();
+             var nonBlankReceivers = GSA.ReceiverInfo.Where(r => !string.IsNullOrEmpty(r.StreamId)).ToList();
 
              foreach (var streamInfo in nonBlankReceivers)
              {
-               GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "Creating receiver " + streamInfo.Item1);
-               gsaReceiverCoordinator.Receivers[streamInfo.Item1] = new StreamReceiver(RestApi, ApiToken, GSA.GsaApp.gsaMessenger);
+               GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "Creating receiver " + streamInfo.StreamId);
+               gsaReceiverCoordinator.StreamReceivers[streamInfo.StreamId] = new StreamReceiver(RestApi, ApiToken, GSA.GsaApp.gsaMessenger);
              }
            });
-          await gsaReceiverCoordinator.Initialize();
+          gsaReceiverCoordinator.Initialize(new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>());
         }
         catch (Exception ex)
         {
@@ -790,12 +791,20 @@ namespace SpeckleGSAUI
       ReceiverStreams.Items.Clear();
 
       if (GSA.SenderInfo != null)
-        foreach (KeyValuePair<string, SidSpeckleRecord> sender in GSA.SenderInfo)
+      {
+        foreach (var sender in GSA.SenderInfo)
+        {
           SenderStreams.Items.Add(new Tuple<string, string>(sender.Key, sender.Value.StreamId));
+        }
+      }
 
       if (GSA.ReceiverInfo != null)
-        foreach (Tuple<string, string> receiver in GSA.ReceiverInfo)
-          ReceiverStreams.Items.Add(receiver.Item1);
+      {
+        foreach (var receiver in GSA.ReceiverInfo)
+        {
+          ReceiverStreams.Items.Add(receiver.StreamId);
+        }
+      }
     }
 
     /// <summary>
@@ -884,36 +893,56 @@ namespace SpeckleGSAUI
     {
       var chk = sender as CheckBox;
       if (chk.IsChecked.Value)
-        GSA.GsaApp.gsaSettings.NodalResults[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
+      {
+        //This will make the old UI not work but necessary during construction of new UI
+        //GSA.GsaApp.gsaSettings.NodalResults[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
+      }
       else
+      {
         GSA.GsaApp.gsaSettings.NodalResults.Remove(chk.Content as string);
+      }
     }
 
     private void UpdateElement1DResult(Object sender, RoutedEventArgs e)
     {
       var chk = sender as CheckBox;
       if (chk.IsChecked.Value)
-        GSA.GsaApp.gsaSettings.Element1DResults[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
+      {
+        //This will make the old UI not work but necessary during construction of new UI
+        //GSA.GsaApp.gsaSettings.Element1DResults[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
+      }
       else
+      {
         GSA.GsaApp.gsaSettings.Element1DResults.Remove(chk.Content as string);
+      }
     }
 
     private void UpdateElement2DResult(Object sender, RoutedEventArgs e)
     {
       var chk = sender as CheckBox;
       if (chk.IsChecked.Value)
-        GSA.GsaApp.gsaSettings.Element2DResults[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
+      {
+        //This will make the old UI not work but necessary during construction of new UI
+        //GSA.GsaApp.gsaSettings.Element2DResults[chk.Content as string] = chk.Tag as Tuple<int, int, List<string>>;
+      }
       else
+      {
         GSA.GsaApp.gsaSettings.Element2DResults.Remove(chk.Content as string);
+      }
     }
 
     private void UpdateMiscResult(Object sender, RoutedEventArgs e)
     {
       var chk = sender as CheckBox;
       if (chk.IsChecked.Value)
-        GSA.GsaApp.gsaSettings.MiscResults[chk.Content as string] = chk.Tag as Tuple<string, int, int, List<string>>;
+      {
+        //This will make the old UI not work but necessary during construction of new UI
+        //GSA.GsaApp.gsaSettings.MiscResults[chk.Content as string] = chk.Tag as Tuple<string, int, int, List<string>>;
+      }
       else
+      {
         GSA.GsaApp.gsaSettings.MiscResults.Remove(chk.Content as string);
+      }
     }
 
     private void StreamList_CopyStreamID(object sender, RoutedEventArgs e)
@@ -1106,7 +1135,7 @@ namespace SpeckleGSAUI
 
       if (streamID.GetType() == typeof(string))
       {
-        GSA.ReceiverInfo.Remove(GSA.ReceiverInfo.First(x => x.Item1 == (string)streamID));
+        GSA.ReceiverInfo.Remove(GSA.ReceiverInfo.First(x => x.StreamId == (string)streamID));
         if (!GSA.SetSpeckleClients(EmailAddress, RestApi))
         {
           GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, "Error in communicating GSA - please check if the GSA file has been closed down");

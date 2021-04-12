@@ -11,5 +11,10 @@
       this.StreamName = streamName;
       this.ClientId = clientId;
     }
+    public SidSpeckleRecord(string streamId, string streamName)
+    {
+      this.StreamId = streamId;
+      this.StreamName = streamName;
+    }
   }
 }
