@@ -268,13 +268,14 @@ namespace SpeckleGSAProxy
     }
 
     //Tuple: keyword | index | Application ID | GWA command | Set or Set At
-    public List<ProxyGwaLine> GetGwaData(IEnumerable<string> keywords, bool nodeApplicationIdFilter)
+    public List<ProxyGwaLine> GetGwaData(IEnumerable<string> keywords, bool nodeApplicationIdFilter, IProgress<int> incrementProgress = null)
     {
       var dataLock = new object();
       var data = new List<ProxyGwaLine>();
       var setKeywords = new List<string>();
       var setAtKeywords = new List<string>();
       var tempKeywordIndexCache = new Dictionary<string, List<int>>();
+      int numKeywordsProcessed = 0;
 
       var versionRemovedKeywords = keywords.Select(kw => kw.Split('.').First()).Where(kw => !string.IsNullOrEmpty(kw)).ToList();
 
@@ -391,8 +392,12 @@ namespace SpeckleGSAProxy
               }
             }
           }
+        });
+
+        if (incrementProgress != null)
+        {
+          incrementProgress.Report(1);
         }
-        );
       }
 
       for (int i = 0; i < setAtKeywords.Count(); i++)
@@ -468,6 +473,10 @@ namespace SpeckleGSAProxy
               }
             }
           }
+        }
+        if (incrementProgress != null)
+        {
+          incrementProgress.Report(1);
         }
       }
 

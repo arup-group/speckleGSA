@@ -26,14 +26,12 @@ namespace SpeckleGSAProxy.Test
       ;
     }
 
-    public Task InitializeSender(string documentName, BasePropertyUnits units, double tolerance, double angleTolerance, string streamID = "",
-      string clientID = "", string streamName = "")
+    public void InitializeSender(string documentName, BasePropertyUnits units, double tolerance, double angleTolerance, string streamID = "",
+      string clientID = "", string streamName = "", IProgress<int> totalProgress = null, IProgress<int> incrementProgress = null)
     {
       this.streamId = streamID;
       this.clientId = clientID;
       this.streamName = streamName;
-
-      return Task.CompletedTask;
     }
 
     //objects by layer name
