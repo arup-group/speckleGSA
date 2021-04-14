@@ -24,10 +24,10 @@ namespace SpeckleGSA.UI.DataAccess
 
     private static List<SpeckleAccountForUI> rndAccountSource = new List<SpeckleAccountForUI>
     {
-      new SpeckleAccountForUI("Aaron Aardvark", "https://hongkong.speckle.arup.com", "aaron.aardvark@arup.com", "token1"),
-      new SpeckleAccountForUI("Brian Barrelolaughs", "https://canada.speckle.arup.com", "brian.Barrelolaughs@arup.com", "token2"),
-      new SpeckleAccountForUI("Charlie Chaplin", "https://ireland.speckle.arup.com", "charlie.chaplin@arup.com", "token3"),
-      new SpeckleAccountForUI("Dan de Man", "https://australia.speckle.arup.com", "dan.deman@arup.com", "token4")
+      new SpeckleAccountForUI("https://hongkong.speckle.arup.com", "aaron.aardvark@arup.com", "token1", "Aaron Aardvark"),
+      new SpeckleAccountForUI("https://canada.speckle.arup.com", "brian.Barrelolaughs@arup.com", "token2", "Brian Barrelolaughs"),
+      new SpeckleAccountForUI("https://ireland.speckle.arup.com", "charlie.chaplin@arup.com", "token3", "Charlie Chaplin"),
+      new SpeckleAccountForUI("https://australia.speckle.arup.com", "dan.deman@arup.com", "token4", "Dan de Man")
     };
 
     private static List<string> rndFilePaths = new List<string>

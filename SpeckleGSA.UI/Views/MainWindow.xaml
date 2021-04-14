@@ -9,7 +9,7 @@
 				xmlns:localUtilities="clr-namespace:SpeckleGSA.UI.Utilities"
 				DataContext="{StaticResource MainWindowViewModel}"
         mc:Ignorable="d" FontSize="13" WindowStartupLocation="CenterScreen"
-        Title="{Binding Title}" Height="720" Width="700" FontFamily="Arial" 
+        Title="{Binding Title}" Height="720" Width="700" FontFamily="Arial" IsEnabled="{Binding MainWindowEnabled, Mode=OneWay}"
 				  >
 	<Window.Resources>
 		<localUtilities:EnumConverter x:Key="EnumConverter" />
@@ -58,8 +58,8 @@
 					<Setter Property="FontSize" Value="10"/>
 				</Style>
 			</StackPanel.Resources>
-			<TextBlock Text="{Binding Summary}"/>
-			<TextBlock Text="{Binding ServerUrl}"/>
+			<TextBlock Text="{Binding Summary, Mode=OneWay}"/>
+			<TextBlock Text="{Binding ServerUrl, Mode=OneWay}"/>
 		</StackPanel>
 
 		<Button Grid.Column="3" Grid.Row="1" x:Name="ConnectToServer" Padding="5" Content="Connect To Server" Margin="5"

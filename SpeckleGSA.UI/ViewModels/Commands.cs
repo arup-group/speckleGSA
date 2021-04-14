@@ -37,7 +37,7 @@ namespace SpeckleGSA.UI.ViewModels
         var account = LocalContext.GetDefaultAccount();
         if (account != null)
         {
-          coordinator.Account = new SpeckleAccountForUI("", account.RestApi, account.Email, account.Token);
+          coordinator.Account = new SpeckleAccountForUI(account.RestApi, account.Email, account.Token);
         }
       }
       catch
@@ -45,12 +45,17 @@ namespace SpeckleGSA.UI.ViewModels
         loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Error, "No default account found - press the Login button to login/select an account"));
       }
 
+      return await CompleteLoginAsync(coordinator, loggingProgress);
+    }
+
+    public static async Task<bool> CompleteLoginAsync(CoordinatorForUI coordinator, IProgress<MessageEventArgs> loggingProgress)
+    {
       try
       {
         var accountName = await SpeckleInterface.SpeckleStreamManager.GetClientName(coordinator.Account.ServerUrl, coordinator.Account.Token);
         if (!string.IsNullOrEmpty(accountName))
         {
-          coordinator.Account.ClientName = accountName;
+          coordinator.Account.Update(accountName);
         }
       }
       catch
@@ -66,7 +71,7 @@ namespace SpeckleGSA.UI.ViewModels
         {
           coordinator.ServerStreamList.StreamListItems.Add(new StreamListItem(sd.StreamId, sd.Name));
         }
-        loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Logged in to default account at: " + coordinator.Account.ServerUrl));
+        loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Logged into account at: " + coordinator.Account.ServerUrl));
         return true;
       }
       else
@@ -113,11 +118,6 @@ namespace SpeckleGSA.UI.ViewModels
       {
         return false;
       }
-    }
-
-    public static SpeckleAccountForUI Login()
-    {
-      return DataAccess.DataAccess.GetAccount();
     }
 
     public static StreamList GetStreamList()

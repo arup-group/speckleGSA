@@ -9,9 +9,6 @@ using System.ComponentModel;
 using System.Windows;
 using SpeckleGSAInterfaces;
 using System.Reflection;
-using System.Windows.Input;
-using SpeckleInterface;
-using SpeckleCore;
 using System.Windows.Threading;
 using System.Timers;
 
@@ -29,6 +26,7 @@ namespace SpeckleGSA.UI.ViewModels
     public string Title { get => "SpeckleGSA - " + Coordinator.RunningVersion; }
 
     public SpeckleAccountForUI Account { get => Coordinator.Account; }
+
     public GSATargetLayer ReceiveLayer
     {
       get => Coordinator.ReceiverCoordinatorForUI.TargetLayer;
@@ -49,6 +47,8 @@ namespace SpeckleGSA.UI.ViewModels
     {
       get => Coordinator.FileStatus == GsaLoadedFileType.None ? "No file is currently open" : Coordinator.FileStatus == GsaLoadedFileType.NewFile ? "New file" : Coordinator.FilePath;
     }
+
+    public bool MainWindowEnabled { get; private set; } = true;
 
     #region command_properties
     public DelegateCommand<object> InitialLoadCommand { get; set; }
@@ -185,17 +185,37 @@ namespace SpeckleGSA.UI.ViewModels
         {
           Refresh(() => StateMachine.StartedLoggingIn());
 
-          Coordinator.Account = await Task.Run(() => Commands.Login());
+          var signInWindow = new SpecklePopup.SignInWindow(true);
 
-          Refresh(() => StateMachine.LoggedIn());
+          MainWindowEnabled = false;
 
-          Refresh(() => StateMachine.StartedUpdatingStreams());
+          signInWindow.ShowDialog();
 
-          Coordinator.ServerStreamList = await Task.Run(() => Commands.GetStreamList());
+          MainWindowEnabled = true;
 
-          Refresh(() => StateMachine.StoppedUpdatingStreams());
+          if (signInWindow.AccountListBox.SelectedIndex != -1)
+          {
+            var account = signInWindow.accounts[signInWindow.AccountListBox.SelectedIndex];
+            var newAccountForUI = new SpeckleAccountForUI(account.RestApi, account.Email, account.Token);
+
+            if (newAccountForUI != null && newAccountForUI.IsValid)
+            {
+              Coordinator.Account.Update(newAccountForUI.ServerUrl, newAccountForUI.EmailAddress, newAccountForUI.Token);
+
+              Refresh(() => StateMachine.LoggedIn());
+
+              Refresh(() => StateMachine.StartedUpdatingStreams());
+
+              await Commands.CompleteLoginAsync(Coordinator, loggingProgress);
+
+              Refresh(() => StateMachine.StoppedUpdatingStreams());
+
+              return;
+            }
+          }
+          GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, "Failed to log in");         
         },
-        (o) => !StateMachine.StreamFileIsOccupied);
+        (o) => !StateMachine.StreamIsOccupied);
 
       UpdateStreamListCommand = new DelegateCommand<object>(
         async (o) =>

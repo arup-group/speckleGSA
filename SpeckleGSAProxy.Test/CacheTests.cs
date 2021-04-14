@@ -99,7 +99,7 @@ namespace SpeckleGSAProxy.Test
     }
 
     [Test]
-    public async Task GenerateDesignCacheAsync()
+    public void GenerateDesignCache()
     {
       GSA.GsaApp = new GsaAppResources();
       GSA.GsaApp.gsaSettings.TargetLayer = GSATargetLayer.Design;
@@ -108,7 +108,7 @@ namespace SpeckleGSAProxy.Test
 
       //This runs SpeckleInitializer.Initialize() and fills WriteTypePrereqs and ReadTypePrereqs
       GSA.Init("");
-      
+
       //Status.MessageAdded += (s, e) => Debug.WriteLine("Message: " + e.Message);
       //Status.ErrorAdded += (s, e) => Debug.WriteLine("Error: " + e.Message);
       Status.StatusChanged += (s, e) => Debug.WriteLine("Status: " + e.Name);
@@ -135,7 +135,7 @@ namespace SpeckleGSAProxy.Test
         Helper.WriteFile(jsonToWrite, designLayerExpectedFile, TestDataDirectory);
       }
       catch (Exception ex)
-      { 
+      {
         failed = true;
       }
       finally
@@ -146,7 +146,7 @@ namespace SpeckleGSAProxy.Test
     }
 
     [Test]
-    public async Task SendAnalysisThenDesignAsync()
+    public void SendAnalysisThenDesign()
     {
       GSA.GsaApp = new GsaAppResources();
 
@@ -188,7 +188,8 @@ namespace SpeckleGSAProxy.Test
         //Each kit stores their own objects to be sent
         speckleObjects = GSA.GetSpeckleObjectsFromSenderDictionaries();
       }
-      catch {
+      catch
+      {
         failed = true;
       }
       finally

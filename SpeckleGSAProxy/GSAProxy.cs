@@ -275,7 +275,6 @@ namespace SpeckleGSAProxy
       var setKeywords = new List<string>();
       var setAtKeywords = new List<string>();
       var tempKeywordIndexCache = new Dictionary<string, List<int>>();
-      int numKeywordsProcessed = 0;
 
       var versionRemovedKeywords = keywords.Select(kw => kw.Split('.').First()).Where(kw => !string.IsNullOrEmpty(kw)).ToList();
 
