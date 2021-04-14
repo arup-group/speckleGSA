@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
+using System.Timers;
 using System.Threading.Tasks;
 using Microsoft.Win32;
 using SpeckleCore;
@@ -125,25 +125,24 @@ namespace SpeckleGSA.UI.ViewModels
       return DataAccess.DataAccess.GetStreamList();
     }
 
-    public static bool Receive(SpeckleAccountForUI account, List<StreamListItem> streamsToReceive, GSATargetLayer layer, IProgress<StreamListItem> streamCreationProgress,
+    public static bool Receive(CoordinatorForUI coordinator, ReceiverCoordinator gsaReceiverCoordinator, IProgress<StreamListItem> streamCreationProgress,
       IProgress<MessageEventArgs> loggingProgress, IProgress<string> statusProgress, IProgress<double> percentageProgress)
     {
-      GSA.GsaApp.gsaSettings.TargetLayer = layer;
+      GSA.GsaApp.gsaSettings.TargetLayer = coordinator.ReceiverCoordinatorForUI.TargetLayer;
 
-      var gsaReceiverCoordinator = new ReceiverCoordinator();
       var messenger = new ProgressMessenger(loggingProgress);
 
-      GSA.GetSpeckleClients(account.EmailAddress, account.ServerUrl);
-      if (!GSA.SetSpeckleClients(account.EmailAddress, account.ServerUrl))
+      GSA.GetSpeckleClients(coordinator.Account.EmailAddress, coordinator.Account.ServerUrl);
+      if (!GSA.SetSpeckleClients(coordinator.Account.EmailAddress, coordinator.Account.ServerUrl))
       {
         loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Error, "Error in communicating GSA - please check if the GSA file has been closed down"));
         return false;
       }
 
-      foreach (var str in streamsToReceive)
+      foreach (var str in coordinator.ReceiverCoordinatorForUI.StreamList.StreamListItems)
       {
         GSA.ReceiverInfo.Add(new SidSpeckleRecord(str.StreamId, null));
-        gsaReceiverCoordinator.StreamReceivers.Add(str.StreamId, new SpeckleInterface.StreamReceiver(account.ServerUrl, account.Token, messenger));
+        gsaReceiverCoordinator.StreamReceivers.Add(str.StreamId, new SpeckleInterface.StreamReceiver(coordinator.Account.ServerUrl, coordinator.Account.Token, messenger));
       }
 
       gsaReceiverCoordinator.Initialize(loggingProgress, statusProgress, percentageProgress);
@@ -155,29 +154,25 @@ namespace SpeckleGSA.UI.ViewModels
       return true;
     }
 
-    public static bool Send(SpeckleAccountForUI account, GSATargetLayer layer, StreamContentConfig streamContentConfig, List<ResultSettingItem> resultsToSend, string loadCaseString, 
-      IProgress<StreamListItem> streamCreationProgress, IProgress<MessageEventArgs> loggingProgress, IProgress<string> statusProgress, IProgress<double> percentageProgress)
+    public static bool SendInitial(CoordinatorForUI coordinator, SenderCoordinator gsaSenderCoordinator, IProgress<StreamListItem> streamCreationProgress, IProgress<MessageEventArgs> loggingProgress, IProgress<string> statusProgress, IProgress<double> percentageProgress)
     {
-      GSA.GsaApp.gsaSettings.TargetLayer = layer;
-      GSA.GsaApp.gsaSettings.SeparateStreams = (streamContentConfig == StreamContentConfig.ModelWithTabularResults || streamContentConfig == StreamContentConfig.TabularResultsOnly);
-      GSA.GsaApp.gsaSettings.SendResults = (streamContentConfig == StreamContentConfig.ModelWithEmbeddedResults || streamContentConfig == StreamContentConfig.ModelWithTabularResults 
-        || streamContentConfig == StreamContentConfig.TabularResultsOnly);
-      GSA.GsaApp.gsaSettings.SendOnlyResults = (streamContentConfig == StreamContentConfig.TabularResultsOnly);
-      
-      //Sender coordinator is in the SpeckleGSA library, NOT the SpeckleInterface.  The sender coordinator calls the SpeckleInterface methods
-      var gsaSenderCoordinator = new SenderCoordinator();  //Coordinates across multiple streams
-      
-      var messenger = new ProgressMessenger(loggingProgress);
+      GSA.GsaApp.gsaSettings.TargetLayer = coordinator.SenderCoordinatorForUI.TargetLayer;
+      GSA.GsaApp.gsaSettings.SeparateStreams = (coordinator.SenderCoordinatorForUI.StreamContentConfig == StreamContentConfig.ModelWithTabularResults 
+        || coordinator.SenderCoordinatorForUI.StreamContentConfig == StreamContentConfig.TabularResultsOnly);
+      GSA.GsaApp.gsaSettings.SendResults = (coordinator.SenderCoordinatorForUI.StreamContentConfig == StreamContentConfig.ModelWithEmbeddedResults 
+        || coordinator.SenderCoordinatorForUI.StreamContentConfig == StreamContentConfig.ModelWithTabularResults 
+        || coordinator.SenderCoordinatorForUI.StreamContentConfig == StreamContentConfig.TabularResultsOnly);
+      GSA.GsaApp.gsaSettings.SendOnlyResults = (coordinator.SenderCoordinatorForUI.StreamContentConfig == StreamContentConfig.TabularResultsOnly);
 
+      UpdateResultSettings(coordinator.SenderCoordinatorForUI.ResultSettings.ResultSettingItems.Where(rsi => rsi.Selected).ToList(), coordinator.SenderCoordinatorForUI.LoadCaseList);
+
+      var messenger = new ProgressMessenger(loggingProgress);
 
       Func<string, string, SpeckleInterface.IStreamSender> streamSenderCreationFn = (restApi, apiToken) => new SpeckleInterface.StreamSender(restApi, apiToken, messenger);
 
-      gsaSenderCoordinator.Initialize(account.ServerUrl, account.Token, streamSenderCreationFn, loggingProgress, statusProgress, percentageProgress);
-
-      //This needs the cache to be populated, which the above line of code does
-      UpdateResultSettings(resultsToSend, loadCaseString);
-
-      GSA.SetSpeckleClients(account.EmailAddress, account.ServerUrl);
+      gsaSenderCoordinator.Initialize(coordinator.Account.ServerUrl, coordinator.Account.Token, streamSenderCreationFn, loggingProgress, statusProgress, percentageProgress);
+      
+      GSA.SetSpeckleClients(coordinator.Account.EmailAddress, coordinator.Account.ServerUrl);
 
       gsaSenderCoordinator.Trigger();
 
@@ -186,20 +181,25 @@ namespace SpeckleGSA.UI.ViewModels
         streamCreationProgress.Report(new StreamListItem(sender.Value.StreamId, sender.Key));
       }
 
-      gsaSenderCoordinator.Dispose();
+      return true;
+    }
+
+    public static bool SendTriggered(SenderCoordinator gsaSenderCoordinator)
+    {
+      gsaSenderCoordinator.Trigger();
 
       return true;
     }
 
     public static bool SaveFile()
     {
-      Thread.Sleep(1000);
+      System.Threading.Thread.Sleep(1000);
       return true;
     }
 
     public static bool RenameStream(string streamId, string newStreamName, IProgress<MessageEventArgs> loggingProgress)
     {
-      Thread.Sleep(1000);
+      System.Threading.Thread.Sleep(1000);
       loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Changed name of the stream to " + newStreamName));
       return true;
     }
@@ -210,6 +210,21 @@ namespace SpeckleGSA.UI.ViewModels
       {
         return false;
       }
+
+      //Prepare the cache for the ability to parse the load case string
+      var initialData = GSA.GsaApp.gsaProxy.GetGwaData(GSA.GsaApp.gsaCache.KeywordsForLoadCaseExpansion, false);
+      for (int i = 0; i < initialData.Count(); i++)
+      {
+        var applicationId = (string.IsNullOrEmpty(initialData[i].ApplicationId)) ? null : initialData[i].ApplicationId;
+        GSA.GsaApp.gsaCache.Upsert(
+          initialData[i].Keyword,
+          initialData[i].Index,
+          initialData[i].GwaWithoutSet,
+          streamId: initialData[i].StreamId,
+          applicationId: applicationId,
+          gwaSetCommandType: initialData[i].GwaSetType);
+      }
+
       var resultCases = GSA.GsaApp.gsaCache.ExpandLoadCasesAndCombinations(loadCaseString);
       if (resultCases == null || resultCases.Count() == 0)
       {

@@ -48,8 +48,10 @@ namespace SpeckleGSAProxy
     private readonly Dictionary<string, int> streamIndexByApplicationId = new Dictionary<string, int>();
 
     //Hardcoded for now to use current 10.1 keywords - to be reviewed
-    private readonly string analKey = "ANAL";
-    private readonly string comboKey = "COMBINATION";
+    private static readonly string analKey = "ANAL";
+    private static readonly string comboKey = "COMBINATION";
+
+    public List<string> KeywordsForLoadCaseExpansion { get => new List<string> { analKey, comboKey }; }
 
     public Dictionary<int, object> GetIndicesSpeckleObjects(string speckleTypeName)
     {

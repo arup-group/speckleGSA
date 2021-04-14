@@ -20,6 +20,7 @@ namespace SpeckleGSA.UI.Models
     ExistingFile
   }
 
+  /*
   public enum AppState
   {
     NotLoggedIn = 0,
@@ -35,6 +36,30 @@ namespace SpeckleGSA.UI.Models
     SavingFile,
     Ready,   // when not continuously sending or receiving: between send/receive events, this is the regular state of being
     ActiveRenamingStream
+  }
+  */
+
+  //This is independent of logged-in state although tied to it (i.e. you can't be active at the same time
+  //It isn't fully normalised because it's intended to have the entire stream state in one enum value for display purposes
+  public enum StreamState
+  {
+    NotLoggedIn = 0,
+    ActiveLoggingIn,
+    ActiveRenamingStream,
+    ActiveRetrievingStreamList,
+    Ready,
+    ReceivingWaiting,     //time between active reception in continuous mode
+    ActiveReceiving,
+    SendingWaiting,
+    ActiveSending
+  }
+
+  public enum FileState
+  {
+    None,
+    Loading,
+    Saving,
+    Loaded
   }
 
   public enum StreamContentConfig

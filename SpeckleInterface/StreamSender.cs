@@ -442,10 +442,12 @@ namespace SpeckleInterface
       for (var j = 0; j < payloads.Count(); j++)
       {
         ResponseObject res = null;
+        //Make a copy so that the task below doesn't use the j variable, which could change (by looping) by the time the task is run
+        var payload = payloads[j].ToList();   
 
         try
         {
-          res = apiClient.ObjectCreateAsync(payloads[j], apiTimeoutOverride).Result;
+          res = apiClient.ObjectCreateAsync(payload, apiTimeoutOverride).Result;
           if (incrementProgress != null)
           {
             incrementProgress.Report(1);
@@ -456,21 +458,22 @@ namespace SpeckleInterface
           numErrors++;
           var speckleExceptionContext = ExtractSpeckleExceptionContext(ex);
           var errContext = speckleExceptionContext.Concat(new[] { "StreamId=" + StreamId,
-                "Error in updating the server with a payload of " + payloads[j].Count() + " objects" });
+                "Error in updating the server with a payload of " + payload.Count() + " objects" });
           messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, ex, errContext.ToArray());
         }
 
         if (res != null && res.Resources.Count() > 0)
         {
-          for (int i = 0; i < payloads[j].Count(); i++)
+          for (int i = 0; i < payload.Count(); i++)
           {
-            payloads[j][i]._id = res.Resources[i]._id;
+            payload[i]._id = res.Resources[i]._id;
           }
         }
 
+
         Task.Run(() =>
         {
-          foreach (SpeckleObject obj in payloads[j].Where(o => o.Hash != null && o._id != null))
+          foreach (SpeckleObject obj in payload.Where(o => o.Hash != null && o._id != null))
           {
             tryCatchWithEvents(() => LocalContext.AddSentObject(obj, baseUrl), "", "Error in updating local db");
           }

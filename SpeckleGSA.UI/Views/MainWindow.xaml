@@ -166,7 +166,7 @@
 						</Grid.RowDefinitions>
 						<!-- play button | option labels | radio option col 1 | radio option col 2 -->
 						<Button Grid.Column="0" Grid.Row="0" Grid.RowSpan="2" Content="{Binding SendButtonText}" VerticalAlignment="Center" Padding="5"
-										Command="{Binding SendCommand}"/>
+										Command="{Binding SendStopCommand}"/>
 						<TextBlock Grid.Row="0" Grid.Column="1" Text="Layer to stream:" HorizontalAlignment="Right" Padding="5"/>
 						<RadioButton Grid.Row="0" Grid.Column="2" GroupName="SendLayer" Content="Design" Padding="5" VerticalContentAlignment="Center"
 												 IsChecked="{Binding Path=SendLayer, Converter={StaticResource EnumConverter}, ConverterParameter=Design}"/>
@@ -259,7 +259,7 @@
 						</Grid.RowDefinitions>
 						<!-- play button | option labels | radio option col 1 | radio option col 2 -->
 						<Button Grid.Column="0" Grid.Row="0" Grid.RowSpan="2" Content="{Binding ReceiveButtonText}" VerticalAlignment="Center" Padding="5"
-										Command="{Binding ReceiveCommand}"/>
+										Command="{Binding ReceiveStopCommand}"/>
 						<TextBlock Grid.Row="0" Grid.Column="1" Text="Layer to stream:" HorizontalAlignment="Right" Padding="5"/>
 						<RadioButton Grid.Row="0" Grid.Column="2" GroupName="ReceiveLayer" Content="Design" Padding="5" VerticalContentAlignment="Center"
 												 IsChecked="{Binding Path=ReceiveLayer, Converter={StaticResource EnumConverter}, ConverterParameter=Design}"  />

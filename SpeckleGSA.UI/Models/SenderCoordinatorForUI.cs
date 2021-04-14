@@ -3,7 +3,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Timers;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Threading;
 
 namespace SpeckleGSA.UI.Models
 {
@@ -21,5 +24,6 @@ namespace SpeckleGSA.UI.Models
     public int AdditionalPositionsFor1dElements { get; set; }
 
     public ResultSettings ResultSettings { get; set; } = new ResultSettings();
+
   }
 }

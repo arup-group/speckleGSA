@@ -12,6 +12,8 @@ using System.Reflection;
 using System.Windows.Input;
 using SpeckleInterface;
 using SpeckleCore;
+using System.Windows.Threading;
+using System.Timers;
 
 namespace SpeckleGSA.UI.ViewModels
 {
@@ -29,17 +31,17 @@ namespace SpeckleGSA.UI.ViewModels
     public SpeckleAccountForUI Account { get => Coordinator.Account; }
     public GSATargetLayer ReceiveLayer
     {
-      get => Coordinator.ReceiverCoordinatorForUI.TargetLayer; 
+      get => Coordinator.ReceiverCoordinatorForUI.TargetLayer;
       set
       {
         Refresh(() => Coordinator.ReceiverCoordinatorForUI.TargetLayer = value);
       }
     }
-    public GSATargetLayer SendLayer { get => Coordinator.SenderCoordinatorForUI.TargetLayer; 
-      set 
+    public GSATargetLayer SendLayer { get => Coordinator.SenderCoordinatorForUI.TargetLayer;
+      set
       {
         Refresh(() => Coordinator.SenderCoordinatorForUI.TargetLayer = value);
-      } 
+      }
     }
     public StreamMethod ReceiveStreamMethod { get => Coordinator.ReceiverCoordinatorForUI.StreamMethod; set => Refresh(() => Coordinator.ReceiverCoordinatorForUI.StreamMethod = value); }
     public StreamMethod SendStreamMethod { get => Coordinator.SenderCoordinatorForUI.StreamMethod; set => Refresh(() => Coordinator.SenderCoordinatorForUI.StreamMethod = value); }
@@ -56,15 +58,16 @@ namespace SpeckleGSA.UI.ViewModels
     public DelegateCommand<object> NewFileCommand { get; private set; }
     public DelegateCommand<object> OpenFileCommand { get; private set; }
     public DelegateCommand<object> SaveAndCloseCommand { get; private set; }
-    public DelegateCommand<object> ReceiveCommand { get; private set; }
-    public DelegateCommand<object> SendCommand { get; private set; }
+    public DelegateCommand<object> ReceiveStopCommand { get; private set; }
+    public DelegateCommand<object> SendStopCommand { get; private set; }
+    public DelegateCommand<object> ContinuousSendCommand { get; private set; }  //Used by the timer only
     public DelegateCommand<object> PasteClipboardCommand { get; private set; }
     public DelegateCommand<object> ClearReceiveStreamListCommand { get; private set; }
     public DelegateCommand<object> AddCandidateStreamIdCommand { get; private set; }
     public DelegateCommand<object> RenameStreamCommand { get; private set; }
 
-    public string ReceiveButtonText { get => (ReceiveStreamMethod == StreamMethod.Continuous && StateMachine.State == AppState.ReceivingWaiting) ? "Stop" : "Receive"; }
-    public string SendButtonText { get => (SendStreamMethod == StreamMethod.Continuous && StateMachine.State == AppState.SendingWaiting) ? "Stop" : "Send"; }
+    public string ReceiveButtonText { get => (ReceiveStreamMethod == StreamMethod.Continuous && StateMachine.StreamState == StreamState.ReceivingWaiting) ? "Stop" : "Receive"; }
+    public string SendButtonText { get => (SendStreamMethod == StreamMethod.Continuous && StateMachine.StreamState == StreamState.SendingWaiting) ? "Stop" : "Send"; }
     #endregion
 
     #region logging_and_state_members
@@ -72,7 +75,7 @@ namespace SpeckleGSA.UI.ViewModels
     {
       get => new ObservableCollection<string>(Coordinator.DisplayLog.DisplayLogItems.Select(i => string.Join(" - ", i.TimeStamp.ToString("dd/MM/yyyy HH:mm:ss"), i.Description)));
     }
-    public string StateSummary { get => (string.IsNullOrEmpty(stateSummaryOverride)) ? appDateDict[StateMachine.State] : stateSummaryOverride; }
+    public string StateSummary { get => (string.IsNullOrEmpty(stateSummaryOverride)) ? string.Join(" | ", fileStateDict[StateMachine.FileState], streamStateDict[StateMachine.StreamState]) : stateSummaryOverride; }
     public double ProcessingProgress { get; set; }
 
     private string stateSummaryOverride = "";  //To allow temporary finer information within a state to override the usual state summary
@@ -102,11 +105,11 @@ namespace SpeckleGSA.UI.ViewModels
       get => new ObservableCollection<ResultSettingItem>(Coordinator.SenderCoordinatorForUI.ResultSettings.ResultSettingItems.OrderByDescending(i => i.DefaultSelected));
     }
 
-    public StreamContentConfig StreamContentConfig { get => Coordinator.SenderCoordinatorForUI.StreamContentConfig; 
+    public StreamContentConfig StreamContentConfig { get => Coordinator.SenderCoordinatorForUI.StreamContentConfig;
       set => Refresh(() => Coordinator.SenderCoordinatorForUI.StreamContentConfig = value); }
 
     public bool SendMeaningfulNodes { get; set; } = true;
-    public double PollingRate { get; set; } = (double)2000;
+
     public double CoincidentNodeAllowance { get => Coordinator.ReceiverCoordinatorForUI.CoincidentNodeAllowance; set { Coordinator.ReceiverCoordinatorForUI.CoincidentNodeAllowance = value; } }
     public List<GsaUnit> CoincidentNodeAllowanceUnitOptions { get => new List<GsaUnit> { GsaUnit.Millimetres, GsaUnit.Metres, GsaUnit.Inches }; }
     public GsaUnit CoincidentNodeAllowanceUnit { get => Coordinator.ReceiverCoordinatorForUI.CoincidentNodeUnits; set { Coordinator.ReceiverCoordinatorForUI.CoincidentNodeUnits = value; } }
@@ -119,30 +122,23 @@ namespace SpeckleGSA.UI.ViewModels
     #endregion
 
 
-    private readonly Dictionary<AppState, string> appDateDict = new Dictionary<AppState, string> {
-      { AppState.NotLoggedIn, "Not logged in and no link to active GSA file"},
-      { AppState.NotLoggedInLinkedToGsa, "Not logged in but linked to active GSA file"},
-      { AppState.ActiveLoggingIn, "Logging in"},
-      { AppState.ActiveRetrievingStreamList, "Retrieving streams" },
-      { AppState.LoggedInNotLinkedToGsa, "Logged in but not linked to active GSA file"},
-      { AppState.ReceivingWaiting, "Waiting for next receive event"},
-      { AppState.ActiveReceiving, "Receiving"},
-      { AppState.SendingWaiting, "Waiting for next send event"},
-      { AppState.ActiveSending, "Sending"},
-      { AppState.OpeningFile, "Opening file" },
-      { AppState.SavingFile, "Saving file" },
-      { AppState.ActiveRenamingStream, "Renaming stream" },
-      { AppState.Ready, "Ready" } };
+    private readonly Dictionary<StreamState, string> streamStateDict = new Dictionary<StreamState, string> {
+      { StreamState.NotLoggedIn, "Not logged in"},
+      { StreamState.ActiveLoggingIn, "Logging in"},
+      { StreamState.ActiveRetrievingStreamList, "Retrieving streams" },
+      { StreamState.ReceivingWaiting, "Waiting for next receive event"},
+      { StreamState.ActiveReceiving, "Receiving"},
+      { StreamState.SendingWaiting, "Waiting for next send event"},
+      { StreamState.ActiveSending, "Sending"},
+      { StreamState.ActiveRenamingStream, "Renaming stream" },
+      { StreamState.Ready, "Ready to stream" } };
 
-    private readonly Dictionary<int, MainTab> TabData = new Dictionary<int, MainTab>
-    { 
-      { 0, MainTab.Server },
-      { 1, MainTab.GSA },
-      { 2, MainTab.Sender },
-      { 3, MainTab.Receiver },
-      { 4, MainTab.Settings }
-    };
-    
+    private readonly Dictionary<FileState, string> fileStateDict = new Dictionary<FileState, string> {
+      { FileState.None, "No file loaded"},
+      { FileState.Loading, "Loading file"},
+      { FileState.Loaded, "File loaded" },
+      { FileState.Saving, "Saving file"} };
+
     public int SelectedTabIndex { get; set; }
 
     private readonly Progress<double> percentageProgress = new Progress<double>();
@@ -151,7 +147,10 @@ namespace SpeckleGSA.UI.ViewModels
     private readonly Progress<string> statusProgress = new Progress<string>();
     private List<DelegateCommandBase> cmds; //Filled in using Reflection and used in bulk updating of CanExecute bindings
 
-    public bool IsSendStreamListEnabled => StateMachine.State != AppState.ActiveRenamingStream;
+    #region continuous_streaming_members
+    private Timer TriggerTimer { get; set; } = new Timer();
+    //private SenderCoordinator continuousSenderCoordinator;
+    #endregion
 
     public MainWindowViewModel()
     {
@@ -207,7 +206,7 @@ namespace SpeckleGSA.UI.ViewModels
 
           Refresh(() => StateMachine.StoppedUpdatingStreams());
         },
-        (o) => !StateMachine.StreamFileIsOccupied && StateMachine.State != AppState.NotLoggedIn);
+        (o) => !StateMachine.StreamIsOccupied );
 
       ReceiveSelectedStreamCommand = new DelegateCommand<object>(
         async (o) =>
@@ -217,14 +216,16 @@ namespace SpeckleGSA.UI.ViewModels
           Coordinator.ReceiverCoordinatorForUI.StreamList.StreamListItems.Clear();
           Coordinator.ReceiverCoordinatorForUI.StreamList.StreamListItems.Add(SelectedStreamItem);
 
+          //Sender coordinator is in the SpeckleGSA library, NOT the SpeckleInterface.  The sender coordinator calls the SpeckleInterface methods
+          var gsaReceiverCoordinator = new ReceiverCoordinator();  //Coordinates across multiple streams
+
           Refresh(() => StateMachine.EnteredReceivingMode(ReceiveStreamMethod));
 
-          var result = await Task.Run(() => Commands.Receive(Coordinator.Account, Coordinator.ReceiverCoordinatorForUI.StreamList.StreamListItems, 
-            Coordinator.ReceiverCoordinatorForUI.TargetLayer, streamCreationProgress, loggingProgress, statusProgress, percentageProgress));
+          var result = await Task.Run(() => Commands.Receive(Coordinator, gsaReceiverCoordinator, streamCreationProgress, loggingProgress, statusProgress, percentageProgress));
 
           Refresh(() => StateMachine.StoppedReceiving());
         },
-        (o) => StateMachine.State == AppState.Ready && (SelectedStreamItem != null));
+        (o) => StateMachine.FileState == FileState.Loaded && StateMachine.StreamState == StreamState.Ready && (SelectedStreamItem != null));
 
       NewFileCommand = new DelegateCommand<object>(
         async (o) =>
@@ -255,22 +256,24 @@ namespace SpeckleGSA.UI.ViewModels
         },
         (o) => !StateMachine.StreamFileIsOccupied && !StateMachine.FileIsOccupied);
 
-      ReceiveCommand = new DelegateCommand<object>(
+      ReceiveStopCommand = new DelegateCommand<object>(
         async (o) =>
         {
-          if (StateMachine.State == AppState.ReceivingWaiting)
+          if (StateMachine.StreamState == StreamState.ReceivingWaiting)
           {
             Refresh(() => StateMachine.StoppedReceiving());
           }
           else
           {
+            //Sender coordinator is in the SpeckleGSA library, NOT the SpeckleInterface.  The sender coordinator calls the SpeckleInterface methods
+            var gsaReceiverCoordinator = new ReceiverCoordinator();  //Coordinates across multiple streams
+
             Refresh(() => StateMachine.EnteredReceivingMode(ReceiveStreamMethod));
-            var result = await Task.Run(() => Commands.Receive(Coordinator.Account, Coordinator.ServerStreamList.StreamListItems, Coordinator.ReceiverCoordinatorForUI.TargetLayer, 
-              streamCreationProgress, loggingProgress, statusProgress, percentageProgress));
+            var result = await Task.Run(() => Commands.Receive(Coordinator, gsaReceiverCoordinator, streamCreationProgress, loggingProgress, statusProgress, percentageProgress));
             Refresh(() => StateMachine.StoppedReceiving());
           }
         },
-        (o) => StateMachine.State == AppState.ReceivingWaiting || (ReceiverStreamListItems.Count() > 0 && StateMachine.State == AppState.Ready));
+        (o) => StateMachine.StreamState == StreamState.ReceivingWaiting || (StateMachine.StreamState == StreamState.Ready && ReceiverStreamListItems.Count() > 0));
 
       PasteClipboardCommand = new DelegateCommand<object>(
         (o) =>
@@ -282,7 +285,7 @@ namespace SpeckleGSA.UI.ViewModels
           }
           Refresh();
         },
-        (o) => !StateMachine.StreamFileIsOccupied && StateMachine.State == AppState.Ready);
+        (o) => true);
 
       ClearReceiveStreamListCommand = new DelegateCommand<object>(
         (o) =>
@@ -302,25 +305,50 @@ namespace SpeckleGSA.UI.ViewModels
           }
           Refresh();
         },
-        (o) => !StateMachine.StreamFileIsOccupied && StateMachine.State == AppState.Ready);
+        (o) => !StateMachine.StreamFileIsOccupied);
 
-      SendCommand = new DelegateCommand<object>(
+      SendStopCommand = new DelegateCommand<object>(
         async (o) =>
         {
-          if (StateMachine.State == AppState.SendingWaiting)
+          if (StateMachine.StreamState == StreamState.SendingWaiting)
           {
             Refresh(() => StateMachine.StoppedSending());
           }
           else
           {
+            //Sender coordinator is in the SpeckleGSA library, NOT the SpeckleInterface.  The sender coordinator calls the SpeckleInterface methods
+            var gsaSenderCoordinator = new SenderCoordinator();  //Coordinates across multiple streams
+
             Refresh(() => StateMachine.EnteredSendingMode(SendStreamMethod));
-            var result = await Task.Run(() => Commands.Send(Coordinator.Account, Coordinator.SenderCoordinatorForUI.TargetLayer, Coordinator.SenderCoordinatorForUI.StreamContentConfig, 
-              Coordinator.SenderCoordinatorForUI.ResultSettings.ResultSettingItems.Where(rsi => rsi.Selected).ToList(), Coordinator.SenderCoordinatorForUI.LoadCaseList,
-              streamCreationProgress, loggingProgress, statusProgress, percentageProgress));
+            var result = await Task.Run(() => Commands.SendInitial(Coordinator, gsaSenderCoordinator, streamCreationProgress, loggingProgress, statusProgress, percentageProgress));
             Refresh(() => StateMachine.StoppedSending());
+
+            if (SendStreamMethod == StreamMethod.Continuous)
+            {
+              TriggerTimer = new Timer(Coordinator.SenderCoordinatorForUI.PollingRateMilliseconds);
+              TriggerTimer.Elapsed += (sender, e) => Application.Current.Dispatcher.BeginInvoke(
+                DispatcherPriority.Background, new Action(() => ContinuousSendCommand.Execute(gsaSenderCoordinator)));
+              TriggerTimer.AutoReset = false;
+              TriggerTimer.Start();
+            }
+            else
+            {
+              gsaSenderCoordinator.Dispose();
+            }
           }
         },
-        (o) => StateMachine.State == AppState.SendingWaiting || StateMachine.State == AppState.Ready);
+        (o) => StateMachine.StreamState == StreamState.SendingWaiting || StateMachine.StreamState == StreamState.Ready);
+
+      ContinuousSendCommand = new DelegateCommand<object>(
+        async (o) =>
+        {
+          var gsaSenderCoordinator = (SenderCoordinator)o;
+          Refresh(() => StateMachine.StartedTriggeredSending());
+          var result = await Task.Run(() => Commands.SendTriggered(gsaSenderCoordinator));
+          Refresh(() => StateMachine.StoppedTriggeredSending());
+
+          TriggerTimer.Start();
+        }, (o) => true);
 
       SaveAndCloseCommand = new DelegateCommand<object>(
         async (o) =>
@@ -340,7 +368,7 @@ namespace SpeckleGSA.UI.ViewModels
           SelectedStreamItem.StreamName = newStreamName;
           Refresh(() => StateMachine.StoppedRenamingStream());
         },
-        (o) => !StateMachine.StreamFileIsOccupied && !StateMachine.StreamIsOccupied);  //There is no visual button linked to this command so the CanExecute condition can be less strict 
+        (o) => !StateMachine.StreamIsOccupied);  //There is no visual button linked to this command so the CanExecute condition can be less strict 
 
       cmds = new List<DelegateCommandBase>();
       Type myType = this.GetType();

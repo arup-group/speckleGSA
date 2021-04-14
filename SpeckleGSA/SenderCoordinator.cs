@@ -104,13 +104,27 @@ namespace SpeckleGSA
     {
       if ((IsBusy) || (!IsInit)) return;
 
-      var startTime = DateTime.Now;
-
       IsBusy = true;
 			GSA.GsaApp.gsaSettings.Units = GSA.GsaApp.gsaProxy.GetUnits();
 
+      lock (traversedSerialisedLock)
+      {
+        traversedSerialisedTypes.Clear();
+      }
+
       //Clear previously-sent objects
       GSA.ClearSenderDictionaries();
+
+      var startTime = DateTime.Now;
+      statusProgress.Report("Reading GSA data into cache");
+
+      //Update cache
+      var updatedCache = UpdateCache();
+      if (!updatedCache)
+      {
+        this.loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Error, "Error in communicating GSA - please check if the GSA file has been closed down"));
+        return;
+      }
 
       var changeDetected = ProcessTxObjects();
 

@@ -1,5 +1,4 @@
-﻿using SpeckleGSA.UI.Models;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -8,55 +7,75 @@ namespace SpeckleGSA.UI.Models
   public class StateMachine
   {
     //Overall state - the main output of this class
-    public AppState State { get => stateFns.Keys.FirstOrDefault(k => stateFns[k]()); }
-    public bool StreamFileIsOccupied { get => ((StreamState == StreamState.Active || StreamState == StreamState.Pending) && (streamContent == StreamContent.Objects)); }
-    public bool StreamIsOccupied { get => ((StreamState == StreamState.Active || StreamState == StreamState.Pending) 
-        && (streamContent == StreamContent.Accounts || streamContent == StreamContent.StreamInfo)); }
+    //public AppState State { get => stateFns.Keys.FirstOrDefault(k => stateFns[k]()); }
+    public bool StreamFileIsOccupied { get => StreamIsOccupied && (commContent == ServerCommContent.Objects); }
+    public bool StreamIsOccupied { get => (commState == ServerCommState.Active || commState == ServerCommState.Pending); }
     public bool FileIsOccupied { get => (FileState == FileState.Loading || FileState == FileState.Saving); }
+    //The state is effectively three parallel tracks - based on the concept that these states can both be in an "active" state at the same time
+    //- e.g. you can be loading a file while doing account-related activies, or renaming a stream while saving the file
+    //Note: this currently does tie account operations (log in, get stream list) and stream reception/transmission operations together into a mutually-exclusive arrangement.  This could be broken up
+    //and separated at a later point
     public FileState FileState { get; set; } = FileState.None;
-    public StreamState StreamState { get; set; } = StreamState.None;
+    //public ServerCommState StreamState { get; set; } = ServerCommState.None;
+    public StreamState StreamState { get => streamStateFns.Keys.FirstOrDefault(k => streamStateFns[k]()); }
+    public bool LoggedInState { get => loggedIn; }
 
     #region private_state_variables
     //Don't need previous state as the information embodied in such a variable is stored in the variables below
     private bool loggedIn = false;
     private bool prevFileLoaded = false;
-    
+
     private StreamMethod streamMethod = StreamMethod.None;
-    private Direction streamDirection = Direction.None;
-    private StreamContent streamContent = StreamContent.None;
+    private ServerCommDirection direction = ServerCommDirection.None;
+    private ServerCommContent commContent = ServerCommContent.None;
+    private ServerCommState commState = ServerCommState.None;
     #endregion
 
     #region private_condition_fns
 
-    private bool Is(StreamState ss, Direction dir, StreamContent cont) => (StreamState == ss && streamDirection == dir && streamContent == cont);
-    private bool Is(FileState fs, StreamState ss, Direction dir, StreamContent cont) => (FileState == fs && StreamState == ss && streamDirection == dir && streamContent == cont);
-    private void Set(StreamState ss, Direction dir, StreamContent cont)
+    private bool Is(ServerCommState scs, ServerCommDirection dir, ServerCommContent cont) => (commState == scs && direction == dir && commContent == cont);
+    private bool Is(FileState fs, ServerCommState scs, ServerCommDirection dir, ServerCommContent cont) => (FileState == fs && commState == scs && direction == dir && commContent == cont);
+    private void Set(ServerCommState scs, ServerCommDirection dir, ServerCommContent cont)
     {
-      StreamState = ss;
-      streamDirection = dir;
-      streamContent = cont;
+      commState = scs;
+      direction = dir;
+      commContent = cont;
     }
     #endregion
 
-    private readonly Dictionary<AppState, Func<bool>> stateFns;
+    private readonly Dictionary<StreamState, Func<bool>> streamStateFns;
 
     public StateMachine()
     {
+      /*
       stateFns = new Dictionary<AppState, Func<bool>>()
       {
         { AppState.NotLoggedIn,                () => !loggedIn && !StreamFileIsOccupied && FileState != FileState.Loaded },
         { AppState.NotLoggedInLinkedToGsa,     () => !loggedIn && !StreamFileIsOccupied && FileState == FileState.Loaded },
-        { AppState.ActiveLoggingIn,            () => !loggedIn && Is(StreamState.Active, Direction.Receiving, StreamContent.Accounts) },
-        { AppState.ActiveRetrievingStreamList, () => !loggedIn && Is(StreamState.Active, Direction.Receiving, StreamContent.StreamInfo) },
+        { AppState.ActiveLoggingIn,            () => !loggedIn && Is(ServerCommState.Active, ServerCommDirection.From, ServerCommContent.Accounts) },
+        { AppState.ActiveRetrievingStreamList, () => !loggedIn && Is(ServerCommState.Active, ServerCommDirection.From, ServerCommContent.StreamInfo) },
         { AppState.LoggedInNotLinkedToGsa,     () => loggedIn && FileState != FileState.Loaded && !StreamFileIsOccupied },
         { AppState.OpeningFile,                () => FileState == FileState.Loading },
-        { AppState.ReceivingWaiting,           () => loggedIn && Is(FileState.Loaded, StreamState.Pending, Direction.Receiving, StreamContent.Objects) },
-        { AppState.ActiveReceiving,            () => loggedIn && Is(FileState.Loaded, StreamState.Active, Direction.Receiving, StreamContent.Objects) },
-        { AppState.SendingWaiting,             () => loggedIn && Is(FileState.Loaded, StreamState.Pending, Direction.Sending, StreamContent.Objects) },
-        { AppState.ActiveSending,              () => loggedIn && Is(FileState.Loaded, StreamState.Active, Direction.Sending, StreamContent.Objects) },
-        { AppState.Ready,                      () => loggedIn && Is(FileState.Loaded, StreamState.None, Direction.None, StreamContent.None) },
-        { AppState.SavingFile,                 () => Is(FileState.Saving, StreamState.None, Direction.None, StreamContent.None) },
-        { AppState.ActiveRenamingStream,       () => loggedIn && Is(StreamState.Active, Direction.Sending, StreamContent.StreamInfo) }
+        { AppState.ReceivingWaiting,           () => loggedIn && Is(FileState.Loaded, ServerCommState.Pending, ServerCommDirection.From, ServerCommContent.Objects) },
+        { AppState.ActiveReceiving,            () => loggedIn && Is(FileState.Loaded, ServerCommState.Active, ServerCommDirection.From, ServerCommContent.Objects) },
+        { AppState.SendingWaiting,             () => loggedIn && Is(FileState.Loaded, ServerCommState.Pending, ServerCommDirection.To, ServerCommContent.Objects) },
+        { AppState.ActiveSending,              () => loggedIn && Is(FileState.Loaded, ServerCommState.Active, ServerCommDirection.To, ServerCommContent.Objects) },
+        { AppState.Ready,                      () => loggedIn && Is(FileState.Loaded, ServerCommState.None, ServerCommDirection.None, ServerCommContent.None) },
+        { AppState.SavingFile,                 () => Is(FileState.Saving, ServerCommState.None, ServerCommDirection.None, ServerCommContent.None) },
+        { AppState.ActiveRenamingStream,       () => loggedIn && Is(ServerCommState.Active, ServerCommDirection.To, ServerCommContent.StreamInfo) }
+      };
+      */
+      streamStateFns = new Dictionary<StreamState, Func<bool>>()
+      {
+        { StreamState.NotLoggedIn,                () => !loggedIn && commState == ServerCommState.None },
+        { StreamState.ActiveLoggingIn,            () => !loggedIn && commState == ServerCommState.Active && commContent == ServerCommContent.Accounts && direction == ServerCommDirection.To },
+        { StreamState.ActiveRenamingStream,       () => loggedIn && commState == ServerCommState.Active && commContent == ServerCommContent.StreamInfo && direction == ServerCommDirection.To },
+        { StreamState.ActiveRetrievingStreamList, () => loggedIn && commState == ServerCommState.Active && commContent == ServerCommContent.StreamInfo && direction == ServerCommDirection.From },
+        { StreamState.Ready,                      () => loggedIn && commState == ServerCommState.None },
+        { StreamState.ReceivingWaiting,           () => loggedIn && commState == ServerCommState.Pending && commContent == ServerCommContent.Objects && direction == ServerCommDirection.From },
+        { StreamState.ActiveReceiving,            () => loggedIn && commState == ServerCommState.Active && commContent == ServerCommContent.Objects && direction == ServerCommDirection.From },
+        { StreamState.SendingWaiting,             () => loggedIn && commState == ServerCommState.Pending && commContent == ServerCommContent.Objects && direction == ServerCommDirection.To },
+        { StreamState.ActiveSending,              () => loggedIn && commState == ServerCommState.Active && commContent == ServerCommContent.Objects && direction == ServerCommDirection.To },
       };
     }
 
@@ -65,54 +84,71 @@ namespace SpeckleGSA.UI.Models
       if (!loggedIn && !StreamFileIsOccupied)
       {
         //No need to change the state of the file, nor the loggedIn boolean as that serves as the "previous" logged-in state, useful if the logging in is cancelled
-        Set(StreamState.Active, Direction.Receiving, StreamContent.Accounts);
+        Set(ServerCommState.Active, ServerCommDirection.To, ServerCommContent.Accounts);
       }
     }
 
     public void CancelledLoggingIn()
     {
-      if (Is(StreamState.Active, Direction.Receiving, StreamContent.Accounts))
+      if (Is(ServerCommState.Active, ServerCommDirection.From, ServerCommContent.Accounts))
       {
         //No need to set the loggedIn value as that will essentially revert to how it was
         //No need to change the state of the file
-        Set(StreamState.None, Direction.None, StreamContent.None);
+        Set(ServerCommState.None, ServerCommDirection.None, ServerCommContent.None);
       }
     }
 
     public void LoggedIn()
     {
-      if (Is(StreamState.Active, Direction.Receiving, StreamContent.Accounts))
+      if (Is(ServerCommState.Active, ServerCommDirection.To, ServerCommContent.Accounts))
       {
         loggedIn = true;
         //No need to change the state of the file
-        Set(StreamState.None, Direction.None, StreamContent.None);
+        Set(ServerCommState.None, ServerCommDirection.None, ServerCommContent.None);
       }
     }
 
-    public void EnteredReceivingMode(StreamMethod streamMethod) => EnteredStreamingMode(Direction.Receiving, streamMethod);
+    public void EnteredReceivingMode(StreamMethod streamMethod) => EnteredStreamingMode(ServerCommDirection.From, streamMethod);
+
+    //Used for sending instances after the first one (which is handled by the EnteredSendingMode method)
+    public void StartedTriggeredSending()
+    {
+      if (loggedIn && streamMethod == StreamMethod.Continuous && Is(ServerCommState.Pending, ServerCommDirection.To, ServerCommContent.Objects))
+      {
+        Set(ServerCommState.Active, ServerCommDirection.To, ServerCommContent.Objects);
+      }
+    }
+
+    public void StoppedTriggeredSending()
+    {
+      if (loggedIn && streamMethod == StreamMethod.Continuous && Is(ServerCommState.Active, ServerCommDirection.To, ServerCommContent.Objects))
+      {
+        Set(ServerCommState.Pending, ServerCommDirection.To, ServerCommContent.Objects);
+      }
+    }
 
     //This same method is called at the end of an active receive event and the end of being in the state of continuous receive
-    public void StoppedReceiving() => StoppedStreaming(Direction.Receiving);
+    public void StoppedReceiving() => StoppedStreaming(ServerCommDirection.From);
 
-    public void EnteredSendingMode(StreamMethod streamMethod) => EnteredStreamingMode(Direction.Sending, streamMethod);
+    public void EnteredSendingMode(StreamMethod streamMethod) => EnteredStreamingMode(ServerCommDirection.To, streamMethod);
 
     //This same method is called at the end of an active send event and the end of being in the state of continuous send
-    public void StoppedSending() => StoppedStreaming(Direction.Sending);
+    public void StoppedSending() => StoppedStreaming(ServerCommDirection.To);
 
     public void StartedUpdatingStreams()
     {
       if (loggedIn && !StreamFileIsOccupied)
       {
         //File state isn't relevant here
-        Set(StreamState.Active, Direction.Receiving, StreamContent.StreamInfo);
+        Set(ServerCommState.Active, ServerCommDirection.From, ServerCommContent.StreamInfo);
       }
     }
 
     public void StoppedUpdatingStreams()
     {
-      if (Is(StreamState.Active, Direction.Receiving, StreamContent.StreamInfo))
+      if (Is(ServerCommState.Active, ServerCommDirection.From, ServerCommContent.StreamInfo))
       {
-        Set(StreamState.None, Direction.None, StreamContent.None);
+        Set(ServerCommState.None, ServerCommDirection.None, ServerCommContent.None);
       }
     }
 
@@ -163,56 +199,52 @@ namespace SpeckleGSA.UI.Models
     {
       if (loggedIn && FileState == FileState.Loaded && !StreamFileIsOccupied)
       {
-        Set(StreamState.Active, Direction.Sending, StreamContent.StreamInfo);
+        Set(ServerCommState.Active, ServerCommDirection.To, ServerCommContent.StreamInfo);
       }
     }
 
     public void StoppedRenamingStream()
     {
-      if (Is(StreamState.Active, Direction.Sending, StreamContent.StreamInfo))
+      if (Is(ServerCommState.Active, ServerCommDirection.To, ServerCommContent.StreamInfo))
       {
-        Set(StreamState.None, Direction.None, StreamContent.None);
+        Set(ServerCommState.None, ServerCommDirection.None, ServerCommContent.None);
       }
     }
 
-    private void EnteredStreamingMode(Direction direction, StreamMethod streamMethod)
+    private void EnteredStreamingMode(ServerCommDirection direction, StreamMethod streamMethod)
     {
-      if (loggedIn && FileState == FileState.Loaded && !StreamFileIsOccupied)
+      if (loggedIn && FileState == FileState.Loaded && ((commState == ServerCommState.Pending && streamMethod == StreamMethod.Continuous) || !StreamFileIsOccupied))
       {
         this.streamMethod = streamMethod;
         //StreamState won't be None as that is filtered out by the IsOccupied check
-        Set(StreamState.Active, direction, StreamContent.Objects);
+        Set(ServerCommState.Active, direction, ServerCommContent.Objects);
       }
     }
 
-    private void StoppedStreaming(Direction direction)
+    private void StoppedStreaming(ServerCommDirection direction)
     {
-      if (Is(StreamState.Active, direction, StreamContent.Objects))
+      if (Is(ServerCommState.Active, direction, ServerCommContent.Objects))
       {
         if (streamMethod == StreamMethod.Single)
         {
-          Set(StreamState.None, Direction.None, StreamContent.None);
+          Set(ServerCommState.None, ServerCommDirection.None, ServerCommContent.None);
         }
         else if (streamMethod == StreamMethod.Continuous)
         {
-          Set(StreamState.Pending, direction, StreamContent.Objects);
+          Set(ServerCommState.Pending, direction, ServerCommContent.Objects);
         }
       }
-      else if (Is(StreamState.Pending, direction, StreamContent.Objects))
+      else if (Is(ServerCommState.Pending, direction, ServerCommContent.Objects))
       {
-        Set(StreamState.None, Direction.None, StreamContent.None);
+        Set(ServerCommState.None, ServerCommDirection.None, ServerCommContent.None);
       }
     }
 
     #region private_enums
-    private enum Direction
-    {
-      None,
-      Sending,
-      Receiving
-    }
 
-    private enum StreamContent
+    //These enums make the state a bit more "normalised" (using the relational database concept there)
+
+    private enum ServerCommContent
     {
       None,
       Accounts,
@@ -220,21 +252,21 @@ namespace SpeckleGSA.UI.Models
       Objects
     }
 
+    private enum ServerCommDirection
+    {
+      None,
+      From,
+      To
+    }
+
+    private enum ServerCommState
+    {
+      None,
+      Active,
+      Pending
+    }
+
     #endregion
   }
 
-  public enum StreamState
-  {
-    None,
-    Active,
-    Pending
-  }
-
-  public enum FileState
-  {
-    None,
-    Loading,
-    Saving,
-    Loaded
-  }
 }
