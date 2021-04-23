@@ -149,7 +149,7 @@ namespace SpeckleGSA.UI.ViewModels
 
     #region continuous_streaming_members
     private Timer TriggerTimer { get; set; } = new Timer();
-    //private SenderCoordinator continuousSenderCoordinator;
+    private ReceiverCoordinator continuousReceiverCoordinator;
     #endregion
 
     public MainWindowViewModel()
@@ -281,6 +281,7 @@ namespace SpeckleGSA.UI.ViewModels
         {
           if (StateMachine.StreamState == StreamState.ReceivingWaiting)
           {
+            continuousReceiverCoordinator.Dispose();
             Refresh(() => StateMachine.StoppedReceiving());
           }
           else
