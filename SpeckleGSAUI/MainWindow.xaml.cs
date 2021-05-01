@@ -15,6 +15,8 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 using SpeckleInterface;
+using SpeckleStructuralClasses;
+using SpeckleStructuralGSA.Schema;
 
 namespace SpeckleGSAUI
 {
@@ -52,6 +54,8 @@ namespace SpeckleGSAUI
     {
       InitializeComponent();
 
+      var test1 = SpeckleStructuralGSA.Schema.AnalysisType.BAR;
+      var test2 = SpeckleStructuralClasses.StructuralSpringPropertyType.Axial;
       var speckleGsaAppVersion = getRunningVersion();
       mainWindow.Title = mainWindow.Title + " - " + speckleGsaAppVersion;
 

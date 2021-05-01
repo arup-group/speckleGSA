@@ -418,7 +418,7 @@ namespace SpeckleGSA
           }
 
           //GSA.GsaApp.gsaMessenger.Trigger();
-          
+#if !DEBUG
           if (GSA.RxParallelisableTypes.ContainsKey(valueType))
           {
             var numErrorLock = new object();
@@ -434,6 +434,7 @@ namespace SpeckleGSA
             });
           }
           else
+#endif
           {
             currentObjects.ForEach(o =>
             {

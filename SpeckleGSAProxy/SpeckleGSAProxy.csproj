@@ -149,9 +149,13 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="GSACache.cs" />
     <Compile Include="GSACacheRecord.cs" />
+    <Compile Include="GsaCacheRecordCollection.cs" />
     <Compile Include="GSAProxy.cs" />
     <Compile Include="IGSACache.cs" />
     <Compile Include="IGSACacheForTesting.cs" />
+    <Compile Include="IGSACacheRecordCollection.cs" />
+    <Compile Include="IPairCollection.cs" />
+    <Compile Include="PairCollection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
