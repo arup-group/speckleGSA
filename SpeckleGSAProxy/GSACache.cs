@@ -10,10 +10,6 @@ namespace SpeckleGSAProxy
 {
   public class GSACache : IGSACache, IGSACacheForKit, IGSACacheForTesting
   {
-    //For future use
-    //private object recordsLock = new object();
-    //private object provisionalsLock = new object();
-
     private readonly object syncLock = new object();
 
     private T ExecuteWithLock<T>(Func<T> f)
@@ -33,15 +29,6 @@ namespace SpeckleGSAProxy
       }
     }
 
-    /*
-    private ReadOnlyCollection<GSACacheRecord> records => recordsByKeyword.SelectMany(k => k.Value).ToList().AsReadOnly();
-
-    //There could be multiple entries at the same index - namely, a previous and a latest
-    private readonly Dictionary<string, List<GSACacheRecord>> recordsByKeyword = new Dictionary<string, List<GSACacheRecord>>();
-
-    //Shortcut optimisation for the records above
-    private readonly Dictionary<string, Dictionary<int, string>> applicationIdLookup = new Dictionary<string, Dictionary<int, string>>();
-    */
     private readonly IGSACacheRecordCollection recordCollection = new GsaCacheRecordCollection();
 
     // < keyword , { < index, app_id >, < index, app_id >, ... } >
@@ -57,81 +44,23 @@ namespace SpeckleGSAProxy
     public List<string> KeywordsForLoadCaseExpansion { get => new List<string> { analKey, comboKey }; }
 
     public Dictionary<int, object> GetIndicesSpeckleObjects(string speckleTypeName)
-    {
-      speckleTypeName = speckleTypeName.ChildType();
-      //return ExecuteWithLock(() => records.Where(r => r.SpeckleObj != null && r.SpeckleType.EndsWith(speckleTypeName)).ToDictionary(v => v.Index, v => (object)v.SpeckleObj));
-      return ExecuteWithLock(() => recordCollection.GetSpeckleObjectsByTypeName(speckleTypeName));
-    }
+      => ExecuteWithLock(() => recordCollection.GetSpeckleObjectsByTypeName(speckleTypeName.ChildType()));
 
     public List<SpeckleObject> GetSpeckleObjects(string speckleTypeName, string applicationId, bool? latest = true, string streamId = null)
-    {
-      return ExecuteWithLock(() =>
-      {
-        speckleTypeName = speckleTypeName.ChildType();
-        return recordCollection.GetSpeckleObjects(speckleTypeName, applicationId, latest, streamId);
-        /*
-        var matchingRecords = records.Where(r => r.SpeckleObj != null
-          && r.SpeckleType == speckleTypeName
-          && r.ApplicationId.EqualsWithoutSpaces(applicationId)
-          && (string.IsNullOrEmpty(streamId) || r.StreamId.EqualsWithoutSpaces(streamId))
-          && ((latest.HasValue && latest.Value) || (!latest.HasValue)));
-        return matchingRecords.Select(r => r.SpeckleObj).ToList();
-        */
-      });
-    }
+      => ExecuteWithLock(() => recordCollection.GetSpeckleObjects(speckleTypeName.ChildType(), applicationId, latest, streamId));
 
-    public bool ApplicationIdExists(string keyword, string applicationId) => ExecuteWithLock(() =>
-      {
-        var kw = keyword.Split('.').First();
-        return recordCollection.ContainsKeyword(kw, applicationId);
-        /*
-        if (recordsByKeyword.ContainsKey(kw))
-        {
-          return recordsByKeyword[kw].Any(r => r.ApplicationId.EqualsWithoutSpaces(applicationId));
-        }
-        return false;
-        */
-      });
+    public bool ApplicationIdExists(string keyword, string applicationId) 
+      => ExecuteWithLock(() => recordCollection.ContainsKeyword(keyword.Split('.').First(), applicationId));
 
     public bool ContainsType(string speckleTypeName)
-    {
-      speckleTypeName = speckleTypeName.ChildType();
-      //return ExecuteWithLock(() => records.Any(r => r.SpeckleObj != null && r.SpeckleType == speckleTypeName));
-      return ExecuteWithLock(() => recordCollection.ContainsSpeckleType(speckleTypeName));
-    }
+      => ExecuteWithLock(() => recordCollection.ContainsSpeckleType(speckleTypeName.ChildType()));
 
     //Used by the ToSpeckle methods in the kit; either the previous needs to be serialised for merging purposes during reception, or newly-arrived GWA needs to be serialised for transmission
-    public Dictionary<int, string> GetGwaToSerialise(string keyword) => ExecuteWithLock(() =>
-      {
-        var kw = keyword.Split('.').First();
-        return recordCollection.GetIndexedGwa(kw);
-        /*
-        return (recordsByKeyword.ContainsKey(kw))
-          ? recordsByKeyword[kw]
-            .Where(r => ((r.Previous == false && r.Latest == true && r.SpeckleObj == null) || (r.Previous == true && r.SpeckleObj == null)))
-            .ToDictionary(r => r.Index, r => r.Gwa)
-          : new Dictionary<int, string>();
-        */
-      });
+    public Dictionary<int, string> GetGwaToSerialise(string keyword) => ExecuteWithLock(() => recordCollection.GetIndexedGwa(keyword.Split('.').First()));
 
     public List<string> GetNewGwaSetCommands() => ExecuteWithLock(() =>
       {
         var retList = new List<string>();
-
-        /*
-        //Ensure records within each keyword group is ordered by index
-        var latestRecords = records.Where(r => r.Previous == false && r.Latest == true);        
-        var latestRecordsByKeyword = latestRecords.GroupBy(r => r.Keyword).ToDictionary(g => g.Key, g => g.ToList());
-        foreach (var kw in latestRecordsByKeyword.Keys)
-        {
-          foreach (var r in latestRecordsByKeyword[kw].OrderBy(r => r.Index))
-          {
-            retList.Add((r.GwaSetCommandType == GwaSetCommandType.SetAt)
-            ? string.Join(GSAProxy.GwaDelimiter.ToString(), new[] { "SET_AT", r.Index.ToString(), r.Gwa })
-            : r.Gwa);
-          }
-        }
-        */
         var latestRecordsByKeyword = recordCollection.GetLatestRecordsByKeyword();
         foreach (var kw in latestRecordsByKeyword.Keys)
         {
@@ -150,17 +79,14 @@ namespace SpeckleGSAProxy
       {
         var kw = keyword.Split('.').First();
         return recordCollection.GetRecord(kw, index);
-        //return (recordsByKeyword.ContainsKey(kw)) ? recordsByKeyword[kw].Where(r => r.Index == index).Select(r => r.Gwa).ToList() : new List<string>();
       });
 
     public List<string> GetGwa(string keyword) => ExecuteWithLock(() =>
       {
         var kw = keyword.Split('.').First();
         return recordCollection.GetAllRecordsByKeyword(kw);
-        //return (recordsByKeyword.ContainsKey(kw)) ? recordsByKeyword[kw].Select(r => r.Gwa).ToList() : new List<string>();
       });
 
-    //public List<string> GetCurrentGwa() => ExecuteWithLock(() => records.Where(r => r.Latest).Select(r => r.Gwa).ToList());
     public List<string> GetCurrentGwa() => ExecuteWithLock(() => recordCollection.GetLatestGwa());
 
     public void Clear()
@@ -168,8 +94,6 @@ namespace SpeckleGSAProxy
       ExecuteWithLock(() =>
       {
         recordCollection.Clear();
-        //recordsByKeyword.Clear();
-        //applicationIdLookup.Clear();
         provisionals.Clear();
         streamIndexByApplicationId.Clear();
         streams.Clear();
@@ -180,28 +104,10 @@ namespace SpeckleGSAProxy
     public bool GetKeywordRecordsSummary(string keyword, out List<string> gwa, out List<int> indices, out List<string> applicationIds)
     {
       var kw = keyword.Split('.').First();
-      /*
-      gwa = new List<string>();
-      indices = new List<int>();
-      applicationIds = new List<string>();
-      if (!recordsByKeyword.ContainsKey(kw))
-      {
-        return false;
-      }
-      foreach (var record in recordsByKeyword[kw])
-      {
-        gwa.Add(record.Gwa);
-        indices.Add(record.Index);
-        applicationIds.Add(record.ApplicationId);
-      }
-      return true;
-      */
       return recordCollection.GetRecordSummaries(kw, out gwa, out indices, out applicationIds);
     }
 
     //For testing
-    //public List<string> GetGwaSetCommands() => ExecuteWithLock(() => records.Select(r => (r.GwaSetCommandType == GwaSetCommandType.Set) ? "SET\t" + r.Gwa
-    //  : string.Join(GSAProxy.GwaDelimiter.ToString(), new[] { "SET_AT", r.Index.ToString(), r.Gwa })).ToList());
     public List<string> GetGwaSetCommands() => ExecuteWithLock(() => recordCollection.GetGwaCommandsWithSet());
 
     public void MarkAsPrevious(string keyword, string applicationId)
@@ -210,20 +116,6 @@ namespace SpeckleGSAProxy
       {
         var kw = keyword.Split('.').First();
         recordCollection.MarkPrevious(kw, applicationId);
-        /*
-        if (recordsByKeyword.ContainsKey(kw))
-        {
-          var matchingRecords = recordsByKeyword[kw].Where(r => r.ApplicationId.EqualsWithoutSpaces(applicationId) && r.Latest).ToList();
-          if (matchingRecords != null && matchingRecords.Count() > 0)
-          {
-            for (int i = 0; i < matchingRecords.Count(); i++)
-            {
-              matchingRecords[i].Previous = true;
-              matchingRecords[i].Latest = false;
-            }
-          }
-        }
-        */
       });
     }
 
@@ -233,19 +125,6 @@ namespace SpeckleGSAProxy
     }
 
     #region methods_used_within_lock_by_Upsert
-    /*
-    private void UpsertApplicationIdLookup(string keyword, int index, string applicationId)
-    {
-      if (!string.IsNullOrEmpty(applicationId))
-      {
-        if (!applicationIdLookup.ContainsKey(keyword))
-        {
-          applicationIdLookup.Add(keyword, new Dictionary<int, string>());
-        }
-        applicationIdLookup[keyword][index] = applicationId.Replace(" ", "");
-      }
-    }
-    */
     private void RemoveFromProvisional(string keyword, int index)
     {
       if (provisionals.ContainsKey(keyword))
@@ -265,11 +144,6 @@ namespace SpeckleGSAProxy
     //Not every record has stream IDs (like generated nodes)
     public bool Upsert(string keyword, int index, string gwa, string applicationId = "", SpeckleObject so = null, GwaSetCommandType gwaSetCommandType = GwaSetCommandType.Set, bool? latest = true, string streamId = null)
     {
-      if (applicationId == null)
-      {
-        applicationId = "";
-      }
-
       var kw = keyword.Split('.').First();
 
       try
@@ -278,11 +152,6 @@ namespace SpeckleGSAProxy
         ExecuteWithLock(() =>
         {
           matchingRecords = recordCollection.GetAllRecords(kw, index);
-          //if (!recordsByKeyword.ContainsKey(kw))
-          //{
-          //  recordsByKeyword.Add(kw, new List<GSACacheRecord>());
-          //}
-          //matchingRecords = recordsByKeyword[kw].Where(r => r.Index == index).ToList();
         });
 
         if (matchingRecords.Count() > 0)
@@ -317,98 +186,23 @@ namespace SpeckleGSAProxy
 
         ExecuteWithLock(() =>
         {
-          recordCollection.Upsert(kw, index, gwa, streamId, applicationId, true, so, gwaSetCommandType);
-          /*
-          if (!recordsByKeyword.ContainsKey(kw))
-          {
-            recordsByKeyword.Add(kw, new List<GSACacheRecord>());
-          }
-          recordsByKeyword[kw].Add(new GSACacheRecord(kw, index, gwa, streamId: streamId, applicationId: applicationId, latest: true, so: so, gwaSetCommandType: gwaSetCommandType));
-
-          UpsertApplicationIdLookup(kw, index, applicationId);
-          */
+          recordCollection.Upsert(kw, index, gwa, streamId, applicationId ?? "", true, so, gwaSetCommandType);
           RemoveFromProvisional(kw, index);
         });
         return true;
       }
-      catch (Exception ex)
+      catch
       {
         return false;
       }
     }
 
     public bool AssignSpeckleObject(string keyword, string applicationId, SpeckleObject so, string streamId = null)
-    {
-      return ExecuteWithLock(() =>
-      {
-        var kw = keyword.Split('.').First();
-        return recordCollection.AssignSpeckleObject(kw, applicationId, so, streamId);
-        /*
-        if (recordsByKeyword.ContainsKey(kw))
-        {
-          var matchingRecords = recordsByKeyword[kw]
-            .Where(r => !string.IsNullOrEmpty(r.ApplicationId)
-              && r.ApplicationId.EqualsWithoutSpaces(applicationId)
-              && (string.IsNullOrEmpty(streamId) || (!string.IsNullOrEmpty(r.StreamId) && r.StreamId.Equals(streamId ?? "")))
-              && r.SpeckleObj == null);
+      => ExecuteWithLock(() => recordCollection.AssignSpeckleObject(keyword.Split('.').First(), applicationId, so, streamId));
 
-          if (matchingRecords == null || matchingRecords.Count() == 0)
-          {
-            return false;
-          }
-
-          matchingRecords.First().SpeckleObj = so;
-          return true;
-        }
-        return false;
-        */
-      });
-    }
-
-    public void Snapshot(string streamId)
-    {
-      ExecuteWithLock(() =>
-      {
-        recordCollection.Snapshot(streamId);
-        /*
-        foreach (var keyword in recordsByKeyword.Keys)
-        {
-          var indicesToRemove = new List<int>();
-
-          for (int i = 0; i < recordsByKeyword[keyword].Count(); i++)
-          {
-            if (recordsByKeyword[keyword][i].StreamId == null || recordsByKeyword[keyword][i].StreamId != streamId || !IsAlterable(keyword, recordsByKeyword[keyword][i].ApplicationId))
-            {
-              continue;
-            }
-
-            // The use and function of IsAlterable needs to be reviewed.  Nodes are a special case as they are generated outside of Speckle feeds 
-            // and these ones need to be preserved
-            if (recordsByKeyword[keyword][i].Latest == false)
-            {
-              indicesToRemove.Add(i);
-            }
-            else
-            {
-              recordsByKeyword[keyword][i].Previous = true;
-              recordsByKeyword[keyword][i].Latest = false;
-            }
-          }
-
-          for (int i = (indicesToRemove.Count() - 1); i >= 0; i--)
-          {
-            recordsByKeyword[keyword].RemoveAt(indicesToRemove[i]);
-          }
-        }
-        */
-      });
-    }
+    public void Snapshot(string streamId) => ExecuteWithLock(() => { recordCollection.Snapshot(streamId); });
 
     #region methods_used_within_lock_by_UpsertProvisional
-    //private List<int> GetIndices(string keyword) => recordsByKeyword.ContainsKey(keyword)
-    //    ? recordsByKeyword[keyword].Select(r => r.Index).Where(k => k > 0).OrderBy(i => i).ToList()
-    //    : new List<int>();
-
     private int? HighestProvisional(string keyword)
     {
       if (!provisionals.ContainsKey(keyword) || provisionals[keyword] == null || provisionals[keyword].Count() == 0)
@@ -416,7 +210,6 @@ namespace SpeckleGSAProxy
         return null;
       }
 
-      //return provisionals[keyword].Keys.Max();
       return provisionals[keyword].MaxLeft();
     }
 
@@ -447,14 +240,6 @@ namespace SpeckleGSAProxy
           provisionalIndex = index;
           return true;
         }
-        /*
-        var matching = provisionals[keyword].Where(kvp => kvp.Value != null && kvp.Value.Equals(applicationId));
-        if (matching.Count() > 0)
-        {
-          provisionalIndex = matching.First().Key;
-          return true;
-        }
-        */
       }
       provisionalIndex = null;
       return false;
@@ -466,7 +251,6 @@ namespace SpeckleGSAProxy
       {
         return false;
       }
-      //return provisionals[keyword].ContainsKey(index);
       return provisionals[keyword].ContainsLeft(index);
     }
     #endregion
@@ -481,21 +265,9 @@ namespace SpeckleGSAProxy
       ExecuteWithLock(() =>
       {
         var kw = keyword.Split('.').First();
-        if (provisionals.ContainsKey(kw) && !string.IsNullOrEmpty(applicationId))
+        if (provisionals.ContainsKey(kw) && !string.IsNullOrEmpty(applicationId) && provisionals[kw].ContainsRight(applicationId))
         {
-          /*
-          var matching = provisionals[kw].Where(kvp => kvp.Value == applicationId);
-          if (matching != null && matching.Count() > 0)
-          {
-            var index = matching.Select(kvp => kvp.Key).FirstOrDefault();
-
-            RemoveFromProvisional(kw, index);
-          }
-          */
-          if (provisionals[kw].ContainsRight(applicationId))
-          {
-            provisionals[kw].RemoveRight(applicationId);
-          }
+          provisionals[kw].RemoveRight(applicationId);
         }
       });
     }
@@ -525,14 +297,6 @@ namespace SpeckleGSAProxy
         }
         else
         {
-          /*
-          var matchingRecords = new List<GSACacheRecord>();
-
-          if (recordsByKeyword.ContainsKey(kw))
-          {
-            matchingRecords.AddRange(recordsByKeyword[kw].Where(r => r.ApplicationId.EqualsWithoutSpaces(applicationId)).ToList());
-          }
-          */
           var matchingRecords = recordCollection.GetAllRecords(kw, applicationId);
 
           if (matchingRecords.Count() == 0)
@@ -569,102 +333,20 @@ namespace SpeckleGSAProxy
       });
     }
 
-    public int? LookupIndex(string keyword, string applicationId)
-    {
-      var matchingRecords = new List<GSACacheRecord>();
-      return ExecuteWithLock(() =>
-      {
-        var kw = keyword.Split('.').First();
-        return recordCollection.GetRecordIndex(kw, applicationId);
-        /*
-        if (recordsByKeyword.ContainsKey(kw))
-        {
-          matchingRecords.AddRange(recordsByKeyword[kw].Where(r => r.Index > 0 && r.ApplicationId.EqualsWithoutSpaces(applicationId)));
-        }
-        if (matchingRecords.Count() == 0)
-        {
-          return null;
-        }
-        return (int?) matchingRecords.Select(r => r.Index).First();
-        */
-      });
-    }
+    public int? LookupIndex(string keyword, string applicationId) 
+      => ExecuteWithLock(() => recordCollection.GetRecordIndex(keyword.Split('.').First(), applicationId));
 
-    public List<int?> LookupIndices(string keyword, IEnumerable<string> applicationIds)
-    {
-      var matchingRecords = new List<GSACacheRecord>();
-
-      return ExecuteWithLock(() =>
-      {
-        var kw = keyword.Split('.').First();
-        return recordCollection.GetRecordIndices(kw, applicationIds);
-        /*
-        if (recordsByKeyword.ContainsKey(kw) && applicationIds != null)
-        {
-          matchingRecords.AddRange(recordsByKeyword[kw].Where(r => r.Index > 0 && applicationIds.Any(id => r.ApplicationId.EqualsWithoutSpaces(id))
-            && r.Latest));
-        }
-
-        if (matchingRecords.Count() == 0)
-        {
-          return new List<int?>();
-        }
-        return matchingRecords.Select(r => (int?)r.Index).Distinct().ToList();
-        */
-      });
-    }
+    public List<int?> LookupIndices(string keyword, IEnumerable<string> applicationIds) 
+      => ExecuteWithLock(() => recordCollection.GetRecordIndices(keyword.Split('.').First(), applicationIds));
 
     public List<int?> LookupIndices(string keyword)
-    {
-      return ExecuteWithLock(() =>
-      {
-        var kw = keyword.Split('.').First();
-        return recordCollection.GetRecordIndices(kw).Select(k => (int?)k).ToList();
-        //return (recordsByKeyword.ContainsKey(kw))
-        // ? recordsByKeyword[kw].Select(r => r.Index).Where(k => k > 0).Select(k => (int?)k).ToList()
-        // : new List<int?>();
-      });
-    }
+      => ExecuteWithLock(() => recordCollection.GetRecordIndices(keyword.Split('.').First()).Select(k => (int?)k).ToList());
 
     public List<Tuple<string, int, string, GwaSetCommandType>> GetExpiredData()
-    {
-      return ExecuteWithLock(() =>
-      {
-        return recordCollection.GetExpiredData();
-        /*
-        var matchingRecords = records.Where(r => IsAlterable(r.Keyword, r.ApplicationId) && r.Previous == true && r.Latest == false).ToList();
-        //Order by index as for some keywords (like LOAD_2D_FACE.2) the records do actually move indices when one is deleted
-        matchingRecords = matchingRecords.OrderByDescending(r => r.Index).ToList();
-        var returnData = new List<Tuple<string, int, string, GwaSetCommandType>>();
-
-        for (int i = 0; i < matchingRecords.Count(); i++)
-        {
-          returnData.Add(new Tuple<string, int, string, GwaSetCommandType>(matchingRecords[i].Keyword, matchingRecords[i].Index, matchingRecords[i].Gwa, matchingRecords[i].GwaSetCommandType));
-        }
-
-        return returnData;
-        */
-      });
-    }
+      => ExecuteWithLock(() => recordCollection.GetExpiredData());
 
     public List<Tuple<string, int, string, GwaSetCommandType>> GetDeletableData()
-    {
-      return ExecuteWithLock(() =>
-      {
-        return recordCollection.GetDeletableData();
-        /*
-        var matchingRecords = records.Where(r => IsAlterable(r.Keyword, r.ApplicationId) && r.Latest == true).ToList();
-        var returnData = new List<Tuple<string, int, string, GwaSetCommandType>>();
-
-        for (int i = 0; i < matchingRecords.Count(); i++)
-        {
-          returnData.Add(new Tuple<string, int, string, GwaSetCommandType>(matchingRecords[i].Keyword, matchingRecords[i].Index, matchingRecords[i].Gwa, matchingRecords[i].GwaSetCommandType));
-        }
-
-        return returnData;
-        */
-      });
-    }
+      => ExecuteWithLock(() => recordCollection.GetDeletableData());
 
     public List<string> ExpandLoadCasesAndCombinations(string loadCaseString)
     {
@@ -676,17 +358,7 @@ namespace SpeckleGSAProxy
       }
 
       var cachedAnalIndices = ExecuteWithLock(() => recordCollection.GetRecordIndices(analKey));
-      /*
-      var cachedAnalIndices = (recordsByKeyword.ContainsKey(analKey)
-        ? recordsByKeyword[analKey].Select(r => r.Index).ToList()
-        : new List<int>();
-      */
       var cachedComboIndices = ExecuteWithLock(() => recordCollection.GetRecordIndices(comboKey));
-      /*
-      var cachedComboIndices = (recordsByKeyword.ContainsKey(comboKey))
-        ? recordsByKeyword[comboKey].Select(r => r.Index).ToList()
-        : new List<int>();
-      */
       var tasks = new List<Task>();
       var retListLock = new object();
 
@@ -993,85 +665,17 @@ namespace SpeckleGSAProxy
       }
       return (char.ToLowerInvariant(part[0]) == 'a') ? 1 : (char.ToLowerInvariant(part[0]) == 'c') ? 2 : 0;
     }
-#endregion
+    #endregion
 
-#region applicationIdLookup
+    #region applicationIdLookup
     public string GetApplicationId(string keyword, int index)
-    {
-      return ExecuteWithLock(() =>
-      {
-        var kw = keyword.Split('.').First();
-        return recordCollection.GetApplicationId(kw, index);
-        /*
-        if (applicationIdLookup.ContainsKey(kw))
-        {
-          if (applicationIdLookup[kw].ContainsKey(index))
-          {
-            return applicationIdLookup[kw][index];
-          }
-        }
-        return "";
-        */
-      });
-    }
+      => ExecuteWithLock(() => recordCollection.GetApplicationId(keyword.Split('.').First(), index));
 
     public bool SetApplicationId(string keyword, int index, string applicationId)
-    {
-      return ExecuteWithLock(() =>
-      {
-        var kw = keyword.Split('.').First();
-        return recordCollection.AssignApplicationId(kw, index, applicationId);
-        /*
-        if (!recordsByKeyword.ContainsKey(kw) || index >= recordsByKeyword[kw].Count())
-        {
-          return false;
-        }
-        var recordsWithSameIndex = recordsByKeyword[kw].Where(r => r.Index == index);
-        if (recordsWithSameIndex.Count() == 0)
-        {
-          return false;
-        }
-        var record = recordsWithSameIndex.First();
-        record.ApplicationId = applicationId;
-        UpsertApplicationIdLookup(kw, index, applicationId);
-        return true;
-        */
-      }
-      );
-    }
+      => ExecuteWithLock(() => recordCollection.AssignApplicationId(keyword.Split('.').First(), index, applicationId));
+    
+  #endregion
 
-    /*
-    private void RemoveFromApplicationIdLookup(string keyword, int index)
-    {
-      ExecuteWithLock(() =>
-      {
-        var kw = keyword.Split('.').First();
-        if (applicationIdLookup.ContainsKey(kw))
-        {
-          if (applicationIdLookup[kw].ContainsKey(index))
-          {
-            applicationIdLookup[kw].Remove(index);
-          }
-          if (applicationIdLookup[kw].Keys.Count() == 0)
-          {
-            applicationIdLookup.Remove(kw);
-          }
-        }
-      });
-    }
-    */
-#endregion
-
-    /*
-    private bool IsAlterable(string keyword, string applicationId)
-    {
-      if (keyword.Contains("NODE") && (applicationId == "" || (applicationId != null && applicationId.StartsWith("gsa"))))
-      {
-        return false;
-      }
-      return true;
-    }
-    */
 
     public bool SetStream(string applicationId, string streamId)
     {
@@ -1114,7 +718,6 @@ namespace SpeckleGSAProxy
     }
 
     //For testing
-    //ReadOnlyCollection<GSACacheRecord> IGSACacheForTesting.Records => records;
     List<GSACacheRecord> IGSACacheForTesting.Records => ExecuteWithLock(() => recordCollection.GetAllRecords());
   }
 }
