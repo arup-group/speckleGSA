@@ -15,6 +15,8 @@ namespace SpeckleGSAProxy
     private readonly Dictionary<string, HashSet<int>> collectionIndicesByStreamId = new Dictionary<string, HashSet<int>>();
     private readonly Dictionary<string, HashSet<int>> collectionIndicesBySpeckleTypeName = new Dictionary<string, HashSet<int>>();
 
+    private List<GSACacheRecord> validRecords { get => records.Where(r => r != null).ToList(); }
+
     public bool AssignApplicationId(string kw, int gsaIndex, string applicationId)
     {
       if (string.IsNullOrEmpty(kw) || !collectionIndicesByKw.ContainsKey(kw) || string.IsNullOrEmpty(applicationId))
@@ -122,7 +124,7 @@ namespace SpeckleGSAProxy
 
     public bool ContainsSpeckleType(string speckleTypeName)
     {
-      return records.Any(r => r.SpeckleObj != null && r.SpeckleType == speckleTypeName);
+      return validRecords.Any(r => r.SpeckleObj != null && r.SpeckleType == speckleTypeName);
     }
 
     public List<GSACacheRecord> GetAllRecords(string kw, int gsaIndex)
@@ -141,7 +143,7 @@ namespace SpeckleGSAProxy
 
     public List<GSACacheRecord> GetAllRecords()
     {
-      return records;
+      return validRecords;
     }
 
     public List<string> GetAllRecordsByKeyword(string kw)
@@ -161,21 +163,11 @@ namespace SpeckleGSAProxy
         return "";
       }
       return collectionIndicesByKw[kw].Where(i => records[i].Index == gsaIndex).OrderBy(i => i).Select(i => records[i].ApplicationId).FirstOrDefault();
-      /*
-        if (applicationIdLookup.ContainsKey(kw))
-        {
-          if (applicationIdLookup[kw].ContainsKey(index))
-          {
-            return applicationIdLookup[kw][index];
-          }
-        }
-        return "";
-        */
     }
 
     public List<Tuple<string, int, string, GwaSetCommandType>> GetDeletableData()
     {
-      var matchingRecords = records.Where(r => IsAlterable(r.Keyword, r.ApplicationId) && r.Latest == true).ToList();
+      var matchingRecords = validRecords.Where(r => IsAlterable(r.Keyword, r.ApplicationId) && r.Latest == true).ToList();
       var returnData = new List<Tuple<string, int, string, GwaSetCommandType>>();
 
       for (int i = 0; i < matchingRecords.Count(); i++)
@@ -189,7 +181,7 @@ namespace SpeckleGSAProxy
 
     public List<Tuple<string, int, string, GwaSetCommandType>> GetExpiredData()
     {
-      var matchingRecords = records.Where(r => IsAlterable(r.Keyword, r.ApplicationId) && r.Previous == true && r.Latest == false).ToList();
+      var matchingRecords = validRecords.Where(r => IsAlterable(r.Keyword, r.ApplicationId) && r.Previous == true && r.Latest == false).ToList();
       //Order by index as for some keywords (like LOAD_2D_FACE.2) the records do actually move indices when one is deleted
       matchingRecords = matchingRecords.OrderByDescending(r => r.Index).ToList();
       var returnData = new List<Tuple<string, int, string, GwaSetCommandType>>();
@@ -206,7 +198,7 @@ namespace SpeckleGSAProxy
     {
       //public List<string> GetGwaSetCommands() => ExecuteWithLock(() => records.Select(r => (r.GwaSetCommandType == GwaSetCommandType.Set) ? "SET\t" + r.Gwa
       //  : string.Join(GSAProxy.GwaDelimiter.ToString(), new[] { "SET_AT", r.Index.ToString(), r.Gwa })).ToList());
-      return records.OrderBy(r => r.Keyword).ThenBy(r => r.Index).Select(r => (r.GwaSetCommandType == GwaSetCommandType.Set) 
+      return validRecords.OrderBy(r => r.Keyword).ThenBy(r => r.Index).Select(r => (r.GwaSetCommandType == GwaSetCommandType.Set) 
       ? "SET\t" + r.Gwa 
       : string.Join(GSAProxy.GwaDelimiter.ToString(), new[] { "SET_AT", r.Index.ToString(), r.Gwa })).ToList();
     }
@@ -230,7 +222,7 @@ namespace SpeckleGSAProxy
 
     public List<string> GetLatestGwa()
     {
-      return records.Where(r => r.Latest).Select(r => r.Gwa).ToList();
+      return validRecords.Where(r => r.Latest).Select(r => r.Gwa).ToList();
     }
 
     public HashSet<int> GetRecordIndexHashSet(string kw)
@@ -408,7 +400,7 @@ namespace SpeckleGSAProxy
       var indicesToRemove = new HashSet<int>();
       foreach (var keyword in collectionIndicesByKw.Keys)
       {
-        var indices = collectionIndicesByKw[keyword].Union(collectionIndicesByStreamId[streamId]).ToList();
+        var indices = collectionIndicesByKw[keyword].Intersect(collectionIndicesByStreamId[streamId]).ToList();
 
         foreach (var i in indices)
         {
@@ -460,7 +452,8 @@ namespace SpeckleGSAProxy
       }
       foreach (var i in indicesToRemove)
       {
-        records.RemoveAt(i);
+        //Keep the item position intact so that it doesn't mess with the indices contained in the optimising hash sets
+        records[i] = null;
       }
     }
 

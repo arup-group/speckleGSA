@@ -420,7 +420,16 @@ namespace SpeckleGSAProxy
       return provisionals[keyword].MaxLeft();
     }
 
-    private void UpsertProvisional(string keyword, int index, string applicationId = "")
+    private void UpsertProvisional(string keyword, int index)
+    {
+      if (!provisionals.ContainsKey(keyword))
+      {
+        provisionals.Add(keyword, new PairCollection<int, string>());
+      }
+      provisionals[keyword].Add(index, null);
+    }
+
+    private void UpsertProvisional(string keyword, int index, string applicationId)
     {
       if (!provisionals.ContainsKey(keyword))
       {
@@ -496,22 +505,22 @@ namespace SpeckleGSAProxy
       return ExecuteWithLock(() =>
       {
         var kw = keyword.Split('.').First();
-        if (applicationId == "")
+        if (string.IsNullOrEmpty(applicationId))
         {
           //var indices = GetIndices(kw);
-          var indices = recordCollection.GetRecordIndexHashSet(keyword);
+          var indices = recordCollection.GetRecordIndexHashSet(kw);
           var highestProvisional = HighestProvisional(kw);
-          var highestIndex = Math.Max((indices.Count() == 0) ? 0 : indices.Last(), highestProvisional ?? 0);
+          var highestIndex = Math.Max((indices.Count() == 0) ? 0 : indices.Max(), highestProvisional ?? 0);
           for (int i = 1; i <= highestIndex; i++)
           {
             if (!indices.Contains(i) && !ProvisionalContains(kw, i))
             {
-              UpsertProvisional(kw, i, applicationId);
+              UpsertProvisional(kw, i);
               return i;
             }
           }
 
-          UpsertProvisional(kw, highestIndex + 1, applicationId);
+          UpsertProvisional(kw, highestIndex + 1);
           return highestIndex + 1;
         }
         else
@@ -536,7 +545,7 @@ namespace SpeckleGSAProxy
             //var indices = GetIndices(kw);
             var indices = recordCollection.GetRecordIndexHashSet(kw);
             var highestProvisional = HighestProvisional(kw);
-            var highestIndex = Math.Max((indices.Count() == 0) ? 0 : indices.Last(), highestProvisional ?? 0);
+            var highestIndex = Math.Max((indices.Count() == 0) ? 0 : indices.Max(), highestProvisional ?? 0);
             for (int i = 1; i <= highestIndex; i++)
             {
               if (!indices.Contains(i) && !ProvisionalContains(kw, i))

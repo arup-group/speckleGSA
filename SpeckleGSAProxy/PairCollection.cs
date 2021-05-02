@@ -8,15 +8,21 @@ namespace SpeckleGSAProxy
   //Note: it assumes both keys and values are unique
   internal class PairCollection<U, V> : IPairCollection<U, V> where U : IComparable<U> where V : IComparable<V>
   {
-    private readonly List<U> leftKeys = new List<U>();
-    private readonly Dictionary<U, int> lefts = new Dictionary<U, int>();
-    private readonly List<V> rightKeys = new List<V>();
-    private readonly Dictionary<V, int> rights = new Dictionary<V, int>();
-    private int? highestIndex = null;
+    private readonly Dictionary<U, V> lefts = new Dictionary<U, V>();
+    private readonly Dictionary<V, U> rights = new Dictionary<V, U>();
     private readonly object dictLock = new object();
 
     private U maxLeft;
     private V maxRight;
+
+    private readonly bool uIsNullable;
+    private readonly bool vIsNullable;
+
+    public PairCollection()
+    {
+      uIsNullable = (Nullable.GetUnderlyingType(typeof(U)) != null) || (typeof(U) == typeof(String));
+      vIsNullable = (Nullable.GetUnderlyingType(typeof(V)) != null) || (typeof(V) == typeof(String));
+    }
 
     public bool ContainsLeft(U u)
     {
@@ -43,7 +49,7 @@ namespace SpeckleGSAProxy
       {
         lock (dictLock)
         {
-          return leftKeys.ToList();
+          return lefts.Keys.ToList();
         }
       }
     }
@@ -54,7 +60,7 @@ namespace SpeckleGSAProxy
       {
         lock (dictLock)
         {
-          return rightKeys.ToList();
+          return rights.Keys.ToList();
         }
       }
     }
@@ -63,23 +69,18 @@ namespace SpeckleGSAProxy
     {
       lock (dictLock)
       {
-        leftKeys.Add(u);
-        rightKeys.Add(v);
-        var index = IncrementHighestIndex();
-        lefts.Add(u, index);
-        rights.Add(v, index);
-        if (index == 0)
+        if (!(uIsNullable && u == null))
         {
-          maxLeft = u;
-          maxRight = v;
-        }
-        else
-        {
-          if (u.CompareTo(maxLeft) > 0)
+          lefts.Add(u, v);
+          if (lefts.Count() == 0 || u.CompareTo(maxLeft) > 0)
           {
             maxLeft = u;
           }
-          if (v.CompareTo(maxRight) > 0)
+        }
+        if (!(vIsNullable && v == null))
+        {
+          rights.Add(v, u);
+          if (rights.Count() == 0 || v.CompareTo(maxRight) > 0)
           {
             maxRight = v;
           }
@@ -93,7 +94,6 @@ namespace SpeckleGSAProxy
       {
         lefts.Clear();
         rights.Clear();
-        highestIndex = null;
         maxLeft = default;
         maxRight = default;
       }
@@ -103,18 +103,22 @@ namespace SpeckleGSAProxy
     {
       lock (dictLock)
       {
-        return highestIndex.HasValue? highestIndex.Value + 1 : 0;
+        return Math.Max(lefts.Count(), rights.Count());
       } 
     }
 
     public bool FindLeft(V v, out U u)
     {
+      if (vIsNullable && v == null)
+      {
+        u = default;
+        return false;
+      }
       lock (dictLock)
       {
         if (rights.ContainsKey(v))
         {
-          var index = rights[v];
-          u = leftKeys[index];
+          u = rights[v];
           return true;
         }
         u = default;
@@ -124,12 +128,16 @@ namespace SpeckleGSAProxy
 
     public bool FindRight(U u, out V v)
     {
+      if (uIsNullable && u == null)
+      {
+        v = default;
+        return false;
+      }
       lock (dictLock)
       {
         if (lefts.ContainsKey(u))
         {
-          var index = lefts[u];
-          v = rightKeys[index];
+          v = lefts[u];
           return true;
         }
         v = default;
@@ -139,28 +147,34 @@ namespace SpeckleGSAProxy
 
     public void RemoveLeft(U u)
     {
+      if (uIsNullable && u == null)
+      {
+        return;
+      }
+      
       lock (dictLock)
       {
-        if (!lefts.ContainsKey(u))
+        if (!lefts.ContainsKey(u) || !FindRight(u, out V v))
         {
           return;
         }
-        var index = lefts[u];
-        var v = rightKeys[index];
         Remove(u, v);
       }
     }
 
     public void RemoveRight(V v)
     {
+      if (vIsNullable && v == null)
+      {
+        return;
+      }
+
       lock (dictLock)
       {
-        if (!rights.ContainsKey(v))
+        if (!rights.ContainsKey(v) || !FindLeft(v, out U u))
         {
           return;
         }
-        var index = rights[v];
-        var u = leftKeys[index];
         Remove(u, v);
       }
     }
@@ -168,25 +182,22 @@ namespace SpeckleGSAProxy
     #region inside_lock_private_fns
     private void Remove(U u, V v)
     {
-      lefts.Remove(u);
-      rights.Remove(v);
-      leftKeys.Remove(u);
-      rightKeys.Remove(v);
-      highestIndex = (highestIndex == 0) ? null : highestIndex - 1;
-      if (u.CompareTo(maxLeft) == 0)
+      if (!(uIsNullable && u == null))
       {
-        maxLeft = leftKeys.Count() == 0 ? default : leftKeys.Max();
+        lefts.Remove(u);
+        if (u.CompareTo(maxLeft) == 0)
+        {
+          maxLeft = lefts.Count() == 0 ? default : lefts.Keys.Max();
+        }
       }
-      if (v.CompareTo(maxRight) == 0)
+      if (!(vIsNullable && v == null))
       {
-        maxRight = rightKeys.Count() == 0 ? default : rightKeys.Max();
+        rights.Remove(v);
+        if (v.CompareTo(maxRight) == 0)
+        {
+          maxRight = rights.Count() == 0 ? default : rights.Keys.Max();
+        }
       }
-    }
-
-    private int IncrementHighestIndex()
-    {
-      highestIndex = (highestIndex.HasValue) ? highestIndex.Value + 1 : 0;
-      return highestIndex.Value;
     }
     #endregion
   }
