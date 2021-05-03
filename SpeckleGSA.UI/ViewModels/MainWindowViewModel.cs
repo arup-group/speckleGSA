@@ -358,7 +358,7 @@ namespace SpeckleGSA.UI.ViewModels
             }
           }
         },
-        (o) => StateMachine.StreamState == StreamState.SendingWaiting || StateMachine.StreamState == StreamState.Ready);
+        (o) => StateMachine.FileState == FileState.Loaded && (StateMachine.StreamState == StreamState.SendingWaiting || StateMachine.StreamState == StreamState.Ready));
 
       ContinuousSendCommand = new DelegateCommand<object>(
         async (o) =>
