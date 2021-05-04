@@ -78,6 +78,8 @@ namespace SpeckleGSA
       statusProgress.Report("Ready to receive");
 			IsInit = true;
 
+      GSA.GsaApp.gsaProxy.SetUnits(GSA.GsaApp.gsaSettings.Units);
+
 			return statusMessages;
 		}
 
@@ -92,7 +94,7 @@ namespace SpeckleGSA
 
       var startTime = DateTime.Now;
 
-      GSA.GsaApp.gsaSettings.Units = GSA.GsaApp.gsaProxy.GetUnits();
+      //GSA.GsaApp.gsaSettings.Units = GSA.GsaApp.gsaProxy.GetUnits();
 
       lock (traversedSerialisedLock)
       {

@@ -904,6 +904,13 @@ namespace SpeckleGSAProxy
     {
       return ((string)ExecuteWithLock(() => GSAObject.GwaCommand(string.Join(GwaDelimiter.ToString(), new[] { "GET", "UNIT_DATA.1", "LENGTH" })))).ListSplit(GwaDelimiter)[2];
     }
+
+    public bool SetUnits(string units)
+    {
+      var retCode = ExecuteWithLock(() => GSAObject.GwaCommand(string.Join(GwaDelimiter.ToString(), new[] { "SET", "UNIT_DATA", "LENGTH", units })));
+      //Apparently 1 seems to be the code for success, from observation
+      return (retCode == 1);
+    }
     #endregion
 
     #region Views

@@ -129,6 +129,8 @@ namespace SpeckleGSA.UI.ViewModels
       IProgress<MessageEventArgs> loggingProgress, IProgress<string> statusProgress, IProgress<double> percentageProgress)
     {
       GSA.GsaApp.gsaSettings.TargetLayer = coordinator.ReceiverCoordinatorForUI.TargetLayer;
+      GSA.GsaApp.gsaSettings.Units = UnitEnumToString(coordinator.ReceiverCoordinatorForUI.CoincidentNodeUnits);
+      GSA.GsaApp.gsaSettings.CoincidentNodeAllowance = coordinator.ReceiverCoordinatorForUI.CoincidentNodeAllowance;
 
       var messenger = new ProgressMessenger(loggingProgress);
 
@@ -256,6 +258,16 @@ namespace SpeckleGSA.UI.ViewModels
       }
 
       return resultParams;
+    }
+    
+    private static string UnitEnumToString(GsaUnit unit)
+    {
+      switch(unit)
+      {
+        case GsaUnit.Inches: return "in";
+        case GsaUnit.Metres: return "m";
+        default: return "mm";
+      }
     }
   }
 }
