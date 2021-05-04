@@ -543,7 +543,7 @@ namespace SpeckleGSA
     private bool GwaToCache(string gwaCommand, string streamId, SpeckleObject targetObject)
     {
       //At this point the SID will be filled with the application ID
-      GSA.GsaApp.gsaProxy.ParseGeneralGwa(gwaCommand, out string keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType, true);
+      GSAProxy.ParseGeneralGwa(gwaCommand, out string keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType, true);
 
       var originalSid = GSA.GsaApp.gsaProxy.FormatSidTags(foundStreamId, foundApplicationId);
       var newSid = GSA.GsaApp.gsaProxy.FormatSidTags(streamId, foundApplicationId);

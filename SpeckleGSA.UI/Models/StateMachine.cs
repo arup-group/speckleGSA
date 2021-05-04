@@ -166,7 +166,7 @@ namespace SpeckleGSA.UI.Models
     {
       if (FileState == FileState.Saving)
       {
-        FileState = FileState.None;
+        FileState = FileState.Loaded;
       }
     }
 

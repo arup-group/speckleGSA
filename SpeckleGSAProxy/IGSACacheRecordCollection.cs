@@ -11,6 +11,7 @@ namespace SpeckleGSAProxy
 {
   internal interface IGSACacheRecordCollection
   {
+    int NumRecords { get; }
     Dictionary<int, object> GetSpeckleObjectsByTypeName(string speckleTypeName);
     List<SpeckleObject> GetSpeckleObjects(string speckleTypeName, string applicationId, bool? latest, string streamId);
     bool ContainsKeyword(string keyword, string applicationId);

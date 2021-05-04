@@ -328,7 +328,7 @@ namespace SpeckleGSAProxy.Test
     public void ParseGwaCommandTests(string gwa, string expKeyword, int expIndex, string expAppId, string expGwaWithoutSet)
     {
       var gsaProxy = new GSAProxy();
-      gsaProxy.ParseGeneralGwa(gwa, out string keyword, out int? foundIndex, out string streamId, out string applicationId, out string gwaWithoutSet, out SpeckleGSAInterfaces.GwaSetCommandType? gwaSetCommandType);
+      GSAProxy.ParseGeneralGwa(gwa, out string keyword, out int? foundIndex, out string streamId, out string applicationId, out string gwaWithoutSet, out SpeckleGSAInterfaces.GwaSetCommandType? gwaSetCommandType);
       var index = foundIndex ?? 0;
 
       Assert.AreEqual(expKeyword, keyword);

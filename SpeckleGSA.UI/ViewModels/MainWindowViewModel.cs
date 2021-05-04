@@ -65,6 +65,7 @@ namespace SpeckleGSA.UI.ViewModels
     public DelegateCommand<object> ClearReceiveStreamListCommand { get; private set; }
     public DelegateCommand<object> AddCandidateStreamIdCommand { get; private set; }
     public DelegateCommand<object> RenameStreamCommand { get; private set; }
+    public DelegateCommand<object> ExportAppliedSectionDataCommand { get; private set; }
 
     public string ReceiveButtonText { get => (ReceiveStreamMethod == StreamMethod.Continuous && StateMachine.StreamState == StreamState.ReceivingWaiting) ? "Stop" : "Receive"; }
     public string SendButtonText { get => (SendStreamMethod == StreamMethod.Continuous && StateMachine.StreamState == StreamState.SendingWaiting) ? "Stop" : "Send"; }
@@ -358,7 +359,8 @@ namespace SpeckleGSA.UI.ViewModels
             }
           }
         },
-        (o) => StateMachine.StreamState == StreamState.SendingWaiting || StateMachine.StreamState == StreamState.Ready);
+        (o) => (StateMachine.FileState == FileState.Loaded 
+              && (StateMachine.StreamState == StreamState.SendingWaiting || StateMachine.StreamState == StreamState.Ready)));
 
       ContinuousSendCommand = new DelegateCommand<object>(
         async (o) =>
@@ -390,6 +392,15 @@ namespace SpeckleGSA.UI.ViewModels
           Refresh(() => StateMachine.StoppedRenamingStream());
         },
         (o) => !StateMachine.StreamIsOccupied);  //There is no visual button linked to this command so the CanExecute condition can be less strict 
+
+      ExportAppliedSectionDataCommand = new DelegateCommand<object>(
+        async (o) =>
+        {
+          Refresh(() => StateMachine.StartedSavingFile());
+          var result = await Task.Run(() => Commands.ExportAppliedSectionData());
+          Refresh(() => StateMachine.StoppedSavingFile());
+        },
+        (o) => StateMachine.FileState == FileState.Loaded && !StateMachine.StreamIsOccupied);
 
       cmds = new List<DelegateCommandBase>();
       Type myType = this.GetType();

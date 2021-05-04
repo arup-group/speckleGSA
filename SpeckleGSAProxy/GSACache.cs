@@ -38,10 +38,16 @@ namespace SpeckleGSAProxy
     private readonly Dictionary<string, int> streamIndexByApplicationId = new Dictionary<string, int>();
 
     //Hardcoded for now to use current 10.1 keywords - to be reviewed
-    private static readonly string analKey = "ANAL";
-    private static readonly string comboKey = "COMBINATION";
+    private static readonly string analKeyword = "ANAL";
+    private static readonly string comboKeyword = "COMBINATION";
+    //These are hardcoded for queries of the cache that are exportable from the UI
+    private static readonly string sectionKeyword = "PROP_SEC";
+    private static readonly string memberKeyword = "MEMB";
+    private static readonly string elementKeyword = "EL";
 
-    public List<string> KeywordsForLoadCaseExpansion { get => new List<string> { analKey, comboKey }; }
+    public int NumRecords { get => recordCollection.NumRecords; }
+
+    public List<string> KeywordsForLoadCaseExpansion { get => new List<string> { analKeyword, comboKeyword }; }
 
     public Dictionary<int, object> GetIndicesSpeckleObjects(string speckleTypeName)
       => ExecuteWithLock(() => recordCollection.GetSpeckleObjectsByTypeName(speckleTypeName.ChildType()));
@@ -357,8 +363,8 @@ namespace SpeckleGSAProxy
         return retList;
       }
 
-      var cachedAnalIndices = ExecuteWithLock(() => recordCollection.GetRecordIndices(analKey));
-      var cachedComboIndices = ExecuteWithLock(() => recordCollection.GetRecordIndices(comboKey));
+      var cachedAnalIndices = ExecuteWithLock(() => recordCollection.GetRecordIndices(analKeyword));
+      var cachedComboIndices = ExecuteWithLock(() => recordCollection.GetRecordIndices(comboKeyword));
       var tasks = new List<Task>();
       var retListLock = new object();
 
@@ -715,6 +721,73 @@ namespace SpeckleGSAProxy
         }
       }
       return "";
+    }
+
+    public List<List<string>> GetAppliedSectionData()
+    {
+      var lines = new List<List<string>>();
+
+      var propertyGwas = ExecuteWithLock(() => recordCollection.GetAllRecordsByKeyword(sectionKeyword));
+      var propSectionDescs = new Dictionary<int, string>();
+      var propApplicationIds = new Dictionary<int, string>();
+
+      lines.Add(new List<string>() { sectionKeyword });
+      lines.Add(new List<string>() { "Index", "ApplicationId", "SectionProfile" });
+      foreach (var gwa in propertyGwas)
+      {
+        GSAProxy.ParseGeneralGwa(gwa, out _, out int? propertyIndex, out _, out string propApplicationId, out _, out _, false);
+
+        var pieces = gwa.Split(GSAProxy.GwaDelimiter);
+        var desc = pieces[7];
+        if (int.TryParse(pieces[1], out int recordIndex) && !string.IsNullOrEmpty(desc))
+        {
+          desc = desc.Replace("%", " ");
+          propSectionDescs.Add(recordIndex, desc);
+          propApplicationIds.Add(recordIndex, propApplicationId);
+          var line = new List<string>() { recordIndex.ToString(), propApplicationId, desc };
+          lines.Add(line);
+        }
+      }
+
+      lines.Add(new List<string>() { memberKeyword });
+      lines.Add(new List<string>() { "Index", "ApplicationId", "SectionIndex", "SectionApplicationId", "SectionProfile" });
+      var memberGwas = ExecuteWithLock(() => recordCollection.GetAllRecordsByKeyword(memberKeyword));
+      foreach (var gwa in memberGwas)
+      {
+        GSAProxy.ParseGeneralGwa(gwa, out _, out int? memberIndex, out _, out string memberApplicationId, out _, out _, false);
+
+        var pieces = gwa.Split(GSAProxy.GwaDelimiter);
+
+        //EL records can have strings in brackets immediately after the index like "1[0.000000:0.590164]"
+        var sectionIndexStr = pieces[6].Split('[').First();
+        if (memberIndex.HasValue && int.TryParse(sectionIndexStr, out int sectionIndex) && propSectionDescs.ContainsKey(sectionIndex))
+        {
+          var line = new List<string>() { memberIndex.ToString(), memberApplicationId, sectionIndex.ToString(),
+            (propApplicationIds.ContainsKey(sectionIndex)) ? propApplicationIds[sectionIndex] : "", propSectionDescs[sectionIndex] };
+          lines.Add(line);
+        }
+      }
+
+      lines.Add(new List<string>() { elementKeyword });
+      lines.Add(new List<string>() { "Index", "ApplicationId", "SectionIndex", "SectionApplicationId", "SectionProfile" });
+      var elementGwas = ExecuteWithLock(() => recordCollection.GetAllRecordsByKeyword(elementKeyword));
+      foreach (var gwa in elementGwas)
+      {
+        GSAProxy.ParseGeneralGwa(gwa, out _, out int? propertyIndex, out _, out string elementApplicationId, out _, out _, false);
+
+        var pieces = gwa.Split(GSAProxy.GwaDelimiter);
+
+        //EL records can have strings in brackets immediately after the index like "1[0.000000:0.590164]"
+        var sectionIndexStr = pieces[5].Split('[').First();  
+        if (int.TryParse(pieces[1], out int elementIndex) && int.TryParse(sectionIndexStr, out int sectionIndex))
+        {
+          var line = new List<string>() { elementIndex.ToString(), elementApplicationId, sectionIndex.ToString(),
+            (propApplicationIds.ContainsKey(sectionIndex)) ? propApplicationIds[sectionIndex] : "", propSectionDescs[sectionIndex] };
+          lines.Add(line);
+        }
+      }
+
+      return lines;
     }
 
     //For testing

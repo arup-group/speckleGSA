@@ -13,7 +13,7 @@ namespace SpeckleGSA.UI.Models
     public StreamMethod StreamMethod { get; set; } = StreamMethod.Single;
     public StreamList StreamList { get; set; } = new StreamList();
 
-    public double CoincidentNodeAllowance { get; set; } = 0.01;
+    public double CoincidentNodeAllowance { get; set; } = 10;
     public GsaUnit CoincidentNodeUnits { get; set; } = GsaUnit.Millimetres;
   }
 }

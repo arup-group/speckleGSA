@@ -183,7 +183,7 @@ namespace SpeckleGSAProxy
       return FormatStreamIdSidTag(streamId) + FormatApplicationIdSidTag(applicationId);
     }
 
-    public void ParseGeneralGwa(string fullGwa, out string keyword, out int? index, out string streamId, out string applicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType, bool includeKwVersion = false)
+    public static void ParseGeneralGwa(string fullGwa, out string keyword, out int? index, out string streamId, out string applicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType, bool includeKwVersion = false)
     {
       var pieces = fullGwa.ListSplit(GSAProxy.GwaDelimiter).ToList();
       keyword = "";

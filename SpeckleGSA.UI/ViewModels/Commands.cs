@@ -9,6 +9,7 @@ using SpeckleCore;
 using SpeckleGSA.UI.Models;
 using SpeckleGSA.UI.Utilities;
 using SpeckleGSAInterfaces;
+using System.IO;
 
 namespace SpeckleGSA.UI.ViewModels
 {
@@ -195,8 +196,55 @@ namespace SpeckleGSA.UI.ViewModels
 
     public static bool SaveFile()
     {
-      System.Threading.Thread.Sleep(1000);
+      OpenFileDialog openFileDialog = new OpenFileDialog();
+      if (openFileDialog.ShowDialog() == true)
+      {
+        GSA.GsaApp.gsaProxy.SaveAs(openFileDialog.FileName);
+      }
       return true;
+    }
+
+    public static bool ExportAppliedSectionData()
+    {
+      SaveFileDialog saveFileDialog = new SaveFileDialog();
+      if (saveFileDialog.ShowDialog() == true)
+      {
+        if (GSA.GsaApp.gsaCache.NumRecords == 0)
+        {
+          UpdateCache(new [] { "EL", "MEMB", "PROP_SEC" });
+        }
+
+        var data = GSA.GsaApp.gsaCache.GetAppliedSectionData();
+        File.WriteAllLines(saveFileDialog.FileName, data.Select(l => string.Join(",", l)).ToArray());
+      }
+      return true;
+    }
+
+    private static bool UpdateCache(IEnumerable<string> keywords)
+    {
+      try
+      {
+        var data = GSA.GsaApp.gsaProxy.GetGwaData(keywords, false);
+
+        for (int i = 0; i < data.Count(); i++)
+        {
+          GSA.GsaApp.gsaCache.Upsert(
+            data[i].Keyword,
+            data[i].Index,
+            data[i].GwaWithoutSet,
+            streamId: data[i].StreamId,
+            //This needs to be revised as this logic is in the kit too
+            applicationId: (string.IsNullOrEmpty(data[i].ApplicationId)) ? ("gsa/" + data[i].Keyword + "_" + data[i].Index.ToString()) : data[i].ApplicationId,
+            gwaSetCommandType: data[i].GwaSetType);
+        }
+
+        var numRowsupdated = data.Count();
+        return (numRowsupdated > 0);
+      }
+      catch
+      {
+        return false;
+      }
     }
 
     public static bool RenameStream(string streamId, string newStreamName, IProgress<MessageEventArgs> loggingProgress)

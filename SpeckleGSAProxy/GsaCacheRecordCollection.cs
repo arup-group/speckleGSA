@@ -15,6 +15,8 @@ namespace SpeckleGSAProxy
     private readonly Dictionary<string, HashSet<int>> collectionIndicesBySpeckleTypeName = new Dictionary<string, HashSet<int>>();
 
     private List<GSACacheRecord> validRecords { get => records.Where(r => r != null).ToList(); }
+    
+    public int NumRecords { get => validRecords.Where(r => r.Latest).Count(); }
 
     public bool AssignApplicationId(string kw, int gsaIndex, string applicationId)
     {
