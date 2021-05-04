@@ -758,12 +758,11 @@ namespace SpeckleGSAProxy
 
         var pieces = gwa.Split(GSAProxy.GwaDelimiter);
 
-        //EL records can have strings in brackets immediately after the index like "1[0.000000:0.590164]"
-        var sectionIndexStr = pieces[6].Split('[').First();
-        if (memberIndex.HasValue && int.TryParse(sectionIndexStr, out int sectionIndex) && propSectionDescs.ContainsKey(sectionIndex))
+        if (memberIndex.HasValue && int.TryParse(pieces[6], out int sectionIndex) && propSectionDescs.ContainsKey(sectionIndex))
         {
           var line = new List<string>() { memberIndex.ToString(), memberApplicationId, sectionIndex.ToString(),
-            (propApplicationIds.ContainsKey(sectionIndex)) ? propApplicationIds[sectionIndex] : "", propSectionDescs[sectionIndex] };
+            (propApplicationIds.ContainsKey(sectionIndex)) ? propApplicationIds[sectionIndex] : "",
+            propSectionDescs[sectionIndex] };
           lines.Add(line);
         }
       }
@@ -773,16 +772,17 @@ namespace SpeckleGSAProxy
       var elementGwas = ExecuteWithLock(() => recordCollection.GetAllRecordsByKeyword(elementKeyword));
       foreach (var gwa in elementGwas)
       {
-        GSAProxy.ParseGeneralGwa(gwa, out _, out int? propertyIndex, out _, out string elementApplicationId, out _, out _, false);
+        GSAProxy.ParseGeneralGwa(gwa, out _, out int? elementIndex, out _, out string elementApplicationId, out _, out _, false);
 
         var pieces = gwa.Split(GSAProxy.GwaDelimiter);
 
         //EL records can have strings in brackets immediately after the index like "1[0.000000:0.590164]"
         var sectionIndexStr = pieces[5].Split('[').First();  
-        if (int.TryParse(pieces[1], out int elementIndex) && int.TryParse(sectionIndexStr, out int sectionIndex))
+        if (elementIndex.HasValue && int.TryParse(sectionIndexStr, out int sectionIndex) && propSectionDescs.ContainsKey(sectionIndex))
         {
           var line = new List<string>() { elementIndex.ToString(), elementApplicationId, sectionIndex.ToString(),
-            (propApplicationIds.ContainsKey(sectionIndex)) ? propApplicationIds[sectionIndex] : "", propSectionDescs[sectionIndex] };
+            (propApplicationIds.ContainsKey(sectionIndex)) ? propApplicationIds[sectionIndex] : "",
+            propSectionDescs[sectionIndex] };
           lines.Add(line);
         }
       }
