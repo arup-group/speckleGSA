@@ -11,6 +11,7 @@ using SpeckleGSAInterfaces;
 using System.Reflection;
 using System.Windows.Threading;
 using System.Timers;
+using SpeckleGSAProxy;
 
 namespace SpeckleGSA.UI.ViewModels
 {
@@ -169,8 +170,14 @@ namespace SpeckleGSA.UI.ViewModels
        {
          Refresh(() => StateMachine.StartedLoggingIn());
 
-         var loaded = await Task.Run(() => Commands.InitialLoadAsync(Coordinator, loggingProgress));
+         var calibrateNodeAtTask = Task.Run(() => GSAProxy.CalibrateNodeAt());
+         var initialLoadTask = Task.Run(() => Commands.InitialLoadAsync(Coordinator, loggingProgress));
 
+         await initialLoadTask;
+         await calibrateNodeAtTask;
+
+         var loaded = initialLoadTask.Result;
+         
          if (loaded)
          {
            Refresh(() => StateMachine.LoggedIn());
