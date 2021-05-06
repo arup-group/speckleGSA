@@ -268,7 +268,7 @@ namespace SpeckleGSA
             }
           }
         }
-        catch (Exception ex)
+        catch
         {
 
         }
@@ -276,9 +276,9 @@ namespace SpeckleGSA
       return currentObjects;
     }
 
-#endregion
+  #endregion
 
-#region streamInfo
+  #region streamInfo
     public static void RemoveUnusedStreamInfo(List<string> streamNames)
     {
       //Remove any streams that will no longer need to be used - if the "Separate sender streams" item has been toggled, for example
@@ -290,7 +290,7 @@ namespace SpeckleGSA
     }
 #endregion
 
-#region File Operations
+  #region File Operations
     /// <summary>
     /// Creates a new GSA file. Email address and server address is needed for logging purposes.
     /// </summary>
@@ -340,9 +340,9 @@ namespace SpeckleGSA
       SenderInfo.Clear();
       ReceiverInfo.Clear();
     }
-#endregion
+  #endregion
 
-#region Speckle Client
+  #region Speckle Client
     /// <summary>
     /// Extracts sender and receiver streams associated with the account.
     /// </summary>

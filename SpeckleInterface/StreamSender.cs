@@ -50,10 +50,11 @@ namespace SpeckleInterface
     /// <param name="streamId">Stream ID of stream. If no stream ID is given, a new stream is created.</param>
     /// <param name="streamName">Stream name</param>
     /// <returns>Task</returns>
-    public void InitializeSender(string documentName, BasePropertyUnits units, double tolerance, double angleTolerance, 
+    public async Task InitializeSender(string documentName, BasePropertyUnits units, double tolerance, double angleTolerance, 
       string streamId = "", string clientId = "", string streamName = "", IProgress<int> totalProgress = null, IProgress<int> incrementProgress = null)
     {
       apiClient.AuthToken = apiToken;
+      await apiClient.IntializeUser();
 
       this.units = units;
       this.tolerance = tolerance;

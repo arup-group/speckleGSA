@@ -37,8 +37,9 @@ namespace SpeckleGSAProxy.Test
 
     public string ObjectUrl(string id) => HelperFunctions.Combine(ServerAddress, "object/" + id);
 
-    public void InitializeReceiver(string streamID, string documentName, string clientID = "", IProgress<double> totalProgress = null, IProgress<double> incrementProgress = null)
+    public Task InitializeReceiver(string streamID, string documentName, string clientID = "", IProgress<double> totalProgress = null, IProgress<double> incrementProgress = null)
     {
+      return Task.CompletedTask;
     }
   }
 }

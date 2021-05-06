@@ -885,7 +885,7 @@ namespace SpeckleGSAUI
           GSA.GsaApp.gsaSettings.SetFieldOrPropValue(propertyName, propertyValue);
         }
       }
-      catch (Exception exception)
+      catch
       { }
     }
 

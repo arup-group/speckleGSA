@@ -19,8 +19,6 @@ namespace SpeckleInterface
 
     public string Units { get => apiClient == null ? null : apiClient.Stream.BaseProperties["units"]; }
 
-		public string StreamId { get => apiClient == null ? "" : apiClient.Stream.StreamId; }
-
     private IProgress<double> incrementProgress;
     private IProgress<double> totalProgress;
 
@@ -40,14 +38,15 @@ namespace SpeckleInterface
     /// </summary>
     /// <param name="streamID">Stream ID of stream</param>
     /// <returns>Task</returns>
-    public void InitializeReceiver(string streamId, string documentName, string clientID = "", IProgress<double> totalProgress = null, IProgress<double> incrementProgress = null)
+    public async Task InitializeReceiver(string streamId, string documentName, string clientID = "", IProgress<double> totalProgress = null, IProgress<double> incrementProgress = null)
     {
       apiClient.StreamId = streamId;
       apiClient.AuthToken = apiToken;
       this.incrementProgress = incrementProgress;
+      await apiClient.IntializeUser();
       this.totalProgress = totalProgress;
 
-      if (string.IsNullOrEmpty(clientID))
+	  if (string.IsNullOrEmpty(clientID))
       {
         tryCatchWithEvents(() =>
         {

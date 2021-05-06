@@ -7,7 +7,7 @@ namespace SpeckleInterface
   {
     protected readonly ISpeckleAppMessenger messenger;
 
-    public string StreamId => apiClient?.StreamId;
+    public string StreamId { get => apiClient?.StreamId; }
     public string StreamName => apiClient?.Stream.Name;
     public string ClientId => apiClient?.ClientId;
 
