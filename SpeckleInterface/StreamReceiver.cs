@@ -42,8 +42,9 @@ namespace SpeckleInterface
     {
       apiClient.StreamId = streamID;
       apiClient.AuthToken = apiToken;
+	  await apiClient.IntializeUser();
 
-      if (string.IsNullOrEmpty(clientID))
+	  if (string.IsNullOrEmpty(clientID))
       {
 				tryCatchWithEvents(() =>
 				{

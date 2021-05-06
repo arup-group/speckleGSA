@@ -52,6 +52,7 @@ namespace SpeckleInterface
       string streamId = "", string clientId = "", string streamName = "")
     {
       apiClient.AuthToken = apiToken;
+      await apiClient.IntializeUser();
 
       this.units = units;
       this.tolerance = tolerance;
