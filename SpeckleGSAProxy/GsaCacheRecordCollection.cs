@@ -98,7 +98,7 @@ namespace SpeckleGSAProxy
       {
         return new List<GSACacheRecord>();
       }
-      return collectionIndicesByKw[kw].Where(i => records[i].Index == gsaIndex).OrderBy(i => records[i].Index).Select(i => records[i]).ToList();
+      return collectionIndicesByKw[kw].Where(i => records[i].Index == gsaIndex).Select(i => records[i]).ToList();
     }
 
     public List<GSACacheRecord> GetAllRecords()
@@ -112,7 +112,6 @@ namespace SpeckleGSAProxy
       {
         return new List<string>();
       }
-      //return (recordsByKeyword.ContainsKey(kw)) ? recordsByKeyword[kw].Select(r => r.Gwa).ToList() : new List<string>();
       return collectionIndicesByKw[kw].OrderBy(i => records[i].Index).Select(i => records[i].Gwa).ToList();
     }
 
@@ -249,9 +248,10 @@ namespace SpeckleGSAProxy
         applicationIds = new List<string>();
         return false;
       }
-      gsaIndices = collectionIndicesByKw[kw].Select(i => records[i].Index).OrderBy(i => i).ToList();
-      gwa = collectionIndicesByKw[kw].Select(i => records[i].Gwa).ToList();
-      applicationIds = collectionIndicesByKw[kw].Select(i => records[i].ApplicationId).ToList();
+      var colIndices = collectionIndicesByKw[kw].OrderBy(i => records[i].Index);
+      gsaIndices = colIndices.Select(i => records[i].Index).ToList();
+      gwa = colIndices.Select(i => records[i].Gwa).ToList();
+      applicationIds = colIndices.Select(i => records[i].ApplicationId).ToList();
       return true;
     }
 
@@ -264,7 +264,7 @@ namespace SpeckleGSAProxy
         return new List<SpeckleObject>();
       }
       var colIndices = collectionIndicesByApplicationId[applicationId].Intersect(collectionIndicesBySpeckleTypeName[speckleTypeName]).OrderBy(i => i);
-      return colIndices.Where(i => records[i].SpeckleObj != null).Select(i => records[i].SpeckleObj).ToList();
+      return colIndices.Where(i => records[i].SpeckleObj != null).OrderBy(i => records[i].Index).Select(i => records[i].SpeckleObj).ToList();
     }
 
     public Dictionary<int, object> GetSpeckleObjectsByTypeName(string speckleTypeName)
@@ -274,7 +274,6 @@ namespace SpeckleGSAProxy
         return new Dictionary<int, object>();
       }
       return collectionIndicesBySpeckleTypeName[speckleTypeName].OrderBy(i => records[i].Index).ToDictionary(i => records[i].Index, i => (object)records[i].SpeckleObj);
-      // records.Where(r => r.SpeckleObj != null && r.SpeckleType.EndsWith(speckleTypeName)).ToDictionary(v => v.Index, v => (object)v.SpeckleObj)
     }
 
     public void MarkPrevious(string kw, string applicationId)
@@ -437,7 +436,7 @@ namespace SpeckleGSAProxy
         return null;
       }
       var colIndices = collectionIndicesByApplicationId[applicationId].Intersect(collectionIndicesByKw[kw]);
-      return (colIndices.Count() == 0) ? null : (int?)colIndices.Select(i => records[i].Index).OrderBy(i => i).First();
+      return (colIndices.Count() == 0) ? null : (int?)colIndices.Select(i => records[i].Index).OrderBy(i => i).Last();
     }
 
     public List<GSACacheRecord> GetAllRecords(string kw, string applicationId)

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using SpeckleCore;
@@ -441,7 +440,7 @@ namespace SpeckleGSAProxy
       return specs;
     }
 
-#region load_case_conversion
+    #region load_case_conversion
 
     //Since EntitiesInList doesn't offer load cases/combinations as a GsaEntity type, a dummy GSA instance is 
     //created where a node is created for every load case/combination in the specification.  This is done separately for load cases and combinations.
