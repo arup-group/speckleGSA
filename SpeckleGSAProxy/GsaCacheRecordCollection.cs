@@ -362,20 +362,21 @@ namespace SpeckleGSAProxy
     public void Upsert(string kw, int gsaIndex, string gwa, string streamId, string applicationId, bool latest, SpeckleObject so, GwaSetCommandType gwaSetCommandType)
     {
       var newColIndex = records.Count();
-      var newRecord = new GSACacheRecord(kw, gsaIndex, gwa, streamId: streamId, applicationId: applicationId, latest: true, so: so, gwaSetCommandType: gwaSetCommandType);
+      var trimmedAppId = string.IsNullOrEmpty(applicationId) ? applicationId : applicationId.Replace(" ", "");
+      var newRecord = new GSACacheRecord(kw, gsaIndex, gwa, streamId: streamId, applicationId: trimmedAppId, latest: true, so: so, gwaSetCommandType: gwaSetCommandType);
       records.Add(newRecord);
       if (!collectionIndicesByKw.ContainsKey(kw))
       {
         collectionIndicesByKw.Add(kw, new HashSet<int>());
       }
       collectionIndicesByKw[kw].Add(newColIndex);
-      if (!string.IsNullOrEmpty(applicationId))
+      if (!string.IsNullOrEmpty(trimmedAppId))
       {
-        if (!collectionIndicesByApplicationId.ContainsKey(applicationId))
+        if (!collectionIndicesByApplicationId.ContainsKey(trimmedAppId))
         {
-          collectionIndicesByApplicationId.Add(applicationId, new HashSet<int>());
+          collectionIndicesByApplicationId.Add(trimmedAppId, new HashSet<int>());
         }
-        collectionIndicesByApplicationId[applicationId].Add(newColIndex);
+        collectionIndicesByApplicationId[trimmedAppId].Add(newColIndex);
       }
       if (!string.IsNullOrEmpty(streamId))
       {

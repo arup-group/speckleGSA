@@ -50,6 +50,86 @@ namespace SpeckleGSAProxy.Test
       type: "Polyline/Structural1DElementPolyline",	23
     */
 
+    [Test]
+    public void UnitCalibrationsTest()
+    {
+      GSAProxy.CalibrateNodeAt();
+    }
+
+    private double CalibrateFactorFor(string units, double coincidentNodeTolerance = 1)
+    {
+      double coordValue = 1000;
+
+      var proxy = new GSAProxy();
+      proxy.NewFile(false);
+      proxy.SetUnits(units);
+      proxy.NodeAt(coordValue, coordValue, coordValue, coincidentNodeTolerance);
+      double factor = 1;
+      var gwa = proxy.GetGwaForNode(1);
+      var pieces = gwa.Split(GSAProxy.GwaDelimiter);
+      if (double.TryParse(pieces.Last(), out double z1))
+      {
+        if (z1 != coordValue)
+        {
+          var factorCandidate = coordValue / z1;
+
+          proxy.NodeAt(coordValue * factorCandidate, coordValue * factorCandidate, coordValue * factorCandidate, coincidentNodeTolerance * factorCandidate);
+
+          gwa = proxy.GetGwaForNode(2);
+          pieces = gwa.Split(GSAProxy.GwaDelimiter);
+
+          if (double.TryParse(pieces.Last(), out double z2) && z2 == 1000)
+          {
+            //it's confirmed
+            factor = factorCandidate;
+          }
+        }
+      }
+
+      proxy.Close();
+
+      return factor;
+    }
+
+    private Dictionary<string, double> CalibrateFactorsFor(Dictionary<string, double> unitAndTolerances)
+    {
+      double coordValue = 1000;
+      var retDict = new Dictionary<string, double>();
+      var proxy = new GSAProxy();
+      proxy.NewFile(false);
+      foreach (var u in unitAndTolerances.Keys)
+      {
+        proxy.SetUnits(u);
+        var nodeIndex = proxy.NodeAt(coordValue, coordValue, coordValue, unitAndTolerances[u]);
+        double factor = 1;
+        var gwa = proxy.GetGwaForNode(nodeIndex);
+        var pieces = gwa.Split(GSAProxy.GwaDelimiter);
+        if (double.TryParse(pieces.Last(), out double z1))
+        {
+          if (z1 != coordValue)
+          {
+            var factorCandidate = coordValue / z1;
+
+            nodeIndex = proxy.NodeAt(coordValue * factorCandidate, coordValue * factorCandidate, coordValue * factorCandidate, 1 * factorCandidate);
+
+            gwa = proxy.GetGwaForNode(nodeIndex);
+            pieces = gwa.Split(GSAProxy.GwaDelimiter);
+
+            if (double.TryParse(pieces.Last(), out double z2) && z2 == 1000)
+            {
+              //it's confirmed
+              factor = factorCandidate;
+            }
+          }
+        }
+        retDict.Add(u, factor);
+      }
+
+      proxy.Close();
+
+      return retDict;
+    }
+
     [TestCase(GSATargetLayer.Design, "EC_mxfJ2p.json", "m")]
     [TestCase(GSATargetLayer.Analysis, "EC_mxfJ2p.json", "m")]
     public void ReceiveTestPreserveOrderContinuousMerge(GSATargetLayer layer, string fileName, string streamUnits = "mm")
@@ -195,7 +275,8 @@ namespace SpeckleGSAProxy.Test
         GSA.GsaApp.gsaProxy.Close();
       }
     }
-
+    
+    [Ignore("To help with potential future debugging")]
     [Test]
     public void ForgetSIDTest()
     {
@@ -229,7 +310,7 @@ namespace SpeckleGSAProxy.Test
         Debug.WriteLine("");
         Debug.WriteLine("Test run number: " + (n + 1));
         Debug.WriteLine("");
-        
+
 
         var streamIds = savedJsonFileNames.Select(fn => fn.Split(new[] { '.' }).First()).ToList();
         GSA.ReceiverInfo = streamIds.Select(si => new SidSpeckleRecord(si, null)).ToList();
@@ -374,37 +455,7 @@ namespace SpeckleGSAProxy.Test
       Assert.AreEqual(9, testMessageCache.Count());
     }
 
-    [Test]
-    public void DeserTest()
-    {
-
-      SpeckleInitializer.Initialize();
-
-      //string t = "{\"success\":true,\"message\":\"Saved objects to database.\",\"resources\":[{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98275e\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98275f\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982760\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982761\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982762\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982763\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982764\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982765\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982766\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982767\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982768\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982769\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98276a\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98276b\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98276c\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98276d\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98276e\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98276f\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982770\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982771\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982772\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982773\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982774\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982775\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982776\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982777\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982778\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982779\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98277a\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98277b\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98277c\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98277d\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98277e\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98277f\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982780\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982781\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982782\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982783\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982784\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982785\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982786\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982787\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982788\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982789\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98278a\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98278b\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98278c\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98278d\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98278e\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98278f\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982790\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982791\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982792\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982793\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982794\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982795\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982796\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982797\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982798\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b982799\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98279a\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98279b\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98279c\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98279d\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98279e\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98279f\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b9827a0\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b9827a1\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b9827a2\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b9827a3\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b9827a4\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b9827a5\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b9827a6\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b9827a7\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b9827a8\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b9827a9\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b9827aa\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b9827ab\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b9827ac\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b9827ad\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b9827ae\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b9827af\"},{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b9827b0\"}]}";
-      //string t2 = "{\"success\":true,\"message\":\"Saved objects to database.\",\"resources\":[{\"type\":\"Placeholder\",\"_id\":\"603f65a393d84f149b98275e\",\"properties\":{}}]}";
-
-      var res3 = new ResponseObject()
-      {
-        Success = true,
-        Message = "Saved objects to database.",
-        Resources = new List<SpeckleObject>() { new SpecklePlaceholder() { _id = "603f65a393d84f149b98275e" } }
-      };
-
-      var t3 = res3.ToJson();
-      //var r = ResponseObject.FromJson(t3);
-      //var testRes = new TestRes() { message = "a", success = true };
-      //var t3 = JsonConvert.SerializeObject(testRes);
-
-      try
-      {
-        var res = JsonConvert.DeserializeObject(t3, typeof(TestRes));
-      }
-      catch
-      {
-
-      }
-    }
-
+    
     #region private_methods
 
     private void TestMessageHandler(object sender, MessageEventArgs mea)
@@ -475,7 +526,7 @@ namespace SpeckleGSAProxy.Test
     #endregion
 
 
-    public static string[] DesignLayerKeywords = new string[] { 
+    public static string[] DesignLayerKeywords = new string[] {
       "LOAD_2D_THERMAL",
       "ALIGN",
       "PATH",
