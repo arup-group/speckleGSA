@@ -118,7 +118,7 @@
       <HintPath>..\packages\Serilog.Settings.AppSettings.2.2.2\lib\net45\Serilog.Settings.AppSettings.dll</HintPath>
     </Reference>
     <Reference Include="SpeckleCore, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\SpecCxCore.1.2.5\lib\netstandard2.0\SpeckleCore.dll</HintPath>
+      <HintPath>..\packages\SpecCxCore.1.2.6\lib\netstandard2.0\SpeckleCore.dll</HintPath>
     </Reference>
     <Reference Include="SQLite-net, Version=1.5.231.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\sqlite-net-pcl.1.5.231\lib\netstandard1.1\SQLite-net.dll</HintPath>

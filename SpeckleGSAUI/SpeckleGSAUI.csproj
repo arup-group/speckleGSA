@@ -111,7 +111,7 @@
       <HintPath>..\packages\Serilog.Sinks.RollingFile.3.3.0\lib\net45\Serilog.Sinks.RollingFile.dll</HintPath>
     </Reference>
     <Reference Include="SpeckleCore, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\SpecCxCore.1.2.5\lib\netstandard2.0\SpeckleCore.dll</HintPath>
+      <HintPath>..\packages\SpecCxCore.1.2.6\lib\netstandard2.0\SpeckleCore.dll</HintPath>
     </Reference>
     <Reference Include="SpecklePopup, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\SpecCxPopup.1.2.3\lib\net461\SpecklePopup.dll</HintPath>
