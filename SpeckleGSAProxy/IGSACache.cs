@@ -34,6 +34,8 @@ namespace SpeckleGSAProxy
 
     void MarkAsPrevious(string keyword, string sid);
 
+    List<string> KeywordsForLoadCaseExpansion { get; }
+
     List<string> ExpandLoadCasesAndCombinations(string loadCaseString);
   }
 }

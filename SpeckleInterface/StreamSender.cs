@@ -22,8 +22,10 @@ namespace SpeckleInterface
     private int numParallelApiRequests = DEFAULT_PARALLEL_API_REQUESTS;
 
     private BasePropertyUnits units;
-    double tolerance;
-    double angleTolerance;
+    private double tolerance;
+    private double angleTolerance;
+    private IProgress<int> incrementProgress;
+    private IProgress<int> totalProgress;
 
     private Dictionary<string, object> BaseProperties  { get => new Dictionary<string, object>()
     {
@@ -49,13 +51,16 @@ namespace SpeckleInterface
     /// <param name="streamName">Stream name</param>
     /// <returns>Task</returns>
     public async Task InitializeSender(string documentName, BasePropertyUnits units, double tolerance, double angleTolerance, 
-      string streamId = "", string clientId = "", string streamName = "")
+      string streamId = "", string clientId = "", string streamName = "", IProgress<int> totalProgress = null, IProgress<int> incrementProgress = null)
     {
       apiClient.AuthToken = apiToken;
+      await apiClient.IntializeUser();
 
       this.units = units;
       this.tolerance = tolerance;
       this.angleTolerance = angleTolerance;
+      this.totalProgress = totalProgress;
+      this.incrementProgress = incrementProgress;
 
       if (string.IsNullOrEmpty(clientId))
       {
@@ -158,8 +163,7 @@ namespace SpeckleInterface
 
       GroupIntoLayers(payloadObjects, out List<Layer> layers, out List<SpeckleObject> bucketObjects);
 
-      messenger.Message(MessageIntent.Display, MessageLevel.Information,
-        "Successfully grouped " + bucketObjects.Count() + " objects into " + layers.Count() + " layers");
+      messenger.Message(MessageIntent.Display, MessageLevel.Information, "Successfully grouped " + bucketObjects.Count() + " objects into " + layers.Count() + " layers");
 
       DetermineObjectsToBeSent(bucketObjects, baseUrl, out List<SpeckleObject> changedObjects);
 
@@ -169,8 +173,7 @@ namespace SpeckleInterface
       var numUnchanged = bucketObjects.Count() - numChanged;
       if (numChanged == 0)
       {
-        messenger.Message(MessageIntent.Display, MessageLevel.Information,
-          "All " + numUnchanged + " objects are unchanged on the server for stream " + StreamId);
+        messenger.Message(MessageIntent.Display, MessageLevel.Information, "All " + numUnchanged + " objects are unchanged on the server for stream " + StreamId);
       }
       else
       {
@@ -405,6 +408,11 @@ namespace SpeckleInterface
       // Separate objects into sizeable payloads
       var payloads = CreatePayloads(bucketObjects);
 
+      if (totalProgress != null)
+      {
+        totalProgress.Report(payloads.Count());
+      }
+
       if (bucketObjects.Count(o => o.Type == "Placeholder") == bucketObjects.Count)
       {
         numErrors = 0;
@@ -435,31 +443,38 @@ namespace SpeckleInterface
       for (var j = 0; j < payloads.Count(); j++)
       {
         ResponseObject res = null;
+        //Make a copy so that the task below doesn't use the j variable, which could change (by looping) by the time the task is run
+        var payload = payloads[j].ToList();   
 
         try
         {
-          res = apiClient.ObjectCreateAsync(payloads[j], apiTimeoutOverride).Result;
+          res = apiClient.ObjectCreateAsync(payload, apiTimeoutOverride).Result;
+          if (incrementProgress != null)
+          {
+            incrementProgress.Report(1);
+          }
         }
         catch (Exception ex)
         {
           numErrors++;
           var speckleExceptionContext = ExtractSpeckleExceptionContext(ex);
           var errContext = speckleExceptionContext.Concat(new[] { "StreamId=" + StreamId,
-                "Error in updating the server with a payload of " + payloads[j].Count() + " objects" });
+                "Error in updating the server with a payload of " + payload.Count() + " objects" });
           messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, ex, errContext.ToArray());
         }
 
         if (res != null && res.Resources.Count() > 0)
         {
-          for (int i = 0; i < payloads[j].Count(); i++)
+          for (int i = 0; i < payload.Count(); i++)
           {
-            payloads[j][i]._id = res.Resources[i]._id;
+            payload[i]._id = res.Resources[i]._id;
           }
         }
 
+
         Task.Run(() =>
         {
-          foreach (SpeckleObject obj in payloads[j].Where(o => o.Hash != null && o._id != null))
+          foreach (SpeckleObject obj in payload.Where(o => o.Hash != null && o._id != null))
           {
             tryCatchWithEvents(() => LocalContext.AddSentObject(obj, baseUrl), "", "Error in updating local db");
           }

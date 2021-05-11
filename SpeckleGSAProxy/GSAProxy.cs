@@ -26,7 +26,8 @@ namespace SpeckleGSAProxy
     };
 
     //Note that When a GET_ALL is called for LOAD_BEAM, it returns LOAD_BEAM_UDL, LOAD_BEAM_LINE, LOAD_BEAM_PATCH and LOAD_BEAM_TRILIN
-    public static string[] SetAtKeywords = new string[] { "LOAD_NODE", "LOAD_BEAM", "LOAD_GRID_POINT", "LOAD_GRID_LINE", "LOAD_2D_FACE", "LOAD_GRID_AREA", "LOAD_2D_THERMAL", "LOAD_GRAVITY", "INF_BEAM", "INF_NODE", "RIGID", "GEN_REST" };
+    public static string[] SetAtKeywords = new string[] { "LOAD_NODE", "LOAD_BEAM", "LOAD_GRID_POINT", "LOAD_GRID_LINE", "LOAD_2D_FACE", 
+      "LOAD_GRID_AREA", "LOAD_2D_THERMAL", "LOAD_GRAVITY", "INF_BEAM", "INF_NODE", "RIGID", "GEN_REST" };
     //----
 
     //These are accessed via a lock
@@ -39,6 +40,61 @@ namespace SpeckleGSAProxy
     char IGSAProxy.GwaDelimiter => GSAProxy.GwaDelimiter;
 
     private string SpeckleGsaVersion;
+    private string units = "m";
+
+    #region nodeAt_factors
+    public static bool NodeAtCalibrated = false;
+    //Set to defaults, which will be updated at calibration
+    private static readonly Dictionary<string, double> UnitNodeAtFactors = new Dictionary<string, double>();
+
+    public static void CalibrateNodeAt()
+    {
+      double coordValue = 1000;
+      var unitCoincidentDict = new Dictionary<string, double>() { { "mm", 20 }, { "cm", 1 }, { "in", 1 }, { "m", 0.1 } };
+      var units = new[] { "m", "cm", "mm", "in" };
+
+      var proxy = new GSAProxy();
+      proxy.NewFile(false);
+      foreach (var u in units)
+      {
+        proxy.SetUnits(u);
+        var nodeIndex = proxy.NodeAt(coordValue, coordValue, coordValue, unitCoincidentDict[u]);
+        double factor = 1;
+        var gwa = proxy.GetGwaForNode(nodeIndex);
+        var pieces = gwa.Split(GSAProxy.GwaDelimiter);
+        if (double.TryParse(pieces.Last(), out double z1))
+        {
+          if (z1 != coordValue)
+          {
+            var factorCandidate = coordValue / z1;
+
+            nodeIndex = proxy.NodeAt(coordValue * factorCandidate, coordValue * factorCandidate, coordValue * factorCandidate, 1 * factorCandidate);
+
+            gwa = proxy.GetGwaForNode(nodeIndex);
+            pieces = gwa.Split(GSAProxy.GwaDelimiter);
+
+            if (double.TryParse(pieces.Last(), out double z2) && z2 == 1000)
+            {
+              //it's confirmed
+              factor = factorCandidate;
+            }
+          }
+        }
+        if (UnitNodeAtFactors.ContainsKey(u))
+        {
+          UnitNodeAtFactors[u] = factor;
+        }
+        else
+        {
+          UnitNodeAtFactors.Add(u, factor);
+        }
+      }
+
+      proxy.Close();
+
+      NodeAtCalibrated = true;
+    }
+    #endregion
 
     public void SetAppVersionForTelemetry(string speckleGsaAppVersion)
     {
@@ -183,7 +239,7 @@ namespace SpeckleGSAProxy
       return FormatStreamIdSidTag(streamId) + FormatApplicationIdSidTag(applicationId);
     }
 
-    public void ParseGeneralGwa(string fullGwa, out string keyword, out int? index, out string streamId, out string applicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType, bool includeKwVersion = false)
+    public static void ParseGeneralGwa(string fullGwa, out string keyword, out int? index, out string streamId, out string applicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType, bool includeKwVersion = false)
     {
       var pieces = fullGwa.ListSplit(GSAProxy.GwaDelimiter).ToList();
       keyword = "";
@@ -268,7 +324,7 @@ namespace SpeckleGSAProxy
     }
 
     //Tuple: keyword | index | Application ID | GWA command | Set or Set At
-    public List<ProxyGwaLine> GetGwaData(IEnumerable<string> keywords, bool nodeApplicationIdFilter)
+    public List<ProxyGwaLine> GetGwaData(IEnumerable<string> keywords, bool nodeApplicationIdFilter, IProgress<int> incrementProgress = null)
     {
       var dataLock = new object();
       var data = new List<ProxyGwaLine>();
@@ -391,8 +447,12 @@ namespace SpeckleGSAProxy
               }
             }
           }
+        });
+
+        if (incrementProgress != null)
+        {
+          incrementProgress.Report(1);
         }
-        );
       }
 
       for (int i = 0; i < setAtKeywords.Count(); i++)
@@ -469,6 +529,10 @@ namespace SpeckleGSAProxy
             }
           }
         }
+        if (incrementProgress != null)
+        {
+          incrementProgress.Report(1);
+        }
       }
 
       return data;
@@ -543,8 +607,9 @@ namespace SpeckleGSAProxy
 
     public int NodeAt(double x, double y, double z, double coincidenceTol)
     {
+      double factor = (UnitNodeAtFactors != null && UnitNodeAtFactors.ContainsKey(units)) ? UnitNodeAtFactors[units] : 1;
       //Note: the outcome of this might need to be added to the caches!
-      var index = ExecuteWithLock(() => GSAObject.Gen_NodeAt(x, y, z, coincidenceTol));
+      var index = ExecuteWithLock(() => GSAObject.Gen_NodeAt(x * factor, y * factor, z * factor, coincidenceTol * factor));
       return index;
     }
 
@@ -894,7 +959,19 @@ namespace SpeckleGSAProxy
     /// </summary>
     public string GetUnits()
     {
-      return ((string)ExecuteWithLock(() => GSAObject.GwaCommand(string.Join(GwaDelimiter.ToString(), new[] { "GET", "UNIT_DATA.1", "LENGTH" })))).ListSplit(GwaDelimiter)[2];
+      var retrievedUnits = ((string)ExecuteWithLock(() => GSAObject.GwaCommand(string.Join(GwaDelimiter.ToString(), new[] { "GET", "UNIT_DATA.1", "LENGTH" })))).ListSplit(GwaDelimiter)[2];
+      this.units = retrievedUnits;
+      return retrievedUnits;
+    }
+
+    public bool SetUnits(string units)
+    {
+      this.units = units;
+      var retCode = ExecuteWithLock(() => GSAObject.GwaCommand(string.Join(GwaDelimiter.ToString(), new[] { "SET", "UNIT_DATA", "LENGTH", units })));
+      retCode = ExecuteWithLock(() => GSAObject.GwaCommand(string.Join(GwaDelimiter.ToString(), new[] { "SET", "UNIT_DATA", "DISP", units })));
+      retCode = ExecuteWithLock(() => GSAObject.GwaCommand(string.Join(GwaDelimiter.ToString(), new[] { "SET", "UNIT_DATA", "SECTION", units })));
+      //Apparently 1 seems to be the code for success, from observation
+      return (retCode == 1);
     }
     #endregion
 

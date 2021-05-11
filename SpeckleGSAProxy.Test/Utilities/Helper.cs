@@ -22,7 +22,7 @@ namespace SpeckleGSAProxy.Test
           NullValueHandling = NullValueHandling.Ignore
         });
       }
-      catch (Exception e)
+      catch
       {
         return default(T);
       }

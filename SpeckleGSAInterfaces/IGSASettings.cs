@@ -10,10 +10,10 @@ namespace SpeckleGSAInterfaces
 		string Units { get; }
 		double CoincidentNodeAllowance { get; }
 
-		Dictionary<string, Tuple<int, int, List<string>>> NodalResults { get; }
-		Dictionary<string, Tuple<int, int, List<string>>> Element1DResults { get; }
-		Dictionary<string, Tuple<int, int, List<string>>> Element2DResults { get; }
-		Dictionary<string, Tuple<string, int, int, List<string>>> MiscResults { get; } 
+		Dictionary<string, IGSAResultParams> NodalResults { get; }
+		Dictionary<string, IGSAResultParams> Element1DResults { get; }
+		Dictionary<string, IGSAResultParams> Element2DResults { get; }
+		Dictionary<string, IGSAResultParams> MiscResults { get; } 
 
 		bool SendResults { get; }
 		List<string> ResultCases { get; }

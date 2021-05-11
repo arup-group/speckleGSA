@@ -19,9 +19,10 @@ namespace SpeckleInterface
 
     public string Units { get => apiClient == null ? null : apiClient.Stream.BaseProperties["units"]; }
 
-		public string StreamId { get => apiClient == null ? "" : apiClient.Stream.StreamId; }
+    private IProgress<double> incrementProgress;
+    private IProgress<double> totalProgress;
 
-		//public string ServerAddress { get => serverAddress; }
+    //public string ServerAddress { get => serverAddress; }
 
     /// <summary>
     /// Create SpeckleGSAReceiver object.
@@ -30,7 +31,6 @@ namespace SpeckleInterface
     /// <param name="apiToken">API token</param>
     public StreamReceiver(string serverAddress, string apiToken, ISpeckleAppMessenger messenger) : base(serverAddress, apiToken, messenger)
     {
-
     }
 
     /// <summary>
@@ -38,52 +38,62 @@ namespace SpeckleInterface
     /// </summary>
     /// <param name="streamID">Stream ID of stream</param>
     /// <returns>Task</returns>
-    public async Task InitializeReceiver(string streamID, string documentName, string clientID = "")
+    public async Task InitializeReceiver(string streamId, string documentName, string clientID = "", IProgress<double> totalProgress = null, IProgress<double> incrementProgress = null)
     {
-      apiClient.StreamId = streamID;
+      apiClient.StreamId = streamId;
       apiClient.AuthToken = apiToken;
+      this.incrementProgress = incrementProgress;
+      await apiClient.IntializeUser();
+      this.totalProgress = totalProgress;
 
-      if (string.IsNullOrEmpty(clientID))
+	  if (string.IsNullOrEmpty(clientID))
       {
-				tryCatchWithEvents(() =>
-				{
-					var clientResponse = apiClient.ClientCreateAsync(new AppClient()
-					{
-						DocumentName = documentName,
-						DocumentType = "GSA",
-						Role = "Receiver",
-						StreamId = streamID,
-						Online = true,
-					}).Result;
+        tryCatchWithEvents(() =>
+        {
+          var clientResponse = apiClient.ClientCreateAsync(new AppClient()
+          {
+            DocumentName = documentName,
+            DocumentType = "GSA",
+            Role = "Receiver",
+            StreamId = streamId,
+            Online = true,
+          }).Result;
 
-					apiClient.ClientId = clientResponse.Resource._id;
-				}, "", "Unable to create client on server");
+          apiClient.ClientId = clientResponse.Resource._id;
+        }, "", "Unable to create client on server");
       }
       else
       {
-				tryCatchWithEvents(() =>
-				{
-					_ = apiClient.ClientUpdateAsync(clientID, new AppClient()
-					{
-						DocumentName = documentName,
-						Online = true,
-					}).Result;
+        tryCatchWithEvents(() =>
+        {
+          _ = apiClient.ClientUpdateAsync(clientID, new AppClient()
+          {
+            DocumentName = documentName,
+            Online = true,
+          }).Result;
 
-					apiClient.ClientId = clientID;
-				}, "", "Unable to update client on server");
+          apiClient.ClientId = clientID;
+        }, "", "Unable to update client on server");
       }
 
-      apiClient.SetupWebsocket();
-      apiClient.JoinRoom("stream", streamID);
+      tryCatchWithEvents(() =>
+      {
+        apiClient.SetupWebsocket();
+      }, "", "Unable to set up web socket");
+
+      tryCatchWithEvents(() =>
+      {
+        apiClient.JoinRoom("stream", streamId);
+      }, "", "Uable to join web socket");
 
       apiClient.OnWsMessage += OnWsMessage;
     }
 
-		/// <summary>
-		/// Return a list of SpeckleObjects from the stream.
-		/// </summary>
-		/// <returns>List of SpeckleObjects</returns>
-		public List<SpeckleObject> GetObjects()
+    /// <summary>
+    /// Return a list of SpeckleObjects from the stream.
+    /// </summary>
+    /// <returns>List of SpeckleObjects</returns>
+    public List<SpeckleObject> GetObjects()
     {
       UpdateGlobal();
 

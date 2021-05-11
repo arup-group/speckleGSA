@@ -12,7 +12,7 @@ namespace SpeckleInterface
 
     event EventHandler<EventArgs> UpdateGlobalTrigger;
 
-    Task InitializeReceiver(string streamID, string documentName, string clientID = "");
+    Task InitializeReceiver(string streamID, string documentName, string clientID = "", IProgress<double> totalProgress = null, IProgress<double> incrementProgress = null);
     List<SpeckleObject> GetObjects();
     void Dispose(); 
   }

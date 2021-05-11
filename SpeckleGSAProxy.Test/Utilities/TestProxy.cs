@@ -51,7 +51,7 @@ namespace SpeckleGSAProxy.Test
       ExecuteWithLock(() => data.Add(line));
     }
 
-    public new List<ProxyGwaLine> GetGwaData(IEnumerable<string> keywords, bool nodeApplicationIdFilter)
+    public List<ProxyGwaLine> GetGwaData(IEnumerable<string> keywords, bool nodeApplicationIdFilter)
     {
       return data;
     }

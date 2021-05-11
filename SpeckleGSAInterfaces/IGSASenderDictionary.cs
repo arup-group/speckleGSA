@@ -13,6 +13,7 @@ namespace SpeckleGSAInterfaces
     bool AddRange<T>(List<T> os);
 
     int Count<T>();
+    int Count(Type t);
 
     List<T> Get<T>();
     Dictionary<Type, List<object>> GetAll();
