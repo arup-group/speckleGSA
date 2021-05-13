@@ -66,7 +66,7 @@ namespace SpeckleInterface
       {
         tryCatchWithEvents(() =>
         {
-          var streamResponse = apiClient.StreamCreateAsync(new SpeckleStream()).Result;
+          var streamResponse = apiClient.StreamCreateAsync(new SpeckleStream(), timeoutMillisecondsOverride: DEFAULT_API_TIMEOUT).Result;
           apiClient.Stream = streamResponse.Resource;
           apiClient.StreamId = streamResponse.Resource.StreamId;
         },
@@ -81,34 +81,31 @@ namespace SpeckleInterface
             Role = "Sender",
             StreamId = this.StreamId,
             Online = true,
-          }).Result;
+          }, timeoutMillisecondsOverride: DEFAULT_API_TIMEOUT).Result;
           apiClient.ClientId = clientResponse.Resource._id;
         }, "", "Unable to create client on the server");
       }
       else
       {
-        tryCatchWithEvents(() =>
+        tryCatchWithEvents(async () =>
         {
-          var streamResponse = apiClient.StreamGetAsync(streamId, null).Result;
+          var streamResponse = await apiClient.StreamGetAsync(streamId, null, timeoutMillisecondsOverride: DEFAULT_API_TIMEOUT);
 
           apiClient.Stream = streamResponse.Resource;
           apiClient.StreamId = streamResponse.Resource.StreamId;
         }, "", "Unable to get stream response");
 
-        tryCatchWithEvents(() =>
+        tryCatchWithEvents(async () =>
         {
-          var clientResponse = apiClient.ClientUpdateAsync(clientId, new AppClient()
+          var clientResponse = await apiClient.ClientUpdateAsync(clientId, new AppClient()
           {
-            //DocumentName = Path.GetFileNameWithoutExtension(GSA.GsaApp.gsaProxy.FilePath),
             DocumentName = documentName,
             Online = true,
-          }).Result;
+          }, timeoutMillisecondsOverride: DEFAULT_API_TIMEOUT);
 
           apiClient.ClientId = clientId;
         }, "", "Unable to update client on the server");
       }
-
-      apiClient.Stream.Name = streamName;
 
       tryCatchWithEvents(() =>
       {
@@ -125,10 +122,11 @@ namespace SpeckleInterface
     /// Update stream name.
     /// </summary>
     /// <param name="streamName">Stream name</param>
-    public void UpdateName(string streamName)
+    public async Task UpdateName(string streamName)
     {
-      apiClient.StreamUpdateAsync(apiClient.StreamId, new SpeckleStream() { Name = streamName });
-
+      var response = await apiClient.StreamUpdateAsync(apiClient.StreamId, new SpeckleStream() { Name = streamName });
+      //apiClient.Stream = response.Resource;
+      //apiClient.StreamId = response.Resource.StreamId;
       apiClient.Stream.Name = streamName;
     }
 
@@ -418,23 +416,6 @@ namespace SpeckleInterface
         numErrors = 0;
         return;
       }
-
-      /*
-      var cumulative = 0;
-
-      do
-      {
-        var parallelPayloads = payloads.Skip(cumulative).Take(numParallelApiRequests);
-
-        var tasks = new List>Task
-        foreach (var p in parallelPayloads)
-        {
-          Task.Run
-        }
-
-        cumulative += parallelPayloads.Count();
-      }
-      */
 
       //var payloadTasks = payloads.Select(p => apiClient.ObjectCreateAsync(p, 30000)).ToArray();
 

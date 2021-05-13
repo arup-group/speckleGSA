@@ -49,6 +49,48 @@ namespace SpeckleInterface
       return ret;
     }
 
+    public static async Task<StreamBasicData> GetStream(string restApi, string apiToken, string streamId)
+    {
+      SpeckleApiClient myClient = new SpeckleApiClient() { BaseUrl = restApi, AuthToken = apiToken };
+
+      var response = await myClient.StreamGetAsync(streamId, "fields=streamId,name");
+
+      if (response != null && response.Success.HasValue && response.Success.Value
+        && response.Resource != null && response.Resource.StreamId.Equals(streamId, StringComparison.InvariantCultureIgnoreCase))
+      {
+        return new StreamBasicData(response.Resource.StreamId, response.Resource.Name, response.Resource.Owner);
+      }
+      return null;
+    }
+
+    /*
+    public static async Task<bool> CheckStreamOnServer(string restApi, string apiToken, string streamId)
+    {
+      SpeckleApiClient myClient = new SpeckleApiClient() { BaseUrl = restApi, AuthToken = apiToken };
+
+      var response = await myClient.StreamGetAsync(streamId, "fields=streamId");
+      if (response != null && response.Success.HasValue && response.Success.Value
+        && response.Resource != null && response.Resource.StreamId.Equals(streamId, StringComparison.InvariantCultureIgnoreCase))
+      {
+        return true;
+      }
+      return false;
+    }
+
+    public static async Task<string> GetStreamName(string restApi, string apiToken, string streamId)
+    {
+      SpeckleApiClient myClient = new SpeckleApiClient() { BaseUrl = restApi, AuthToken = apiToken };
+
+      var response = await myClient.StreamGetAsync(streamId, "fields=name");
+      if (response != null && response.Success.HasValue && response.Success.Value
+        && response.Resource != null && response.Resource.StreamId.Equals(streamId, StringComparison.InvariantCultureIgnoreCase))
+      {
+        return response.Resource.Name;
+      }
+      return null;
+    }
+    */
+
     public static async Task<string> GetClientName(string restApi, string apiToken)
     {
       SpeckleApiClient myClient = new SpeckleApiClient() { BaseUrl = restApi, AuthToken = apiToken };

@@ -9,6 +9,8 @@ namespace SpeckleGSA.UI
   {
     public MainWindow()
     {
+      var test1 = SpeckleStructuralGSA.Schema.AnalysisType.BAR;
+      var test2 = SpeckleStructuralClasses.StructuralSpringPropertyType.Axial;
       InitializeComponent();
     }
   }

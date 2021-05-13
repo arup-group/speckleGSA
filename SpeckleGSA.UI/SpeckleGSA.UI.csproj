@@ -172,16 +172,17 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Models\Tabs\TabBase.cs" />
     <Compile Include="Models\SpeckleAccountForUI.cs" />
     <Compile Include="DataAccess\DataAccess.cs" />
-    <Compile Include="Models\CoordinatorForUI.cs" />
+    <Compile Include="Models\Tabs\TabCoordinator.cs" />
     <Compile Include="Models\DisplayLog.cs" />
     <Compile Include="Models\DisplayLogItem.cs" />
     <Compile Include="Models\Enums.cs" />
-    <Compile Include="Models\ReceiverCoordinatorForUI.cs" />
+    <Compile Include="Models\Tabs\ReceiverTab.cs" />
     <Compile Include="Models\ResultSettingItem.cs" />
     <Compile Include="Models\ResultSettings.cs" />
-    <Compile Include="Models\SenderCoordinatorForUI.cs" />
+    <Compile Include="Models\Tabs\SenderTab.cs" />
     <Compile Include="Models\StreamList.cs" />
     <Compile Include="Models\StreamListItem.cs" />
     <Compile Include="Utilities\DelegateCommand.cs" />

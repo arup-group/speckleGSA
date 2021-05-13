@@ -1,5 +1,6 @@
 ﻿using SpeckleCore;
 using SpeckleGSAInterfaces;
+using SpeckleInterface;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,9 +17,8 @@ namespace SpeckleGSA
     public bool IsInit = false;
     public bool IsBusy = false;
 
-    private Dictionary<Type, string> StreamMap;
-
-    private Dictionary<string, SpeckleInterface.IStreamSender> Senders;
+    // [ bucket, IStreamSender (which has stream ID and clientID) ]
+    public Dictionary<string, IStreamSender> Senders = new Dictionary<string, IStreamSender>();
 
     //These need to be accessed using a lock
     private object traversedSerialisedLock = new object();
@@ -26,9 +26,20 @@ namespace SpeckleGSA
 
     private IProgress<MessageEventArgs> loggingProgress;
     private IProgress<string> statusProgress;
+    private IProgress<SidSpeckleRecord> streamCreationProgress;
+    private IProgress<SidSpeckleRecord> streamDeletionProgress;
 
     private ProgressEstimator progressEstimator;
 
+    private double tolerance;
+    private double angleTolerance;
+    private string documentName;
+    private string documentTitle;
+    private List<SidSpeckleRecord> savedSenderSidRecords;
+    private string restApi;
+    private string apiToken;
+    private Func<string, string, IStreamSender> gsaSenderCreator;
+    private BasePropertyUnits basePropertyUnits;
 
     /// <summary>
     /// Initializes sender.
@@ -36,62 +47,52 @@ namespace SpeckleGSA
     /// <param name="restApi">Server address</param>
     /// <param name="apiToken">API token of account</param>
     /// <returns>Task</returns>
-    public void Initialize(string restApi, string apiToken, Func<string, string, SpeckleInterface.IStreamSender> gsaSenderCreator,
-      IProgress<MessageEventArgs> loggingProgress, IProgress<string> statusProgress, IProgress<double> percentageProgress)
+    public void Initialize(string restApi, string apiToken, List<SidSpeckleRecord> savedSenderStreamInfo, Func<string, string, IStreamSender> gsaSenderCreator,
+      IProgress<MessageEventArgs> loggingProgress, IProgress<string> statusProgress, IProgress<double> percentageProgress,
+      IProgress<SidSpeckleRecord> streamCreationProgress, IProgress<SidSpeckleRecord> streamDeletionProgress)
     {
-      this.loggingProgress = loggingProgress;
-      this.statusProgress = statusProgress;
-
-      this.progressEstimator = new ProgressEstimator(percentageProgress, WorkPhase.CacheRead, 3, WorkPhase.CacheUpdate, 1, WorkPhase.Conversion, 20, WorkPhase.ApiCalls, 3);
-
       if (IsInit) return;
 
       if (!GSA.IsInit)
       {
-        this.loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Error, "GSA link not found."));
+        this.loggingProgress.Report(new MessageEventArgs(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, "GSA link not found."));
         return;
       }
 
-      var startTime = DateTime.Now;
-      statusProgress.Report("Reading GSA data into cache");
+      this.loggingProgress = loggingProgress;
+      this.statusProgress = statusProgress;
+      this.streamCreationProgress = streamCreationProgress;
+      this.streamDeletionProgress = streamDeletionProgress;
+      this.restApi = restApi;
+      this.apiToken = apiToken;
+      this.gsaSenderCreator = gsaSenderCreator;
+      this.savedSenderSidRecords = savedSenderStreamInfo;
+      this.documentName = Path.GetFileNameWithoutExtension(GSA.GsaApp.gsaProxy.FilePath);
+      this.documentTitle = Path.GetFileNameWithoutExtension(GSA.GsaApp.gsaProxy.GetTitle());
 
-      //Update cache
-      var updatedCache = UpdateCache();
-      if (!updatedCache)
-      {
-        this.loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Error, "Error in communicating GSA - please check if the GSA file has been closed down"));
-        return;
-      }
-
-      // Grab all GSA related object
-      statusProgress.Report("Preparing to read GSA Objects");
-
-      // Run initialize sender method in interfacer
-      var objTypes = GetAssembliesTypes();
-      var streamNames = GetStreamNames(objTypes);
-
-      StreamMap = new Dictionary<Type, string>();
-      foreach (Type t in objTypes)
-      {
-        var streamAttribute = t.GetAttribute("Stream");
-        if (streamAttribute != null)
-        {
-          StreamMap[t] = (string)streamAttribute;
-        }
-      }
-
-      // Create the streams
-      statusProgress.Report("Creating streams");
-
-      // The units are key for the stream
+      // Since this is sending, just use whatever is set in the opened GSA file
       GSA.GsaApp.gsaSettings.Units = GSA.GsaApp.gsaProxy.GetUnits();
 
-      CreateInitialiseSenders(streamNames, gsaSenderCreator, restApi, apiToken);
+      //Read properties in the opened GSA file
+      var baseProps = GSA.GetBaseProperties();
+      if (!Enum.TryParse(baseProps["units"].ToString(), true, out basePropertyUnits))
+      {
+        basePropertyUnits = BasePropertyUnits.Millimetres;
+      }
+      this.tolerance = Math.Round((double)baseProps["tolerance"], 8);
+      this.angleTolerance = Math.Round((double)baseProps["angleTolerance"], 6);
 
-      TimeSpan duration = DateTime.Now - startTime;
-      this.loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Duration of initialisation: " + duration.ToString(@"hh\:mm\:ss")));
-      this.loggingProgress.Report(new MessageEventArgs(MessageIntent.Telemetry, MessageLevel.Information, "send", "initialisation", "duration", duration.ToString(@"hh\:mm\:ss")));
-      statusProgress.Report("Ready to stream");
+      this.progressEstimator = new ProgressEstimator(percentageProgress, WorkPhase.CacheRead, 3, WorkPhase.CacheUpdate, 1, WorkPhase.Conversion, 20, WorkPhase.ApiCalls, 3);
+
+      Senders.Clear();
+
+      var startTime = DateTime.Now;
+
+      Progress<int> incrementProgress = new Progress<int>();
+      incrementProgress.ProgressChanged += IncorporateSendPayloadProgress;
+      Progress<int> totalProgress = new Progress<int>();
+      totalProgress.ProgressChanged += IncorporateNewNumPayloadsProgress;
+
       IsInit = true;
 
       return;
@@ -100,21 +101,14 @@ namespace SpeckleGSA
     /// <summary>
     /// Trigger to update stream.
     /// </summary>
-    public void Trigger()
+    public async Task Trigger()
     {
       if ((IsBusy) || (!IsInit)) return;
 
       IsBusy = true;
-			GSA.GsaApp.gsaSettings.Units = GSA.GsaApp.gsaProxy.GetUnits();
+      //GSA.GsaApp.gsaSettings.Units = GSA.GsaApp.gsaProxy.GetUnits();
 
-      lock (traversedSerialisedLock)
-      {
-        traversedSerialisedTypes.Clear();
-      }
-
-      //Clear previously-sent objects
-      GSA.ClearSenderDictionaries();
-
+      #region update_cache
       var startTime = DateTime.Now;
       statusProgress.Report("Reading GSA data into cache");
 
@@ -122,54 +116,107 @@ namespace SpeckleGSA
       var updatedCache = UpdateCache();
       if (!updatedCache)
       {
-        this.loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Error, "Error in communicating GSA - please check if the GSA file has been closed down"));
+        this.loggingProgress.Report(new MessageEventArgs(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, "Error in communicating GSA - please check if the GSA file has been closed down"));
         return;
+      }
+
+      TimeSpan duration = DateTime.Now - startTime;
+      loggingProgress.Report(new MessageEventArgs(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "Duration of reading GSA model into cache: " + duration.ToString(@"hh\:mm\:ss")));
+      loggingProgress.Report(new MessageEventArgs(SpeckleGSAInterfaces.MessageIntent.Telemetry, SpeckleGSAInterfaces.MessageLevel.Information, "send", "update-cache", "duration", duration.ToString(@"hh\:mm\:ss")));
+      #endregion
+
+      #region GSA_model_to_SpeckleObjects
+      startTime = DateTime.Now;
+
+      //Clear previously-sent objects
+      GSA.ClearSenderDictionaries();
+
+      lock (traversedSerialisedLock)
+      {
+        traversedSerialisedTypes.Clear();
       }
 
       var changeDetected = ProcessTxObjects();
 
       if (!changeDetected)
       {
-        statusProgress.Report("Finished sending");
+        statusProgress.Report("No new or changed objects to send");
         IsBusy = false;
         return;
       }
-        
-      // Separate objects into streams
-      var streamBuckets = CreateStreamBuckets();
 
-      TimeSpan duration = DateTime.Now - startTime;
-      loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Duration of conversion to Speckle: " + duration.ToString(@"hh\:mm\:ss")));
-      loggingProgress.Report(new MessageEventArgs(MessageIntent.Telemetry, MessageLevel.Information, "send", "conversion", "duration", duration.ToString(@"hh\:mm\:ss")));
+      duration = DateTime.Now - startTime;
+      loggingProgress.Report(new MessageEventArgs(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "Duration of conversion to Speckle: " + duration.ToString(@"hh\:mm\:ss")));
+      loggingProgress.Report(new MessageEventArgs(SpeckleGSAInterfaces.MessageIntent.Telemetry, SpeckleGSAInterfaces.MessageLevel.Information, "send", "conversion", "duration", duration.ToString(@"hh\:mm\:ss")));
+      #endregion
+
+      #region create_necessary_streams
       startTime = DateTime.Now;
 
+      // Separate objects into streams
+      var allBuckets = CreateStreamBuckets();
+
+      var bucketsToCreate = allBuckets.Keys.Except(Senders.Keys).ToList();
+
+      //Now check if any streams need to be created
+      if (bucketsToCreate.Count() > 0)
+      {
+        var sidRecordByBucket = savedSenderSidRecords.ToDictionary(r => r.Bucket, r => r);
+        if (savedSenderSidRecords != null && savedSenderSidRecords.Count() > 0)
+        {
+          var savedBuckets = sidRecordByBucket.Keys.ToList();
+          var reuseBuckets = sidRecordByBucket.Keys.Where(ssn => bucketsToCreate.Any(sn => ssn.Equals(sn, StringComparison.InvariantCultureIgnoreCase))).ToList();
+          var discardStreamNames = sidRecordByBucket.Keys.Except(reuseBuckets);
+          foreach (var bucket in reuseBuckets)
+          {
+            var basicStreamData = SpeckleStreamManager.GetStream(restApi, apiToken, sidRecordByBucket[bucket].StreamId).Result;
+            if (basicStreamData != null)
+            {
+              Senders.Add(bucket, gsaSenderCreator(restApi, apiToken));
+              await Senders[bucket].InitializeSender(documentName, basePropertyUnits, tolerance, angleTolerance, sidRecordByBucket[bucket].StreamId, sidRecordByBucket[bucket].ClientId);
+
+              bucketsToCreate.Remove(bucket);
+            }
+          }
+          foreach (var dsn in discardStreamNames)
+          {
+            streamDeletionProgress.Report(sidRecordByBucket[dsn]);
+          }
+        }
+
+        foreach (var sn in bucketsToCreate)
+        {
+          Senders.Add(sn, gsaSenderCreator(restApi, apiToken));
+          var streamName = string.IsNullOrEmpty(documentTitle) ? "GSA " + sn : documentTitle + " (" + sn + ")";
+          await Senders[sn].InitializeSender(documentName, basePropertyUnits, tolerance, angleTolerance, streamName: streamName);
+          streamCreationProgress.Report(new SidSpeckleRecord(Senders[sn].StreamId, sn, Senders[sn].ClientId, streamName));
+        }
+      }
+
+      #endregion
+
+      #region send_to_server
       // Send package
       statusProgress.Report("Sending to Server");
 
       int numErrors = 0;
       var sendingTasks = new List<Task>();
-      foreach (var k in streamBuckets.Keys.Where(k => Senders.ContainsKey(k)))
+      foreach (var k in Senders.Keys)
       {
         statusProgress.Report("Sending to stream: " + Senders[k].StreamId);
-
-        var title = GSA.GsaApp.gsaProxy.GetTitle();
-        var streamName = GSA.GsaApp.gsaSettings.SeparateStreams ? title + "." + k : title;
-
-        Senders[k].UpdateName(streamName);
-        numErrors += Senders[k].SendObjects(streamBuckets[k]);
-        //GSA.GsaApp.gsaMessenger.Trigger();
+        numErrors += Senders[k].SendObjects(allBuckets[k]);
       }
 
       if (numErrors > 0)
       {
-        loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Error,
+        loggingProgress.Report(new MessageEventArgs(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error,
           numErrors + " errors found with sending to the server. Refer to the .txt log file(s) in " + AppDomain.CurrentDomain.BaseDirectory));
       }
 
       duration = DateTime.Now - startTime;
-      loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Duration of sending to Speckle: " + duration.ToString(@"hh\:mm\:ss")));
-      loggingProgress.Report(new MessageEventArgs(MessageIntent.Telemetry, MessageLevel.Information, "send", "sending", "duration", duration.ToString(@"hh\:mm\:ss")));
-
+      loggingProgress.Report(new MessageEventArgs(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "Duration of sending to Speckle: " + duration.ToString(@"hh\:mm\:ss")));
+      loggingProgress.Report(new MessageEventArgs(SpeckleGSAInterfaces.MessageIntent.Telemetry, SpeckleGSAInterfaces.MessageLevel.Information, "send", "sending", "duration", duration.ToString(@"hh\:mm\:ss")));
+      #endregion
       IsBusy = false;
       statusProgress.Report("Finished sending");
     }
@@ -205,7 +252,7 @@ namespace SpeckleGSA
 
       if (numErrors > 0)
       {
-        loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Error,
+        loggingProgress.Report(new MessageEventArgs(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error,
           numErrors + " processing errors found. Refer to the .txt log file(s) in " + AppDomain.CurrentDomain.BaseDirectory));
       }
 
@@ -258,15 +305,11 @@ namespace SpeckleGSA
       changeDetected = parallelChangeDetected;
 #endif
 
-      //Process any cached messages from the conversion code
-      //GSA.GsaApp.gsaMessenger.Trigger();
 
       lock (traversedSerialisedLock)
       {
         traversedSerialisedTypes.AddRange(batch);
       }
-
-      //return GSA.GsaApp.gsaMessenger.LoggedMessageCount;
     }
 
     private void SerialiseType(Type t, ref bool changeDetected)
@@ -294,64 +337,22 @@ namespace SpeckleGSA
     /// </summary>
     public void Dispose()
     {
-      foreach (KeyValuePair<string, SidSpeckleRecord> kvp in GSA.SenderInfo)
-      {
-        Senders[kvp.Key].Dispose();
-      }
+      Senders.Keys.ToList().ForEach(s => Senders[s].Dispose());
+      Senders.Clear();
     }
 
-    private void CreateInitialiseSenders(List<string> streamNames, Func<string, string, SpeckleInterface.IStreamSender> GSASenderCreator, string restApi, string apiToken)
-    {
-      GSA.RemoveUnusedStreamInfo(streamNames);
-
-      Senders = new Dictionary<string, SpeckleInterface.IStreamSender>();
-
-      progressEstimator.UpdateTotal(WorkPhase.ApiCalls, 0);//Set it to zero here so that it will be updated as each sender works out its number of payloads - to be revised with a better way soon
-
-      Progress<int> incrementProgress = new Progress<int>();
-      incrementProgress.ProgressChanged += IncorporateSendPayloadProgress;
-      Progress<int> totalProgress = new Progress<int>();
-      totalProgress.ProgressChanged += IncorporateNewNumPayloadsProgress;
-
-      var baseProps = GSA.GetBaseProperties();
-      if (!Enum.TryParse(baseProps["units"].ToString(), true, out SpeckleInterface.BasePropertyUnits basePropertyUnits))
-      {
-        basePropertyUnits = SpeckleInterface.BasePropertyUnits.Millimetres;
-      }
-      var tolerance = Math.Round((double)baseProps["tolerance"], 8);
-      var angleTolerance = Math.Round((double)baseProps["angleTolerance"], 6);
-      var documentName = Path.GetFileNameWithoutExtension(GSA.GsaApp.gsaProxy.FilePath);
-
-      foreach (string streamName in streamNames)
-      {
-        Senders[streamName] = GSASenderCreator(restApi, apiToken);
-
-        if (!GSA.SenderInfo.ContainsKey(streamName))
-        {
-          loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Creating new sender for " + streamName));
-
-          Senders[streamName].InitializeSender(documentName, basePropertyUnits, tolerance, angleTolerance, streamName: streamName, 
-            totalProgress: totalProgress, incrementProgress: incrementProgress);
-
-          GSA.SenderInfo[streamName] = new SidSpeckleRecord(Senders[streamName].StreamId, streamName, Senders[streamName].ClientId);
-        }
-        else
-        {
-          Senders[streamName].InitializeSender(documentName, basePropertyUnits, tolerance, angleTolerance, GSA.SenderInfo[streamName].StreamId, GSA.SenderInfo[streamName].ClientId, streamName);
-        }
-      }
-    }
 
     private Dictionary<string, Dictionary<string, List<SpeckleObject>>> CreateStreamBuckets()
     {
-      var streamBuckets = new Dictionary<string, Dictionary<string, List<SpeckleObject>>>();
+      var buckets = new Dictionary<string, Dictionary<string, List<SpeckleObject>>>();
 
       var currentObjects = GSA.GetAllConvertedGsaObjectsByType();
-      foreach (var kvp in currentObjects)
+      foreach (var t in currentObjects.Keys)
       {
-        var targetStream = GSA.GsaApp.gsaSettings.SeparateStreams ? StreamMap[kvp.Key] : "Full Model";
+        //var bucketName = GSA.GsaApp.gsaSettings.SeparateStreams ? StreamMap[kvp.Key] : "Full Model";
+        var bucketName = (string)t.GetAttribute("Stream");
 
-        foreach (IGSASpeckleContainer obj in kvp.Value)
+        foreach (IGSASpeckleContainer obj in currentObjects[t])
         {
           if (GSA.GsaApp.gsaSettings.SendOnlyMeaningfulNodes)
           {
@@ -360,51 +361,26 @@ namespace SpeckleGSA
               continue;
             }
           }
-          //var insideVal = (SpeckleObject)obj.GetType().GetProperty("Value").GetValue(obj);
           var insideVal = (SpeckleObject) obj.SpeckleObject;
 
           insideVal.GenerateHash();
 
-          if (!streamBuckets.ContainsKey(targetStream))
+          if (!buckets.ContainsKey(bucketName))
           {
-            streamBuckets[targetStream] = new Dictionary<string, List<SpeckleObject>>();
+            buckets[bucketName] = new Dictionary<string, List<SpeckleObject>>();
           }
 
-          if (streamBuckets[targetStream].ContainsKey(insideVal.GetType().Name))
+          if (buckets[bucketName].ContainsKey(insideVal.GetType().Name))
           {
-            streamBuckets[targetStream][insideVal.GetType().Name].Add(insideVal);
+            buckets[bucketName][insideVal.GetType().Name].Add(insideVal);
           }
           else
           {
-            streamBuckets[targetStream][insideVal.GetType().Name] = new List<SpeckleObject>() { insideVal };
+            buckets[bucketName][insideVal.GetType().Name] = new List<SpeckleObject>() { insideVal };
           }
         }
       }
-      return streamBuckets;
-    }
-
-    private List<Type> GetAssembliesTypes()
-    {
-      // Grab GSA interface type
-      var interfaceType = typeof(IGSASpeckleContainer);
-
-      var assemblies = SpeckleInitializer.GetAssemblies();
-      var objTypes = new List<Type>();
-      foreach (var ass in assemblies)
-      {
-        var types = ass.GetTypes();
-        objTypes.AddRange(types.Where(t => interfaceType.IsAssignableFrom(t) && t != interfaceType && !t.IsAbstract));
-      }
-      return objTypes;
-    }
-
-    private List<string> GetStreamNames(List<Type> objTypes)
-    {
-      var streamNames = (GSA.GsaApp.gsaSettings.SendOnlyResults) ? new List<string> { "results" }
-       : (GSA.GsaApp.gsaSettings.SeparateStreams)
-         ? objTypes.Select(t => (string)t.GetAttribute("Stream")).Distinct().ToList()
-         : new List<string>() { "Full Model" };
-      return streamNames.Where(sn => !string.IsNullOrEmpty(sn)).ToList();
+      return buckets;
     }
 
     private bool UpdateCache()
@@ -448,7 +424,7 @@ namespace SpeckleGSA
         int numRowsupdated = data.Count();
         if (numRowsupdated > 0)
         {
-          loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information,
+          loggingProgress.Report(new MessageEventArgs(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information,
             "Read " + numRowsupdated + " GWA lines across " + keywords.Count() + " keywords into cache"));
         }
 

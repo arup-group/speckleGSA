@@ -153,38 +153,41 @@
 						<RowDefinition Height="auto"/>
 						<RowDefinition Height="*"/>
 					</Grid.RowDefinitions>
-					<Grid Grid.Row="0" >
-						<Grid.ColumnDefinitions>
-							<ColumnDefinition Width="*"/>
-							<ColumnDefinition Width="auto"/>
-							<ColumnDefinition Width="auto"/>
-							<ColumnDefinition Width="auto"/>
-						</Grid.ColumnDefinitions>
-						<Grid.RowDefinitions>
-							<RowDefinition Height="auto"/>
-							<RowDefinition Height="auto"/>
-						</Grid.RowDefinitions>
-						<!-- play button | option labels | radio option col 1 | radio option col 2 -->
-						<Button Grid.Column="0" Grid.Row="0" Grid.RowSpan="2" Content="{Binding SendButtonText}" VerticalAlignment="Center" Padding="5"
+          <Grid Grid.Row="0" >
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="auto"/>
+              <ColumnDefinition Width="auto"/>
+              <ColumnDefinition Width="auto"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="auto"/>
+              <RowDefinition Height="auto"/>
+            </Grid.RowDefinitions>
+            <!-- play button | option labels | radio option col 1 | radio option col 2 -->
+            <Button Grid.Column="0" Grid.Row="0" Grid.RowSpan="2" Content="{Binding SendButtonText}" VerticalAlignment="Center" Padding="5"
 										Command="{Binding SendStopCommand}"/>
-						<TextBlock Grid.Row="0" Grid.Column="1" Text="Layer to stream:" HorizontalAlignment="Right" Padding="5"/>
-						<RadioButton Grid.Row="0" Grid.Column="2" GroupName="SendLayer" Content="Design" Padding="5" VerticalContentAlignment="Center"
+            <TextBlock Grid.Row="0" Grid.Column="1" Text="Layer to stream:" HorizontalAlignment="Right" Padding="5"/>
+            <RadioButton Grid.Row="0" Grid.Column="2" GroupName="SendLayer" Content="Design" Padding="5" VerticalContentAlignment="Center"
 												 IsChecked="{Binding Path=SendLayer, Converter={StaticResource EnumConverter}, ConverterParameter=Design}"/>
-						<RadioButton Grid.Row="0" Grid.Column="3" GroupName="SendLayer" Content="Analysis" Padding="5" VerticalContentAlignment="Center"
+            <RadioButton Grid.Row="0" Grid.Column="3" GroupName="SendLayer" Content="Analysis" Padding="5" VerticalContentAlignment="Center"
 												 IsChecked="{Binding Path=SendLayer, Converter={StaticResource EnumConverter}, ConverterParameter=Analysis}"/>
-						<RadioButton Grid.Row="1" Grid.Column="2" GroupName="SendStreamMethod" Content="Continuous" Padding="5" VerticalContentAlignment="Center"
+            <RadioButton Grid.Row="1" Grid.Column="2" GroupName="SendStreamMethod" Content="Continuous" Padding="5" VerticalContentAlignment="Center"
 												 IsChecked="{Binding Path=SendStreamMethod, Converter={StaticResource EnumConverter}, ConverterParameter=Continuous}"/>
-						<RadioButton Grid.Row="1" Grid.Column="3" GroupName="SendStreamMethod" Content="Single" Padding="5" VerticalContentAlignment="Center"
+            <RadioButton Grid.Row="1" Grid.Column="3" GroupName="SendStreamMethod" Content="Single" Padding="5" VerticalContentAlignment="Center"
 												 IsChecked="{Binding Path=SendStreamMethod, Converter={StaticResource EnumConverter}, ConverterParameter=Single}"/>
-						<TextBlock Grid.Row="1" Grid.Column="1" Text="Streaming method:" HorizontalAlignment="Right" Padding="5" />
-					</Grid>
-					<!-- Stream list -->
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="Streaming method:" HorizontalAlignment="Right" Padding="5" />
+          </Grid>
+          <!-- Stream list -->
 					<DataGrid Grid.Row="1"
-							CanUserSortColumns="False" AutoGenerateColumns="False"
+							CanUserSortColumns="False" AutoGenerateColumns="False" CanUserDeleteRows="True"
 							SelectionMode="Extended" RowHeaderWidth="0"	GridLinesVisibility="None"
 							ItemsSource="{Binding SenderStreamListItems}" SelectedItem="{Binding SelectedStreamItem}"
 							IsEnabled="{Binding IsSendStreamListEnabled}">
-						<DataGrid.Columns>
+            <DataGrid.InputBindings>
+              <KeyBinding Key="Delete" Command="{Binding RemoveStreamCommand}" />
+            </DataGrid.InputBindings>
+            <DataGrid.Columns>
 							<!-- start trial of editable column -->
 							<DataGridTemplateColumn Header="StreamName" Width="*">
                 <DataGridTemplateColumn.CellTemplate>
@@ -199,11 +202,11 @@
 												<localUtilities:TextBoxEnterKeyUpdateBehaviour />
 											</b:Interaction.Behaviors>
 											<b:Interaction.Triggers>
-												<localUtilities:EnterKeyDownEventTrigger EventName="KeyDown">
-													<b:InvokeCommandAction Command="{Binding DataContext.RenameStreamCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                        <localUtilities:EnterKeyDownEventTrigger EventName="KeyDown">
+                          <b:InvokeCommandAction Command="{Binding DataContext.RenameStreamCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
 																									 CommandParameter="{Binding ElementName=Candidate, Path=Text}"/>
-												</localUtilities:EnterKeyDownEventTrigger>
-											</b:Interaction.Triggers>
+                        </localUtilities:EnterKeyDownEventTrigger>
+                      </b:Interaction.Triggers>
 										</TextBox>
 									</DataTemplate>
 								</DataGridTemplateColumn.CellEditingTemplate>

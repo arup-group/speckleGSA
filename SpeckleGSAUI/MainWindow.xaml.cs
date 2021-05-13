@@ -191,7 +191,7 @@ namespace SpeckleGSAUI
         ApiToken = account.Token;
         (SenderTab.Content as Grid).IsEnabled = FileOpened && LoggedIn;
         (ReceiverTab.Content as Grid).IsEnabled = FileOpened && LoggedIn;
-        UpdateClientLists();
+        UpdateClientLists(null, null);
 
         GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "Logged in to account at: " + RestApi);
       }
@@ -253,7 +253,7 @@ namespace SpeckleGSAUI
                         DispatcherPriority.Background,
                         new Action(() =>
                         {
-                          UpdateClientLists();
+                          UpdateClientLists(null, null) ;
                           (SenderTab.Content as Grid).IsEnabled = FileOpened && LoggedIn;
                           (ReceiverTab.Content as Grid).IsEnabled = FileOpened && LoggedIn;
                           Status.ChangeStatus("Ready", 0);
@@ -276,7 +276,7 @@ namespace SpeckleGSAUI
         (SenderTab.Content as Grid).IsEnabled = false;
         (ReceiverTab.Content as Grid).IsEnabled = false;
         Status.ChangeStatus("Opening File");
-        Task.Run(() => GSA.OpenFile(openFileDialog.FileName, EmailAddress, RestApi)).ContinueWith(
+        Task.Run(() => GSA.OpenFile(openFileDialog.FileName, EmailAddress, RestApi, out List<SidSpeckleRecord> receiverStreamInfo, out List<SidSpeckleRecord> senderStreamInfo)).ContinueWith(
             delegate
             {
               try
@@ -286,7 +286,7 @@ namespace SpeckleGSAUI
                   DispatcherPriority.Background,
                   new Action(() =>
                   {
-                    UpdateClientLists();
+                    //UpdateClientLists();
                     (SenderTab.Content as Grid).IsEnabled = FileOpened && LoggedIn;
                     (ReceiverTab.Content as Grid).IsEnabled = FileOpened && LoggedIn;
                     Status.ChangeStatus("Ready", 0);
@@ -371,7 +371,7 @@ namespace SpeckleGSAUI
 
         try
         {
-          if (!GSA.GetSpeckleClients(EmailAddress, RestApi))
+          if (!GSA.GetSpeckleClients(EmailAddress, RestApi, out var receiverStreamInfo, out var senderStreamInfo))
           {
             GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, 
               "Error in communicating GSA - please check if the GSA file has been closed down");
@@ -380,9 +380,9 @@ namespace SpeckleGSAUI
             return;
           }
           gsaSenderCoordinator = new SenderCoordinator();
-          gsaSenderCoordinator.Initialize(RestApi, ApiToken, (restApi, apiToken) => new StreamSender(restApi, apiToken, GSA.GsaApp.gsaMessenger), 
-            new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>());
-          GSA.SetSpeckleClients(EmailAddress, RestApi);
+          gsaSenderCoordinator.Initialize(RestApi, ApiToken, senderStreamInfo, (restApi, apiToken) => new StreamSender(restApi, apiToken, GSA.GsaApp.gsaMessenger), 
+            new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>(), new Progress<SidSpeckleRecord>(), new Progress<SidSpeckleRecord>());
+          GSA.SetSpeckleClients(EmailAddress, RestApi, receiverStreamInfo, senderStreamInfo);
           
         }
         catch (Exception ex)
@@ -427,7 +427,7 @@ namespace SpeckleGSAUI
                     DispatcherPriority.Background,
                     new Action(() =>
                     {
-                      UpdateClientLists();
+                      //UpdateClientLists();
                       SendStream(sender, e);
                     })
                 );
@@ -472,7 +472,7 @@ namespace SpeckleGSAUI
         gsaSenderCoordinator.Trigger();
         Application.Current.Dispatcher.BeginInvoke(
           DispatcherPriority.Background,
-          new Action(() => UpdateClientLists()
+          new Action(() => UpdateClientLists(null, null)
           )
         );
 
@@ -496,14 +496,14 @@ namespace SpeckleGSAUI
       if (ReceiverTextbox.Text != "")
       {
         var streamId = ReceiverTextbox.Text.Trim();
-        GSA.ReceiverInfo.Add(new SidSpeckleRecord(streamId, null));
-        if (!GSA.SetSpeckleClients(EmailAddress, RestApi))
+        //GSA.ReceiverInfo.Add(new SidSpeckleRecord(streamId, null));
+        if (!GSA.SetSpeckleClients(EmailAddress, RestApi, new List<SidSpeckleRecord> { new SidSpeckleRecord(streamId, null) }, null))
         {
           GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, 
             "Error in communicating GSA - please check if the GSA file has been closed down");
           return;
         }
-        UpdateClientLists();
+        UpdateClientLists(null, null);
 
         ReceiverTextbox.Clear();
       }
@@ -519,15 +519,15 @@ namespace SpeckleGSAUI
       foreach (string p in paste)
       {
         var streamId = p.Trim();
-        GSA.ReceiverInfo.Add(new SidSpeckleRecord(streamId, null));
+        //GSA.ReceiverInfo.Add(new SidSpeckleRecord(streamId, null));
       }
-      if (!GSA.SetSpeckleClients(EmailAddress, RestApi))
+      if (!GSA.SetSpeckleClients(EmailAddress, RestApi, new List<SidSpeckleRecord> { new SidSpeckleRecord(paste.First().Trim(), null) }, null))
       {
         GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, 
           "Error in communicating GSA - please check if the GSA file has been closed down");
         return;
       }
-      UpdateClientLists();
+      UpdateClientLists(null, null);
     }
 
     /// <summary>
@@ -535,6 +535,7 @@ namespace SpeckleGSAUI
     /// </summary>
     private void ClearReceiver(object sender, RoutedEventArgs e)
     {
+      /*
       GSA.ReceiverInfo.Clear();
       if (!GSA.SetSpeckleClients(EmailAddress, RestApi))
       {
@@ -544,6 +545,7 @@ namespace SpeckleGSAUI
       }
 
       UpdateClientLists();
+      */
     }
 
     /// <summary>
@@ -576,8 +578,8 @@ namespace SpeckleGSAUI
 
         Application.Current.DoEvents();
 
-        GSA.GetSpeckleClients(EmailAddress, RestApi);
-        if (!GSA.SetSpeckleClients(EmailAddress, RestApi))
+        GSA.GetSpeckleClients(EmailAddress, RestApi, out var receiverStreamInfo, out var senderStreamInfo);
+        if (!GSA.SetSpeckleClients(EmailAddress, RestApi, receiverStreamInfo, senderStreamInfo))
         {
           GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, "Error in communicating GSA - please check if the GSA file has been closed down");
           status = UIStatus.RECEIVING;
@@ -591,7 +593,7 @@ namespace SpeckleGSAUI
         {
           await Task.Run(() =>
            {
-             var nonBlankReceivers = GSA.ReceiverInfo.Where(r => !string.IsNullOrEmpty(r.StreamId)).ToList();
+             var nonBlankReceivers = receiverStreamInfo.Where(r => !string.IsNullOrEmpty(r.StreamId)).ToList();
 
              foreach (var streamInfo in nonBlankReceivers)
              {
@@ -599,7 +601,9 @@ namespace SpeckleGSAUI
                gsaReceiverCoordinator.StreamReceivers[streamInfo.StreamId] = new StreamReceiver(RestApi, ApiToken, GSA.GsaApp.gsaMessenger);
              }
            });
-          gsaReceiverCoordinator.Initialize(new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>());
+          var messenger = new ProgressMessenger(new Progress<MessageEventArgs>());
+          Func<string, string, IStreamReceiver> streamReceiverCreationFn = ((url, token) => new SpeckleInterface.StreamReceiver(url, token, messenger));
+          gsaReceiverCoordinator.Initialize(RestApi, ApiToken, receiverStreamInfo, streamReceiverCreationFn, new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>());
         }
         catch (Exception ex)
         {
@@ -785,24 +789,28 @@ namespace SpeckleGSAUI
     /// <summary>
     /// Update data grids with stream IDs from GSA file.
     /// </summary>
-    private void UpdateClientLists()
+    private void UpdateClientLists(List<SidSpeckleRecord> receiverStreamInfo, List<SidSpeckleRecord> senderStreamInfo)
     {
       SenderStreams.Items.Clear();
       ReceiverStreams.Items.Clear();
 
-      if (GSA.SenderInfo != null)
+      //if (GSA.SenderInfo != null)
+      if (receiverStreamInfo != null)
       {
-        foreach (var sender in GSA.SenderInfo)
+        //foreach (var sender in GSA.SenderInfo)
+        foreach (var ssi in senderStreamInfo)
         {
-          SenderStreams.Items.Add(new Tuple<string, string>(sender.Key, sender.Value.StreamId));
+          SenderStreams.Items.Add(new Tuple<string, string>(ssi.Bucket, ssi.StreamId));
         }
       }
 
-      if (GSA.ReceiverInfo != null)
+      //if (GSA.ReceiverInfo != null)
+      if (senderStreamInfo != null)
       {
-        foreach (var receiver in GSA.ReceiverInfo)
+        //foreach (var receiver in GSA.ReceiverInfo)
+        foreach (var rsi in receiverStreamInfo)
         {
-          ReceiverStreams.Items.Add(receiver.StreamId);
+          ReceiverStreams.Items.Add(rsi.StreamId);
         }
       }
     }
@@ -1076,6 +1084,7 @@ namespace SpeckleGSAUI
 
         if (streamID.GetType() == typeof(string))
         {
+          /*
           GSA.SenderInfo.Remove(streamName);
           if (!GSA.SetSpeckleClients(EmailAddress, RestApi))
           {
@@ -1084,6 +1093,7 @@ namespace SpeckleGSAUI
             return;
           }
           UpdateClientLists();
+          */
         }
       }
     }
@@ -1135,13 +1145,13 @@ namespace SpeckleGSAUI
 
       if (streamID.GetType() == typeof(string))
       {
-        GSA.ReceiverInfo.Remove(GSA.ReceiverInfo.First(x => x.StreamId == (string)streamID));
-        if (!GSA.SetSpeckleClients(EmailAddress, RestApi))
+        //GSA.ReceiverInfo.Remove(GSA.ReceiverInfo.First(x => x.StreamId == (string)streamID));
+        if (!GSA.SetSpeckleClients(EmailAddress, RestApi, null, null))
         {
           GSA.GsaApp.gsaMessenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, "Error in communicating GSA - please check if the GSA file has been closed down");
           return;
         }
-        UpdateClientLists();
+        //UpdateClientLists();
       }
     }
 

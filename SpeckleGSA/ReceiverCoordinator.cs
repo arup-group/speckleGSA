@@ -38,7 +38,9 @@ namespace SpeckleGSA
     /// <param name="restApi">Server address</param>
     /// <param name="apiToken">API token of account</param>
     /// <returns>Task</returns>
-    public List<string> Initialize(IProgress<MessageEventArgs> loggingProgress, IProgress<string> statusProgress, IProgress<double> percentageProgress)
+    public List<string> Initialize(string restApi, string apiToken, List<SidSpeckleRecord> receiverStreamInfo,
+      Func<string, string, SpeckleInterface.IStreamReceiver> streamReceiverCreationFn, 
+      IProgress<MessageEventArgs> loggingProgress, IProgress<string> statusProgress, IProgress<double> percentageProgress)
 		{
 			var statusMessages = new List<string>();
 
@@ -65,9 +67,10 @@ namespace SpeckleGSA
       // Create receivers
       statusProgress.Report("Accessing streams");
 
-      GSA.ReceiverInfo.Where(r => !string.IsNullOrEmpty(r.StreamId)).ToList().ForEach((streamInfo) =>
+      receiverStreamInfo.Where(r => !string.IsNullOrEmpty(r.StreamId)).ToList().ForEach((streamInfo) =>
 			{
-				StreamReceivers[streamInfo.StreamId].InitializeReceiver(streamInfo.StreamId, streamInfo.StreamName);
+        StreamReceivers.Add(streamInfo.StreamId, streamReceiverCreationFn(restApi, apiToken));
+				StreamReceivers[streamInfo.StreamId].InitializeReceiver(streamInfo.StreamId, streamInfo.Bucket);
 				StreamReceivers[streamInfo.StreamId].UpdateGlobalTrigger += Trigger;
 			});
 
@@ -675,10 +678,10 @@ namespace SpeckleGSA
     /// </summary>
     public void Dispose()
     {
-      foreach (var streamInfo in GSA.ReceiverInfo)
+      foreach (var streamId in StreamReceivers.Keys)
       {
-        StreamReceivers[streamInfo.StreamId].UpdateGlobalTrigger -= Trigger;
-        StreamReceivers[streamInfo.StreamId].Dispose();
+        StreamReceivers[streamId].UpdateGlobalTrigger -= Trigger;
+        StreamReceivers[streamId].Dispose();
       }
     }
 
