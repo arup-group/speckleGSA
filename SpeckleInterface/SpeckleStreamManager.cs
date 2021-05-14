@@ -118,6 +118,21 @@ namespace SpeckleInterface
 
       return response.Clone.StreamId;
     }
+
+    public static async Task<bool> UpdateStreamName(string restApi, string apiToken, string streamId, string streamName)
+    {
+      SpeckleApiClient myClient = new SpeckleApiClient() { BaseUrl = restApi, AuthToken = apiToken };
+
+      try
+      {
+        var response = await myClient.StreamUpdateAsync(streamId, new SpeckleStream() { Name = streamName });
+        return (response.Success.HasValue && response.Success.Value);
+      }
+      catch (Exception ex)
+      {
+        return false;
+      }
+    }
   }
 
 }

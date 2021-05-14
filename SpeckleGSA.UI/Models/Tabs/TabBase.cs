@@ -18,6 +18,17 @@ namespace SpeckleGSA.UI.Models
       TargetLayer = defaultLayer;
     }
 
+    public bool ChangeSidRecordStreamName(string streamId, string streamName)
+    {
+      var matching = sidSpeckleRecords.FirstOrDefault(r => r.StreamId.Equals(streamId, System.StringComparison.InvariantCultureIgnoreCase));
+      if (matching == null)
+      {
+        return false;
+      }
+      matching.SetName(streamName);
+      return true;
+    }
+
     public bool SidRecordsToStreamList()
     {
       StreamList.SeletedStreamListItem = null;

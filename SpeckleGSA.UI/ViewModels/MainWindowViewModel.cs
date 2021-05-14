@@ -175,14 +175,13 @@ namespace SpeckleGSA.UI.ViewModels
          var calibrateNodeAtTask = Task.Run(() => GSAProxy.CalibrateNodeAt());
          var initialLoadTask = Task.Run(() => Commands.InitialLoad(Coordinator, loggingProgress));
 
-         await initialLoadTask;
+         var loaded = await initialLoadTask;
          await calibrateNodeAtTask;
 
-         var loaded = initialLoadTask.Result;
-         
          if (loaded)
          {
            var retrievedStreamInfoFromFile = await Task.Run(() => Commands.ReadSavedStreamInfo(Coordinator, loggingProgress));
+
            Refresh(() => StateMachine.LoggedIn());
          }
          else
@@ -238,7 +237,7 @@ namespace SpeckleGSA.UI.ViewModels
         {
           Refresh(() => StateMachine.StartedUpdatingStreams());
 
-          Coordinator.ServerStreamList = await Task.Run(() => Commands.GetStreamList());
+          var result = await Task.Run(() => Commands.GetStreamList(Coordinator, loggingProgress));
 
           Refresh(() => StateMachine.StoppedUpdatingStreams());
         },
@@ -423,8 +422,9 @@ namespace SpeckleGSA.UI.ViewModels
         {
           var newStreamName = o.ToString();
           Refresh(() => StateMachine.StartedRenamingStream());
-          var result = await Task.Run(() => Commands.RenameStream(SelectedStreamItem.StreamId, newStreamName, loggingProgress));
-          SelectedStreamItem.StreamName = newStreamName;
+          var result = await Task.Run(() => Commands.RenameStream(Coordinator, SelectedStreamItem.StreamId, newStreamName, loggingProgress));
+          Coordinator.SenderTab.ChangeSidRecordStreamName(SelectedStreamItem.StreamId, newStreamName);
+          Coordinator.SenderTab.SidRecordsToStreamList();
           Refresh(() => StateMachine.StoppedRenamingStream());
         },
         (o) => !StateMachine.StreamIsOccupied);  //There is no visual button linked to this command so the CanExecute condition can be less strict 

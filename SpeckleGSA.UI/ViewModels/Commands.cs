@@ -166,9 +166,9 @@ namespace SpeckleGSA.UI.ViewModels
       }
     }
 
-    public static StreamList GetStreamList()
+    public static async Task<bool> GetStreamList(TabCoordinator coordinator, IProgress<MessageEventArgs> loggingProgress)
     {
-      return DataAccess.DataAccess.GetStreamList();
+      return await CompleteLogin(coordinator, loggingProgress);
     }
 
     public static bool Receive(TabCoordinator coordinator, ReceiverCoordinator gsaReceiverCoordinator, IProgress<SidSpeckleRecord> streamCreationProgress,
@@ -244,11 +244,17 @@ namespace SpeckleGSA.UI.ViewModels
       return true;
     }
 
-    public static bool RenameStream(string streamId, string newStreamName, IProgress<MessageEventArgs> loggingProgress)
+    public static async Task<bool> RenameStream(TabCoordinator coordinator, string streamId, string newStreamName, IProgress<MessageEventArgs> loggingProgress)
     {
-      System.Threading.Thread.Sleep(1000);
-      loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Changed name of the stream to " + newStreamName));
-      return true;
+      var changed = await SpeckleInterface.SpeckleStreamManager.UpdateStreamName(coordinator.Account.ServerUrl, coordinator.Account.Token, streamId, newStreamName);
+      if (changed)
+      {
+        coordinator.SenderTab.ChangeSidRecordStreamName(streamId, newStreamName);
+        loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Changed name of the stream to " + newStreamName));
+        return true;
+      }
+      loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Unable to change the name of the stream to " + newStreamName));
+      return false;
     }
 
     private static bool UpdateResultSettings(List<ResultSettingItem> resultsToSend, string loadCaseString)
