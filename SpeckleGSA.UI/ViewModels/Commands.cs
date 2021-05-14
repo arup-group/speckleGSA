@@ -257,6 +257,19 @@ namespace SpeckleGSA.UI.ViewModels
       return false;
     }
 
+    public static async Task<bool> CloneStream(TabCoordinator coordinator, string streamId, IProgress<MessageEventArgs> loggingProgress)
+    {
+      var clonedStreamId = await SpeckleInterface.SpeckleStreamManager.CloneStream(coordinator.Account.ServerUrl, coordinator.Account.Token, streamId);
+
+      if (string.IsNullOrEmpty(clonedStreamId))
+      {
+        loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Error, "Unable to clone " + streamId));
+        return false;
+      }
+      loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Cloned to: " + clonedStreamId));
+      return true;
+    }
+
     private static bool UpdateResultSettings(List<ResultSettingItem> resultsToSend, string loadCaseString)
     {
       if (resultsToSend == null || resultsToSend.Count() == 0 || string.IsNullOrEmpty(loadCaseString))

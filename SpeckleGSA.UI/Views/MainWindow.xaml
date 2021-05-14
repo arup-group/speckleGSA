@@ -93,12 +93,12 @@
 						</DataGrid.Columns>
 						<DataGrid.ContextMenu>
 							<ContextMenu>
-								<MenuItem Header="Copy streamId"/>
+                <MenuItem Header="Copy streamId" Command="{Binding CopyStreamIdCommand}"/>
 								<Separator />
-								<MenuItem Header="View stream"/>
-								<MenuItem Header="View stream data"/>
-								<MenuItem Header="View object data"/>
-							</ContextMenu>
+                <MenuItem Header="View stream" Command="{Binding ViewStreamCommand}" />
+                <MenuItem Header="View stream data" Command="{Binding ViewStreamDataCommand}" />
+                <MenuItem Header="View object data" Command="{Binding ViewObjectDataCommand}" />
+              </ContextMenu>
 						</DataGrid.ContextMenu>
 						<DataGrid.CellStyle>
 							<Style    TargetType="DataGridCell"
@@ -216,11 +216,11 @@
 						</DataGrid.Columns>
 						<DataGrid.ContextMenu>
 							<ContextMenu>
-								<MenuItem Header="Copy streamId"/>
+                <MenuItem Header="Copy streamId" Command="{Binding CopyStreamIdCommand}"/>
 								<Separator />
-								<MenuItem Header="View stream"/>
-								<MenuItem Header="View stream data"/>
-								<MenuItem Header="View object data"/>
+								<MenuItem Header="View stream" Command="{Binding ViewStreamCommand}" />
+                <MenuItem Header="View stream data" Command="{Binding ViewStreamDataCommand}" />
+                <MenuItem Header="View object data" Command="{Binding ViewObjectDataCommand}" />
 							</ContextMenu>
 						</DataGrid.ContextMenu>
 						<DataGrid.CellStyle>
@@ -300,12 +300,12 @@
 						</DataGrid.Columns>
 						<DataGrid.ContextMenu>
 							<ContextMenu>
-								<MenuItem Header="Copy streamId"/>
+                <MenuItem Header="Copy streamId" Command="{Binding CopyStreamIdCommand}"/>
 								<Separator />
-								<MenuItem Header="View stream"/>
-								<MenuItem Header="View stream data"/>
-								<MenuItem Header="View object data"/>
-							</ContextMenu>
+                <MenuItem Header="View stream" Command="{Binding ViewStreamCommand}" />
+                <MenuItem Header="View stream data" Command="{Binding ViewStreamDataCommand}" />
+                <MenuItem Header="View object data" Command="{Binding ViewObjectDataCommand}" />
+              </ContextMenu>
 						</DataGrid.ContextMenu>
 						<DataGrid.CellStyle>
 							<Style    TargetType="DataGridCell"

@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Windows.Threading;
 using System.Timers;
 using SpeckleGSAProxy;
+using System.Diagnostics;
 
 namespace SpeckleGSA.UI.ViewModels
 {
@@ -67,6 +68,11 @@ namespace SpeckleGSA.UI.ViewModels
     public DelegateCommand<object> AddCandidateStreamIdCommand { get; private set; }
     public DelegateCommand<object> RenameStreamCommand { get; private set; }
     public DelegateCommand<object> RemoveStreamCommand { get; private set; }
+    public DelegateCommand<object> CopyStreamIdCommand { get; set; }
+    public DelegateCommand<object> ViewStreamCommand { get; set; }
+    public DelegateCommand<object> ViewStreamDataCommand { get; set; }
+    public DelegateCommand<object> ViewObjectDataCommand { get; set; }
+    public DelegateCommand<object> CloneStreamCommand { get; set; }
 
     public string ReceiveButtonText { get => (ReceiveStreamMethod == StreamMethod.Continuous && StateMachine.StreamState == StreamState.ReceivingWaiting) ? "Stop" : "Receive"; }
     public string SendButtonText { get => (SendStreamMethod == StreamMethod.Continuous && StateMachine.StreamState == StreamState.SendingWaiting) ? "Stop" : "Send"; }
@@ -87,7 +93,8 @@ namespace SpeckleGSA.UI.ViewModels
     public ObservableCollection<StreamListItem> ServerStreamListItems { get => new ObservableCollection<StreamListItem>(Coordinator.ServerStreamList.StreamListItems); }
     public StreamListItem SelectedStreamItem
     {
-      get => selectedStream; set
+      get => selectedStream; 
+      set
       {
         selectedStream = value;
         ReceiveSelectedStreamCommand.RaiseCanExecuteChanged();
@@ -321,6 +328,7 @@ namespace SpeckleGSA.UI.ViewModels
           foreach (string p in paste)
           {
             Coordinator.ReceiverTab.StreamList.StreamListItems.Add(new StreamListItem(p, null));
+            Coordinator.ReceiverTab.StreamListToSidRecords();
           }
           Refresh();
         },
@@ -330,6 +338,7 @@ namespace SpeckleGSA.UI.ViewModels
         (o) =>
         {
           Coordinator.ReceiverTab.StreamList.StreamListItems.Clear();
+          Coordinator.ReceiverTab.SidRecordsToStreamList();
           Refresh();
         },
         (o) => !StateMachine.StreamFileIsOccupied && ReceiverStreamListItems.Count() > 0);
@@ -428,6 +437,70 @@ namespace SpeckleGSA.UI.ViewModels
           Refresh(() => StateMachine.StoppedRenamingStream());
         },
         (o) => !StateMachine.StreamIsOccupied);  //There is no visual button linked to this command so the CanExecute condition can be less strict 
+
+
+      CopyStreamIdCommand = new DelegateCommand<object>(
+        (o) =>
+        {
+          if (SelectedStreamItem != null && !string.IsNullOrEmpty(SelectedStreamItem.StreamId))
+          {
+            Clipboard.SetText(SelectedStreamItem.StreamId);
+          }
+        },
+        (o) => !StateMachine.StreamIsOccupied);
+
+      ViewStreamCommand = new DelegateCommand<object>(
+        (o) =>
+        {
+          if (SelectedStreamItem != null && !string.IsNullOrWhiteSpace(SelectedStreamItem.StreamId))
+          {
+            Task.Run(() =>
+            {
+              string streamId = SelectedStreamItem.StreamId;
+              string url = Coordinator.Account.ServerUrl.Split(new string[] { "api" }, StringSplitOptions.RemoveEmptyEntries)[0];
+              Process.Start(url + @"#/view/" + streamId);
+            });
+          }
+        },
+        (o) => !StateMachine.StreamIsOccupied);
+
+      ViewStreamDataCommand = new DelegateCommand<object>(
+        (o) =>
+        {
+          if (SelectedStreamItem != null && !string.IsNullOrWhiteSpace(SelectedStreamItem.StreamId))
+          {
+            Task.Run(() =>
+            {
+              string streamId = SelectedStreamItem.StreamId;
+              Process.Start(Coordinator.Account.ServerUrl + @"/streams/" + streamId);
+            });
+          }
+        },
+        (o) => !StateMachine.StreamIsOccupied);
+
+      ViewObjectDataCommand = new DelegateCommand<object>(
+        (o) =>
+        {
+          if (SelectedStreamItem != null && !string.IsNullOrWhiteSpace(SelectedStreamItem.StreamId))
+          {
+            Task.Run(() =>
+            {
+              string streamId = SelectedStreamItem.StreamId;
+              Process.Start(Coordinator.Account.ServerUrl + @"/streams/" + streamId + @"/objects?omit=displayVale,base64&limit=500");
+            });
+          }
+        },
+        (o) => !StateMachine.StreamIsOccupied);
+
+      CloneStreamCommand = new DelegateCommand<object>(
+        (o) =>
+        {
+          if (SelectedStreamItem != null && !string.IsNullOrWhiteSpace(SelectedStreamItem.StreamId))
+          {
+            Task.Run(() => Commands.CloneStream(Coordinator, SelectedStreamItem.StreamId, loggingProgress));
+          }
+        },
+        (o) => !StateMachine.StreamIsOccupied);
 
       cmds = new List<DelegateCommandBase>();
       Type myType = this.GetType();
