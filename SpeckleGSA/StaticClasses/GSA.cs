@@ -90,11 +90,10 @@ namespace SpeckleGSA
       GSA.GsaApp.gsaMessenger.MessageAdded += GSA.ProcessMessageForLog;
 
       //Avoid sending telemetry when debugging this code
-//#if !DEBUG
+#if !DEBUG
       GSA.GsaApp.gsaMessenger.MessageAdded += GSA.ProcessMessageForTelemetry;
       GSA.GsaApp.gsaProxy.SetAppVersionForTelemetry(speckleGsaAppVersion);
-//#endif
-      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Linked to GSA.");
+#endif
 
       InitialiseKits(out List<string> statusMessages);
 
@@ -230,7 +229,7 @@ namespace SpeckleGSA
       GSA.GsaApp.Merger.Initialise(mappableTypes);
     }
 
-#region kit_resources
+  #region kit_resources
 
     public static void ClearSenderDictionaries()
     {

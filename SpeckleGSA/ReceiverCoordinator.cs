@@ -422,7 +422,6 @@ namespace SpeckleGSA
             }
           }
 
-          //GSA.GsaApp.gsaMessenger.Trigger();
 #if !DEBUG
           if (GSA.RxParallelisableTypes.ContainsKey(valueType))
           {
@@ -446,9 +445,6 @@ namespace SpeckleGSA
               MergeAndDeserialseObject(o, speckleTypeName, keyword, t);
             });
           }
-
-          //Process any cached messages from the conversion code - should be mostly technical log but may include some display messages
-          //GSA.GsaApp.gsaMessenger.Trigger();
         }
 
         lock (traversedDeserialisedLock)
@@ -459,6 +455,10 @@ namespace SpeckleGSA
 #if !DEBUG
       );
 #endif
+
+      //Outside of any parallisation, process any cached messages from the conversion code.
+      //These should be mostly technical log but may include some display messages
+      GSA.GsaApp.gsaMessenger.Trigger();
 
       return; //GSA.GsaApp.gsaMessenger.LoggedMessageCount;
     }
@@ -511,6 +511,10 @@ namespace SpeckleGSA
       //SpeckleCore swallows exceptions on the Deserialise call, so no need for a try..catch block here.  Need to rely on the messages
       //cached in the messenger
       var deserialiseReturn = Converter.Deserialise(targetObject);
+      if (!string.IsNullOrEmpty(targetObject.ApplicationId))
+      {
+        GSA.GsaApp.gsaMessenger.Append(new[] { targetObject.ApplicationId }, errContext);
+      }
 
       if (deserialiseReturn is Exception)
       {

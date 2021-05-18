@@ -90,6 +90,9 @@ namespace SpeckleGSA.UI.ViewModels
     #endregion
 
     #region stream_list_members
+    private StreamListItem selectedStream = null;
+
+    //These are for the server tab - the receiver and sender tabs have their own stream list
     public ObservableCollection<StreamListItem> ServerStreamListItems { get => new ObservableCollection<StreamListItem>(Coordinator.ServerStreamList.StreamListItems); }
     public StreamListItem SelectedStreamItem
     {
@@ -100,7 +103,19 @@ namespace SpeckleGSA.UI.ViewModels
         ReceiveSelectedStreamCommand.RaiseCanExecuteChanged();
       }
     }
-    private StreamListItem selectedStream = null;
+
+    public StreamListItem SelectedReceiverStreamItem 
+    { 
+      get => Coordinator.ReceiverTab.StreamList.SeletedStreamListItem; set { Coordinator.ReceiverTab.StreamList.SeletedStreamListItem = value; } 
+    }
+
+    public StreamListItem SelectedSenderStreamItem
+    {
+      get => Coordinator.SenderTab.StreamList.SeletedStreamListItem; set { Coordinator.SenderTab.StreamList.SeletedStreamListItem = value; }
+    }
+    
+    public ObservableCollection<string> SelectedLogLines { get; set; }
+    public string SelectedLogLine { get; set; }
 
     public string CandidateStreamId { get; set; }
     public ObservableCollection<StreamListItem> ReceiverStreamListItems { get => new ObservableCollection<StreamListItem>(Coordinator.ReceiverTab.StreamList.StreamListItems); }
@@ -169,6 +184,7 @@ namespace SpeckleGSA.UI.ViewModels
       streamCreationProgress.ProgressChanged += ProcessStreamCreationProgress;
       streamDeletionProgress.ProgressChanged += ProcessStreamDeletionProgress;
       statusProgress.ProgressChanged += ProcessStatusProgressUpdate;
+      GSA.GsaApp.gsaMessenger.MessageAdded += ProcessLogProgressUpdate;
       CreateCommands();
     }
 
@@ -442,9 +458,32 @@ namespace SpeckleGSA.UI.ViewModels
       CopyStreamIdCommand = new DelegateCommand<object>(
         (o) =>
         {
-          if (SelectedStreamItem != null && !string.IsNullOrEmpty(SelectedStreamItem.StreamId))
+          var tab = (string)o;
+          string streamId = null;
+          if (tab == "Sender")
           {
-            Clipboard.SetText(SelectedStreamItem.StreamId);
+            if (Coordinator.SenderTab.StreamList.SeletedStreamListItem != null && !string.IsNullOrEmpty(Coordinator.SenderTab.StreamList.SeletedStreamListItem.StreamId))
+            {
+              streamId = Coordinator.SenderTab.StreamList.SeletedStreamListItem.StreamId;
+            }
+          }
+          else if (tab == "Receiver")
+          {
+            if (Coordinator.ReceiverTab.StreamList.SeletedStreamListItem != null && !string.IsNullOrEmpty(Coordinator.ReceiverTab.StreamList.SeletedStreamListItem.StreamId))
+            {
+              streamId = Coordinator.ReceiverTab.StreamList.SeletedStreamListItem.StreamId;
+            }
+          }
+          else
+          {
+            if (SelectedStreamItem != null && !string.IsNullOrEmpty(SelectedStreamItem.StreamId))
+            {
+              streamId = SelectedStreamItem.StreamId;
+            }
+          }
+          if (!string.IsNullOrEmpty(streamId))
+          {
+            Clipboard.SetText(streamId);
           }
         },
         (o) => !StateMachine.StreamIsOccupied);
@@ -546,7 +585,15 @@ namespace SpeckleGSA.UI.ViewModels
     {
       if (mea.Intent == SpeckleGSAInterfaces.MessageIntent.Display)
       {
-        Coordinator.DisplayLog.DisplayLogItems.Add(new DisplayLogItem(mea.MessagePortions.First()));
+        var displayLine = mea.MessagePortions.First() + ": " + string.Join(" ", mea.MessagePortions.Skip(1));
+        if (mea.Level == MessageLevel.Information)
+        {
+          Coordinator.DisplayLog.DisplayLogItems.Add(new DisplayLogItem(displayLine));
+        }
+        else if (mea.Level == MessageLevel.Error || mea.Level == MessageLevel.Fatal)
+        {
+          Coordinator.DisplayLog.DisplayLogItems.Add(new DisplayLogItem("Error: " + displayLine));
+        }
         NotifyPropertyChanged("DisplayLogLines");
       }
     }

@@ -93,7 +93,7 @@
 						</DataGrid.Columns>
 						<DataGrid.ContextMenu>
 							<ContextMenu>
-                <MenuItem Header="Copy streamId" Command="{Binding CopyStreamIdCommand}"/>
+                <MenuItem Header="Copy streamId" Command="{Binding CopyStreamIdCommand}" CommandParameter="Server"/>
 								<Separator />
                 <MenuItem Header="View stream" Command="{Binding ViewStreamCommand}" />
                 <MenuItem Header="View stream data" Command="{Binding ViewStreamDataCommand}" />
@@ -182,7 +182,7 @@
 					<DataGrid Grid.Row="1"
 							CanUserSortColumns="False" AutoGenerateColumns="False" CanUserDeleteRows="True"
 							SelectionMode="Extended" RowHeaderWidth="0"	GridLinesVisibility="None"
-							ItemsSource="{Binding SenderStreamListItems}" SelectedItem="{Binding SelectedStreamItem}"
+							ItemsSource="{Binding SenderStreamListItems}" SelectedItem="{Binding SelectedSenderStreamItem}"
 							IsEnabled="{Binding IsSendStreamListEnabled}">
             <DataGrid.InputBindings>
               <KeyBinding Key="Delete" Command="{Binding RemoveStreamCommand}" />
@@ -216,7 +216,7 @@
 						</DataGrid.Columns>
 						<DataGrid.ContextMenu>
 							<ContextMenu>
-                <MenuItem Header="Copy streamId" Command="{Binding CopyStreamIdCommand}"/>
+                <MenuItem Header="Copy streamId" Command="{Binding CopyStreamIdCommand}" CommandParameter="Sender" />
 								<Separator />
 								<MenuItem Header="View stream" Command="{Binding ViewStreamCommand}" />
                 <MenuItem Header="View stream data" Command="{Binding ViewStreamDataCommand}" />
@@ -293,14 +293,14 @@
 					<DataGrid Grid.Row="2"
 							CanUserSortColumns="False" AutoGenerateColumns="False" IsReadOnly="True"
 							SelectionMode="Extended" RowHeaderWidth="0"	GridLinesVisibility="None"
-							ItemsSource="{Binding ReceiverStreamListItems}" SelectedItem="{Binding SelectedStreamItem}">
+							ItemsSource="{Binding ReceiverStreamListItems}" SelectedItem="{Binding SelectedReceiverStreamItem}">
 						<DataGrid.Columns>
 							<DataGridTextColumn Header="StreamName" Width="*" Binding="{Binding StreamName}" />
 							<DataGridTextColumn Header="StreamId" Width="*" Binding="{Binding StreamId}"/>
 						</DataGrid.Columns>
 						<DataGrid.ContextMenu>
 							<ContextMenu>
-                <MenuItem Header="Copy streamId" Command="{Binding CopyStreamIdCommand}"/>
+                <MenuItem Header="Copy streamId" Command="{Binding CopyStreamIdCommand}" CommandParameter="Receiver"/>
 								<Separator />
                 <MenuItem Header="View stream" Command="{Binding ViewStreamCommand}" />
                 <MenuItem Header="View stream data" Command="{Binding ViewStreamDataCommand}" />
@@ -402,9 +402,10 @@
 		</TabControl>
 
 		<TextBlock Grid.Row="3" Grid.Column="1" Text="Message log" Margin="5"/>
-		<ListBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" Height="120" SelectionMode="Extended" 
-						 ItemsSource="{Binding DisplayLogLines}"/>
-		<TextBlock x:Name="State" Text="{Binding StateSummary, Mode=OneWay}" Grid.Row="5" Grid.Column="1" 
+    <ListBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" Height="120" SelectionMode="Multiple" 
+						 ItemsSource="{Binding DisplayLogLines}" x:Name="_DisplayLogLines" >
+    </ListBox>
+    <TextBlock x:Name="State" Text="{Binding StateSummary, Mode=OneWay}" Grid.Row="5" Grid.Column="1" 
 							 Grid.ColumnSpan="3" HorizontalAlignment="Center" Margin="5	" />
 		<ProgressBar x:Name="MainProgressBar" Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="3" Height="10" Minimum="0" Maximum="100"
 								 Foreground="Blue" Value="{Binding ProcessingProgress, Mode=OneWay}" />

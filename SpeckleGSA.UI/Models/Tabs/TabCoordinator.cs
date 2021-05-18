@@ -42,6 +42,10 @@ namespace SpeckleGSA.UI.Models
       GSA.Init(getRunningVersion().ToString());
       SpeckleInitializer.Initialize();
       LocalContext.Init();
+
+      //This will create the logger
+      GSA.GsaApp.gsaSettings.LoggingMinimumLevel = 4;  //Debug
+
       gsaSenderCoordinator = new SenderCoordinator();
       gsaReceiverCoordinator = new ReceiverCoordinator();
     }

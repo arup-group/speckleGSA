@@ -4,6 +4,7 @@ using System.Collections.Generic;
 
 namespace SpeckleGSA.UI.Utilities
 {
+  //This is mainly for use in the SpeckleInterface library, not the kit
   public class ProgressMessenger : ISpeckleAppMessenger
   {
     private readonly IProgress<MessageEventArgs> loggingProgress;
