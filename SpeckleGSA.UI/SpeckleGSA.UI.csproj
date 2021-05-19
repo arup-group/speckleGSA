@@ -16,6 +16,7 @@
     <Deterministic>true</Deterministic>
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>x64</PlatformTarget>
@@ -67,8 +68,20 @@
     <Reference Include="Piwik.Tracker, Version=3.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Piwik.Tracker.3.0.0\lib\net40\Piwik.Tracker.dll</HintPath>
     </Reference>
+    <Reference Include="Serilog, Version=2.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10, processorArchitecture=MSIL">
+      <HintPath>..\packages\Serilog.2.6.0\lib\net46\Serilog.dll</HintPath>
+    </Reference>
+    <Reference Include="Serilog.Settings.AppSettings, Version=2.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10, processorArchitecture=MSIL">
+      <HintPath>..\packages\Serilog.Settings.AppSettings.2.2.2\lib\net45\Serilog.Settings.AppSettings.dll</HintPath>
+    </Reference>
+    <Reference Include="Serilog.Sinks.File, Version=2.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10, processorArchitecture=MSIL">
+      <HintPath>..\packages\Serilog.Sinks.File.4.1.0\lib\net45\Serilog.Sinks.File.dll</HintPath>
+    </Reference>
+    <Reference Include="Serilog.Sinks.RollingFile, Version=2.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10, processorArchitecture=MSIL">
+      <HintPath>..\packages\Serilog.Sinks.RollingFile.3.3.0\lib\net45\Serilog.Sinks.RollingFile.dll</HintPath>
+    </Reference>
     <Reference Include="SpeckleCore, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\SpecCxCore.1.2.5\lib\netstandard2.0\SpeckleCore.dll</HintPath>
+      <HintPath>..\packages\SpecCxCore.1.2.6\lib\netstandard2.0\SpeckleCore.dll</HintPath>
     </Reference>
     <Reference Include="SpecklePopup, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\SpecCxPopup.1.2.3\lib\net461\SpecklePopup.dll</HintPath>
@@ -93,6 +106,7 @@
       <HintPath>..\packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
     </Reference>
     <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Data" />
     <Reference Include="System.Deployment" />
     <Reference Include="System.Diagnostics.DiagnosticSource, Version=5.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
@@ -172,16 +186,17 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Models\Tabs\TabBase.cs" />
     <Compile Include="Models\SpeckleAccountForUI.cs" />
     <Compile Include="DataAccess\DataAccess.cs" />
-    <Compile Include="Models\CoordinatorForUI.cs" />
+    <Compile Include="Models\Tabs\TabCoordinator.cs" />
     <Compile Include="Models\DisplayLog.cs" />
     <Compile Include="Models\DisplayLogItem.cs" />
     <Compile Include="Models\Enums.cs" />
-    <Compile Include="Models\ReceiverCoordinatorForUI.cs" />
+    <Compile Include="Models\Tabs\ReceiverTab.cs" />
     <Compile Include="Models\ResultSettingItem.cs" />
     <Compile Include="Models\ResultSettings.cs" />
-    <Compile Include="Models\SenderCoordinatorForUI.cs" />
+    <Compile Include="Models\Tabs\SenderTab.cs" />
     <Compile Include="Models\StreamList.cs" />
     <Compile Include="Models\StreamListItem.cs" />
     <Compile Include="Utilities\DelegateCommand.cs" />

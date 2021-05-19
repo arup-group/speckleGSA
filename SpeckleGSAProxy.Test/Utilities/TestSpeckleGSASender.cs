@@ -49,9 +49,10 @@ namespace SpeckleGSAProxy.Test
       return 0;
     }
 
-    public void UpdateName(string streamName)
+    public Task UpdateName(string streamName)
     {
       this.streamName = streamName;
+      return Task.CompletedTask;
     }
   }
 }

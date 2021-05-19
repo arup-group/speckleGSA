@@ -38,7 +38,9 @@ namespace SpeckleGSA
     /// <param name="restApi">Server address</param>
     /// <param name="apiToken">API token of account</param>
     /// <returns>Task</returns>
-    public List<string> Initialize(IProgress<MessageEventArgs> loggingProgress, IProgress<string> statusProgress, IProgress<double> percentageProgress)
+    public List<string> Initialize(string restApi, string apiToken, List<SidSpeckleRecord> receiverStreamInfo,
+      Func<string, string, SpeckleInterface.IStreamReceiver> streamReceiverCreationFn, 
+      IProgress<MessageEventArgs> loggingProgress, IProgress<string> statusProgress, IProgress<double> percentageProgress)
 		{
 			var statusMessages = new List<string>();
 
@@ -65,9 +67,10 @@ namespace SpeckleGSA
       // Create receivers
       statusProgress.Report("Accessing streams");
 
-      GSA.ReceiverInfo.Where(r => !string.IsNullOrEmpty(r.StreamId)).ToList().ForEach((streamInfo) =>
+      receiverStreamInfo.Where(r => !string.IsNullOrEmpty(r.StreamId)).ToList().ForEach((streamInfo) =>
 			{
-				StreamReceivers[streamInfo.StreamId].InitializeReceiver(streamInfo.StreamId, streamInfo.StreamName);
+        StreamReceivers.Add(streamInfo.StreamId, streamReceiverCreationFn(restApi, apiToken));
+				StreamReceivers[streamInfo.StreamId].InitializeReceiver(streamInfo.StreamId, streamInfo.Bucket);
 				StreamReceivers[streamInfo.StreamId].UpdateGlobalTrigger += Trigger;
 			});
 
@@ -419,7 +422,6 @@ namespace SpeckleGSA
             }
           }
 
-          //GSA.GsaApp.gsaMessenger.Trigger();
 #if !DEBUG
           if (GSA.RxParallelisableTypes.ContainsKey(valueType))
           {
@@ -443,9 +445,6 @@ namespace SpeckleGSA
               MergeAndDeserialseObject(o, speckleTypeName, keyword, t);
             });
           }
-
-          //Process any cached messages from the conversion code - should be mostly technical log but may include some display messages
-          //GSA.GsaApp.gsaMessenger.Trigger();
         }
 
         lock (traversedDeserialisedLock)
@@ -456,6 +455,10 @@ namespace SpeckleGSA
 #if !DEBUG
       );
 #endif
+
+      //Outside of any parallisation, process any cached messages from the conversion code.
+      //These should be mostly technical log but may include some display messages
+      GSA.GsaApp.gsaMessenger.Trigger();
 
       return; //GSA.GsaApp.gsaMessenger.LoggedMessageCount;
     }
@@ -508,6 +511,10 @@ namespace SpeckleGSA
       //SpeckleCore swallows exceptions on the Deserialise call, so no need for a try..catch block here.  Need to rely on the messages
       //cached in the messenger
       var deserialiseReturn = Converter.Deserialise(targetObject);
+      if (!string.IsNullOrEmpty(targetObject.ApplicationId))
+      {
+        GSA.GsaApp.gsaMessenger.Append(new[] { targetObject.ApplicationId }, errContext);
+      }
 
       if (deserialiseReturn is Exception)
       {
@@ -675,10 +682,10 @@ namespace SpeckleGSA
     /// </summary>
     public void Dispose()
     {
-      foreach (var streamInfo in GSA.ReceiverInfo)
+      foreach (var streamId in StreamReceivers.Keys)
       {
-        StreamReceivers[streamInfo.StreamId].UpdateGlobalTrigger -= Trigger;
-        StreamReceivers[streamInfo.StreamId].Dispose();
+        StreamReceivers[streamId].UpdateGlobalTrigger -= Trigger;
+        StreamReceivers[streamId].Dispose();
       }
     }
 

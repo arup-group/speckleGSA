@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Windows.Threading;
 using System.Timers;
 using SpeckleGSAProxy;
+using System.Diagnostics;
 
 namespace SpeckleGSA.UI.ViewModels
 {
@@ -21,7 +22,7 @@ namespace SpeckleGSA.UI.ViewModels
     public event PropertyChangedEventHandler PropertyChanged;
     protected void NotifyPropertyChanged(String info) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(info));
 
-    public CoordinatorForUI Coordinator { get; } = new CoordinatorForUI();
+    public TabCoordinator Coordinator { get; } = new TabCoordinator();
     public StateMachine StateMachine { get; } = new StateMachine();
 
     public string Title { get => "SpeckleGSA - " + Coordinator.RunningVersion; }
@@ -30,20 +31,20 @@ namespace SpeckleGSA.UI.ViewModels
 
     public GSATargetLayer ReceiveLayer
     {
-      get => Coordinator.ReceiverCoordinatorForUI.TargetLayer;
+      get => Coordinator.ReceiverTab.TargetLayer;
       set
       {
-        Refresh(() => Coordinator.ReceiverCoordinatorForUI.TargetLayer = value);
+        Refresh(() => Coordinator.ReceiverTab.TargetLayer = value);
       }
     }
-    public GSATargetLayer SendLayer { get => Coordinator.SenderCoordinatorForUI.TargetLayer;
+    public GSATargetLayer SendLayer { get => Coordinator.SenderTab.TargetLayer;
       set
       {
-        Refresh(() => Coordinator.SenderCoordinatorForUI.TargetLayer = value);
+        Refresh(() => Coordinator.SenderTab.TargetLayer = value);
       }
     }
-    public StreamMethod ReceiveStreamMethod { get => Coordinator.ReceiverCoordinatorForUI.StreamMethod; set => Refresh(() => Coordinator.ReceiverCoordinatorForUI.StreamMethod = value); }
-    public StreamMethod SendStreamMethod { get => Coordinator.SenderCoordinatorForUI.StreamMethod; set => Refresh(() => Coordinator.SenderCoordinatorForUI.StreamMethod = value); }
+    public StreamMethod ReceiveStreamMethod { get => Coordinator.ReceiverTab.StreamMethod; set => Refresh(() => Coordinator.ReceiverTab.StreamMethod = value); }
+    public StreamMethod SendStreamMethod { get => Coordinator.SenderTab.StreamMethod; set => Refresh(() => Coordinator.SenderTab.StreamMethod = value); }
     public string CurrentlyOpenFileName
     {
       get => Coordinator.FileStatus == GsaLoadedFileType.None ? "No file is currently open" : Coordinator.FileStatus == GsaLoadedFileType.NewFile ? "New file" : Coordinator.FilePath;
@@ -66,7 +67,12 @@ namespace SpeckleGSA.UI.ViewModels
     public DelegateCommand<object> ClearReceiveStreamListCommand { get; private set; }
     public DelegateCommand<object> AddCandidateStreamIdCommand { get; private set; }
     public DelegateCommand<object> RenameStreamCommand { get; private set; }
-    public DelegateCommand<object> ExportAppliedSectionDataCommand { get; private set; }
+    public DelegateCommand<object> RemoveStreamCommand { get; private set; }
+    public DelegateCommand<object> CopyStreamIdCommand { get; set; }
+    public DelegateCommand<object> ViewStreamCommand { get; set; }
+    public DelegateCommand<object> ViewStreamDataCommand { get; set; }
+    public DelegateCommand<object> ViewObjectDataCommand { get; set; }
+    public DelegateCommand<object> CloneStreamCommand { get; set; }
 
     public string ReceiveButtonText { get => (ReceiveStreamMethod == StreamMethod.Continuous && StateMachine.StreamState == StreamState.ReceivingWaiting) ? "Stop" : "Receive"; }
     public string SendButtonText { get => (SendStreamMethod == StreamMethod.Continuous && StateMachine.StreamState == StreamState.SendingWaiting) ? "Stop" : "Send"; }
@@ -84,43 +90,59 @@ namespace SpeckleGSA.UI.ViewModels
     #endregion
 
     #region stream_list_members
+    private StreamListItem selectedStream = null;
+
+    //These are for the server tab - the receiver and sender tabs have their own stream list
     public ObservableCollection<StreamListItem> ServerStreamListItems { get => new ObservableCollection<StreamListItem>(Coordinator.ServerStreamList.StreamListItems); }
     public StreamListItem SelectedStreamItem
     {
-      get => selectedStream; set
+      get => selectedStream; 
+      set
       {
         selectedStream = value;
         ReceiveSelectedStreamCommand.RaiseCanExecuteChanged();
       }
     }
-    private StreamListItem selectedStream = null;
+
+    public StreamListItem SelectedReceiverStreamItem 
+    { 
+      get => Coordinator.ReceiverTab.StreamList.SeletedStreamListItem; set { Coordinator.ReceiverTab.StreamList.SeletedStreamListItem = value; } 
+    }
+
+    public StreamListItem SelectedSenderStreamItem
+    {
+      get => Coordinator.SenderTab.StreamList.SeletedStreamListItem; set { Coordinator.SenderTab.StreamList.SeletedStreamListItem = value; }
+    }
+    
+    public ObservableCollection<string> SelectedLogLines { get; set; }
+    public string SelectedLogLine { get; set; }
 
     public string CandidateStreamId { get; set; }
-    public ObservableCollection<StreamListItem> ReceiverStreamListItems { get => new ObservableCollection<StreamListItem>(Coordinator.ReceiverCoordinatorForUI.StreamList.StreamListItems); }
+    public ObservableCollection<StreamListItem> ReceiverStreamListItems { get => new ObservableCollection<StreamListItem>(Coordinator.ReceiverTab.StreamList.StreamListItems); }
 
-    public ObservableCollection<StreamListItem> SenderStreamListItems { get => new ObservableCollection<StreamListItem>(Coordinator.SenderCoordinatorForUI.StreamList.StreamListItems); }
+    public ObservableCollection<StreamListItem> SenderStreamListItems { get => new ObservableCollection<StreamListItem>(Coordinator.SenderTab.StreamList.StreamListItems); }
     #endregion
 
     #region settings_properties
     public ObservableCollection<ResultSettingItem> ResultSettingItems
     {
-      get => new ObservableCollection<ResultSettingItem>(Coordinator.SenderCoordinatorForUI.ResultSettings.ResultSettingItems.OrderByDescending(i => i.DefaultSelected));
+      get => new ObservableCollection<ResultSettingItem>(Coordinator.SenderTab.ResultSettings.ResultSettingItems.OrderByDescending(i => i.DefaultSelected));
     }
 
-    public StreamContentConfig StreamContentConfig { get => Coordinator.SenderCoordinatorForUI.StreamContentConfig;
-      set => Refresh(() => Coordinator.SenderCoordinatorForUI.StreamContentConfig = value); }
+    public StreamContentConfig StreamContentConfig { get => Coordinator.SenderTab.StreamContentConfig;
+      set => Refresh(() => Coordinator.SenderTab.StreamContentConfig = value); }
 
     public bool SendMeaningfulNodes { get; set; } = true;
 
-    public double CoincidentNodeAllowance { get => Coordinator.ReceiverCoordinatorForUI.CoincidentNodeAllowance; set { Coordinator.ReceiverCoordinatorForUI.CoincidentNodeAllowance = value; } }
+    public double CoincidentNodeAllowance { get => Coordinator.ReceiverTab.CoincidentNodeAllowance; set { Coordinator.ReceiverTab.CoincidentNodeAllowance = value; } }
     public List<GsaUnit> CoincidentNodeAllowanceUnitOptions { get => new List<GsaUnit> { GsaUnit.Millimetres, GsaUnit.Metres, GsaUnit.Inches }; }
-    public GsaUnit CoincidentNodeAllowanceUnit { get => Coordinator.ReceiverCoordinatorForUI.CoincidentNodeUnits; set { Coordinator.ReceiverCoordinatorForUI.CoincidentNodeUnits = value; } }
+    public GsaUnit CoincidentNodeAllowanceUnit { get => Coordinator.ReceiverTab.CoincidentNodeUnits; set { Coordinator.ReceiverTab.CoincidentNodeUnits = value; } }
     public LoggingMinimumLevel LoggingMinimumLevel { get => Coordinator.LoggingMinimumLevel; set { Coordinator.LoggingMinimumLevel = value; } }
     public List<LoggingMinimumLevel> LoggingMinimumLevelOptions
     {
       get => new List<LoggingMinimumLevel> { LoggingMinimumLevel.Debug, LoggingMinimumLevel.Information, LoggingMinimumLevel.Error, LoggingMinimumLevel.Fatal };
     }
-    public string CasesDescription { get => Coordinator.SenderCoordinatorForUI.LoadCaseList; set { Coordinator.SenderCoordinatorForUI.LoadCaseList = value; } }
+    public string CasesDescription { get => Coordinator.SenderTab.LoadCaseList; set { Coordinator.SenderTab.LoadCaseList = value; } }
     #endregion
 
 
@@ -145,7 +167,8 @@ namespace SpeckleGSA.UI.ViewModels
 
     private readonly Progress<double> percentageProgress = new Progress<double>();
     private readonly Progress<MessageEventArgs> loggingProgress = new Progress<MessageEventArgs>();
-    private readonly Progress<StreamListItem> streamCreationProgress = new Progress<StreamListItem>();
+    private readonly Progress<SidSpeckleRecord> streamCreationProgress = new Progress<SidSpeckleRecord>();
+    private readonly Progress<SidSpeckleRecord> streamDeletionProgress = new Progress<SidSpeckleRecord>();
     private readonly Progress<string> statusProgress = new Progress<string>();
     private List<DelegateCommandBase> cmds; //Filled in using Reflection and used in bulk updating of CanExecute bindings
 
@@ -159,7 +182,9 @@ namespace SpeckleGSA.UI.ViewModels
       percentageProgress.ProgressChanged += ProcessPercentageProgressUpdate;
       loggingProgress.ProgressChanged += ProcessLogProgressUpdate;
       streamCreationProgress.ProgressChanged += ProcessStreamCreationProgress;
+      streamDeletionProgress.ProgressChanged += ProcessStreamDeletionProgress;
       statusProgress.ProgressChanged += ProcessStatusProgressUpdate;
+      GSA.GsaApp.gsaMessenger.MessageAdded += ProcessLogProgressUpdate;
       CreateCommands();
     }
 
@@ -171,15 +196,15 @@ namespace SpeckleGSA.UI.ViewModels
          Refresh(() => StateMachine.StartedLoggingIn());
 
          var calibrateNodeAtTask = Task.Run(() => GSAProxy.CalibrateNodeAt());
-         var initialLoadTask = Task.Run(() => Commands.InitialLoadAsync(Coordinator, loggingProgress));
+         var initialLoadTask = Task.Run(() => Commands.InitialLoad(Coordinator, loggingProgress));
 
-         await initialLoadTask;
+         var loaded = await initialLoadTask;
          await calibrateNodeAtTask;
 
-         var loaded = initialLoadTask.Result;
-         
          if (loaded)
          {
+           var retrievedStreamInfoFromFile = await Task.Run(() => Commands.ReadSavedStreamInfo(Coordinator, loggingProgress));
+
            Refresh(() => StateMachine.LoggedIn());
          }
          else
@@ -214,7 +239,12 @@ namespace SpeckleGSA.UI.ViewModels
 
               Refresh(() => StateMachine.StartedUpdatingStreams());
 
-              await Commands.CompleteLoginAsync(Coordinator, loggingProgress);
+              var completed = await Commands.CompleteLogin(Coordinator, loggingProgress);
+
+              if (completed)
+              {
+                var retrievedStreamInfoFromFile = await Task.Run(() => Commands.ReadSavedStreamInfo(Coordinator, loggingProgress));
+              }
 
               Refresh(() => StateMachine.StoppedUpdatingStreams());
 
@@ -230,7 +260,7 @@ namespace SpeckleGSA.UI.ViewModels
         {
           Refresh(() => StateMachine.StartedUpdatingStreams());
 
-          Coordinator.ServerStreamList = await Task.Run(() => Commands.GetStreamList());
+          var result = await Task.Run(() => Commands.GetStreamList(Coordinator, loggingProgress));
 
           Refresh(() => StateMachine.StoppedUpdatingStreams());
         },
@@ -241,8 +271,8 @@ namespace SpeckleGSA.UI.ViewModels
         {
           SelectedTabIndex = (int)MainTab.Receiver;
 
-          Coordinator.ReceiverCoordinatorForUI.StreamList.StreamListItems.Clear();
-          Coordinator.ReceiverCoordinatorForUI.StreamList.StreamListItems.Add(SelectedStreamItem);
+          Coordinator.ReceiverTab.StreamList.StreamListItems.Clear();
+          Coordinator.ReceiverTab.StreamList.StreamListItems.Add(SelectedStreamItem);
 
           //Sender coordinator is in the SpeckleGSA library, NOT the SpeckleInterface.  The sender coordinator calls the SpeckleInterface methods
           var gsaReceiverCoordinator = new ReceiverCoordinator();  //Coordinates across multiple streams
@@ -272,9 +302,10 @@ namespace SpeckleGSA.UI.ViewModels
         async (o) =>
         {
           Refresh(() => StateMachine.StartedOpeningFile());
-          var opened = await Task.Run(() => Commands.OpenFile(Coordinator));
+          var opened = await Task.Run(() => Commands.OpenFile(Coordinator, loggingProgress));
           if (opened)
           {
+            var retrievedStreamInfoFromFile = await Task.Run(() => Commands.ReadSavedStreamInfo(Coordinator, loggingProgress));
             Refresh(() => StateMachine.OpenedFile());
           }
           else
@@ -298,7 +329,9 @@ namespace SpeckleGSA.UI.ViewModels
             var gsaReceiverCoordinator = new ReceiverCoordinator();  //Coordinates across multiple streams
 
             Refresh(() => StateMachine.EnteredReceivingMode(ReceiveStreamMethod));
+
             var result = await Task.Run(() => Commands.Receive(Coordinator, gsaReceiverCoordinator, streamCreationProgress, loggingProgress, statusProgress, percentageProgress));
+
             Refresh(() => StateMachine.StoppedReceiving());
           }
         },
@@ -310,7 +343,8 @@ namespace SpeckleGSA.UI.ViewModels
           var paste = Clipboard.GetText(TextDataFormat.Text).Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Select(p => p.Trim()).ToList();
           foreach (string p in paste)
           {
-            Coordinator.ReceiverCoordinatorForUI.StreamList.StreamListItems.Add(new StreamListItem(p, null));
+            Coordinator.ReceiverTab.StreamList.StreamListItems.Add(new StreamListItem(p, null));
+            Coordinator.ReceiverTab.StreamListToSidRecords();
           }
           Refresh();
         },
@@ -319,7 +353,8 @@ namespace SpeckleGSA.UI.ViewModels
       ClearReceiveStreamListCommand = new DelegateCommand<object>(
         (o) =>
         {
-          Coordinator.ReceiverCoordinatorForUI.StreamList.StreamListItems.Clear();
+          Coordinator.ReceiverTab.StreamList.StreamListItems.Clear();
+          Coordinator.ReceiverTab.SidRecordsToStreamList();
           Refresh();
         },
         (o) => !StateMachine.StreamFileIsOccupied && ReceiverStreamListItems.Count() > 0);
@@ -329,7 +364,7 @@ namespace SpeckleGSA.UI.ViewModels
         {
           if (!String.IsNullOrEmpty(CandidateStreamId))
           {
-            Coordinator.ReceiverCoordinatorForUI.StreamList.StreamListItems.Add(new StreamListItem(CandidateStreamId, null));
+            Coordinator.ReceiverTab.StreamList.StreamListItems.Add(new StreamListItem(CandidateStreamId, null));
             CandidateStreamId = "";
           }
           Refresh();
@@ -349,12 +384,13 @@ namespace SpeckleGSA.UI.ViewModels
             var gsaSenderCoordinator = new SenderCoordinator();  //Coordinates across multiple streams
 
             Refresh(() => StateMachine.EnteredSendingMode(SendStreamMethod));
-            var result = await Task.Run(() => Commands.SendInitial(Coordinator, gsaSenderCoordinator, streamCreationProgress, loggingProgress, statusProgress, percentageProgress));
+            var result = await Task.Run(() => Commands.SendInitial(Coordinator, gsaSenderCoordinator, streamCreationProgress, streamDeletionProgress, 
+              loggingProgress, statusProgress, percentageProgress));
             Refresh(() => StateMachine.StoppedSending());
 
             if (SendStreamMethod == StreamMethod.Continuous)
             {
-              TriggerTimer = new Timer(Coordinator.SenderCoordinatorForUI.PollingRateMilliseconds);
+              TriggerTimer = new Timer(Coordinator.SenderTab.PollingRateMilliseconds);
               TriggerTimer.Elapsed += (sender, e) => Application.Current.Dispatcher.BeginInvoke(
                 DispatcherPriority.Background, new Action(() => ContinuousSendCommand.Execute(gsaSenderCoordinator)));
               TriggerTimer.AutoReset = false;
@@ -384,30 +420,126 @@ namespace SpeckleGSA.UI.ViewModels
         async (o) =>
         {
           Refresh(() => StateMachine.StartedSavingFile());
-          var result = await Task.Run(() => Commands.SaveFile());
+          var result = await Task.Run(() => Commands.SaveFile(Coordinator));
           Refresh(() => StateMachine.StoppedSavingFile());
         },
         (o) => !StateMachine.StreamFileIsOccupied && StateMachine.FileState == FileState.Loaded);
+
+      RemoveStreamCommand = new DelegateCommand<object>(
+        (o) =>
+        {
+          var streamIdToRemove = SelectedStreamItem.StreamId;
+          if (!string.IsNullOrEmpty(streamIdToRemove))
+          {
+            var sidRecordToRemove = Coordinator.SenderTab.SenderSidRecords.FirstOrDefault(r => r.StreamId.Equals(streamIdToRemove));
+            if (sidRecordToRemove != null)
+            {
+              Coordinator.SenderTab.RemoveSidSpeckleRecord(sidRecordToRemove);
+              Coordinator.SenderTab.SidRecordsToStreamList();
+              Refresh();
+            }
+          }
+        },
+        (o) => !StateMachine.StreamIsOccupied);  //There is no visual button linked to this command so the CanExecute condition can be less strict 
 
       RenameStreamCommand = new DelegateCommand<object>(
         async (o) =>
         {
           var newStreamName = o.ToString();
           Refresh(() => StateMachine.StartedRenamingStream());
-          var result = await Task.Run(() => Commands.RenameStream(SelectedStreamItem.StreamId, newStreamName, loggingProgress));
-          SelectedStreamItem.StreamName = newStreamName;
+          var result = await Task.Run(() => Commands.RenameStream(Coordinator, SelectedStreamItem.StreamId, newStreamName, loggingProgress));
+          Coordinator.SenderTab.ChangeSidRecordStreamName(SelectedStreamItem.StreamId, newStreamName);
+          Coordinator.SenderTab.SidRecordsToStreamList();
           Refresh(() => StateMachine.StoppedRenamingStream());
         },
         (o) => !StateMachine.StreamIsOccupied);  //There is no visual button linked to this command so the CanExecute condition can be less strict 
 
-      ExportAppliedSectionDataCommand = new DelegateCommand<object>(
-        async (o) =>
+
+      CopyStreamIdCommand = new DelegateCommand<object>(
+        (o) =>
         {
-          Refresh(() => StateMachine.StartedSavingFile());
-          var result = await Task.Run(() => Commands.ExportAppliedSectionData());
-          Refresh(() => StateMachine.StoppedSavingFile());
+          var tab = (string)o;
+          string streamId = null;
+          if (tab == "Sender")
+          {
+            if (Coordinator.SenderTab.StreamList.SeletedStreamListItem != null && !string.IsNullOrEmpty(Coordinator.SenderTab.StreamList.SeletedStreamListItem.StreamId))
+            {
+              streamId = Coordinator.SenderTab.StreamList.SeletedStreamListItem.StreamId;
+            }
+          }
+          else if (tab == "Receiver")
+          {
+            if (Coordinator.ReceiverTab.StreamList.SeletedStreamListItem != null && !string.IsNullOrEmpty(Coordinator.ReceiverTab.StreamList.SeletedStreamListItem.StreamId))
+            {
+              streamId = Coordinator.ReceiverTab.StreamList.SeletedStreamListItem.StreamId;
+            }
+          }
+          else
+          {
+            if (SelectedStreamItem != null && !string.IsNullOrEmpty(SelectedStreamItem.StreamId))
+            {
+              streamId = SelectedStreamItem.StreamId;
+            }
+          }
+          if (!string.IsNullOrEmpty(streamId))
+          {
+            Clipboard.SetText(streamId);
+          }
         },
-        (o) => StateMachine.FileState == FileState.Loaded && !StateMachine.StreamIsOccupied);
+        (o) => !StateMachine.StreamIsOccupied);
+
+      ViewStreamCommand = new DelegateCommand<object>(
+        (o) =>
+        {
+          if (SelectedStreamItem != null && !string.IsNullOrWhiteSpace(SelectedStreamItem.StreamId))
+          {
+            Task.Run(() =>
+            {
+              string streamId = SelectedStreamItem.StreamId;
+              string url = Coordinator.Account.ServerUrl.Split(new string[] { "api" }, StringSplitOptions.RemoveEmptyEntries)[0];
+              Process.Start(url + @"#/view/" + streamId);
+            });
+          }
+        },
+        (o) => !StateMachine.StreamIsOccupied);
+
+      ViewStreamDataCommand = new DelegateCommand<object>(
+        (o) =>
+        {
+          if (SelectedStreamItem != null && !string.IsNullOrWhiteSpace(SelectedStreamItem.StreamId))
+          {
+            Task.Run(() =>
+            {
+              string streamId = SelectedStreamItem.StreamId;
+              Process.Start(Coordinator.Account.ServerUrl + @"/streams/" + streamId);
+            });
+          }
+        },
+        (o) => !StateMachine.StreamIsOccupied);
+
+      ViewObjectDataCommand = new DelegateCommand<object>(
+        (o) =>
+        {
+          if (SelectedStreamItem != null && !string.IsNullOrWhiteSpace(SelectedStreamItem.StreamId))
+          {
+            Task.Run(() =>
+            {
+              string streamId = SelectedStreamItem.StreamId;
+              Process.Start(Coordinator.Account.ServerUrl + @"/streams/" + streamId + @"/objects?omit=displayVale,base64&limit=500");
+            });
+          }
+        },
+        (o) => !StateMachine.StreamIsOccupied);
+
+      CloneStreamCommand = new DelegateCommand<object>(
+        (o) =>
+        {
+          if (SelectedStreamItem != null && !string.IsNullOrWhiteSpace(SelectedStreamItem.StreamId))
+          {
+            Task.Run(() => Commands.CloneStream(Coordinator, SelectedStreamItem.StreamId, loggingProgress));
+          }
+        },
+        (o) => !StateMachine.StreamIsOccupied);
 
       cmds = new List<DelegateCommandBase>();
       Type myType = this.GetType();
@@ -426,17 +558,42 @@ namespace SpeckleGSA.UI.ViewModels
 
     #region progress_fns
 
-    private void ProcessStreamCreationProgress(object sender, StreamListItem e)
+    private void ProcessStreamCreationProgress(object sender, SidSpeckleRecord r)
     {
-      Coordinator.SenderCoordinatorForUI.StreamList.StreamListItems.Add(e);
-      NotifyPropertyChanged("SenderStreamListItems");
+      //This is only releveant for sending since no streams are created when receiving
+      if (!Coordinator.SenderTab.StreamList.StreamListItems.Any(s => s.StreamId.Equals(r.StreamId, StringComparison.InvariantCultureIgnoreCase)))
+      {
+        Coordinator.SenderTab.SenderSidRecords.Add(r);
+        Coordinator.SenderTab.SidRecordsToStreamList();
+        NotifyPropertyChanged("SenderStreamListItems");
+      }
+    }
+
+    private void ProcessStreamDeletionProgress(object sender, SidSpeckleRecord r)
+    {
+      //This is only releveant for sending since no streams are deleted when receiving
+      var matching = Coordinator.SenderTab.StreamList.StreamListItems.Where(sli => sli.StreamId.Equals(r.StreamId, StringComparison.InvariantCultureIgnoreCase)).ToList();
+      if (matching != null && matching.Count() > 0)
+      {
+        Coordinator.SenderTab.RemoveSidSpeckleRecord(r);
+        Coordinator.SenderTab.SidRecordsToStreamList();
+        NotifyPropertyChanged("SenderStreamListItems");
+      }
     }
 
     private void ProcessLogProgressUpdate(object sender, MessageEventArgs mea)
     {
       if (mea.Intent == SpeckleGSAInterfaces.MessageIntent.Display)
       {
-        Coordinator.DisplayLog.DisplayLogItems.Add(new DisplayLogItem(mea.MessagePortions.First()));
+        var displayLine = mea.MessagePortions.First() + ": " + string.Join(" ", mea.MessagePortions.Skip(1));
+        if (mea.Level == MessageLevel.Information)
+        {
+          Coordinator.DisplayLog.DisplayLogItems.Add(new DisplayLogItem(displayLine));
+        }
+        else if (mea.Level == MessageLevel.Error || mea.Level == MessageLevel.Fatal)
+        {
+          Coordinator.DisplayLog.DisplayLogItems.Add(new DisplayLogItem("Error: " + displayLine));
+        }
         NotifyPropertyChanged("DisplayLogLines");
       }
     }

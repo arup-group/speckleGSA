@@ -93,12 +93,12 @@
 						</DataGrid.Columns>
 						<DataGrid.ContextMenu>
 							<ContextMenu>
-								<MenuItem Header="Copy streamId"/>
+                <MenuItem Header="Copy streamId" Command="{Binding CopyStreamIdCommand}" CommandParameter="Server"/>
 								<Separator />
-								<MenuItem Header="View stream"/>
-								<MenuItem Header="View stream data"/>
-								<MenuItem Header="View object data"/>
-							</ContextMenu>
+                <MenuItem Header="View stream" Command="{Binding ViewStreamCommand}" />
+                <MenuItem Header="View stream data" Command="{Binding ViewStreamDataCommand}" />
+                <MenuItem Header="View object data" Command="{Binding ViewObjectDataCommand}" />
+              </ContextMenu>
 						</DataGrid.ContextMenu>
 						<DataGrid.CellStyle>
 							<Style    TargetType="DataGridCell"
@@ -133,12 +133,9 @@
 					<Button Grid.Row="1" Content="Open File" Padding="5" Margin="5" Command="{Binding OpenFileCommand}" />
 					<StackPanel Grid.Row="2" VerticalAlignment="Center">
 						<TextBlock Text="{Binding CurrentlyOpenFileName}" Margin="5" />
-						<Button Content="Save and Close File" Padding="5" Margin="5" HorizontalAlignment="Left" 
+            <Button Content="Save and Close File" Padding="5" Margin="5" HorizontalAlignment="Left" 
 										Command="{Binding SaveAndCloseCommand}"/>
-            <TextBlock Text="List of profile strings by member/element record index and Speckle Application ID" Margin="5" />
-            <Button Content="Export Applied Section Data" Padding="5" Margin="5" HorizontalAlignment="Left" 
-										Command="{Binding ExportAppliedSectionDataCommand}"/>
-					</StackPanel>
+          </StackPanel>
 				</Grid>
 			</TabItem>
 			<!-- Sender tab -->
@@ -156,38 +153,41 @@
 						<RowDefinition Height="auto"/>
 						<RowDefinition Height="*"/>
 					</Grid.RowDefinitions>
-					<Grid Grid.Row="0" >
-						<Grid.ColumnDefinitions>
-							<ColumnDefinition Width="*"/>
-							<ColumnDefinition Width="auto"/>
-							<ColumnDefinition Width="auto"/>
-							<ColumnDefinition Width="auto"/>
-						</Grid.ColumnDefinitions>
-						<Grid.RowDefinitions>
-							<RowDefinition Height="auto"/>
-							<RowDefinition Height="auto"/>
-						</Grid.RowDefinitions>
-						<!-- play button | option labels | radio option col 1 | radio option col 2 -->
-						<Button Grid.Column="0" Grid.Row="0" Grid.RowSpan="2" Content="{Binding SendButtonText}" VerticalAlignment="Center" Padding="5"
+          <Grid Grid.Row="0" >
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="auto"/>
+              <ColumnDefinition Width="auto"/>
+              <ColumnDefinition Width="auto"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="auto"/>
+              <RowDefinition Height="auto"/>
+            </Grid.RowDefinitions>
+            <!-- play button | option labels | radio option col 1 | radio option col 2 -->
+            <Button Grid.Column="0" Grid.Row="0" Grid.RowSpan="2" Content="{Binding SendButtonText}" VerticalAlignment="Center" Padding="5"
 										Command="{Binding SendStopCommand}"/>
-						<TextBlock Grid.Row="0" Grid.Column="1" Text="Layer to stream:" HorizontalAlignment="Right" Padding="5"/>
-						<RadioButton Grid.Row="0" Grid.Column="2" GroupName="SendLayer" Content="Design" Padding="5" VerticalContentAlignment="Center"
+            <TextBlock Grid.Row="0" Grid.Column="1" Text="Layer to stream:" HorizontalAlignment="Right" Padding="5"/>
+            <RadioButton Grid.Row="0" Grid.Column="2" GroupName="SendLayer" Content="Design" Padding="5" VerticalContentAlignment="Center"
 												 IsChecked="{Binding Path=SendLayer, Converter={StaticResource EnumConverter}, ConverterParameter=Design}"/>
-						<RadioButton Grid.Row="0" Grid.Column="3" GroupName="SendLayer" Content="Analysis" Padding="5" VerticalContentAlignment="Center"
+            <RadioButton Grid.Row="0" Grid.Column="3" GroupName="SendLayer" Content="Analysis" Padding="5" VerticalContentAlignment="Center"
 												 IsChecked="{Binding Path=SendLayer, Converter={StaticResource EnumConverter}, ConverterParameter=Analysis}"/>
-						<RadioButton Grid.Row="1" Grid.Column="2" GroupName="SendStreamMethod" Content="Continuous" Padding="5" VerticalContentAlignment="Center"
+            <RadioButton Grid.Row="1" Grid.Column="2" GroupName="SendStreamMethod" Content="Continuous" Padding="5" VerticalContentAlignment="Center"
 												 IsChecked="{Binding Path=SendStreamMethod, Converter={StaticResource EnumConverter}, ConverterParameter=Continuous}"/>
-						<RadioButton Grid.Row="1" Grid.Column="3" GroupName="SendStreamMethod" Content="Single" Padding="5" VerticalContentAlignment="Center"
+            <RadioButton Grid.Row="1" Grid.Column="3" GroupName="SendStreamMethod" Content="Single" Padding="5" VerticalContentAlignment="Center"
 												 IsChecked="{Binding Path=SendStreamMethod, Converter={StaticResource EnumConverter}, ConverterParameter=Single}"/>
-						<TextBlock Grid.Row="1" Grid.Column="1" Text="Streaming method:" HorizontalAlignment="Right" Padding="5" />
-					</Grid>
-					<!-- Stream list -->
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="Streaming method:" HorizontalAlignment="Right" Padding="5" />
+          </Grid>
+          <!-- Stream list -->
 					<DataGrid Grid.Row="1"
-							CanUserSortColumns="False" AutoGenerateColumns="False"
+							CanUserSortColumns="False" AutoGenerateColumns="False" CanUserDeleteRows="True"
 							SelectionMode="Extended" RowHeaderWidth="0"	GridLinesVisibility="None"
-							ItemsSource="{Binding SenderStreamListItems}" SelectedItem="{Binding SelectedStreamItem}"
+							ItemsSource="{Binding SenderStreamListItems}" SelectedItem="{Binding SelectedSenderStreamItem}"
 							IsEnabled="{Binding IsSendStreamListEnabled}">
-						<DataGrid.Columns>
+            <DataGrid.InputBindings>
+              <KeyBinding Key="Delete" Command="{Binding RemoveStreamCommand}" />
+            </DataGrid.InputBindings>
+            <DataGrid.Columns>
 							<!-- start trial of editable column -->
 							<DataGridTemplateColumn Header="StreamName" Width="*">
                 <DataGridTemplateColumn.CellTemplate>
@@ -202,11 +202,11 @@
 												<localUtilities:TextBoxEnterKeyUpdateBehaviour />
 											</b:Interaction.Behaviors>
 											<b:Interaction.Triggers>
-												<localUtilities:EnterKeyDownEventTrigger EventName="KeyDown">
-													<b:InvokeCommandAction Command="{Binding DataContext.RenameStreamCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                        <localUtilities:EnterKeyDownEventTrigger EventName="KeyDown">
+                          <b:InvokeCommandAction Command="{Binding DataContext.RenameStreamCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
 																									 CommandParameter="{Binding ElementName=Candidate, Path=Text}"/>
-												</localUtilities:EnterKeyDownEventTrigger>
-											</b:Interaction.Triggers>
+                        </localUtilities:EnterKeyDownEventTrigger>
+                      </b:Interaction.Triggers>
 										</TextBox>
 									</DataTemplate>
 								</DataGridTemplateColumn.CellEditingTemplate>
@@ -216,11 +216,11 @@
 						</DataGrid.Columns>
 						<DataGrid.ContextMenu>
 							<ContextMenu>
-								<MenuItem Header="Copy streamId"/>
+                <MenuItem Header="Copy streamId" Command="{Binding CopyStreamIdCommand}" CommandParameter="Sender" />
 								<Separator />
-								<MenuItem Header="View stream"/>
-								<MenuItem Header="View stream data"/>
-								<MenuItem Header="View object data"/>
+								<MenuItem Header="View stream" Command="{Binding ViewStreamCommand}" />
+                <MenuItem Header="View stream data" Command="{Binding ViewStreamDataCommand}" />
+                <MenuItem Header="View object data" Command="{Binding ViewObjectDataCommand}" />
 							</ContextMenu>
 						</DataGrid.ContextMenu>
 						<DataGrid.CellStyle>
@@ -293,19 +293,19 @@
 					<DataGrid Grid.Row="2"
 							CanUserSortColumns="False" AutoGenerateColumns="False" IsReadOnly="True"
 							SelectionMode="Extended" RowHeaderWidth="0"	GridLinesVisibility="None"
-							ItemsSource="{Binding ReceiverStreamListItems}" SelectedItem="{Binding SelectedStreamItem}">
+							ItemsSource="{Binding ReceiverStreamListItems}" SelectedItem="{Binding SelectedReceiverStreamItem}">
 						<DataGrid.Columns>
 							<DataGridTextColumn Header="StreamName" Width="*" Binding="{Binding StreamName}" />
 							<DataGridTextColumn Header="StreamId" Width="*" Binding="{Binding StreamId}"/>
 						</DataGrid.Columns>
 						<DataGrid.ContextMenu>
 							<ContextMenu>
-								<MenuItem Header="Copy streamId"/>
+                <MenuItem Header="Copy streamId" Command="{Binding CopyStreamIdCommand}" CommandParameter="Receiver"/>
 								<Separator />
-								<MenuItem Header="View stream"/>
-								<MenuItem Header="View stream data"/>
-								<MenuItem Header="View object data"/>
-							</ContextMenu>
+                <MenuItem Header="View stream" Command="{Binding ViewStreamCommand}" />
+                <MenuItem Header="View stream data" Command="{Binding ViewStreamDataCommand}" />
+                <MenuItem Header="View object data" Command="{Binding ViewObjectDataCommand}" />
+              </ContextMenu>
 						</DataGrid.ContextMenu>
 						<DataGrid.CellStyle>
 							<Style    TargetType="DataGridCell"
@@ -402,9 +402,10 @@
 		</TabControl>
 
 		<TextBlock Grid.Row="3" Grid.Column="1" Text="Message log" Margin="5"/>
-		<ListBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" Height="120" SelectionMode="Extended" 
-						 ItemsSource="{Binding DisplayLogLines}"/>
-		<TextBlock x:Name="State" Text="{Binding StateSummary, Mode=OneWay}" Grid.Row="5" Grid.Column="1" 
+    <ListBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" Height="120" SelectionMode="Multiple" 
+						 ItemsSource="{Binding DisplayLogLines}" x:Name="_DisplayLogLines" >
+    </ListBox>
+    <TextBlock x:Name="State" Text="{Binding StateSummary, Mode=OneWay}" Grid.Row="5" Grid.Column="1" 
 							 Grid.ColumnSpan="3" HorizontalAlignment="Center" Margin="5	" />
 		<ProgressBar x:Name="MainProgressBar" Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="3" Height="10" Minimum="0" Maximum="100"
 								 Foreground="Blue" Value="{Binding ProcessingProgress, Mode=OneWay}" />
