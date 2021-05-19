@@ -1,11 +1,7 @@
 ﻿using SpeckleCore;
-using SpeckleGSA;
 using SpeckleInterface;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace SpeckleGSAProxy.Test

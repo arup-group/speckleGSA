@@ -1,11 +1,9 @@
 ﻿using NUnit.Framework;
 using SpeckleCore;
 using SpeckleGSA;
-using SpeckleUtil;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using SpeckleGSAInterfaces;
 using System.IO;
 using System.Diagnostics;

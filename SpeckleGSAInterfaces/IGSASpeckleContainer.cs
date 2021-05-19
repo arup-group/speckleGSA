@@ -1,9 +1,6 @@
-﻿
-using System;
-
-namespace SpeckleGSAInterfaces
+﻿namespace SpeckleGSAInterfaces
 {
-	public interface IGSASpeckleContainer
+  public interface IGSASpeckleContainer
 	{
 		object SpeckleObject { get; }
 	}

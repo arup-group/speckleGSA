@@ -1,16 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using SpeckleCore;
 
 namespace SpeckleInterface
 {
-	/// <summary>
-	/// Receive objects from a stream.
-	/// </summary>
-	public class StreamReceiver : StreamBase, IStreamReceiver
+  /// <summary>
+  /// Receive objects from a stream.
+  /// </summary>
+  public class StreamReceiver : StreamBase, IStreamReceiver
   {
 		//This was chosen to cause typical message payloads of round 100-300k to be sent from the server
     const int MAX_OBJ_REQUEST_COUNT = 1000;

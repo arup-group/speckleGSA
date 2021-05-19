@@ -1,12 +1,9 @@
 ﻿using Interop.Gsa_10_1;
 using Moq;
-using SpeckleGSA;
 using SpeckleGSAInterfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SpeckleGSAProxy.Test
 {

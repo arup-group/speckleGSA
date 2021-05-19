@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -8,10 +7,10 @@ using SpeckleCore;
 
 namespace SpeckleInterface
 {
-	/// <summary>
-	/// Packages and sends objects as a stream.
-	/// </summary>
-	public class StreamSender : StreamBase, IStreamSender
+  /// <summary>
+  /// Packages and sends objects as a stream.
+  /// </summary>
+  public class StreamSender : StreamBase, IStreamSender
   {
     const int DEFAULT_MAX_BUCKET_SIZE = 1000000;
     const int DEFAULT_API_TIMEOUT = 30000;

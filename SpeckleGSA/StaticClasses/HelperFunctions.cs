@@ -1,17 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Interop.Gsa_10_1;
-using System.Text.RegularExpressions;
-using System.Windows.Media.Media3D;
-using System.Drawing;
-using SpeckleCore;
-using System.Reflection;
-using System.Collections;
-using System.IO;
-using System.Runtime.Serialization.Formatters.Binary;
 using SpeckleGSAInterfaces;
 
 namespace SpeckleGSA

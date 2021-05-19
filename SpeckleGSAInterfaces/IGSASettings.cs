@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace SpeckleGSAInterfaces
 {
-	public interface IGSASettings
+  public interface IGSASettings
 	{
 		string ObjectUrl(string id);  //The app owns the connection with the server.  This is used for logging in the kits
 		GSATargetLayer TargetLayer { get;  }

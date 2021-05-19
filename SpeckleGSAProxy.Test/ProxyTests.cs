@@ -8,7 +8,6 @@ using SpeckleGSAInterfaces;
 using System.IO;
 using System.Diagnostics;
 using SpeckleInterface;
-using Newtonsoft.Json;
 
 namespace SpeckleGSAProxy.Test
 {

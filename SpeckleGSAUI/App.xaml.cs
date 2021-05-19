@@ -1,17 +1,18 @@
-﻿using System;
+﻿using SpeckleGSAUI.Utilities;
+using SpeckleGSAInterfaces;
+using SpeckleInterface;
+using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Deployment.Application;
+using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using SpeckleGSA;
-using System.IO;
-using System.Globalization;
-using SpeckleGSAInterfaces;
-using System.Deployment.Application;
-using System.Reflection;
-using SpeckleInterface;
 
 namespace SpeckleGSAUI
 {
@@ -39,9 +40,9 @@ namespace SpeckleGSAUI
       }
       else
       {
-        AttachConsole(-1);
+        //AttachConsole(-1);
 
-        RunCLI(e.Args);
+        //RunCLI(e.Args);
 
         return;
       }
@@ -202,17 +203,17 @@ namespace SpeckleGSAUI
           GSA.GsaApp.gsaSettings.TargetLayer = GSATargetLayer.Analysis;
         }
       }
-      
+
       if (arguments.ContainsKey("nodeAllowance"))
       {
         try
         {
-					GSA.GsaApp.gsaSettings.CoincidentNodeAllowance = Convert.ToDouble(arguments["nodeAllowance"]);
+          GSA.GsaApp.gsaSettings.CoincidentNodeAllowance = Convert.ToDouble(arguments["nodeAllowance"]);
         }
         catch { }
       }
 
-      
+
       GSA.GetSpeckleClients(EmailAddress, RestApi, out List<SidSpeckleRecord> receiverStreaminfo, out List<SidSpeckleRecord> senderStreamInfo);
       var gsaReceiverCoordinator = new ReceiverCoordinator();
       Task.Run(() =>
@@ -232,8 +233,8 @@ namespace SpeckleGSAUI
       gsaReceiverCoordinator.Trigger(null, null);
       gsaReceiverCoordinator.Dispose();
 
-			GSA.GsaApp.gsaProxy.SaveAs(arguments["file"]);
-			GSA.Close();
+      GSA.GsaApp.gsaProxy.SaveAs(arguments["file"]);
+      GSA.Close();
 
       Console.WriteLine("Receiving complete");
     }
@@ -243,36 +244,36 @@ namespace SpeckleGSAUI
       if (arguments.ContainsKey("layer"))
         if (arguments["layer"].ToLower() == "analysis")
         {
-					GSA.GsaApp.gsaSettings.TargetLayer = GSATargetLayer.Analysis;
-				}
+          GSA.GsaApp.gsaSettings.TargetLayer = GSATargetLayer.Analysis;
+        }
 
       if (arguments.ContainsKey("sendAllNodes"))
-				GSA.GsaApp.gsaSettings.SendOnlyMeaningfulNodes = false;
+        GSA.GsaApp.gsaSettings.SendOnlyMeaningfulNodes = false;
 
       if (arguments.ContainsKey("separateStreams"))
-				GSA.GsaApp.gsaSettings.SeparateStreams = true;
+        GSA.GsaApp.gsaSettings.SeparateStreams = true;
 
       if (arguments.ContainsKey("resultOnly"))
-				GSA.GsaApp.gsaSettings.SendOnlyResults = true;
+        GSA.GsaApp.gsaSettings.SendOnlyResults = true;
 
       if (arguments.ContainsKey("resultUnembedded"))
-				GSA.GsaApp.gsaSettings.EmbedResults = false;
+        GSA.GsaApp.gsaSettings.EmbedResults = false;
 
       if (arguments.ContainsKey("resultInLocalAxis"))
-				GSA.GsaApp.gsaSettings.ResultInLocalAxis = true;
+        GSA.GsaApp.gsaSettings.ResultInLocalAxis = true;
 
       if (arguments.ContainsKey("result1DNumPosition"))
       {
         try
         {
-					GSA.GsaApp.gsaSettings.Result1DNumPosition = Convert.ToInt32(arguments["result1DNumPosition"]);
+          GSA.GsaApp.gsaSettings.Result1DNumPosition = Convert.ToInt32(arguments["result1DNumPosition"]);
         }
         catch { }
       }
 
       if (arguments.ContainsKey("result"))
       {
-				GSA.GsaApp.gsaSettings.SendResults = true;
+        GSA.GsaApp.gsaSettings.SendResults = true;
 
         var results = arguments["result"].Split(new char[] { ',' }).Select(x => x.Replace("\"", ""));
 
@@ -301,19 +302,19 @@ namespace SpeckleGSAUI
       {
         GSA.GsaApp.gsaSettings.ResultCases = arguments["resultCases"].Split(new char[] { ',' }).ToList();
       }
-      
+
       //GSA.GetSpeckleClients(EmailAddress, RestApi);
       var gsaSenderCoordinator = new SenderCoordinator();
       gsaSenderCoordinator.Initialize(RestApi, ApiToken, (savedSenderStreamInfo == null || savedSenderStreamInfo.Count() == 0) ? null : savedSenderStreamInfo,
-        (restApi, apiToken) => new StreamSender(restApi, apiToken, GSA.GsaApp.gsaMessenger), 
+        (restApi, apiToken) => new StreamSender(restApi, apiToken, GSA.GsaApp.gsaMessenger),
         new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>(), new Progress<SidSpeckleRecord>(), new Progress<SidSpeckleRecord>());
-      GSA.SetSpeckleClients(EmailAddress, RestApi, null, 
+      GSA.SetSpeckleClients(EmailAddress, RestApi, null,
         gsaSenderCoordinator.Senders.Keys.Select(k => new SidSpeckleRecord(gsaSenderCoordinator.Senders[k].StreamId, k, gsaSenderCoordinator.Senders[k].ClientId)).ToList());
-      gsaSenderCoordinator.Trigger();
+      gsaSenderCoordinator.Trigger().Wait();
       gsaSenderCoordinator.Dispose();
 
-			GSA.GsaApp.gsaProxy.SaveAs(arguments["file"]);
-			GSA.Close();
+      GSA.GsaApp.gsaProxy.SaveAs(arguments["file"]);
+      GSA.Close();
 
       Console.WriteLine("Sending complete");
     }
@@ -321,7 +322,7 @@ namespace SpeckleGSAUI
     #region Log
     [DllImport("Kernel32.dll")]
     public static extern bool AttachConsole(int processId);
-    
+
     /// <summary>
     /// Message handler.
     /// </summary>
@@ -366,34 +367,4 @@ namespace SpeckleGSAUI
     }
   }
 
-  public class ProgressMessenger : ISpeckleAppMessenger
-  {
-    private readonly IProgress<MessageEventArgs> loggingProgress;
-
-    //These are meant to be in corresponding order so that an index of one used in looking up the other correlates correct pairs
-    private static readonly List<SpeckleGSAInterfaces.MessageIntent> AppIntent = new List<SpeckleGSAInterfaces.MessageIntent>()
-      { SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageIntent.TechnicalLog, SpeckleGSAInterfaces.MessageIntent.Telemetry };
-    private static readonly List<SpeckleInterface.MessageIntent> InterfaceIntent = new List<SpeckleInterface.MessageIntent>() { SpeckleInterface.MessageIntent.Display, SpeckleInterface.MessageIntent.TechnicalLog, SpeckleInterface.MessageIntent.Telemetry };
-
-    private static readonly List<SpeckleGSAInterfaces.MessageLevel> AppLevel = new List<SpeckleGSAInterfaces.MessageLevel>()
-      { SpeckleGSAInterfaces.MessageLevel.Information, SpeckleGSAInterfaces.MessageLevel.Debug, SpeckleGSAInterfaces.MessageLevel.Error, SpeckleGSAInterfaces.MessageLevel.Fatal };
-    private static readonly List<SpeckleInterface.MessageLevel> InterfaceLevel = new List<SpeckleInterface.MessageLevel>() { SpeckleInterface.MessageLevel.Information, SpeckleInterface.MessageLevel.Debug, SpeckleInterface.MessageLevel.Error, SpeckleInterface.MessageLevel.Fatal };
-
-    public ProgressMessenger(IProgress<MessageEventArgs> loggingProgress)
-    {
-      this.loggingProgress = loggingProgress;
-    }
-
-    public bool Message(SpeckleInterface.MessageIntent intent, SpeckleInterface.MessageLevel level, params string[] messagePortions)
-    {
-      loggingProgress.Report(new MessageEventArgs(AppIntent[InterfaceIntent.IndexOf(intent)], AppLevel[InterfaceLevel.IndexOf(level)], messagePortions));
-      return true;
-    }
-
-    public bool Message(SpeckleInterface.MessageIntent intent, SpeckleInterface.MessageLevel level, Exception ex, params string[] messagePortions)
-    {
-      loggingProgress.Report(new MessageEventArgs(AppIntent[InterfaceIntent.IndexOf(intent)], AppLevel[InterfaceLevel.IndexOf(level)], ex, messagePortions));
-      return true;
-    }
-  }
 }
