@@ -32,7 +32,9 @@ namespace SpeckleGSAProxy.Test
 
     private ISpeckleAppMessenger messenger = new MockProgressMessenger(new Progress<string>());
     private Func<string, string, SpeckleInterface.IStreamReceiver> streamReceiverCreationFn 
-      => ((url, token) => new SpeckleInterface.StreamReceiver(url, token, this.messenger));
+      => ((url, token) => new TestSpeckleGSAReceiver(url, "mm"));
+
+    private string testRestApi = "http://test.speckle.com";
 
     //The EC_mxfJ2p.json file has these objects (ordered for ease of reading here, this is not the order of the objects in the file):
     /*
@@ -140,7 +142,7 @@ namespace SpeckleGSAProxy.Test
       GSA.Reset();
       GSA.GsaApp.gsaProxy = new TestProxy();
       GSA.GsaApp.gsaSettings.TargetLayer = layer;
-      GSA.GsaApp.gsaSettings.Units = "m";
+      GSA.GsaApp.gsaSettings.Units = "mm";
       GSA.Init("");
 
       var streamIds = new[] { fileName }.Select(fn => fn.Split(new[] { '.' }).First()).ToList();
@@ -148,13 +150,13 @@ namespace SpeckleGSAProxy.Test
       var receiverStreamInfo = streamIds.Select(id => new SidSpeckleRecord(id, null)).ToList();
 
       //Create receiver with all streams
-      var receiverCoordinator = new ReceiverCoordinator() { StreamReceivers = streamIds.ToDictionary(s => s, s => (IStreamReceiver)new TestSpeckleGSAReceiver(s, streamUnits)) };
-      SetObjectsAsReceived(receiverCoordinator, fileName, TestDataDirectory);
+      var receiverCoordinator = new ReceiverCoordinator();
 
       GSA.GsaApp.gsaProxy.NewFile(false);
 
       //This will load data from all streams into the cache
-      receiverCoordinator.Initialize("test@mail.com", "token", receiverStreamInfo, streamReceiverCreationFn, new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>());
+      receiverCoordinator.Initialize(testRestApi, "token", receiverStreamInfo, streamReceiverCreationFn, new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>());
+      SetObjectsAsReceived(receiverCoordinator, fileName, TestDataDirectory);
 
       //RECEIVE EVENT #1: first of continuous
       receiverCoordinator.Trigger(null, null);
@@ -247,12 +249,12 @@ namespace SpeckleGSAProxy.Test
 
         //Create receiver with all streams
         var receiverCoordinator = new ReceiverCoordinator() { StreamReceivers = streamIds.ToDictionary(s => s, s => (IStreamReceiver)new TestSpeckleGSAReceiver(s, "mm")) };
-        SetObjectsAsReceived(receiverCoordinator, savedJsonFileNames, TestDataDirectory);
 
         GSA.GsaApp.gsaProxy.NewFile(false);
 
         //This will load data from all streams into the cache
-        receiverCoordinator.Initialize("test@mail.com", "token", receiveStreamInfo, streamReceiverCreationFn, new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>());
+        receiverCoordinator.Initialize(testRestApi, "token", receiveStreamInfo, streamReceiverCreationFn, new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>());
+        SetObjectsAsReceived(receiverCoordinator, savedJsonFileNames, TestDataDirectory);
 
         //RECEIVE EVENT #1: first of continuous
         receiverCoordinator.Trigger(null, null);
@@ -322,13 +324,14 @@ namespace SpeckleGSAProxy.Test
         var receiveStreamInfo = streamIds.Select(id => new SidSpeckleRecord(id, null)).ToList();
 
         //Create receiver with all streams
-        var receiverCoordinator = new ReceiverCoordinator() { StreamReceivers = streamIds.ToDictionary(s => s, s => (IStreamReceiver)new TestSpeckleGSAReceiver(s, "mm")) };
-        SetObjectsAsReceived(receiverCoordinator, savedJsonFileNames, TestDataDirectory);
+        //var receiverCoordinator = new ReceiverCoordinator() { StreamReceivers = streamIds.ToDictionary(s => s, s => (IStreamReceiver)new TestSpeckleGSAReceiver(s, "mm")) };
+        var receiverCoordinator = new ReceiverCoordinator();
 
         GSA.GsaApp.gsaProxy.NewFile(false);
 
         //This will load data from all streams into the cache
-        receiverCoordinator.Initialize("test@mail.com", "token", receiveStreamInfo, streamReceiverCreationFn, new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>());
+        receiverCoordinator.Initialize(testRestApi, "token", receiveStreamInfo, streamReceiverCreationFn, new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>());
+        SetObjectsAsReceived(receiverCoordinator, savedJsonFileNames, TestDataDirectory);
 
         //RECEIVE EVENT #1: single
         receiverCoordinator.Trigger(null, null);
@@ -339,18 +342,20 @@ namespace SpeckleGSAProxy.Test
         CopyCacheToTestProxy();
 
         var streamIdsToTest = streamIds.Take(3).ToList();
+        receiveStreamInfo = streamIdsToTest.Select(si => new SidSpeckleRecord(si, null)).ToList();
         //GSA.ReceiverInfo = streamIdsToTest.Select(si => new SidSpeckleRecord(si, null)).ToList();
 
 
         //Yes the real SpeckleGSA does create a new receiver.  This time, create them with not all streams active
-        receiverCoordinator = new ReceiverCoordinator() { StreamReceivers = streamIdsToTest.ToDictionary(s => s, s => (IStreamReceiver)new TestSpeckleGSAReceiver(s, "mm")) };
+        //receiverCoordinator = new ReceiverCoordinator() { StreamReceivers = streamIdsToTest.ToDictionary(s => s, s => (IStreamReceiver)new TestSpeckleGSAReceiver(s, "mm")) };
+        receiverCoordinator = new ReceiverCoordinator();
+
+        receiverCoordinator.Initialize(testRestApi, "token", receiveStreamInfo, streamReceiverCreationFn, new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>());
 
         var records = ((IGSACacheForTesting)GSA.GsaApp.gsaCache).Records;
         Assert.AreEqual(3, receiveStreamInfo.Count());
         Assert.AreEqual(3, receiverCoordinator.StreamReceivers.Count());
-        Assert.AreEqual(4, records.Select(r => r.StreamId).Distinct().Count());
-
-        receiverCoordinator.Initialize("test@mail.com", "token", receiveStreamInfo, streamReceiverCreationFn, new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>());
+        Assert.AreEqual(4, records.Where(r => !string.IsNullOrEmpty(r.StreamId)).Select(r => r.StreamId).Distinct().Count());
 
         //Refresh with new copy of objects so they aren't the same (so the merging code isn't trying to merge each object onto itself)
         var streamObjectsTuples = ExtractObjects(savedJsonFileNames.Where(fn => streamIdsToTest.Any(ft => fn.Contains(ft))).ToArray(), TestDataDirectory);

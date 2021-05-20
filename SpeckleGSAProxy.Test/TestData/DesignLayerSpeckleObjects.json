@@ -704,6 +704,7 @@
         15.0,
         -10.0
       ],
+      "hash": "7773d581270e6908022a16039a4beca9",
       "applicationId": "gsa/NODE-1",
       "name": "",
       "properties": {
@@ -742,6 +743,7 @@
         10.0,
         -10.0
       ],
+      "hash": "09c4e1deff47ebc2c91b7a1586508b14",
       "applicationId": "gsa/NODE-4",
       "name": "",
       "properties": {
@@ -757,6 +759,7 @@
         5.0,
         -10.0
       ],
+      "hash": "4e0b961a4df00c46426ddf5525997579",
       "applicationId": "gsa/NODE-5",
       "name": "",
       "properties": {
@@ -783,6 +786,7 @@
         0.0,
         -10.0
       ],
+      "hash": "5c7d4047845d1f1fcc4e5c65c65a289d",
       "applicationId": "gsa/NODE-7",
       "name": "",
       "properties": {

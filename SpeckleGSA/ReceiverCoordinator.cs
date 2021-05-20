@@ -42,7 +42,9 @@ namespace SpeckleGSA
       Func<string, string, SpeckleInterface.IStreamReceiver> streamReceiverCreationFn, 
       IProgress<MessageEventArgs> loggingProgress, IProgress<string> statusProgress, IProgress<double> percentageProgress)
 		{
-			var statusMessages = new List<string>();
+      StreamReceivers.Clear();
+
+      var statusMessages = new List<string>();
 
       this.loggingProgress = loggingProgress;
       this.statusProgress = statusProgress;
@@ -63,7 +65,7 @@ namespace SpeckleGSA
       statusProgress.Report("Reading GSA data into cache");
 
       UpdateCache();
-
+                                                
       // Create receivers
       statusProgress.Report("Accessing streams");
 
@@ -453,14 +455,14 @@ namespace SpeckleGSA
         }
       }
 #if !DEBUG
-      );
+      );                                                                                                                                                                                            
 #endif
 
       //Outside of any parallisation, process any cached messages from the conversion code.
       //These should be mostly technical log but may include some display messages
       GSA.GsaApp.gsaMessenger.Trigger();
 
-      return; //GSA.GsaApp.gsaMessenger.LoggedMessageCount;
+      return;
     }
 
     //Return number of errors
@@ -546,7 +548,7 @@ namespace SpeckleGSA
       progressEstimator.AppendCurrent(WorkPhase.Conversion, 1);
       return;
     }
-
+     
     private bool GwaToCache(string gwaCommand, string streamId, SpeckleObject targetObject)
     {
       //At this point the SID will be filled with the application ID
