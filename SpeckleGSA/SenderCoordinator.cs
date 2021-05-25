@@ -67,14 +67,14 @@ namespace SpeckleGSA
       this.apiToken = apiToken;
       this.gsaSenderCreator = gsaSenderCreator;
       this.savedSenderSidRecords = savedSenderStreamInfo;
-      this.documentName = Path.GetFileNameWithoutExtension(GSA.GsaApp.gsaProxy.FilePath);
-      this.documentTitle = Path.GetFileNameWithoutExtension(GSA.GsaApp.gsaProxy.GetTitle());
+      this.documentName = Path.GetFileNameWithoutExtension(GSA.App.Proxy.FilePath);
+      this.documentTitle = Path.GetFileNameWithoutExtension(GSA.App.Proxy.GetTitle());
 
       // Since this is sending, just use whatever is set in the opened GSA file
-      GSA.GsaApp.gsaSettings.Units = GSA.GsaApp.gsaProxy.GetUnits();
+      GSA.App.Settings.Units = GSA.App.Proxy.GetUnits();
 
       //Read properties in the opened GSA file
-      var baseProps = GSA.GetBaseProperties();
+      var baseProps = GetBaseProperties();
       if (!Enum.TryParse(baseProps["units"].ToString(), true, out basePropertyUnits))
       {
         basePropertyUnits = BasePropertyUnits.Millimetres;
@@ -106,7 +106,7 @@ namespace SpeckleGSA
       if ((IsBusy) || (!IsInit)) return;
 
       IsBusy = true;
-      //GSA.GsaApp.gsaSettings.Units = GSA.GsaApp.gsaProxy.GetUnits();
+      //GSA.App.Settings.Units = GSA.App.Proxy.GetUnits();
 
       #region update_cache
       var startTime = DateTime.Now;
@@ -262,7 +262,7 @@ namespace SpeckleGSA
     private void ProcessTypeBatch(List<Type> batch, out bool changeDetected)
     {
       //This method assumes it's not run in parallel
-      //GSA.GsaApp.gsaMessenger.ResetLoggedMessageCount();
+      //GSA.App.Messenger.ResetLoggedMessageCount();
 
 #if DEBUG
       changeDetected = false;
@@ -349,12 +349,12 @@ namespace SpeckleGSA
       var currentObjects = GSA.GetAllConvertedGsaObjectsByType();
       foreach (var t in currentObjects.Keys)
       {
-        //var bucketName = GSA.GsaApp.gsaSettings.SeparateStreams ? StreamMap[kvp.Key] : "Full Model";
+        //var bucketName = GSA.App.Settings.SeparateStreams ? StreamMap[kvp.Key] : "Full Model";
         var bucketName = (string)t.GetAttribute("Stream");
 
         foreach (IGSASpeckleContainer obj in currentObjects[t])
         {
-          if (GSA.GsaApp.gsaSettings.SendOnlyMeaningfulNodes)
+          if (GSA.App.LocalSettings.SendOnlyMeaningfulNodes)
           {
             if (obj.GetType().Name == "GSANode" && !(bool)obj.GetType().GetField("ForceSend").GetValue(obj))
             {
@@ -389,7 +389,7 @@ namespace SpeckleGSA
       progress.ProgressChanged += IncorporateCacheProgress;
 
       var keywords = GSA.Keywords;
-      GSA.GsaApp.gsaCache.Clear();
+      GSA.App.LocalCache.Clear();
 
       //initial estimate
       progressEstimator.UpdateTotal(WorkPhase.CacheRead, keywords.Count());
@@ -399,7 +399,7 @@ namespace SpeckleGSA
 
       try
       {
-        var data = GSA.GsaApp.gsaProxy.GetGwaData(keywords, false, progress);
+        var data = GSA.App.Proxy.GetGwaData(keywords, false, progress);
         progressEstimator.UpdateTotal(WorkPhase.CacheRead, data.Count());
         progressEstimator.SetCurrentToTotal(WorkPhase.CacheRead); //Equalise the current and total in case the previous total estimate was wrong
 
@@ -410,7 +410,7 @@ namespace SpeckleGSA
         for (int i = 0; i < data.Count(); i++)
         {
           var applicationId = (string.IsNullOrEmpty(data[i].ApplicationId)) ? null : data[i].ApplicationId;
-          GSA.GsaApp.gsaCache.Upsert(
+          GSA.App.Cache.Upsert(
             data[i].Keyword,
             data[i].Index,
             data[i].GwaWithoutSet,
@@ -451,6 +451,33 @@ namespace SpeckleGSA
     private void IncorporateNewNumPayloadsProgress(object sender, int e)
     {
       progressEstimator.AppendTotal(WorkPhase.ApiCalls, e);
+    }
+
+    private Dictionary<string, object> GetBaseProperties()
+    {
+      var baseProps = new Dictionary<string, object>
+      {
+        ["units"] = GSA.GsaApp.Settings.Units.LongUnitName()
+      };
+      // TODO: Add other units
+
+      var tolerances = GSA.App.Proxy.GetTolerances();
+
+      var lengthTolerances = new List<double>() {
+                Convert.ToDouble(tolerances[3]), // edge
+                Convert.ToDouble(tolerances[5]), // leg_length
+                Convert.ToDouble(tolerances[7])  // memb_cl_dist
+            };
+
+      var angleTolerances = new List<double>(){
+                Convert.ToDouble(tolerances[4]), // angle
+                Convert.ToDouble(tolerances[6]), // meemb_orient
+            };
+
+      baseProps["tolerance"] = lengthTolerances.Max().ConvertUnit("m", GSA.GsaApp.Settings.Units);
+      baseProps["angleTolerance"] = angleTolerances.Max().ToRadians();
+
+      return baseProps;
     }
   }
 }

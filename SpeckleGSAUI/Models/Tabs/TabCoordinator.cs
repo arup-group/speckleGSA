@@ -42,7 +42,7 @@ namespace SpeckleGSAUI.Models
       LocalContext.Init();
 
       //This will create the logger
-      GSA.GsaApp.gsaSettings.LoggingMinimumLevel = 4;  //Debug
+      GSA.App.LocalSettings.LoggingMinimumLevel = 4;  //Debug
 
       gsaSenderCoordinator = new SenderCoordinator();
       gsaReceiverCoordinator = new ReceiverCoordinator();
@@ -69,7 +69,7 @@ namespace SpeckleGSAUI.Models
       {
         string key = Account.EmailAddress + "&" + Account.ServerUrl.Replace(':', '&');
 
-        string res = GSA.GsaApp.gsaProxy.GetTopLevelSid();
+        string res = GSA.App.Proxy.GetTopLevelSid();
 
         if (res == "")
         {
@@ -118,7 +118,7 @@ namespace SpeckleGSAUI.Models
     internal bool WriteStreamInfo()
     {
       string key = Account.EmailAddress + "&" + Account.ServerUrl.Replace(':', '&');
-      string res = GSA.GsaApp.gsaProxy.GetTopLevelSid();
+      string res = GSA.App.Proxy.GetTopLevelSid();
 
       List<string[]> sids = Regex.Matches(res, @"(?<={).*?(?=})").Cast<Match>()
               .Select(m => m.Value.Split(new char[] { ':' }))
@@ -159,7 +159,7 @@ namespace SpeckleGSAUI.Models
         sidRecord += "{" + s[0] + ":" + s[1] + "}";
       }
 
-      return GSA.GsaApp.gsaProxy.SetTopLevelSid(sidRecord);
+      return GSA.App.Proxy.SetTopLevelSid(sidRecord);
     }
   }
 }

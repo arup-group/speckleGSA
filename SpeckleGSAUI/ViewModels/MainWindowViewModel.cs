@@ -185,7 +185,7 @@ namespace SpeckleGSAUI.ViewModels
       streamCreationProgress.ProgressChanged += ProcessStreamCreationProgress;
       streamDeletionProgress.ProgressChanged += ProcessStreamDeletionProgress;
       statusProgress.ProgressChanged += ProcessStatusProgressUpdate;
-      GSA.GsaApp.gsaMessenger.MessageAdded += ProcessLogProgressUpdate;
+      GSA.App.LocalMessenger.MessageAdded += ProcessLogProgressUpdate;
       CreateCommands();
     }
 
@@ -252,7 +252,7 @@ namespace SpeckleGSAUI.ViewModels
               return;
             }
           }
-          GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, "Failed to log in");         
+          GSA.App.Messenger.Message(MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, "Failed to log in");         
         },
         (o) => !StateMachine.StreamIsOccupied);
 
@@ -474,7 +474,7 @@ namespace SpeckleGSAUI.ViewModels
         {
           var tab = (string)o;
           string streamId = SelectedStreamId(tab);
-          if (!string.IsNullOrWhiteSpace(SelectedStreamItem.StreamId))
+          if (!string.IsNullOrWhiteSpace(streamId))
           {
             Task.Run(() =>
             {

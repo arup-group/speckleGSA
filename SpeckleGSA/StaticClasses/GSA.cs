@@ -13,7 +13,8 @@ namespace SpeckleGSA
   public static class GSA
   {
     public static List<IGSAKit> kits = new List<IGSAKit>();
-    public static GsaAppResources GsaApp = new GsaAppResources();
+    public static IGSAAppResources GsaApp { get => App; } 
+    public static IGSALocalAppResources App { get; set; } = new GsaAppResources();
 
     //public static Dictionary<string, SidSpeckleRecord> SenderInfo { get; set; }  // [ Stream Name, [ StreamId, Client Id ]
     //public static List<SidSpeckleRecord> ReceiverInfo { get; set; }
@@ -75,24 +76,25 @@ namespace SpeckleGSA
       IsInit = false;
 
       kits = new List<IGSAKit>();
-      GsaApp = new GsaAppResources();
     }
 
     public static void Init(string speckleGsaAppVersion)
     {
       if (IsInit) return;
 
+      kits = new List<IGSAKit>();
+
       //SenderInfo = new Dictionary<string, SidSpeckleRecord>();
       //ReceiverInfo = new List<SidSpeckleRecord>();
 
       IsInit = true;
 
-      GSA.GsaApp.gsaMessenger.MessageAdded += GSA.ProcessMessageForLog;
+      GSA.App.LocalMessenger.MessageAdded += GSA.ProcessMessageForLog;
 
       //Avoid sending telemetry when debugging this code
 #if !DEBUG
-      GSA.GsaApp.gsaMessenger.MessageAdded += GSA.ProcessMessageForTelemetry;
-      GSA.GsaApp.gsaProxy.SetAppVersionForTelemetry(speckleGsaAppVersion);
+      GSA.App.Messenger.MessageAdded += GSA.ProcessMessageForTelemetry;
+      GSA.App.Proxy.SetAppVersionForTelemetry(speckleGsaAppVersion);
 #endif
 
       InitialiseKits(out List<string> statusMessages);
@@ -101,7 +103,7 @@ namespace SpeckleGSA
       {
         foreach (var msg in statusMessages)
         {
-          GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, msg);
+          GSA.App.Messenger.Message(MessageIntent.Display, MessageLevel.Information, msg);
         }
       }
     }
@@ -110,7 +112,7 @@ namespace SpeckleGSA
     {
       if (messageEventArgs.Intent == MessageIntent.Telemetry)
       {
-        GsaApp.gsaProxy.SendTelemetry(messageEventArgs.MessagePortions);
+        App.LocalProxy.SendTelemetry(messageEventArgs.MessagePortions);
         //Also log all telemetry transmissions, although the log entries won't have any additional info (prefixes etc) that the proxy has
         //been coded to add
         Log.Debug("Telemetry: " + string.Join(" ", messageEventArgs.MessagePortions));
@@ -205,7 +207,7 @@ namespace SpeckleGSA
         }
         catch
         {
-          GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Error, 
+          GSA.App.Messenger.Message(MessageIntent.Display, MessageLevel.Error, 
             $"Unable to fully connect to {ass.GetName().Name}.dll. Please check the versions of the kit you have installed.");
         }
 
@@ -226,7 +228,7 @@ namespace SpeckleGSA
           }
         }
       }
-      GSA.GsaApp.Merger.Initialise(mappableTypes);
+      GSA.App.Merger.Initialise(mappableTypes);
     }
 
   #region kit_resources
@@ -275,7 +277,7 @@ namespace SpeckleGSA
       return currentObjects;
     }
 
-  #endregion
+    #endregion
 
     /*
   #region streamInfo
@@ -289,9 +291,8 @@ namespace SpeckleGSA
       }
     }
 #endregion
-    */
 
-  #region File Operations
+    #region File Operations
     /// <summary>
     /// Creates a new GSA file. Email address and server address is needed for logging purposes.
     /// </summary>
@@ -301,16 +302,14 @@ namespace SpeckleGSA
     {
       if (!IsInit) return;
 
-      GSA.GsaApp.gsaProxy.NewFile(showWindow);
+      GSA.App.Proxy.NewFile(showWindow);
 
-      /*
-      if (emailAddress != null && serverAddress != null)
-      {
-        GetSpeckleClients(emailAddress, serverAddress, out _, out _);
-      }
-      */
+      //if (emailAddress != null && serverAddress != null)
+      //{
+      //  GetSpeckleClients(emailAddress, serverAddress, out _, out _);
+      //}
 
-      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Created new file.");
+      GSA.App.Messenger.Message(MessageIntent.Display, MessageLevel.Information, "Created new file.");
     }
 
     /// <summary>
@@ -326,13 +325,13 @@ namespace SpeckleGSA
       senderStreamInfo = new List<SidSpeckleRecord>();
       if (!IsInit) return;
 
-      GSA.GsaApp.gsaProxy.OpenFile(path, showWindow);
+      GSA.App.Proxy.OpenFile(path, showWindow);
       if (emailAddress != null && serverAddress != null)
       {
         GetSpeckleClients(emailAddress, serverAddress, out receiverStreamInfo, out senderStreamInfo);
       }
 
-      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Opened new file.");
+      GSA.App.Messenger.Message(MessageIntent.Display, MessageLevel.Information, "Opened new file.");
     }
 
     /// <summary>
@@ -342,7 +341,7 @@ namespace SpeckleGSA
     {
       if (!IsInit) return;
 
-      GSA.GsaApp.gsaProxy.Close();
+      GSA.App.Proxy.Close();
       //SenderInfo.Clear();
       //ReceiverInfo.Clear();
     }
@@ -367,7 +366,7 @@ namespace SpeckleGSA
       {
         string key = emailAddress + "&" + serverAddress.Replace(':', '&');
 
-        string res = GSA.GsaApp.gsaProxy.GetTopLevelSid();
+        string res = GSA.App.Proxy.GetTopLevelSid();
 
         if (res == "")
         {
@@ -424,7 +423,7 @@ namespace SpeckleGSA
     public static bool SetSpeckleClients(string emailAddress, string serverAddress, List<SidSpeckleRecord> receiverStreamInfo, List<SidSpeckleRecord> senderStreamInfo)
     {
       string key = emailAddress + "&" + serverAddress.Replace(':', '&');
-      string res = GSA.GsaApp.gsaProxy.GetTopLevelSid();
+      string res = GSA.App.Proxy.GetTopLevelSid();
 
       List<string[]> sids = Regex.Matches(res, @"(?<={).*?(?=})").Cast<Match>()
               .Select(m => m.Value.Split(new char[] { ':' }))
@@ -472,7 +471,7 @@ namespace SpeckleGSA
         sidRecord += "{" + s[0] + ":" + s[1] + "}";
       }
 
-      return GSA.GsaApp.gsaProxy.SetTopLevelSid(sidRecord);
+      return GSA.App.Proxy.SetTopLevelSid(sidRecord);
     }
 #endregion
 
@@ -490,7 +489,7 @@ namespace SpeckleGSA
       };
       // TODO: Add other units
 
-      var tolerances = GSA.GsaApp.gsaProxy.GetTolerances();
+      var tolerances = GSA.App.Proxy.GetTolerances();
 
       var lengthTolerances = new List<double>() {
                 Convert.ToDouble(tolerances[3]), // edge
@@ -518,8 +517,9 @@ namespace SpeckleGSA
     /// </summary>
     public static void UpdateCasesAndTasks()
     {
-      GSA.GsaApp.gsaProxy.UpdateCasesAndTasks();
+      GSA.App.Proxy.UpdateCasesAndTasks();
     }
-#endregion
+    #endregion
+    */
   }
 }

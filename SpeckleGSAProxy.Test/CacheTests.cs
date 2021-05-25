@@ -99,9 +99,9 @@ namespace SpeckleGSAProxy.Test
     [Test]
     public void GenerateDesignCache()
     {
-      GSA.GsaApp = new GsaAppResources();
-      GSA.GsaApp.gsaSettings.TargetLayer = GSATargetLayer.Design;
-      GSA.GsaApp.gsaSettings.SeparateStreams = true;
+      var resources = new GsaAppResources();
+      resources.Settings.TargetLayer = GSATargetLayer.Design;
+      resources.LocalSettings.SeparateStreams = true;
       //GSA.SenderInfo = new Dictionary<string, SidSpeckleRecord>() { { "testStream", new SidSpeckleRecord("testStreamId", "testStream", "testClientId") } };
       var senderStreamInfo = new List<SidSpeckleRecord> { new SidSpeckleRecord("testStreamId", "testStream", "testClientId") };
 
@@ -114,7 +114,7 @@ namespace SpeckleGSAProxy.Test
 
       var filePath = @"C:\Users\Nic.Burgers\OneDrive - Arup\Issues\Nguyen Le\2D result\shear wall system-seismic v10.1.gwb";
 
-      GSA.GsaApp.gsaProxy.OpenFile(Path.Combine(TestDataDirectory, filePath), false);
+      GSA.App.Proxy.OpenFile(Path.Combine(TestDataDirectory, filePath), false);
 
       var senderCoordinator = new SenderCoordinator();
       bool failed = false;
@@ -140,7 +140,7 @@ namespace SpeckleGSAProxy.Test
       }
       finally
       {
-        GSA.GsaApp.gsaProxy.Close();
+        GSA.App.Proxy.Close();
       }
       Assert.IsFalse(failed);
     }
@@ -148,7 +148,7 @@ namespace SpeckleGSAProxy.Test
     [Test]
     public void SendAnalysisThenDesign()
     {
-      GSA.GsaApp = new GsaAppResources();
+      GSA.App = new GsaAppResources();
 
       //This runs SpeckleInitializer.Initialize() and fills WriteTypePrereqs and ReadTypePrereqs
       GSA.Init("");
@@ -166,29 +166,29 @@ namespace SpeckleGSAProxy.Test
 
       var filePath = @"C:\Users\Nic.Burgers\OneDrive - Arup\Issues\Nguyen Le\2D result\shear wall system-seismic v10.1.gwb";
 
-      GSA.GsaApp.gsaProxy.OpenFile(Path.Combine(TestDataDirectory, filePath), false);
+      GSA.App.Proxy.OpenFile(Path.Combine(TestDataDirectory, filePath), false);
 
       bool failed = false;
       try
       {
         //RECEIVE EVENT #1: Analyis layer
         var sender = new SenderCoordinator();
-        GSA.GsaApp.gsaSettings = new Settings() { TargetLayer = GSATargetLayer.Analysis, SeparateStreams = true };
+        GSA.App.LocalSettings = new Settings() { TargetLayer = GSATargetLayer.Analysis, SeparateStreams = true };
         sender.Initialize("", "", senderStreamInfo,
           (restApi, apiToken) => new TestSpeckleGSASender(), new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>(), 
           new Progress<SidSpeckleRecord>(), new Progress<SidSpeckleRecord>());
-        sender.Trigger();
+        sender.Trigger().Wait();
 
         //Each kit stores their own objects to be sent
         var speckleObjects = GSA.GetSpeckleObjectsFromSenderDictionaries();
 
         //RECEIVE EVENT #2: Design layer
         sender = new SenderCoordinator();
-        GSA.GsaApp.gsaSettings.TargetLayer = GSATargetLayer.Design;
+        GSA.App.Settings.TargetLayer = GSATargetLayer.Design;
         sender.Initialize("", "", senderStreamInfo,
           (restApi, apiToken) => new TestSpeckleGSASender(), new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>(),
           new Progress<SidSpeckleRecord>(), new Progress<SidSpeckleRecord>());
-        sender.Trigger();
+        sender.Trigger().Wait();
 
         //Each kit stores their own objects to be sent
         speckleObjects = GSA.GetSpeckleObjectsFromSenderDictionaries();
@@ -199,7 +199,7 @@ namespace SpeckleGSAProxy.Test
       }
       finally
       {
-        GSA.GsaApp.gsaProxy.Close();
+        GSA.App.Proxy.Close();
       }
       Assert.IsFalse(failed);
     }

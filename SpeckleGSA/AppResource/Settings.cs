@@ -11,15 +11,15 @@ namespace SpeckleGSA
   /// <summary>
   /// Static class to store settings.
   /// </summary>
-  public class Settings : IGSASettings
+  public class Settings : IGSALocalSettings
 	{
-    public bool SendOnlyMeaningfulNodes = true;
-    public bool SeparateStreams = false;
+    public bool SendOnlyMeaningfulNodes { get; set; } = true;
+    public bool SeparateStreams { get; set; } = false;
     public int PollingRate = 2000;
-		public string ServerAddress = "";
+		public string ServerAddress { get; set; } = "";
 
 		//Default values for properties specified in the interface
-		public string Units { get; set; }
+		public string Units { get; set; } = "mm";
 		public GSATargetLayer TargetLayer { get; set; } = GSATargetLayer.Design;
 		public double CoincidentNodeAllowance { get; set; } = 0.1;
 		public bool SendOnlyResults { get; set; } = false;
@@ -28,7 +28,7 @@ namespace SpeckleGSA
 
 		private int loggingthreshold = 3;
 
-		public bool VerboseErrors = false;
+		public bool VerboseErrors { get; set; } = false;
 
 		public string ObjectUrl(string id)
 		{

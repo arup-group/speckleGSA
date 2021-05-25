@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace SpeckleGSA
 {
-  public class GsaMessenger : IGSAMessenger, ISpeckleAppMessenger
+  public class GsaMessenger : IGSALocalMessenger, ISpeckleAppMessenger
   {
     public event EventHandler<MessageEventArgs> MessageAdded;
 

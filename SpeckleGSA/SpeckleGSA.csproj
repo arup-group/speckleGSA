@@ -61,6 +61,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AppResource\GsaMessenger.cs" />
+    <Compile Include="AppResource\IGSALocalAppResources.cs" />
+    <Compile Include="AppResource\IGSALocalMessenger.cs" />
+    <Compile Include="AppResource\IGSALocalSettings.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="ProgressEstimator\ProcessingPhase.cs" />
     <Compile Include="ProgressEstimator\ProgressEstimator.cs" />

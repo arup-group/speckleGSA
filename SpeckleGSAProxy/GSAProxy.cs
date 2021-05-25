@@ -10,7 +10,7 @@ using SpeckleGSAInterfaces;
 
 namespace SpeckleGSAProxy
 {
-  public class GSAProxy : IGSAProxy
+  public class GSAProxy : IGSALocalProxy
   {
     //Hardwired values for interacting with the GSA instance
     //----

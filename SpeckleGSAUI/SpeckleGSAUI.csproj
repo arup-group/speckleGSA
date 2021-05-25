@@ -193,6 +193,7 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Headless.cs" />
     <Compile Include="Models\Tabs\TabBase.cs" />
     <Compile Include="Models\SpeckleAccountForUI.cs" />
     <Compile Include="DataAccess\DataAccess.cs" />

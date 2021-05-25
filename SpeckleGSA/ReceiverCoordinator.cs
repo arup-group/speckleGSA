@@ -83,7 +83,7 @@ namespace SpeckleGSA
       statusProgress.Report("Ready to receive");
 			IsInit = true;
 
-      GSA.GsaApp.gsaProxy.SetUnits(GSA.GsaApp.gsaSettings.Units);
+      GSA.App.LocalProxy.SetUnits(GSA.App.Settings.Units);
 
 			return statusMessages;
 		}
@@ -99,7 +99,7 @@ namespace SpeckleGSA
 
       var startTime = DateTime.Now;
 
-      //GSA.GsaApp.gsaSettings.Units = GSA.GsaApp.gsaProxy.GetUnits();
+      //GSA.App.Settings.Units = GSA.App.Proxy.GetUnits();
 
       lock (traversedSerialisedLock)
       {
@@ -121,7 +121,7 @@ namespace SpeckleGSA
 
       foreach (var streamId in StreamReceivers.Keys)
       {
-        rxObjsByStream.Add(streamId, StreamReceivers[streamId].GetObjects());
+        rxObjsByStream.Add(streamId, StreamReceivers[streamId].GetObjects());  //This calls UpdateGlobal(), which is the trigger for pulilng information from the server
         progressEstimator.AppendCurrent(WorkPhase.ApiCalls, 1);
       }
 
@@ -164,7 +164,7 @@ namespace SpeckleGSA
             }
 
             //Populate the cache with stream IDs - review if this is needed anymroe
-            GSA.GsaApp.gsaCache.SetStream(o.ApplicationId, streamId);
+            GSA.App.LocalCache.SetStream(o.ApplicationId, streamId);
             rxObjs.Add(o);
           }
         }
@@ -172,7 +172,7 @@ namespace SpeckleGSA
 
       progressEstimator.UpdateTotal(WorkPhase.Conversion, rxObjs.Count());
 
-      //GSA.GsaApp.gsaMessenger.Trigger();
+      //GSA.App.Messenger.Trigger();
 
       TimeSpan duration = DateTime.Now - startTime;
       this.loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Duration of reception from Speckle and scaling: " + duration.ToString(@"hh\:mm\:ss")));
@@ -187,25 +187,25 @@ namespace SpeckleGSA
       }
 
       startTime = DateTime.Now;
-      streamIds.ForEach(s => GSA.GsaApp.gsaCache.Snapshot(s));
+      streamIds.ForEach(s => GSA.App.LocalCache.Snapshot(s));
 
       ProcessRxObjects(rxObjs);
 
-      var toBeAddedGwa = GSA.GsaApp.gsaCache.GetNewGwaSetCommands();
-      toBeAddedGwa.ForEach(tba => GSA.GsaApp.gsaProxy.SetGwa(tba));
+      var toBeAddedGwa = GSA.App.LocalCache.GetNewGwaSetCommands();
+      toBeAddedGwa.ForEach(tba => GSA.App.Proxy.SetGwa(tba));
 
-      var toBeDeletedGwa = GSA.GsaApp.gsaCache.GetExpiredData();
+      var toBeDeletedGwa = GSA.App.LocalCache.GetExpiredData();
 
       var setDeletes = toBeDeletedGwa.Where(t => t.Item4 == GwaSetCommandType.Set).ToList();
-      setDeletes.ForEach(sd => GSA.GsaApp.gsaProxy.DeleteGWA(sd.Item1, sd.Item2, GwaSetCommandType.Set));
+      setDeletes.ForEach(sd => GSA.App.Proxy.DeleteGWA(sd.Item1, sd.Item2, GwaSetCommandType.Set));
 
       var setAtDeletes = toBeDeletedGwa.Where(t => t.Item4 == GwaSetCommandType.SetAt).OrderByDescending(t => t.Item2).ToList();
-      setAtDeletes.ForEach(sad => GSA.GsaApp.gsaProxy.DeleteGWA(sad.Item1, sad.Item2, GwaSetCommandType.SetAt));
+      setAtDeletes.ForEach(sad => GSA.App.Proxy.DeleteGWA(sad.Item1, sad.Item2, GwaSetCommandType.SetAt));
 
-      GSA.GsaApp.gsaProxy.Sync();
+      GSA.App.Proxy.Sync();
 
-      GSA.GsaApp.gsaProxy.UpdateCasesAndTasks();
-      GSA.GsaApp.gsaProxy.UpdateViews();
+      GSA.App.Proxy.UpdateCasesAndTasks();
+      GSA.App.Proxy.UpdateViews();
 
       duration = DateTime.Now - startTime;
       this.loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Duration of conversion from Speckle: " + duration.ToString(@"hh\:mm\:ss")));
@@ -219,7 +219,7 @@ namespace SpeckleGSA
     private bool UpdateCache()
     {
       var keywords = GSA.Keywords;
-      GSA.GsaApp.gsaCache.Clear();
+      GSA.App.LocalCache.Clear();
       //initial estimate
       progressEstimator.UpdateTotal(WorkPhase.CacheRead, keywords.Count());
       progressEstimator.UpdateTotal(WorkPhase.CacheUpdate, keywords.Count());
@@ -228,7 +228,7 @@ namespace SpeckleGSA
 
       try
       {
-        var data = GSA.GsaApp.gsaProxy.GetGwaData(keywords, false);
+        var data = GSA.App.Proxy.GetGwaData(keywords, false);
         progressEstimator.UpdateTotal(WorkPhase.CacheRead, data.Count());
         progressEstimator.SetCurrentToTotal(WorkPhase.CacheRead); //Equalise the current and total in case the previous total estimate was wrong
 
@@ -238,7 +238,7 @@ namespace SpeckleGSA
 
         for (int i = 0; i < data.Count(); i++)
         {
-          GSA.GsaApp.gsaCache.Upsert(
+          GSA.App.Cache.Upsert(
             data[i].Keyword,
             data[i].Index,
             data[i].GwaWithoutSet,
@@ -380,7 +380,7 @@ namespace SpeckleGSA
       var streamIds = StreamReceivers.Keys.ToList();
 
       //This method assumes it's not run in parallel
-      //GSA.GsaApp.gsaMessenger.ResetLoggedMessageCount();
+      //GSA.App.Messenger.ResetLoggedMessageCount();
 
       //Create new dictionary instance in case the original ever gets modified
       var batchRxObsByType = rxObjsByType.Keys.Where(t => currentBatch.Contains(t)).ToDictionary(t => t, t => rxObjsByType[t]);
@@ -412,7 +412,7 @@ namespace SpeckleGSA
 
           //First serialise all relevant objects into sending dictionary so that merging can happen
           var typeAppIds = currentObjects.Where(bo => bo.ApplicationId != null).Select(bo => bo.ApplicationId).ToList();
-          if (typeAppIds.Any(i => GSA.GsaApp.gsaCache.ApplicationIdExists(keyword, i)))
+          if (typeAppIds.Any(i => GSA.App.LocalCache.ApplicationIdExists(keyword, i)))
           {
             //Serialise all objects of this type and update traversedSerialised list
             lock (traversedSerialisedLock)
@@ -432,7 +432,7 @@ namespace SpeckleGSA
             keyword = GSA.RxParallelisableTypes[valueType];
             foreach (var co in currentObjects)
             {
-              GSA.GsaApp.gsaCache.ReserveIndex(keyword, co.ApplicationId);
+              GSA.App.Cache.ReserveIndex(keyword, co.ApplicationId);
             }
             Parallel.ForEach(currentObjects, o =>
             {
@@ -460,7 +460,7 @@ namespace SpeckleGSA
 
       //Outside of any parallisation, process any cached messages from the conversion code.
       //These should be mostly technical log but may include some display messages
-      GSA.GsaApp.gsaMessenger.Trigger();
+      GSA.App.LocalMessenger.Trigger();
 
       return;
     }
@@ -480,7 +480,7 @@ namespace SpeckleGSA
       }
       catch { }
 
-      var existingList = GSA.GsaApp.gsaCache.GetSpeckleObjects(speckleTypeName, targetObject.ApplicationId, streamId: streamId);
+      var existingList = GSA.App.LocalCache.GetSpeckleObjects(speckleTypeName, targetObject.ApplicationId, streamId: streamId);
 
       //In case of error
       var errContext = new List<string>() { "StreamId=" + streamId, "SpeckleType=" + speckleTypeName,
@@ -493,7 +493,7 @@ namespace SpeckleGSA
         //Either this is the first reception event, or it's not in the cache for another reason, like:
         //The ToSpeckle for this Application ID didn't work (a notable example is ASSEMBLY when type is ELEMENT when Design layer is targeted)
         //so mark it as previous as there is clearly an update from the stream.  For these cases, merging isn't possible.
-        GSA.GsaApp.gsaCache.MarkAsPrevious(keyword, targetObject.ApplicationId);
+        GSA.App.LocalCache.MarkAsPrevious(keyword, targetObject.ApplicationId);
       }
       else
       {
@@ -501,7 +501,7 @@ namespace SpeckleGSA
 
         try
         {
-          targetObject = GSA.GsaApp.Merger.Merge(targetObject, existing);
+          targetObject = GSA.App.Merger.Merge(targetObject, existing);
         }
         catch (Exception ex)
         {
@@ -515,7 +515,7 @@ namespace SpeckleGSA
       var deserialiseReturn = Converter.Deserialise(targetObject);
       if (!string.IsNullOrEmpty(targetObject.ApplicationId))
       {
-        GSA.GsaApp.gsaMessenger.Append(new[] { targetObject.ApplicationId }, errContext);
+        GSA.App.LocalMessenger.Append(new[] { targetObject.ApplicationId }, errContext);
       }
 
       if (deserialiseReturn is Exception)
@@ -554,8 +554,8 @@ namespace SpeckleGSA
       //At this point the SID will be filled with the application ID
       GSAProxy.ParseGeneralGwa(gwaCommand, out string keyword, out int? foundIndex, out string foundStreamId, out string foundApplicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType, true);
 
-      var originalSid = GSA.GsaApp.gsaProxy.FormatSidTags(foundStreamId, foundApplicationId);
-      var newSid = GSA.GsaApp.gsaProxy.FormatSidTags(streamId, foundApplicationId);
+      var originalSid = GSA.App.Proxy.FormatSidTags(foundStreamId, foundApplicationId);
+      var newSid = GSA.App.Proxy.FormatSidTags(streamId, foundApplicationId);
 
       //If the SID tag has been set then update it with the stream
       if (string.IsNullOrEmpty(originalSid))
@@ -568,7 +568,7 @@ namespace SpeckleGSA
       }
 
       //Only cache the object against, the top-level GWA command, not the sub-commands - this is what the SID value comparision is there for
-      return GSA.GsaApp.gsaCache.Upsert(keyword.Split('.').First(),
+      return GSA.App.LocalCache.Upsert(keyword.Split('.').First(),
         foundIndex.Value,
         gwaWithoutSet,
         foundApplicationId,
@@ -612,7 +612,7 @@ namespace SpeckleGSA
               prereqSerialisedObjects[k].ApplicationId = applicationId;
 
               //The SpeckleTypeName of this cache entry is automatically created by the assignment of the object
-              GSA.GsaApp.gsaCache.AssignSpeckleObject(prereqKeyword, applicationId, prereqSerialisedObjects[k]);
+              GSA.App.LocalCache.AssignSpeckleObject(prereqKeyword, applicationId, prereqSerialisedObjects[k]);
             }
           }
           traversedSerialisedTypes.Add(readPrereqs[j]);
@@ -641,7 +641,7 @@ namespace SpeckleGSA
           serialisedObjects[j].ApplicationId = applicationId;
 
           //The SpeckleTypeName of this cache entry is automatically created by the assignment of the object
-          GSA.GsaApp.gsaCache.AssignSpeckleObject(keyword, serialisedObjects[j].ApplicationId, serialisedObjects[j]);
+          GSA.App.LocalCache.AssignSpeckleObject(keyword, serialisedObjects[j].ApplicationId, serialisedObjects[j]);
         }
       }
 
@@ -693,7 +693,7 @@ namespace SpeckleGSA
 
 		public void DeleteSpeckleObjects()
     {
-			var gwaToDelete = GSA.GsaApp.gsaCache.GetDeletableData();
+			var gwaToDelete = GSA.App.LocalCache.GetDeletableData();
       
       for (int i = 0; i < gwaToDelete.Count(); i++)
       {
@@ -701,10 +701,10 @@ namespace SpeckleGSA
         var index = gwaToDelete[i].Item2;
         var gwaSetCommandType = gwaToDelete[i].Item4;
 
-        GSA.GsaApp.gsaProxy.DeleteGWA(keyword, index, gwaSetCommandType);
+        GSA.App.Proxy.DeleteGWA(keyword, index, gwaSetCommandType);
       }
 
-      GSA.GsaApp.gsaProxy.UpdateViews();
+      GSA.App.Proxy.UpdateViews();
     }
   }
 }
