@@ -200,8 +200,8 @@ namespace SpeckleGSA
                 .Where(s => s.Length == 2)
                 .ToList();
 
-        string[] senderList = sids.Where(s => s[0] == "SpeckleSender&" + key).FirstOrDefault();
-        string[] receiverList = sids.Where(s => s[0] == "SpeckleReceiver&" + key).FirstOrDefault();
+        string[] senderList = sids.Where(s => s[0].TrimEnd('/').Equals(("SpeckleSender&" + key).TrimEnd('/'))).FirstOrDefault();
+        string[] receiverList = sids.Where(s => s[0].TrimEnd('/').Equals(("SpeckleReceiver&" + key).TrimEnd('/'))).FirstOrDefault();
 
         if (senderList != null && !string.IsNullOrEmpty(senderList[1]))
         {

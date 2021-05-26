@@ -65,6 +65,29 @@ namespace SpeckleGSAUI.Models
       ReceiverTab.ReceiverSidRecords.Clear();
       SenderTab.SenderSidRecords.Clear();
 
+      if (HelperFunctions.GetSidSpeckleRecords(Account.EmailAddress, Account.ServerUrl, GSA.App.Proxy, out var receiverStreamInfo, out var senderStreamInfo))
+      {
+        if (receiverStreamInfo != null && receiverStreamInfo.Count > 0)
+        {
+          for (int i = 0; i < receiverStreamInfo.Count; i++)
+          {
+            ReceiverTab.ReceiverSidRecords.Add(receiverStreamInfo[i]);
+          }
+          ReceiverTab.SidRecordsToStreamList();
+        }
+        if (senderStreamInfo != null && senderStreamInfo.Count > 0)
+        {
+          for (int i = 0; i < senderStreamInfo.Count; i++)
+          {
+            SenderTab.SenderSidRecords.Add(senderStreamInfo[i]);
+          }
+          SenderTab.SidRecordsToStreamList();
+        }
+      }
+
+      return true;
+
+      /*
       try
       {
         string key = Account.EmailAddress + "&" + Account.ServerUrl.Replace(':', '&');
@@ -113,6 +136,7 @@ namespace SpeckleGSAUI.Models
         return false;
       }
       throw new NotImplementedException();
+      */
     }
 
     internal bool WriteStreamInfo()

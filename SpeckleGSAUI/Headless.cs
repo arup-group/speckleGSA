@@ -62,13 +62,6 @@ namespace SpeckleGSAUI
         }
       }
 
-      GSA.Init(getRunningVersion().ToString());
-      GSA.App.LocalMessenger.MessageAdded += this.ProcessMessage;
-      SpeckleCore.SpeckleInitializer.Initialize();
-
-      //This will create the logger
-      GSA.App.LocalSettings.LoggingMinimumLevel = 4;  //Debug
-
       if (cliMode == "receiver" && arguments.ContainsKey("h"))
       {
         Console.WriteLine("\n");
@@ -126,6 +119,14 @@ namespace SpeckleGSAUI
       RestApi = arguments["server"];
       ApiToken = arguments["token"];
 
+      //This will create the logger
+      GSA.App.LocalSettings.LoggingMinimumLevel = 4;  //Debug
+      GSA.App.Settings.TargetLayer = (arguments.ContainsKey("layer") && (arguments["layer"].ToLower() == "analysis")) ? GSATargetLayer.Analysis : GSATargetLayer.Design;
+
+      GSA.Init(getRunningVersion().ToString());
+      GSA.App.LocalMessenger.MessageAdded += this.ProcessMessage;
+      SpeckleCore.SpeckleInitializer.Initialize();
+      
       List<SidSpeckleRecord> receiverStreamInfo;
       List<SidSpeckleRecord> senderStreamInfo;
       // GSA File
@@ -145,26 +146,26 @@ namespace SpeckleGSAUI
         GSA.App.Proxy.SaveAs(arguments["file"]);
       }
 
-      // We will receive all the things!
       if (cliMode == "receiver")
       {
-        CLIReceiver(receiverStreamInfo);
+        if (!arguments.ContainsKey("streamIDs"))
+        {
+          Console.WriteLine("Missing -streamIDs argument");
+          return false;
+        }
+        //There seem to be some issues with HTTP requests down the line if this is run on the initial (UI) thread, so this ensures it runs on another thread
+        return Task.Run(() => CLIReceiver(receiverStreamInfo)).Result;
       }
       else if (cliMode == "sender")
       {
-        CLISender(senderStreamInfo);
+        //There seem to be some issues with HTTP requests down the line if this is run on the initial (UI) thread, so this ensures it runs on another thread
+        return Task.Run(() => CLISender(senderStreamInfo)).Result;
       }
       return true;
     }
 
-    public void CLIReceiver(List<SidSpeckleRecord> savedReceiverStreamInfo)
+    public bool CLIReceiver(List<SidSpeckleRecord> savedReceiverStreamInfo)
     {
-      if (!arguments.ContainsKey("streamIDs"))
-      {
-        Console.WriteLine("Missing -streamIDs argument");
-        return;
-      }
-
       //Ignore the saved receiver stream info for now - review?
       var receiverStreamInfo = new List<SidSpeckleRecord>();
 
@@ -182,7 +183,7 @@ namespace SpeckleGSAUI
       }
 
       var gsaReceiverCoordinator = new ReceiverCoordinator();
-      
+
       var nonBlankReceivers = receiverStreamInfo.Where(r => !string.IsNullOrEmpty(r.StreamId)).ToList();
       foreach (var streamInfo in nonBlankReceivers)
       {
@@ -199,35 +200,43 @@ namespace SpeckleGSAUI
       gsaReceiverCoordinator.Trigger(null, null);
       gsaReceiverCoordinator.Dispose();
 
-      GSA.App.Proxy.SaveAs(arguments["file"]);
+      var filePath = arguments["file"];
+      if (filePath.StartsWith("."))
+      {
+        string sCurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
+        filePath = Path.GetFullPath(Path.Combine(sCurrentDirectory, filePath));
+      }
+
+      GSA.App.Proxy.SaveAs(filePath);
       GSA.App.Proxy.Close();
 
       Console.WriteLine("Receiving complete");
+
+      return true;
     }
 
-    public void CLISender(List<SidSpeckleRecord> savedSenderStreamInfo)
+    public bool CLISender(List<SidSpeckleRecord> savedSenderStreamInfo)
     {
-      if (arguments.ContainsKey("layer"))
-        if (arguments["layer"].ToLower() == "analysis")
-        {
-          GSA.App.Settings.TargetLayer = GSATargetLayer.Analysis;
-        }
-
       if (arguments.ContainsKey("sendAllNodes"))
+      {
         GSA.App.LocalSettings.SendOnlyMeaningfulNodes = false;
-
+      }
       if (arguments.ContainsKey("separateStreams"))
+      {
         GSA.App.LocalSettings.SeparateStreams = true;
-
+      }
       if (arguments.ContainsKey("resultOnly"))
+      {
         GSA.App.LocalSettings.SendOnlyResults = true;
-
+      }
       if (arguments.ContainsKey("resultUnembedded"))
+      {
         GSA.App.Settings.EmbedResults = false;
-
+      }
       if (arguments.ContainsKey("resultInLocalAxis"))
+      {
         GSA.App.Settings.ResultInLocalAxis = true;
-
+      }
       if (arguments.ContainsKey("result1DNumPosition"))
       {
         try
@@ -282,6 +291,7 @@ namespace SpeckleGSAUI
       GSA.App.Proxy.Close();
 
       Console.WriteLine("Sending complete");
+      return true;
     }
 
     #region Log

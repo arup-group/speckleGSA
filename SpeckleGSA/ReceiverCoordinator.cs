@@ -69,12 +69,12 @@ namespace SpeckleGSA
       // Create receivers
       statusProgress.Report("Accessing streams");
 
-      receiverStreamInfo.Where(r => !string.IsNullOrEmpty(r.StreamId)).ToList().ForEach((streamInfo) =>
+      foreach (var streamInfo in receiverStreamInfo.Where(r => !string.IsNullOrEmpty(r.StreamId)))
 			{
         StreamReceivers.Add(streamInfo.StreamId, streamReceiverCreationFn(restApi, apiToken));
-				StreamReceivers[streamInfo.StreamId].InitializeReceiver(streamInfo.StreamId, streamInfo.Bucket);
-				StreamReceivers[streamInfo.StreamId].UpdateGlobalTrigger += Trigger;
-			});
+        StreamReceivers[streamInfo.StreamId].InitializeReceiver(streamInfo.StreamId, streamInfo.Bucket).Wait();
+        StreamReceivers[streamInfo.StreamId].UpdateGlobalTrigger += Trigger;
+			};
 
       TimeSpan duration = DateTime.Now - startTime;
       this.loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Duration of initialisation: " + duration.ToString(@"hh\:mm\:ss")));
