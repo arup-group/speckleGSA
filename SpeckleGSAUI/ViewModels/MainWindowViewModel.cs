@@ -349,7 +349,7 @@ namespace SpeckleGSAUI.ViewModels
           }
           Refresh();
         },
-        (o) => true);
+        (o) => StateMachine.FileState == FileState.Loaded && !StateMachine.StreamFileIsOccupied);
 
       ClearReceiveStreamListCommand = new DelegateCommand<object>(
         (o) =>
@@ -370,7 +370,7 @@ namespace SpeckleGSAUI.ViewModels
           }
           Refresh();
         },
-        (o) => !StateMachine.StreamFileIsOccupied);
+        (o) => StateMachine.FileState == FileState.Loaded && !StateMachine.StreamFileIsOccupied);
 
       SendStopCommand = new DelegateCommand<object>(
         async (o) =>

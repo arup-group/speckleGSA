@@ -1,5 +1,6 @@
 ﻿using SpeckleGSA;
 using SpeckleGSAInterfaces;
+using SpeckleGSAProxy;
 using SpeckleGSAUI.Utilities;
 //using SpeckleInterface;
 using System;
@@ -146,6 +147,9 @@ namespace SpeckleGSAUI
         GSA.App.Proxy.SaveAs(arguments["file"]);
       }
 
+      var calibrateNodeAtTask = Task.Run(() => GSAProxy.CalibrateNodeAt());
+      calibrateNodeAtTask.Wait();
+
       if (cliMode == "receiver")
       {
         if (!arguments.ContainsKey("streamIDs"))
@@ -181,6 +185,8 @@ namespace SpeckleGSAUI
       {
         GSA.App.Settings.CoincidentNodeAllowance = nodeAllowance;
       }
+      //TO DO: enable is as a command line argument
+      GSA.App.Settings.Units = "m";
 
       var gsaReceiverCoordinator = new ReceiverCoordinator();
 
