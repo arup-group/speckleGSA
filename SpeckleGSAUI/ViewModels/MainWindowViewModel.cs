@@ -60,7 +60,7 @@ namespace SpeckleGSAUI.ViewModels
     public DelegateCommand<object> ReceiveSelectedStreamCommand { get; private set; }
     public DelegateCommand<object> NewFileCommand { get; private set; }
     public DelegateCommand<object> OpenFileCommand { get; private set; }
-    public DelegateCommand<object> SaveAndCloseCommand { get; private set; }
+    public DelegateCommand<object> SaveFileCommand { get; private set; }
     public DelegateCommand<object> ReceiveStopCommand { get; private set; }
     public DelegateCommand<object> SendStopCommand { get; private set; }
     public DelegateCommand<object> ContinuousSendCommand { get; private set; }  //Used by the timer only
@@ -181,10 +181,14 @@ namespace SpeckleGSAUI.ViewModels
     public MainWindowViewModel()
     {
       percentageProgress.ProgressChanged += ProcessPercentageProgressUpdate;
+      //The same methods that handle messages from the kits are being used for messages originating from the commands and the SpeckleGSA library, with the 
+      //sender and receiver coordinators
       loggingProgress.ProgressChanged += ProcessLogProgressUpdate;
+      loggingProgress.ProgressChanged += GSA.ProcessMessageForLog;
       streamCreationProgress.ProgressChanged += ProcessStreamCreationProgress;
       streamDeletionProgress.ProgressChanged += ProcessStreamDeletionProgress;
       statusProgress.ProgressChanged += ProcessStatusProgressUpdate;
+      //This ensures the messages for the display log in the UI, originating from the conversion code in the kits, end up being handled
       GSA.App.LocalMessenger.MessageAdded += ProcessLogProgressUpdate;
       CreateCommands();
     }
@@ -425,7 +429,7 @@ namespace SpeckleGSAUI.ViewModels
           TriggerTimer.Start();
         }, (o) => true);
 
-      SaveAndCloseCommand = new DelegateCommand<object>(
+      SaveFileCommand = new DelegateCommand<object>(
         async (o) =>
         {
           Refresh(() => StateMachine.StartedSavingFile());

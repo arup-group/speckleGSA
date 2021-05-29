@@ -36,28 +36,23 @@ namespace SpeckleGSAUI.ViewModels
         {
           coordinator.Account = new SpeckleAccountForUI(account.RestApi, account.Email, account.Token);
         }
+        return await CompleteLogin(coordinator, loggingProgress);
       }
       catch
       {
-        loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Error, "No default account found - press the Login button to login/select an account"));
+        loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "No default account found - press the Login button to login/select an account"));
+        return false;
       }
-
-      return await CompleteLogin(coordinator, loggingProgress);
     }
 
     public static async Task<bool> CompleteLogin(TabCoordinator coordinator, IProgress<MessageEventArgs> loggingProgress)
     {
-      try
+      var messenger = new ProgressMessenger(loggingProgress);
+
+      var accountName = await SpeckleInterface.SpeckleStreamManager.GetClientName(coordinator.Account.ServerUrl, coordinator.Account.Token, messenger);
+      if (!string.IsNullOrEmpty(accountName))
       {
-        var accountName = await SpeckleInterface.SpeckleStreamManager.GetClientName(coordinator.Account.ServerUrl, coordinator.Account.Token);
-        if (!string.IsNullOrEmpty(accountName))
-        {
-          coordinator.Account.Update(accountName);
-        }
-      }
-      catch
-      {
-        loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Error, "Unable to get name of account"));
+        coordinator.Account.Update(accountName);
       }
 
       if (coordinator.Account != null && coordinator.Account.IsValid)
@@ -237,18 +232,29 @@ namespace SpeckleGSAUI.ViewModels
 
     public static bool SaveFile(TabCoordinator coordinator)
     {
-      OpenFileDialog openFileDialog = new OpenFileDialog();
-      if (openFileDialog.ShowDialog() == true)
+      if (coordinator.FileStatus == GsaLoadedFileType.NewFile)
       {
-        coordinator.WriteStreamInfo();
-        GSA.App.Proxy.SaveAs(openFileDialog.FileName);
+        OpenFileDialog openFileDialog = new OpenFileDialog();
+        if (openFileDialog.ShowDialog() == true)
+        {
+          GSA.App.Proxy.SaveAs(openFileDialog.FileName);
+        }
+      }
+      else if (coordinator.FileStatus == GsaLoadedFileType.ExistingFile)
+      {
+        GSA.App.Proxy.SaveAs(coordinator.FilePath);
       }
       return true;
     }
 
     public static async Task<bool> RenameStream(TabCoordinator coordinator, string streamId, string newStreamName, IProgress<MessageEventArgs> loggingProgress)
     {
-      var changed = await SpeckleInterface.SpeckleStreamManager.UpdateStreamName(coordinator.Account.ServerUrl, coordinator.Account.Token, streamId, newStreamName);
+      var messenger = new ProgressMessenger(loggingProgress);
+
+      var changed = await SpeckleInterface.SpeckleStreamManager.UpdateStreamName(coordinator.Account.ServerUrl, coordinator.Account.Token, streamId, newStreamName, messenger);
+
+      return changed;
+      /*
       if (changed)
       {
         coordinator.SenderTab.ChangeSidRecordStreamName(streamId, newStreamName);
@@ -257,12 +263,17 @@ namespace SpeckleGSAUI.ViewModels
       }
       loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Unable to change the name of the stream to " + newStreamName));
       return false;
+      */
     }
 
     public static async Task<bool> CloneStream(TabCoordinator coordinator, string streamId, IProgress<MessageEventArgs> loggingProgress)
     {
-      var clonedStreamId = await SpeckleInterface.SpeckleStreamManager.CloneStream(coordinator.Account.ServerUrl, coordinator.Account.Token, streamId);
+      var messenger = new ProgressMessenger(loggingProgress);
 
+      var clonedStreamId = await SpeckleInterface.SpeckleStreamManager.CloneStream(coordinator.Account.ServerUrl, coordinator.Account.Token, streamId, messenger);
+
+      return (!string.IsNullOrEmpty(clonedStreamId));
+      /*
       if (string.IsNullOrEmpty(clonedStreamId))
       {
         loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Error, "Unable to clone " + streamId));
@@ -270,6 +281,7 @@ namespace SpeckleGSAUI.ViewModels
       }
       loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Cloned to: " + clonedStreamId));
       return true;
+      */
     }
 
     private static bool UpdateResultSettings(List<ResultSettingItem> resultsToSend, string loadCaseString)
