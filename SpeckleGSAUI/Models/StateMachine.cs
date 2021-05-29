@@ -90,7 +90,7 @@ namespace SpeckleGSAUI.Models
 
     public void CancelledLoggingIn()
     {
-      if (Is(ServerCommState.Active, ServerCommDirection.From, ServerCommContent.Accounts))
+      if (Is(ServerCommState.Active, ServerCommDirection.To, ServerCommContent.Accounts))
       {
         //No need to set the loggedIn value as that will essentially revert to how it was
         //No need to change the state of the file

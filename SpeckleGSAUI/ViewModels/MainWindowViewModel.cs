@@ -234,7 +234,14 @@ namespace SpeckleGSAUI.ViewModels
 
             if (newAccountForUI != null && newAccountForUI.IsValid)
             {
-              Coordinator.Account.Update(newAccountForUI.ServerUrl, newAccountForUI.EmailAddress, newAccountForUI.Token);
+              if (Coordinator.Account == null)
+              {
+                Coordinator.Account = newAccountForUI;
+              }
+              else
+              {
+                Coordinator.Account.Update(newAccountForUI.ServerUrl, newAccountForUI.EmailAddress, newAccountForUI.Token);
+              }
 
               Refresh(() => StateMachine.LoggedIn());
 
@@ -252,6 +259,7 @@ namespace SpeckleGSAUI.ViewModels
               return;
             }
           }
+          Refresh(() => StateMachine.CancelledLoggingIn());
           GSA.App.Messenger.Message(MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, "Failed to log in");         
         },
         (o) => !StateMachine.StreamIsOccupied);
@@ -265,7 +273,7 @@ namespace SpeckleGSAUI.ViewModels
 
           Refresh(() => StateMachine.StoppedUpdatingStreams());
         },
-        (o) => !StateMachine.StreamIsOccupied );
+        (o) => StateMachine.LoggedInState && !StateMachine.StreamIsOccupied );
 
       ReceiveSelectedStreamCommand = new DelegateCommand<object>(
         async (o) =>
@@ -571,7 +579,7 @@ namespace SpeckleGSAUI.ViewModels
     {
       if (mea.Intent == SpeckleGSAInterfaces.MessageIntent.Display)
       {
-        var displayLine = mea.MessagePortions.First() + ": " + string.Join(" ", mea.MessagePortions.Skip(1));
+        var displayLine = mea.MessagePortions.First() + ((mea.MessagePortions.Count() == 1) ? "" : ": " + string.Join(" ", mea.MessagePortions.Skip(1)));
         if (mea.Level == MessageLevel.Information)
         {
           Coordinator.DisplayLog.DisplayLogItems.Add(new DisplayLogItem(displayLine));
