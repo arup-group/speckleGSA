@@ -11,11 +11,11 @@ namespace SpeckleGSAProxy.Test
 
     public IGSALocalSettings LocalSettings { get; set; } = new Settings();
 
-    public IGSACache LocalCache { get; set; } = new GSACache();
+    public IGSACache LocalCache { get; set; }
 
-    public IGSALocalMessenger LocalMessenger { get; set; }
+    public IGSALocalMessenger LocalMessenger { get; set; } = new GsaMessenger();
 
-    public ISpeckleObjectMerger Merger { get; set; }
+    public ISpeckleObjectMerger Merger { get; set; } = new SpeckleObjectMerger();
 
     public IGSASettings Settings { get => LocalSettings; }
 
@@ -23,7 +23,7 @@ namespace SpeckleGSAProxy.Test
 
     public IGSACacheForKit Cache { get; set; }
 
-    public IGSAMessenger Messenger => throw new NotImplementedException();
+    public IGSAMessenger Messenger {  get=> LocalMessenger;}
 
     public TestAppResources() { }
 
@@ -31,6 +31,9 @@ namespace SpeckleGSAProxy.Test
     {
       LocalProxy = testProxy;
       LocalSettings = testSettings;
+      var cache = new GSACache();
+      LocalCache = cache;
+      Cache = cache;
     }
   }
 }

@@ -90,11 +90,24 @@ namespace SpeckleInterface
     }
     */
 
-    public static async Task<string> GetClientName(string restApi, string apiToken)
+    public static async Task<string> GetClientName(string restApi, string apiToken, ISpeckleAppMessenger messenger)
     {
       SpeckleApiClient myClient = new SpeckleApiClient() { BaseUrl = restApi, AuthToken = apiToken };
 
-      var user = await myClient.UserGetAsync();
+      ResponseUser user = null;
+      try
+      {
+        user = await myClient.UserGetAsync();
+      }
+      catch (Exception ex)
+      {
+        if (messenger != null)
+        {
+          messenger.Message(MessageIntent.Display, MessageLevel.Error, "Unable to get user's name from server");
+          messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, ex, "Unable to rename stream", "BaseUrl=" + restApi);
+          return "";
+        }
+      }
       if (user.Resource != null)
       {
         return string.Join(" ", user.Resource.Name, user.Resource.Surname);
@@ -107,24 +120,29 @@ namespace SpeckleInterface
     /// </summary>
     /// <param name="restApi">Server address</param>
     /// <param name="apiToken">API token for account</param>
-    /// <param name="streamID">Stream ID of stream to clone</param>
+    /// <param name="streamId">Stream ID of stream to clone</param>
     /// <returns>Stream ID of the clone</returns>
-    public static async Task<string> CloneStream(string restApi, string apiToken, string streamID)
+    public static async Task<string> CloneStream(string restApi, string apiToken, string streamId, ISpeckleAppMessenger messenger)
     {
       SpeckleApiClient myClient = new SpeckleApiClient() { BaseUrl = restApi, AuthToken = apiToken };
 
       try
       {
-        ResponseStreamClone response = await myClient.StreamCloneAsync(streamID);
+        ResponseStreamClone response = await myClient.StreamCloneAsync(streamId);
         return response.Clone.StreamId;
       }
       catch (Exception ex)
       {
-        return "";
+        if (messenger != null)
+        {
+          messenger.Message(MessageIntent.Display, MessageLevel.Error, "Unable to clone stream name for " + streamId);
+          messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, ex, "Unable to rename stream", "StreamId=" + streamId, "BaseUrl=" + restApi);
+        }
       }
+      return "";
     }
 
-    public static async Task<bool> UpdateStreamName(string restApi, string apiToken, string streamId, string streamName)
+    public static async Task<bool> UpdateStreamName(string restApi, string apiToken, string streamId, string streamName, ISpeckleAppMessenger messenger)
     {
       SpeckleApiClient myClient = new SpeckleApiClient() { BaseUrl = restApi, AuthToken = apiToken };
 
@@ -135,6 +153,11 @@ namespace SpeckleInterface
       }
       catch (Exception ex)
       {
+        if (messenger != null)
+        {
+          messenger.Message(MessageIntent.Display, MessageLevel.Error, "Unable to update stream name for " + streamId);
+          messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, ex, "Unable to rename stream", "StreamId=" + streamId, "BaseUrl=" + restApi, "StreamName=" + streamName);
+        }
         return false;
       }
     }

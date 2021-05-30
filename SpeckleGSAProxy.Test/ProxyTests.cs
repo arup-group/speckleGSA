@@ -55,12 +55,14 @@ namespace SpeckleGSAProxy.Test
       type: "Polyline/Structural1DElementPolyline",	23
     */
 
+
     [Test]
     public void UnitCalibrationsTest()
     {
       GSAProxy.CalibrateNodeAt();
     }
 
+    /*
     private double CalibrateFactorFor(string units, double coincidentNodeTolerance = 1)
     {
       double coordValue = 1000;
@@ -134,6 +136,7 @@ namespace SpeckleGSAProxy.Test
 
       return retDict;
     }
+    */
 
     [TestCase(GSATargetLayer.Design, "EC_mxfJ2p.json", "m")]
     [TestCase(GSATargetLayer.Analysis, "EC_mxfJ2p.json", "m")]
@@ -304,7 +307,7 @@ namespace SpeckleGSAProxy.Test
       for (var n = 0; n < numRepeat; n++)
       {
         GSA.Reset();
-        GSA.App = new TestAppResources(new GSAProxy(), new Settings() { Units = "m", TargetLayer = GSATargetLayer.Design });
+        GSA.App = new TestAppResources(new TestProxy(), new Settings() { Units = "m", TargetLayer = GSATargetLayer.Design });
         GSA.Init("");
 
         Debug.WriteLine("");
@@ -329,6 +332,8 @@ namespace SpeckleGSAProxy.Test
         //RECEIVE EVENT #1: single
         receiverCoordinator.Trigger(null, null);
 
+        var d1 = ((IGSACacheForTesting)GSA.App.Cache).Records.Where(r => r.Latest).GroupBy(r => r.Keyword).ToDictionary(r => r.Key, r => r.ToList());
+
         //RECEIVE EVENT #2: single with reduced streams
 
         //Add contents of cache to the test proxy so they can be the source for the renewed hydration of the cache in the Initialize call
@@ -345,10 +350,10 @@ namespace SpeckleGSAProxy.Test
 
         receiverCoordinator.Initialize(testRestApi, "token", receiveStreamInfo, streamReceiverCreationFn, new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>());
 
-        var records = ((IGSACacheForTesting)GSA.App.Cache).Records;
+        var records1 = ((IGSACacheForTesting)GSA.App.Cache).Records;
         Assert.AreEqual(3, receiveStreamInfo.Count());
         Assert.AreEqual(3, receiverCoordinator.StreamReceivers.Count());
-        Assert.AreEqual(4, records.Where(r => !string.IsNullOrEmpty(r.StreamId)).Select(r => r.StreamId).Distinct().Count());
+        Assert.AreEqual(4, records1.Where(r => !string.IsNullOrEmpty(r.StreamId)).Select(r => r.StreamId).Distinct().Count());
 
         //Refresh with new copy of objects so they aren't the same (so the merging code isn't trying to merge each object onto itself)
         var streamObjectsTuples = ExtractObjects(savedJsonFileNames.Where(fn => streamIdsToTest.Any(ft => fn.Contains(ft))).ToArray(), TestDataDirectory);
@@ -363,12 +368,20 @@ namespace SpeckleGSAProxy.Test
 
         var kwGroupsAfter = ((IGSACacheForTesting)GSA.App.Cache).Records.Where(r => r.Latest).GroupBy(r => r.Keyword).ToDictionary(g => g, g => g.ToList());
 
-        //Check the other streams aren't affected by only having some active
-        records = ((IGSACacheForTesting)GSA.App.Cache).Records;
-        Assert.AreEqual(101, records.Where(r => r.Latest).Count());
-        //-------
+        //The number of latest records for each keyword should be the same, since the stream not being received shouldn't be affected by receiving
+        //the others, so they should remain current (Latest=true)
+
+        var d2 = ((IGSACacheForTesting)GSA.App.Cache).Records.Where(r => r.Latest).GroupBy(r => r.Keyword).ToDictionary(r => r.Key, r => r.ToList());
 
         GSA.App.Proxy.Close();
+
+
+        Assert.IsTrue(d1.Keys.OrderBy(k => k).SequenceEqual(d2.Keys.OrderBy(k => k)));
+        foreach (var k in d2.Keys)
+        {
+          Assert.AreEqual(d1[k].Count(), d2[k].Count());
+        }
+        
       }
     }
 
