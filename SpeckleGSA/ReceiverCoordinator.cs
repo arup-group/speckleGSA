@@ -432,7 +432,7 @@ namespace SpeckleGSA
             keyword = GSA.RxParallelisableTypes[valueType];
             foreach (var co in currentObjects)
             {
-              GSA.App.Cache.ReserveIndex(keyword, co.ApplicationId);
+              GSA.App.LocalCache.ReserveIndex(keyword, co.ApplicationId);
             }
             Parallel.ForEach(currentObjects, o =>
             {

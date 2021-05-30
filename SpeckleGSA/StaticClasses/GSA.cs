@@ -93,8 +93,8 @@ namespace SpeckleGSA
 
       //Avoid sending telemetry when debugging this code
 #if !DEBUG
-      GSA.App.Messenger.MessageAdded += GSA.ProcessMessageForTelemetry;
-      GSA.App.Proxy.SetAppVersionForTelemetry(speckleGsaAppVersion);
+      GSA.App.LocalMessenger.MessageAdded += GSA.ProcessMessageForTelemetry;
+      GSA.App.LocalProxy.SetAppVersionForTelemetry(speckleGsaAppVersion);
 #endif
 
       InitialiseKits(out List<string> statusMessages);

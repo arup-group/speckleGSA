@@ -143,8 +143,8 @@
           <Button Grid.Row="1" Content="Open File" Padding="10 5" Margin="5 5 5 10" Command="{Binding OpenFileCommand}" />
 					<StackPanel Grid.Row="2" VerticalAlignment="Center">
 						<TextBlock Text="{Binding CurrentlyOpenFileName}" Margin="5" />
-						<Button Content="Save and Close File" Padding="5" Margin="10 5" HorizontalAlignment="Left" 
-										Command="{Binding SaveAndCloseCommand}"/>
+						<Button Content="Save File" Padding="5" Margin="10 5" HorizontalAlignment="Left" 
+										Command="{Binding SaveFileCommand}"/>
           </StackPanel>
 				</Grid>
 			</TabItem>
