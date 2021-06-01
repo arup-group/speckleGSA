@@ -57,7 +57,8 @@ namespace SpeckleGSAUI.ViewModels
 
       if (coordinator.Account != null && coordinator.Account.IsValid)
       {
-        var streamData = await SpeckleInterface.SpeckleStreamManager.GetStreams(coordinator.Account.ServerUrl, coordinator.Account.Token);
+
+        var streamData = await SpeckleInterface.SpeckleStreamManager.GetStreams(coordinator.Account.ServerUrl, coordinator.Account.Token, messenger);
         coordinator.ServerStreamList.StreamListItems.Clear();
         foreach (var sd in streamData)
         {
@@ -85,12 +86,16 @@ namespace SpeckleGSAUI.ViewModels
         {
           if (coordinator.ReceiverTab.ReceiverSidRecords.Count() > 0)
           {
+            var messenger = new ProgressMessenger(loggingProgress);
+
             var invalidSidRecords = new List<SidSpeckleRecord>();
             //Since the buckets are stored in the SID tags, but not the stream names, get the stream names
             foreach (var r in coordinator.ReceiverTab.ReceiverSidRecords)
             {
               
-              var basicStreamData = await SpeckleInterface.SpeckleStreamManager.GetStream(coordinator.Account.ServerUrl, coordinator.Account.Token, r.StreamId);
+              var basicStreamData = await SpeckleInterface.SpeckleStreamManager.GetStream(coordinator.Account.ServerUrl, coordinator.Account.Token, 
+                r.StreamId, messenger);
+
               if (basicStreamData == null)
               {
                 invalidSidRecords.Add(r);
@@ -108,11 +113,14 @@ namespace SpeckleGSAUI.ViewModels
           }
           if (coordinator.SenderTab.SenderSidRecords.Count() > 0)
           {
+            var messenger = new ProgressMessenger(loggingProgress);
+
             var invalidSidRecords = new List<SidSpeckleRecord>();
             //Since the buckets are stored in the SID tags, but not the stream names, get the stream names
             foreach (var r in coordinator.SenderTab.SenderSidRecords)
             {
-              var basicStreamData = await SpeckleInterface.SpeckleStreamManager.GetStream(coordinator.Account.ServerUrl, coordinator.Account.Token, r.StreamId);
+              var basicStreamData = await SpeckleInterface.SpeckleStreamManager.GetStream(coordinator.Account.ServerUrl, coordinator.Account.Token, 
+                r.StreamId, messenger);
               if (basicStreamData == null)
               {
                 invalidSidRecords.Add(r);
@@ -181,8 +189,11 @@ namespace SpeckleGSAUI.ViewModels
 
       Func<string, string, SpeckleInterface.IStreamReceiver> streamReceiverCreationFn = ((url, token) => new SpeckleInterface.StreamReceiver(url, token, messenger));
 
-      gsaReceiverCoordinator.Initialize(coordinator.Account.ServerUrl, coordinator.Account.Token, coordinator.ReceiverTab.ReceiverSidRecords,
-        streamReceiverCreationFn, loggingProgress, statusProgress, percentageProgress);
+      if (!gsaReceiverCoordinator.Initialize(coordinator.Account.ServerUrl, coordinator.Account.Token, coordinator.ReceiverTab.ReceiverSidRecords,
+        streamReceiverCreationFn, loggingProgress, statusProgress, percentageProgress))
+      {
+        return false;
+      }
 
       gsaReceiverCoordinator.Trigger(null, null);
 

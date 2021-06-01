@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using SpeckleGSAInterfaces;
@@ -237,7 +238,7 @@ namespace SpeckleGSA
       List<SidSpeckleRecord> receiverStreamInfo, List<SidSpeckleRecord> senderStreamInfo)
     {
       string key = emailAddress + "&" + serverAddress.Replace(':', '&');
-      string res = GSA.App.Proxy.GetTopLevelSid();
+      string res = proxy.GetTopLevelSid();
 
       List<string[]> sids = Regex.Matches(res, @"(?<={).*?(?=})").Cast<Match>()
               .Select(m => m.Value.Split(new char[] { ':' }))
@@ -281,5 +282,15 @@ namespace SpeckleGSA
       return proxy.SetTopLevelSid(sidRecord);
     }
     #endregion
+
+    public static string GetFullPath(string relative)
+    {
+      if (relative.StartsWith("."))
+      {
+        string sCurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
+        return Path.GetFullPath(Path.Combine(sCurrentDirectory, relative));
+      }
+      return relative;
+    }
   }
 }

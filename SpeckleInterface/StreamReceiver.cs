@@ -37,7 +37,7 @@ namespace SpeckleInterface
     /// </summary>
     /// <param name="streamID">Stream ID of stream</param>
     /// <returns>Task</returns>
-    public async Task InitializeReceiver(string streamId, string documentName, string clientID = "", IProgress<double> totalProgress = null, IProgress<double> incrementProgress = null)
+    public async Task<bool> InitializeReceiver(string streamId, string documentName, string clientID = "", IProgress<double> totalProgress = null, IProgress<double> incrementProgress = null)
     {
       apiClient.StreamId = streamId;
       apiClient.AuthToken = apiToken;
@@ -45,9 +45,15 @@ namespace SpeckleInterface
       await apiClient.IntializeUser();
       this.totalProgress = totalProgress;
 
-	  if (string.IsNullOrEmpty(clientID))
+      //Check if the user has access to this stream in the first place
+      if (GetStream(streamId).Result == null)
       {
-        tryCatchWithEvents(() =>
+        return false;
+      }
+
+      if (string.IsNullOrEmpty(clientID))
+      {
+        if (!tryCatchWithEvents(() =>
         {
           var clientResponse = apiClient.ClientCreateAsync(new AppClient()
           {
@@ -59,7 +65,10 @@ namespace SpeckleInterface
           }).Result;
 
           apiClient.ClientId = clientResponse.Resource._id;
-        }, "", "Unable to create client on server");
+        }, "", "Unable to create client on server"))
+        {
+          return false;
+        }
       }
       else
       {
@@ -86,6 +95,8 @@ namespace SpeckleInterface
       }, "", "Uable to join web socket");
 
       apiClient.OnWsMessage += OnWsMessage;
+
+      return true;
     }
 
     /// <summary>
@@ -95,8 +106,8 @@ namespace SpeckleInterface
     public List<SpeckleObject> GetObjects()
     {
       UpdateGlobal();
-
-      return apiClient.Stream.Objects.Where(o => o != null && !(o is SpecklePlaceholder)).Distinct().ToList();
+      return (apiClient == null || apiClient.Stream == null || apiClient.Stream.Objects == null) ? new List<SpeckleObject>() 
+        : apiClient.Stream.Objects.Where(o => o != null && !(o is SpecklePlaceholder)).Distinct().ToList();
     }
 
     /// <summary>
@@ -143,14 +154,14 @@ namespace SpeckleInterface
 			// Try to get stream
 			ResponseStream streamGetResult = null;
 
-			var exceptionThrown = tryCatchWithEvents(() =>
+			var success = tryCatchWithEvents(() =>
 			{
 				streamGetResult = apiClient.StreamGetAsync(apiClient.StreamId, null).Result;
 			}, "", "Unable to get stream info from server");
 
-			if (!exceptionThrown && streamGetResult.Success == false)
+			if (!success || streamGetResult == null || (streamGetResult != null && streamGetResult.Success == false))
 			{
-				messenger.Message(MessageIntent.Display, MessageLevel.Error, "Failed to receive " + apiClient.Stream.Name + "stream.");
+				messenger.Message(MessageIntent.Display, MessageLevel.Error, "Unable to access " + apiClient.StreamId);
 				return;
 			}
 

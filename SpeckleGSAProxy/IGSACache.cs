@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace SpeckleGSAProxy
 {
-  public interface IGSACache
+  public interface IGSACache : IGSACacheForKit
   {
     bool Upsert(string keyword, int index, string gwa, string applicationId = "", SpeckleObject so = null, GwaSetCommandType gwaSetCommandType = GwaSetCommandType.Set, bool? latest = true, string streamId = null);
 

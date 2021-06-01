@@ -1,5 +1,8 @@
 ﻿using SpeckleCore;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace SpeckleInterface
 {
@@ -23,6 +26,27 @@ namespace SpeckleInterface
 
       apiClient = new SpeckleApiClient() { BaseUrl = serverAddress.ToString() };
       LocalContext.Init();
+    }
+
+    public async Task<StreamBasicData> GetStream(string streamId)
+    {
+      try
+      {
+        var response = await apiClient.StreamGetAsync(streamId, "fields=streamId,name");
+
+        if (response != null && response.Success.HasValue && response.Success.Value
+          && response.Resource != null && response.Resource.StreamId.Equals(streamId, StringComparison.InvariantCultureIgnoreCase))
+        {
+          return new StreamBasicData(response.Resource.StreamId, response.Resource.Name, response.Resource.Owner);
+        }
+      }
+      catch (Exception ex)
+      {
+        messenger.Message(MessageIntent.Display, MessageLevel.Error, "Unable to access stream information for " + streamId);
+        messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, ex, "Unable to access stream information",
+          "BaseUrl=" + apiClient.BaseUrl, "StreamId" + streamId);
+      }
+      return null;
     }
 
     protected bool tryCatchWithEvents(Action action, string msgSuccessful, string msgFailure)

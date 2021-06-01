@@ -4,6 +4,7 @@ using SpeckleGSAInterfaces;
 using SpeckleGSAProxy;
 using SpeckleUtil;
 using System;
+using System.Collections.Generic;
 
 namespace SpeckleGSAUI.Test
 {
@@ -26,11 +27,15 @@ namespace SpeckleGSAUI.Test
 
     public IGSAMessenger Messenger { get => LocalMessenger; }
 
+    private readonly List<string> tolerances = new List<string>() {  "TOL.1", "0.01745506562", "0.01", "0.01", "2", "0.001", "1", "0.01", "2", "0.01745506562", "0.01"};
+
 
     //Default test implementations
-    public MockGSAApp(IGSALocalSettings settings = null, IGSALocalProxy proxy = null, IGSACache cache = null, IGSALocalMessenger messenger = null)
+    public MockGSAApp(IGSALocalSettings settings = null, IGSALocalProxy proxy = null, IGSACache cache = null, IGSALocalMessenger messenger = null,
+      string topLevelSid = "", List<ProxyGwaLine> proxyGwaLines = null)
     {
       LocalCache = cache ?? new GSACache();
+      Cache = LocalCache;
       LocalSettings = settings ?? new MockSettings();
       if (proxy == null)
       {
@@ -46,8 +51,10 @@ namespace SpeckleGSAUI.Test
           .Returns(new Func<string, GSAEntity, int[]>(MockGSAProxyMethods.ConvertGSAList));
         mockProxy.SetupGet(x => x.GwaDelimiter).Returns(GSAProxy.GwaDelimiter);
         mockProxy.Setup(x => x.GetUnits()).Returns("m");
-        mockProxy.Setup(x => x.GetTopLevelSid()).Returns("");
+        mockProxy.Setup(x => x.GetTopLevelSid()).Returns(string.Join("/t", "SID.1", topLevelSid));
         mockProxy.Setup(x => x.SetTopLevelSid(It.IsAny<string>())).Returns(true);
+        mockProxy.Setup(x => x.GetTolerances()).Returns(tolerances.ToArray());
+        mockProxy.Setup(x => x.GetGwaData(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>(), It.IsAny<IProgress<int>>())).Returns(proxyGwaLines);
 
         LocalProxy = mockProxy.Object;
       }

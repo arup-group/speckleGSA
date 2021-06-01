@@ -2,32 +2,42 @@
 using SpeckleInterface;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace SpeckleGSAUI.Test
 {
   class TestSpeckleGSASender : IStreamSender
   {
-    private string clientId;
-    private string streamId;
-    private string streamName;
-    public Dictionary<string, List<object>> sentObjects = new Dictionary<string, List<object>>();
+    public string StreamName { get; private set; }
 
-    public string StreamId { get => streamId; }
+    public Dictionary<string, List<object>> SentObjects = new Dictionary<string, List<object>>();
+
+    public string StreamId { get; private set; }
+    public string Token { get; set; }
+
+    public string ServerAddress = "https://test.speckle.works";
 
     public string ClientId { get => clientId; }
 
-    public void Dispose()
-    {
-      ;
-    }
+    private string clientId;
 
-    public Task InitializeSender(string documentName, BasePropertyUnits units, double tolerance, double angleTolerance, string streamID = "",
-      string clientID = "", string streamName = "", IProgress<int> totalProgress = null, IProgress<int> incrementProgress = null)
+    private static Random random = new Random();
+    
+    public Task InitializeSender(string documentName, BasePropertyUnits units, double tolerance, double angleTolerance, string streamId = "",
+      string clientId = "", string streamName = "", IProgress<int> totalProgress = null, IProgress<int> incrementProgress = null)
     {
-      this.streamId = streamID;
-      this.clientId = clientID;
-      this.streamName = streamName;
+      if (string.IsNullOrEmpty(clientId))
+      {
+        //Just like the real thing, this simulates the creation of a stream if the client ID is not present
+        this.StreamId = RandomString(8);
+      }
+      else
+      {
+        this.StreamId = streamId;
+      }
+      this.clientId = clientId;
+      this.StreamName = streamName;
       return Task.CompletedTask;
     }
 
@@ -36,19 +46,37 @@ namespace SpeckleGSAUI.Test
     {
       foreach (var key in value.Keys)
       {
-        if (!sentObjects.ContainsKey(key))
+        if (!SentObjects.ContainsKey(key))
         {
-          sentObjects.Add(key, new List<object>());
+          SentObjects.Add(key, new List<object>());
         }
-        sentObjects[key].AddRange(value[key]);
+        SentObjects[key].AddRange(value[key]);
       }
       return 0;
     }
 
     public Task UpdateName(string streamName)
     {
-      this.streamName = streamName;
+      this.StreamName = streamName;
       return Task.CompletedTask;
     }
+
+    public async Task<StreamBasicData> GetStream(string streamId)
+    {
+      return new StreamBasicData(streamId, "", "");
+    }
+
+    private string RandomString(int length)
+    {
+      const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+      return new string(Enumerable.Repeat(chars, length)
+        .Select(s => s[random.Next(s.Length)]).ToArray());
+    }
+
+    public void Dispose()
+    {
+
+    }
+
   }
 }

@@ -38,26 +38,24 @@ namespace SpeckleGSA
     /// <param name="restApi">Server address</param>
     /// <param name="apiToken">API token of account</param>
     /// <returns>Task</returns>
-    public List<string> Initialize(string restApi, string apiToken, List<SidSpeckleRecord> receiverStreamInfo,
+    public bool Initialize(string restApi, string apiToken, List<SidSpeckleRecord> receiverStreamInfo,
       Func<string, string, SpeckleInterface.IStreamReceiver> streamReceiverCreationFn, 
       IProgress<MessageEventArgs> loggingProgress, IProgress<string> statusProgress, IProgress<double> percentageProgress)
 		{
       StreamReceivers.Clear();
-
-      var statusMessages = new List<string>();
 
       this.loggingProgress = loggingProgress;
       this.statusProgress = statusProgress;
 
       this.progressEstimator = new ProgressEstimator(percentageProgress, WorkPhase.CacheRead, 3, WorkPhase.CacheUpdate, 1, WorkPhase.ApiCalls, 3, WorkPhase.Conversion, 20);
 
-      if (IsInit) return statusMessages;
+      if (IsInit) return true;
 
       var startTime = DateTime.Now;
 			if (!GSA.IsInit)
 			{
         this.loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Error, "GSA link not found."));
-				return statusMessages;
+				return false;
 			}
 
       this.loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Initialising receivers"));
@@ -69,23 +67,37 @@ namespace SpeckleGSA
       // Create receivers
       statusProgress.Report("Accessing streams");
 
+      int failedInitialisations = 0;
       foreach (var streamInfo in receiverStreamInfo.Where(r => !string.IsNullOrEmpty(r.StreamId)))
 			{
-        StreamReceivers.Add(streamInfo.StreamId, streamReceiverCreationFn(restApi, apiToken));
-        StreamReceivers[streamInfo.StreamId].InitializeReceiver(streamInfo.StreamId, streamInfo.Bucket).Wait();
-        StreamReceivers[streamInfo.StreamId].UpdateGlobalTrigger += Trigger;
+        var streamReceiver = streamReceiverCreationFn(restApi, apiToken);
+        if (streamReceiver.InitializeReceiver(streamInfo.StreamId, streamInfo.Bucket).Result)
+        {
+          StreamReceivers.Add(streamInfo.StreamId, streamReceiver);
+          StreamReceivers[streamInfo.StreamId].UpdateGlobalTrigger += Trigger;
+        }
+        else
+        {
+          failedInitialisations++;
+        }
 			};
+
+      statusProgress.Report("Ready to receive");
+
+      if (failedInitialisations > 0)
+      {
+        return false;
+      }
+
+      IsInit = true;
 
       TimeSpan duration = DateTime.Now - startTime;
       this.loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Duration of initialisation: " + duration.ToString(@"hh\:mm\:ss")));
       this.loggingProgress.Report(new MessageEventArgs(MessageIntent.Telemetry, MessageLevel.Information, "receive", "initialisation", "duration", duration.ToString(@"hh\:mm\:ss")));
 
-      statusProgress.Report("Ready to receive");
-			IsInit = true;
-
       GSA.App.LocalProxy.SetUnits(GSA.App.Settings.Units);
 
-			return statusMessages;
+			return true;
 		}
 
     /// <summary>

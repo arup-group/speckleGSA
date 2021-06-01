@@ -161,19 +161,22 @@ namespace SpeckleGSA
       //Now check if any streams need to be created
       if (bucketsToCreate.Count() > 0)
       {
-        var sidRecordByBucket = savedSenderSidRecords.ToDictionary(r => r.Bucket, r => r);
         if (savedSenderSidRecords != null && savedSenderSidRecords.Count() > 0)
         {
+          var sidRecordByBucket = savedSenderSidRecords.ToDictionary(r => r.Bucket, r => r);
+
           var savedBuckets = sidRecordByBucket.Keys.ToList();
           var reuseBuckets = sidRecordByBucket.Keys.Where(ssn => bucketsToCreate.Any(sn => ssn.Equals(sn, StringComparison.InvariantCultureIgnoreCase))).ToList();
           var discardStreamNames = sidRecordByBucket.Keys.Except(reuseBuckets);
           foreach (var bucket in reuseBuckets)
           {
-            var basicStreamData = SpeckleStreamManager.GetStream(restApi, apiToken, sidRecordByBucket[bucket].StreamId).Result;
+            var sender = gsaSenderCreator(restApi, apiToken);
+            var basicStreamData = sender.GetStream(sidRecordByBucket[bucket].StreamId).Result;
             if (basicStreamData != null)
-            {
-              Senders.Add(bucket, gsaSenderCreator(restApi, apiToken));
-              await Senders[bucket].InitializeSender(documentName, basePropertyUnits, tolerance, angleTolerance, sidRecordByBucket[bucket].StreamId, sidRecordByBucket[bucket].ClientId);
+            { 
+              await sender.InitializeSender(documentName, basePropertyUnits, tolerance, angleTolerance, sidRecordByBucket[bucket].StreamId, sidRecordByBucket[bucket].ClientId);
+
+              Senders.Add(bucket, sender);
 
               bucketsToCreate.Remove(bucket);
             }
@@ -410,7 +413,7 @@ namespace SpeckleGSA
         for (int i = 0; i < data.Count(); i++)
         {
           var applicationId = (string.IsNullOrEmpty(data[i].ApplicationId)) ? null : data[i].ApplicationId;
-          GSA.App.Cache.Upsert(
+          GSA.App.LocalCache.Upsert(
             data[i].Keyword,
             data[i].Index,
             data[i].GwaWithoutSet,

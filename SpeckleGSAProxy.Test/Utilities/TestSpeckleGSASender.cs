@@ -50,5 +50,10 @@ namespace SpeckleGSAProxy.Test
       this.streamName = streamName;
       return Task.CompletedTask;
     }
+
+    public async Task<StreamBasicData> GetStream(string streamId)
+    {
+      return await Task.FromResult(new StreamBasicData(streamId, "", ""));
+    }
   }
 }

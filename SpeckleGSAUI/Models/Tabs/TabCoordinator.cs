@@ -37,6 +37,8 @@ namespace SpeckleGSAUI.Models
 
     public void Init()
     {
+      GSA.Reset();
+
       GSA.Init(getRunningVersion().ToString());
       SpeckleInitializer.Initialize();
       LocalContext.Init();
@@ -86,57 +88,6 @@ namespace SpeckleGSAUI.Models
       }
 
       return true;
-
-      /*
-      try
-      {
-        string key = Account.EmailAddress + "&" + Account.ServerUrl.Replace(':', '&');
-
-        string res = GSA.App.Proxy.GetTopLevelSid();
-
-        if (res == "")
-        {
-          return true;
-        }
-
-        List<string[]> sids = Regex.Matches(res, @"(?<={).*?(?=})").Cast<Match>()
-                .Select(m => m.Value.Split(new char[] { ':' }))
-                .Where(s => s.Length == 2)
-                .ToList();
-
-        string[] senderList = sids.Where(s => s[0] == "SpeckleSender&" + key).FirstOrDefault();
-        string[] receiverList = sids.Where(s => s[0] == "SpeckleReceiver&" + key).FirstOrDefault();
-
-        if (senderList != null && !string.IsNullOrEmpty(senderList[1]))
-        {
-          string[] senders = senderList[1].Split(new char[] { '&' });
-
-          for (int i = 0; i < senders.Length; i += 3)
-          {
-            SenderTab.SenderSidRecords.Add(new SidSpeckleRecord(senders[i + 1], senders[i], senders[i + 2]));
-          }
-        }
-
-        if (receiverList != null && !string.IsNullOrEmpty(receiverList[1]))
-        {
-          string[] receivers = receiverList[1].Split(new char[] { '&' });
-
-          for (int i = 0; i < receivers.Length; i += 2)
-          {
-            ReceiverTab.ReceiverSidRecords.Add(new SidSpeckleRecord(receivers[i], receivers[i + 1]));
-          }
-        }
-
-        ReceiverTab.SidRecordsToStreamList();
-        SenderTab.SidRecordsToStreamList();
-        return true;
-      }
-      catch
-      {
-        return false;
-      }
-      throw new NotImplementedException();
-      */
     }
 
     internal bool WriteStreamInfo()

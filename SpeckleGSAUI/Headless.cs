@@ -18,7 +18,8 @@ namespace SpeckleGSAUI
   public class Headless
   {
     public static Func<string, string, SpeckleInterface.IStreamReceiver> streamReceiverCreationFn = ((url, token) => new SpeckleInterface.StreamReceiver(url, token, ProgressMessenger));
-    public static Func<string, string, SpeckleInterface.IStreamSender> streamSenderCreatorFn = ((url, token) => new SpeckleInterface.StreamSender(url, token, ProgressMessenger));
+    //public static Func<string, string, SpeckleInterface.IStreamSender> streamSenderCreationFn = ((url, token) => new SpeckleInterface.StreamSender(url, token, ProgressMessenger));
+    public static Func<string, string, SpeckleInterface.IStreamSender> streamSenderCreationFn;
     public static IProgress<MessageEventArgs> loggingProgress = new Progress<MessageEventArgs>();
     public static SpeckleInterface.ISpeckleAppMessenger ProgressMessenger = new ProgressMessenger(loggingProgress);
 
@@ -124,16 +125,30 @@ namespace SpeckleGSAUI
       GSA.App.LocalSettings.LoggingMinimumLevel = 4;  //Debug
       GSA.App.Settings.TargetLayer = (arguments.ContainsKey("layer") && (arguments["layer"].ToLower() == "analysis")) ? GSATargetLayer.Analysis : GSATargetLayer.Design;
 
+      //This ensures that if multiple CLI calls are made sequentially from any process, that there is no carry over of static variable values
+      //from previous calls
+      GSA.Reset();
+
       GSA.Init(getRunningVersion().ToString());
       GSA.App.LocalMessenger.MessageAdded += this.ProcessMessage;
       SpeckleCore.SpeckleInitializer.Initialize();
       
       List<SidSpeckleRecord> receiverStreamInfo;
       List<SidSpeckleRecord> senderStreamInfo;
+
+      var fileArg = arguments["file"];
+      var filePath = fileArg.StartsWith(".") ? Path.Combine(AssemblyDirectory, fileArg) : fileArg;
+
       // GSA File
-      if (File.Exists(arguments["file"]))
+      if (File.Exists(filePath))
       {
-        OpenFile(arguments["file"], EmailAddress, RestApi, out receiverStreamInfo, out senderStreamInfo, false);
+        OpenFile(filePath, EmailAddress, RestApi, out receiverStreamInfo, out senderStreamInfo, false);
+      }
+      else if (cliMode == "sender")
+      {
+        Console.WriteLine("Could not locate file: " + filePath);
+        //sending needs the file to exist
+        return false;
       }
       else
       {
@@ -144,7 +159,7 @@ namespace SpeckleGSAUI
         GSA.App.Messenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "Created new file.");
 
         //Ensure this new file has a file name
-        GSA.App.Proxy.SaveAs(arguments["file"]);
+        GSA.App.Proxy.SaveAs(filePath);
       }
 
       var calibrateNodeAtTask = Task.Run(() => GSAProxy.CalibrateNodeAt());
@@ -199,7 +214,12 @@ namespace SpeckleGSAUI
 
       var messenger = new ProgressMessenger(new Progress<MessageEventArgs>());
       Func<string, string, SpeckleInterface.IStreamReceiver> streamReceiverCreationFn = ((url, token) => new SpeckleInterface.StreamReceiver(url, token, messenger));
-      gsaReceiverCoordinator.Initialize(RestApi, ApiToken, receiverStreamInfo, Headless.streamReceiverCreationFn, new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>());
+      if (!gsaReceiverCoordinator.Initialize(RestApi, ApiToken, receiverStreamInfo, Headless.streamReceiverCreationFn, 
+        new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>()))
+      {
+        Console.WriteLine("Unable to set up connection with the server for the specified streams");
+        return false;
+      }
 
       HelperFunctions.SetSidSpeckleRecords(EmailAddress, RestApi, GSA.App.Proxy, receiverStreamInfo, null);
 
@@ -230,6 +250,7 @@ namespace SpeckleGSAUI
       if (arguments.ContainsKey("separateStreams"))
       {
         GSA.App.LocalSettings.SeparateStreams = true;
+        GSA.App.Settings.EmbedResults = false;
       }
       if (arguments.ContainsKey("resultOnly"))
       {
@@ -287,13 +308,22 @@ namespace SpeckleGSAUI
       //GSA.GetSpeckleClients(EmailAddress, RestApi);
       var gsaSenderCoordinator = new SenderCoordinator();
       gsaSenderCoordinator.Initialize(RestApi, ApiToken, (savedSenderStreamInfo == null || savedSenderStreamInfo.Count() == 0) ? null : savedSenderStreamInfo,
-        streamSenderCreatorFn, loggingProgress, new Progress<string>(), new Progress<double>(), new Progress<SidSpeckleRecord>(), new Progress<SidSpeckleRecord>());
+        streamSenderCreationFn, loggingProgress, new Progress<string>(), new Progress<double>(), new Progress<SidSpeckleRecord>(), new Progress<SidSpeckleRecord>());
+      gsaSenderCoordinator.Trigger().Wait();
+      //The Trigger method creates the senders, so need to wait until that is finished before saving the sender info to the file
       HelperFunctions.SetSidSpeckleRecords(EmailAddress, RestApi, GSA.App.Proxy, null,
         gsaSenderCoordinator.Senders.Keys.Select(k => new SidSpeckleRecord(gsaSenderCoordinator.Senders[k].StreamId, k, gsaSenderCoordinator.Senders[k].ClientId)).ToList());
-      gsaSenderCoordinator.Trigger().Wait();
+
       gsaSenderCoordinator.Dispose();
 
-      GSA.App.Proxy.SaveAs(arguments["file"]);
+      var filePath = arguments["file"];
+      if (filePath.StartsWith("."))
+      {
+        string sCurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
+        filePath = Path.GetFullPath(Path.Combine(sCurrentDirectory, filePath));
+      }
+
+      GSA.App.Proxy.SaveAs(filePath);
       GSA.App.Proxy.Close();
 
       Console.WriteLine("Sending complete");
@@ -360,6 +390,17 @@ namespace SpeckleGSAUI
       }
 
       GSA.App.Messenger.Message(SpeckleGSAInterfaces.MessageIntent.Display, MessageLevel.Information, "Opened new file.");
+    }
+
+    private static string AssemblyDirectory
+    {
+      get
+      {
+        string codeBase = Assembly.GetExecutingAssembly().CodeBase;
+        UriBuilder uri = new UriBuilder(codeBase);
+        string path = Uri.UnescapeDataString(uri.Path);
+        return Path.GetDirectoryName(path);
+      }
     }
   }
 }
