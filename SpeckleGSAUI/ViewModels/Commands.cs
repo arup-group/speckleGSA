@@ -197,7 +197,8 @@ namespace SpeckleGSAUI.ViewModels
 
       gsaReceiverCoordinator.Trigger(null, null);
 
-      gsaReceiverCoordinator.Dispose();
+      //Unlike for sending, the command itself doesn't dispose of the (receiver) coordinator here, as in the case of continuous mode it needs to persist as it needs
+      //a constant web socket connection
 
       coordinator.WriteStreamInfo();
 

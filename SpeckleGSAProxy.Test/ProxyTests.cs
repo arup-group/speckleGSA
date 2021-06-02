@@ -55,7 +55,6 @@ namespace SpeckleGSAProxy.Test
       type: "Polyline/Structural1DElementPolyline",	23
     */
 
-
     [Test]
     public void UnitCalibrationsTest()
     {

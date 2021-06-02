@@ -7,20 +7,6 @@ using SpeckleCore;
 
 namespace SpeckleInterface
 {
-  public class StreamBasicData
-  {
-    public string Name { get; set; }
-    public string StreamId { get; set; }
-    public string ClientId { get; set; }
-
-    public StreamBasicData(string streamId, string name, string clientId)
-    {
-      this.Name = name;
-      this.StreamId = streamId;
-      this.ClientId = clientId;
-    }
-  }
-
   /// <summary>
   /// Performs operations on Speckle streams.
   /// </summary>
@@ -33,7 +19,7 @@ namespace SpeckleInterface
     /// <param name="restApi">Server address</param>
     /// <param name="apiToken">API token for account</param>
     /// <returns>List of tuple containing the name and the streamID of each stream</returns>
-    public static async Task<List<StreamBasicData>> GetStreams(string restApi, string apiToken, ISpeckleAppMessenger messenger)
+    public static async Task<List<SpeckleStream>> GetStreams(string restApi, string apiToken, ISpeckleAppMessenger messenger)
     {
       SpeckleApiClient myClient = new SpeckleApiClient() { BaseUrl = restApi, AuthToken = apiToken };
 
@@ -41,11 +27,11 @@ namespace SpeckleInterface
       {
         ResponseStream response = await myClient.StreamsGetAllAsync("limit=500&sort=-updatedAt&parent=&fields=name,streamId,parent");
 
-        List<StreamBasicData> ret = new List<StreamBasicData>();
+        List<SpeckleStream> ret = new List<SpeckleStream>();
 
         foreach (SpeckleStream s in response.Resources.Where(r => r.Parent == null))
         {
-          ret.Add(new StreamBasicData(s.StreamId, s.Name, s.Owner));
+          ret.Add(s);
         }
 
         return ret;
@@ -62,7 +48,7 @@ namespace SpeckleInterface
       return null;
     }
 
-    public static async Task<StreamBasicData> GetStream(string restApi, string apiToken, string streamId, ISpeckleAppMessenger messenger)
+    public static async Task<SpeckleStream> GetStream(string restApi, string apiToken, string streamId, ISpeckleAppMessenger messenger)
     {
       SpeckleApiClient myClient = new SpeckleApiClient() { BaseUrl = restApi, AuthToken = apiToken };
 
@@ -73,7 +59,7 @@ namespace SpeckleInterface
         if (response != null && response.Success.HasValue && response.Success.Value
           && response.Resource != null && response.Resource.StreamId.Equals(streamId, StringComparison.InvariantCultureIgnoreCase))
         {
-          return new StreamBasicData(response.Resource.StreamId, response.Resource.Name, response.Resource.Owner);
+          return response.Resource;
         }
       }
       catch (Exception ex)
@@ -88,34 +74,6 @@ namespace SpeckleInterface
       }
       return null;
     }
-
-    /*
-  public static async Task<bool> CheckStreamOnServer(string restApi, string apiToken, string streamId)
-  {
-    SpeckleApiClient myClient = new SpeckleApiClient() { BaseUrl = restApi, AuthToken = apiToken };
-
-    var response = await myClient.StreamGetAsync(streamId, "fields=streamId");
-    if (response != null && response.Success.HasValue && response.Success.Value
-      && response.Resource != null && response.Resource.StreamId.Equals(streamId, StringComparison.InvariantCultureIgnoreCase))
-    {
-      return true;
-    }
-    return false;
-  }
-
-  public static async Task<string> GetStreamName(string restApi, string apiToken, string streamId)
-  {
-    SpeckleApiClient myClient = new SpeckleApiClient() { BaseUrl = restApi, AuthToken = apiToken };
-
-    var response = await myClient.StreamGetAsync(streamId, "fields=name");
-    if (response != null && response.Success.HasValue && response.Success.Value
-      && response.Resource != null && response.Resource.StreamId.Equals(streamId, StringComparison.InvariantCultureIgnoreCase))
-    {
-      return response.Resource.Name;
-    }
-    return null;
-  }
-  */
 
     public static async Task<string> GetClientName(string restApi, string apiToken, ISpeckleAppMessenger messenger)
     {

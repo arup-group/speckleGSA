@@ -23,23 +23,7 @@ namespace SpeckleGSAUI.Test
     private string clientId;
 
     private static Random random = new Random();
-    
-    public Task InitializeSender(string documentName, BasePropertyUnits units, double tolerance, double angleTolerance, string streamId = "",
-      string clientId = "", string streamName = "", IProgress<int> totalProgress = null, IProgress<int> incrementProgress = null)
-    {
-      if (string.IsNullOrEmpty(clientId))
-      {
-        //Just like the real thing, this simulates the creation of a stream if the client ID is not present
-        this.StreamId = RandomString(8);
-      }
-      else
-      {
-        this.StreamId = streamId;
-      }
-      this.clientId = clientId;
-      this.StreamName = streamName;
-      return Task.CompletedTask;
-    }
+   
 
     //objects by layer name
     public int SendObjects(Dictionary<string, List<SpeckleObject>> value, int maxPayloadBytes = 0, int apiTimeoutOverride = 0, int numParallel = 0)
@@ -55,15 +39,10 @@ namespace SpeckleGSAUI.Test
       return 0;
     }
 
-    public Task UpdateName(string streamName)
+    public Task<bool> UpdateName(string streamName)
     {
       this.StreamName = streamName;
-      return Task.CompletedTask;
-    }
-
-    public async Task<StreamBasicData> GetStream(string streamId)
-    {
-      return new StreamBasicData(streamId, "", "");
+      return Task.FromResult(true);
     }
 
     private string RandomString(int length)
@@ -78,5 +57,19 @@ namespace SpeckleGSAUI.Test
 
     }
 
+    public bool InitializeSender(string documentName, string streamName, BasePropertyUnits units, double tolerance, double angleTolerance, IProgress<int> totalProgress, IProgress<int> incrementProgress)
+    {
+      //Just like the real thing, this simulates the creation of a stream if the client ID is not present
+      this.StreamId = RandomString(8);
+      this.StreamName = streamName;
+      return true;
+    }
+
+    public bool InitializeSender(string documentName, string streamId, string clientId, IProgress<int> totalProgress, IProgress<int> incrementProgress)
+    {
+      this.StreamId = streamId;
+      this.clientId = clientId;
+      return true;
+    }
   }
 }

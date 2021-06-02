@@ -67,11 +67,17 @@ namespace SpeckleGSA
       // Create receivers
       statusProgress.Report("Accessing streams");
 
+      //TO DO - expand in the future
+      Progress<int> incrementProgress = new Progress<int>();
+      //incrementProgress.ProgressChanged += <some function which updates the progressEstimator>
+      Progress<int> totalProgress = new Progress<int>();
+      //totalProgress.ProgressChanged += <some function which updates the progressEstimator>
+
       int failedInitialisations = 0;
       foreach (var streamInfo in receiverStreamInfo.Where(r => !string.IsNullOrEmpty(r.StreamId)))
 			{
         var streamReceiver = streamReceiverCreationFn(restApi, apiToken);
-        if (streamReceiver.InitializeReceiver(streamInfo.StreamId, streamInfo.Bucket).Result)
+        if (streamReceiver.InitializeReceiver(streamInfo.StreamId, streamInfo.Bucket, totalProgress, incrementProgress).Result)
         {
           StreamReceivers.Add(streamInfo.StreamId, streamReceiver);
           StreamReceivers[streamInfo.StreamId].UpdateGlobalTrigger += Trigger;

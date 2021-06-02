@@ -88,11 +88,6 @@ namespace SpeckleGSA
 
       var startTime = DateTime.Now;
 
-      Progress<int> incrementProgress = new Progress<int>();
-      incrementProgress.ProgressChanged += IncorporateSendPayloadProgress;
-      Progress<int> totalProgress = new Progress<int>();
-      totalProgress.ProgressChanged += IncorporateNewNumPayloadsProgress;
-
       IsInit = true;
 
       return;
@@ -161,6 +156,11 @@ namespace SpeckleGSA
       //Now check if any streams need to be created
       if (bucketsToCreate.Count() > 0)
       {
+        Progress<int> incrementProgress = new Progress<int>();
+        incrementProgress.ProgressChanged += IncorporateSendPayloadProgress;
+        Progress<int> totalProgress = new Progress<int>();
+        totalProgress.ProgressChanged += IncorporateNewNumPayloadsProgress;
+
         if (savedSenderSidRecords != null && savedSenderSidRecords.Count() > 0)
         {
           var sidRecordByBucket = savedSenderSidRecords.ToDictionary(r => r.Bucket, r => r);
@@ -171,11 +171,9 @@ namespace SpeckleGSA
           foreach (var bucket in reuseBuckets)
           {
             var sender = gsaSenderCreator(restApi, apiToken);
-            var basicStreamData = sender.GetStream(sidRecordByBucket[bucket].StreamId).Result;
-            if (basicStreamData != null)
+            var initialised = sender.InitializeSender(documentName, sidRecordByBucket[bucket].StreamId, sidRecordByBucket[bucket].ClientId, totalProgress, incrementProgress);
+            if (initialised)
             { 
-              await sender.InitializeSender(documentName, basePropertyUnits, tolerance, angleTolerance, sidRecordByBucket[bucket].StreamId, sidRecordByBucket[bucket].ClientId);
-
               Senders.Add(bucket, sender);
 
               bucketsToCreate.Remove(bucket);
@@ -189,10 +187,15 @@ namespace SpeckleGSA
 
         foreach (var sn in bucketsToCreate)
         {
-          Senders.Add(sn, gsaSenderCreator(restApi, apiToken));
           var streamName = string.IsNullOrEmpty(documentTitle) ? "GSA " + sn : documentTitle + " (" + sn + ")";
-          await Senders[sn].InitializeSender(documentName, basePropertyUnits, tolerance, angleTolerance, streamName: streamName);
-          streamCreationProgress.Report(new SidSpeckleRecord(Senders[sn].StreamId, sn, Senders[sn].ClientId, streamName));
+
+          var sender = gsaSenderCreator(restApi, apiToken);
+          var initialised = sender.InitializeSender(documentName, streamName, basePropertyUnits, tolerance, angleTolerance, totalProgress, incrementProgress);
+          if (initialised)
+          {
+            Senders.Add(sn, sender);
+            streamCreationProgress.Report(new SidSpeckleRecord(Senders[sn].StreamId, sn, Senders[sn].ClientId, streamName));
+          }
         }
       }
 

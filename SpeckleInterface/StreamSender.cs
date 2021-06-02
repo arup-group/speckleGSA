@@ -20,113 +20,86 @@ namespace SpeckleInterface
     private int apiTimeoutOverride = DEFAULT_API_TIMEOUT;
     private int numParallelApiRequests = DEFAULT_PARALLEL_API_REQUESTS;
 
-    private BasePropertyUnits units;
-    private double tolerance;
-    private double angleTolerance;
     private IProgress<int> incrementProgress;
     private IProgress<int> totalProgress;
-
-    private Dictionary<string, object> BaseProperties  { get => new Dictionary<string, object>()
-    {
-      { "units", this.units.ToString() },
-      { "tolerance", this.tolerance },
-      { "angleTolerance", this.angleTolerance }
-    }; }
 
     /// <summary>
     /// Create SpeckleGSASender object.
     /// </summary>
     /// <param name="serverAddress">Server address</param>
     /// <param name="apiToken">API token</param>
-    public StreamSender(string serverAddress, string apiToken, ISpeckleAppMessenger messenger) : base(serverAddress, apiToken, messenger)
+    public StreamSender(string serverAddress, string apiToken, ISpeckleAppMessenger messenger) : base(serverAddress, apiToken, messenger)  {  }
+
+    public bool InitializeSender(string documentName, string streamName, BasePropertyUnits units, double tolerance, double angleTolerance, 
+      IProgress<int> totalProgress, IProgress<int> incrementProgress)
     {
-
-    }
-
-    /// <summary>
-    /// Initializes sender.
-    /// </summary>
-    /// <param name="streamId">Stream ID of stream. If no stream ID is given, a new stream is created.</param>
-    /// <param name="streamName">Stream name</param>
-    /// <returns>Task</returns>
-    public async Task InitializeSender(string documentName, BasePropertyUnits units, double tolerance, double angleTolerance, 
-      string streamId = "", string clientId = "", string streamName = "", IProgress<int> totalProgress = null, IProgress<int> incrementProgress = null)
-    {
-      apiClient.AuthToken = apiToken;
-      await apiClient.IntializeUser();
-
-      this.units = units;
-      this.tolerance = tolerance;
-      this.angleTolerance = angleTolerance;
       this.totalProgress = totalProgress;
       this.incrementProgress = incrementProgress;
 
-      if (string.IsNullOrEmpty(clientId))
+      tryCatchWithEvents(() =>
       {
-        tryCatchWithEvents(() =>
-        {
-          var streamResponse = apiClient.StreamCreateAsync(new SpeckleStream(), timeoutMillisecondsOverride: DEFAULT_API_TIMEOUT).Result;
-          apiClient.Stream = streamResponse.Resource;
-          apiClient.StreamId = streamResponse.Resource.StreamId;
-        },
+        var streamToCreate = new SpeckleStream() { BaseProperties = CreateBaseProperties(units, tolerance, angleTolerance), Name = streamName };
+        var streamResponse = apiClient.StreamCreateAsync(streamToCreate, timeoutMillisecondsOverride: DEFAULT_API_TIMEOUT).Result;
+        apiClient.Stream = streamResponse.Resource;
+        apiClient.StreamId = apiClient.Stream.StreamId;
+      },
         "", "Unable to create stream on the server");
 
-        tryCatchWithEvents(() =>
-        {
-          var clientResponse = apiClient.ClientCreateAsync(new AppClient()
-          {
-            DocumentName = documentName,
-            DocumentType = "GSA",
-            Role = "Sender",
-            StreamId = this.StreamId,
-            Online = true,
-          }, timeoutMillisecondsOverride: DEFAULT_API_TIMEOUT).Result;
-          apiClient.ClientId = clientResponse.Resource._id;
-        }, "", "Unable to create client on the server");
-      }
-      else
-      {
-        tryCatchWithEvents(async () =>
-        {
-          var streamResponse = await apiClient.StreamGetAsync(streamId, null, timeoutMillisecondsOverride: DEFAULT_API_TIMEOUT);
-
-          apiClient.Stream = streamResponse.Resource;
-          apiClient.StreamId = streamResponse.Resource.StreamId;
-        }, "", "Unable to get stream response");
-
-        tryCatchWithEvents(async () =>
-        {
-          var clientResponse = await apiClient.ClientUpdateAsync(clientId, new AppClient()
-          {
-            DocumentName = documentName,
-            Online = true,
-          }, timeoutMillisecondsOverride: DEFAULT_API_TIMEOUT);
-
-          apiClient.ClientId = clientId;
-        }, "", "Unable to update client on the server");
-      }
-
       tryCatchWithEvents(() =>
       {
-        apiClient.SetupWebsocket();
-      }, "", "Unable to set up web socket");
+        var clientResponse = apiClient.ClientCreateAsync(new AppClient()
+        {
+          DocumentName = documentName,
+          DocumentType = "GSA",
+          Role = "Sender",
+          StreamId = this.StreamId,
+          Online = true,
+        }, timeoutMillisecondsOverride: DEFAULT_API_TIMEOUT).Result;
+        apiClient.ClientId = clientResponse.Resource._id;
+      }, "", "Unable to create client on the server");
 
-      tryCatchWithEvents(() =>
+      ConnectWebSocket();
+
+      return true;
+    }
+
+    public bool InitializeSender(string documentName, string streamId, string clientId, IProgress<int> totalProgress, IProgress<int> incrementProgress)
+    {
+      this.totalProgress = totalProgress;
+      this.incrementProgress = incrementProgress;
+
+      tryCatchWithEvents(async () =>
       {
-        apiClient.JoinRoom("stream", streamId);
-      }, "", "Uable to join web socket");
+        var streamResponse = await apiClient.StreamGetAsync(streamId, null, timeoutMillisecondsOverride: DEFAULT_API_TIMEOUT);
+        apiClient.Stream = streamResponse.Resource;
+        apiClient.StreamId = streamId;
+      }, "", "Unable to get stream response");
+
+      tryCatchWithEvents(async () =>
+      {
+        var clientResponse = await apiClient.ClientUpdateAsync(clientId, new AppClient()
+        {
+          DocumentName = documentName,
+          Online = true,
+        }, timeoutMillisecondsOverride: DEFAULT_API_TIMEOUT);
+
+        apiClient.ClientId = clientId;
+      }, "", "Unable to update client on the server");
+
+      ConnectWebSocket();
+
+      return true;
     }
 
     /// <summary>
     /// Update stream name.
     /// </summary>
     /// <param name="streamName">Stream name</param>
-    public async Task UpdateName(string streamName)
+    public async Task<bool> UpdateName(string streamName)
     {
-      var response = await apiClient.StreamUpdateAsync(apiClient.StreamId, new SpeckleStream() { Name = streamName });
-      //apiClient.Stream = response.Resource;
-      //apiClient.StreamId = response.Resource.StreamId;
       apiClient.Stream.Name = streamName;
+      var response = await apiClient.StreamUpdateAsync(apiClient.StreamId, apiClient.Stream);
+      return ((response.Success.HasValue && response.Success.Value));
     }
 
     /// <summary>
@@ -281,12 +254,11 @@ namespace SpeckleInterface
     {
       tryCatchWithEvents(() =>
       {
-        //lock (apiClientLock)
-        {
-          _ = apiClient.ClientUpdateAsync(apiClient.ClientId, new AppClient() { Online = false }).Result;
-        }
+        _ = apiClient.ClientUpdateAsync(apiClient.ClientId, new AppClient() { Online = false }).Result;
       },
         "", "Unable to update client on server with offline status");
+
+      //DisconnectWebSocket();
     }
 
     private List<string> ExtractSpeckleExceptionContext(Exception ex)
@@ -373,19 +345,12 @@ namespace SpeckleInterface
         placeholders.Add(new SpecklePlaceholder() { _id = id });
       }
 
-      SpeckleStream updateStream = new SpeckleStream
-      {
-        Layers = layers,
-        Objects = placeholders,
-        Name = StreamName,
-        BaseProperties = BaseProperties
-      };
+      apiClient.Stream.Objects = placeholders;
+      apiClient.Stream.Layers = layers;
 
       try
       {
-        _ = apiClient.StreamUpdateAsync(StreamId, updateStream).Result;
-        apiClient.Stream.Layers = updateStream.Layers.ToList();
-        apiClient.Stream.Objects = placeholders;
+        _ = apiClient.StreamUpdateAsync(StreamId, apiClient.Stream).Result;
         messenger.Message(MessageIntent.Display, MessageLevel.Information, "Updated the stream's object list on the server", StreamId);
       }
       catch (Exception ex)
@@ -419,7 +384,6 @@ namespace SpeckleInterface
       //var payloadTasks = payloads.Select(p => apiClient.ObjectCreateAsync(p, 30000)).ToArray();
 
       // Send objects which are in payload and add to local DB with updated IDs
-      //foreach (List<SpeckleObject> payload in payloads)
       for (var j = 0; j < payloads.Count(); j++)
       {
         ResponseObject res = null;

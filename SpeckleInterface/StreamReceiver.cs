@@ -16,10 +16,11 @@ namespace SpeckleInterface
 
     public event EventHandler<EventArgs> UpdateGlobalTrigger;
 
-    public string Units { get => apiClient == null ? null : apiClient.Stream.BaseProperties["units"]; }
+    public string Units { get => (apiClient == null || apiClient.Stream == null || apiClient.Stream.BaseProperties == null) ? null 
+        : apiClient.Stream.BaseProperties["units"]; }
 
-    private IProgress<double> incrementProgress;
-    private IProgress<double> totalProgress;
+    private IProgress<int> incrementProgress;
+    private IProgress<int> totalProgress;
 
     //public string ServerAddress { get => serverAddress; }
 
@@ -28,73 +29,70 @@ namespace SpeckleInterface
     /// </summary>
     /// <param name="serverAddress">Server address</param>
     /// <param name="apiToken">API token</param>
-    public StreamReceiver(string serverAddress, string apiToken, ISpeckleAppMessenger messenger) : base(serverAddress, apiToken, messenger)
-    {
-    }
+    public StreamReceiver(string serverAddress, string apiToken, ISpeckleAppMessenger messenger) : base(serverAddress, apiToken, messenger) { }
 
-    /// <summary>
-    /// Initializes receiver.
-    /// </summary>
-    /// <param name="streamID">Stream ID of stream</param>
-    /// <returns>Task</returns>
-    public async Task<bool> InitializeReceiver(string streamId, string documentName, string clientID = "", IProgress<double> totalProgress = null, IProgress<double> incrementProgress = null)
+    public async Task<bool> InitializeReceiver(string streamId, string documentName, IProgress<int> totalProgress, IProgress<int> incrementProgress)
     {
-      apiClient.StreamId = streamId;
-      apiClient.AuthToken = apiToken;
       this.incrementProgress = incrementProgress;
-      await apiClient.IntializeUser();
       this.totalProgress = totalProgress;
 
+      await apiClient.IntializeUser();
+
       //Check if the user has access to this stream in the first place
-      if (GetStream(streamId).Result == null)
+      if (!(await GetStream(streamId)))
       {
         return false;
       }
 
-      if (string.IsNullOrEmpty(clientID))
+      if (!tryCatchWithEvents(() =>
       {
-        if (!tryCatchWithEvents(() =>
+        var clientResponse = apiClient.ClientCreateAsync(new AppClient()
         {
-          var clientResponse = apiClient.ClientCreateAsync(new AppClient()
-          {
-            DocumentName = documentName,
-            DocumentType = "GSA",
-            Role = "Receiver",
-            StreamId = streamId,
-            Online = true,
-          }).Result;
+          DocumentName = documentName,
+          DocumentType = "GSA",
+          Role = "Receiver",
+          StreamId = streamId,
+          Online = true,
+        }).Result;
 
-          apiClient.ClientId = clientResponse.Resource._id;
-        }, "", "Unable to create client on server"))
-        {
-          return false;
-        }
-      }
-      else
+        apiClient.ClientId = clientResponse.Resource._id;
+      }, "", "Unable to create client on server"))
       {
-        tryCatchWithEvents(() =>
-        {
-          _ = apiClient.ClientUpdateAsync(clientID, new AppClient()
-          {
-            DocumentName = documentName,
-            Online = true,
-          }).Result;
-
-          apiClient.ClientId = clientID;
-        }, "", "Unable to update client on server");
+        return false;
       }
 
-      tryCatchWithEvents(() =>
-      {
-        apiClient.SetupWebsocket();
-      }, "", "Unable to set up web socket");
-
-      tryCatchWithEvents(() =>
-      {
-        apiClient.JoinRoom("stream", streamId);
-      }, "", "Uable to join web socket");
+      ConnectWebSocket();
 
       apiClient.OnWsMessage += OnWsMessage;
+
+      return true;
+    }
+
+    public async Task<bool> InitializeReceiver(string streamId, string documentName, string clientId, IProgress<int> totalProgress, IProgress<int> incrementProgress)
+    {
+      this.incrementProgress = incrementProgress;
+      this.totalProgress = totalProgress;
+
+      await apiClient.IntializeUser();
+
+      //Check if the user has access to this stream in the first place
+      if (!(await GetStream(streamId)))
+      {
+        return false;
+      }
+
+      tryCatchWithEvents(() =>
+      {
+        _ = apiClient.ClientUpdateAsync(clientId, new AppClient()
+        {
+          DocumentName = documentName,
+          Online = true,
+        }).Result;
+
+        apiClient.ClientId = clientId;
+      }, "", "Unable to update client on server");
+
+      ConnectWebSocket();
 
       return true;
     }
@@ -141,8 +139,8 @@ namespace SpeckleInterface
     {
 			tryCatchWithEvents(() =>
 			{
-				var result = apiClient.StreamGetAsync(apiClient.StreamId, "fields=children").Result;
-				apiClient.Stream.Children = result.Resource.Children;
+        var result = apiClient.StreamGetAsync(apiClient.StreamId, "fields=children").Result;
+        apiClient.Stream.Children = result.Resource.Children;
 			}, "", "Unable to get children of stream");
     }
 
@@ -156,8 +154,8 @@ namespace SpeckleInterface
 
 			var success = tryCatchWithEvents(() =>
 			{
-				streamGetResult = apiClient.StreamGetAsync(apiClient.StreamId, null).Result;
-			}, "", "Unable to get stream info from server");
+        streamGetResult = apiClient.StreamGetAsync(apiClient.StreamId, null).Result;
+      }, "", "Unable to get stream info from server");
 
 			if (!success || streamGetResult == null || (streamGetResult != null && streamGetResult.Success == false))
 			{
@@ -165,17 +163,17 @@ namespace SpeckleInterface
 				return;
 			}
 
-			apiClient.Stream = streamGetResult.Resource;
+      apiClient.Stream = streamGetResult.Resource;
 
-			// Store stream data in local DB
-			tryCatchWithEvents(() =>
+      // Store stream data in local DB
+      tryCatchWithEvents(() =>
 			{
-				LocalContext.AddOrUpdateStream(apiClient.Stream, apiClient.BaseUrl);
+        LocalContext.AddOrUpdateStream(apiClient.Stream, apiClient.BaseUrl);
 			}, "", "Unable to add or update stream details into local database");
 
-			string[] payload = apiClient.Stream.Objects.Where(o => o.Type == "Placeholder").Select(o => o._id).ToArray();
+      string[] payload = apiClient.Stream.Objects.Where(o => o.Type == "Placeholder").Select(o => o._id).ToArray();
 
-			List<SpeckleObject> receivedObjects = new List<SpeckleObject>();
+      List<SpeckleObject> receivedObjects = new List<SpeckleObject>();
 
 			// Get remaining objects from server
 			for (int i = 0; i < payload.Length; i += MAX_OBJ_REQUEST_COUNT)
@@ -190,20 +188,27 @@ namespace SpeckleInterface
 				}, "", "Unable to get objects for stream in bulk");
 			}
 
-			foreach (SpeckleObject obj in receivedObjects)
-			{
-				int streamLoc = apiClient.Stream.Objects.FindIndex(o => o._id == obj._id);
-				try
-				{
-					apiClient.Stream.Objects[streamLoc] = obj;
-				}
-				catch
-				{ }
-			}
+      if (apiClient.Stream.Objects == null || apiClient.Stream.Objects.Count() == 0)
+      {
+        apiClient.Stream.Objects = receivedObjects;
+      }
+      else
+      {
+        foreach (SpeckleObject obj in receivedObjects)
+        {
+          var index = apiClient.Stream.Objects.FindIndex(o => o._id == obj._id);
+          if (index >= 0)
+          {
+            apiClient.Stream.Objects[index] = obj;
+          }
+        }
+      }
 
-			messenger.Message(MessageIntent.Display, MessageLevel.Information, 
-				"Received " + apiClient.Stream.Name + " stream with " + apiClient.Stream.Objects.Count() + " objects.");
-		}
+      messenger.Message(MessageIntent.Display, MessageLevel.Information, 
+      	"Received " + apiClient.Stream.Name + " stream with " + apiClient.Stream.Objects.Count() + " objects.");
+
+
+    }
 
     /// <summary>
     /// Dispose the receiver.
@@ -214,6 +219,8 @@ namespace SpeckleInterface
 			{
 				_ = apiClient.ClientUpdateAsync(apiClient.ClientId, new AppClient() { Online = false }).Result;
 			}, "", "Unable to update client on server");
+
+      //DisconnectWebSocket();
     }
   }
 }

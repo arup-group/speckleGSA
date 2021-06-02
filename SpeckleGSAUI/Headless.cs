@@ -17,7 +17,8 @@ namespace SpeckleGSAUI
 {
   public class Headless
   {
-    public static Func<string, string, SpeckleInterface.IStreamReceiver> streamReceiverCreationFn = ((url, token) => new SpeckleInterface.StreamReceiver(url, token, ProgressMessenger));
+    public static Func<string, string, SpeckleInterface.IStreamReceiver> streamReceiverCreationFn 
+      = ((url, token) => new SpeckleInterface.StreamReceiver(url, token, ProgressMessenger));
     //public static Func<string, string, SpeckleInterface.IStreamSender> streamSenderCreationFn = ((url, token) => new SpeckleInterface.StreamSender(url, token, ProgressMessenger));
     public static Func<string, string, SpeckleInterface.IStreamSender> streamSenderCreationFn;
     public static IProgress<MessageEventArgs> loggingProgress = new Progress<MessageEventArgs>();
@@ -206,16 +207,19 @@ namespace SpeckleGSAUI
       var gsaReceiverCoordinator = new ReceiverCoordinator();
 
       var nonBlankReceivers = receiverStreamInfo.Where(r => !string.IsNullOrEmpty(r.StreamId)).ToList();
+      /*
       foreach (var streamInfo in nonBlankReceivers)
       {
         GSA.App.Messenger.Message(MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Information, "Creating receiver " + streamInfo.StreamId);
+        var receiver = streamReceiverCreationFn(RestApi, ApiToken);
+
         gsaReceiverCoordinator.StreamReceivers[streamInfo.StreamId] = new SpeckleInterface.StreamReceiver(RestApi, ApiToken, ProgressMessenger);
       }
+      */
 
       var messenger = new ProgressMessenger(new Progress<MessageEventArgs>());
-      Func<string, string, SpeckleInterface.IStreamReceiver> streamReceiverCreationFn = ((url, token) => new SpeckleInterface.StreamReceiver(url, token, messenger));
-      if (!gsaReceiverCoordinator.Initialize(RestApi, ApiToken, receiverStreamInfo, Headless.streamReceiverCreationFn, 
-        new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>()))
+      //Func<string, string, SpeckleInterface.IStreamReceiver> streamReceiverCreationFn = ((url, token) => new SpeckleInterface.StreamReceiver(url, token, messenger));
+      if (!gsaReceiverCoordinator.Initialize(RestApi, ApiToken, nonBlankReceivers, streamReceiverCreationFn, new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>()))
       {
         Console.WriteLine("Unable to set up connection with the server for the specified streams");
         return false;

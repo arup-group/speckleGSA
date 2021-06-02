@@ -1,7 +1,6 @@
 ﻿using SpeckleCore;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace SpeckleInterface
@@ -10,34 +9,36 @@ namespace SpeckleInterface
   {
     protected readonly ISpeckleAppMessenger messenger;
 
-    public string StreamId { get => apiClient?.StreamId; }
-    public string StreamName => apiClient?.Stream.Name;
+    protected readonly SpeckleApiClient apiClient;
+
+    public string StreamId { get => (apiClient == null || apiClient.Stream == null) ? null : apiClient.Stream.StreamId; }
+    public string StreamName => (apiClient == null || apiClient.Stream == null) ? null : apiClient.Stream.Name;
     public string ClientId => apiClient?.ClientId;
 
-    protected readonly SpeckleApiClient apiClient;
-    protected readonly string apiToken;
     protected readonly bool verboseDisplayLog;
 
     public StreamBase(string serverAddress, string apiToken, ISpeckleAppMessenger messenger, bool verboseDisplayLog = false)
     {
       this.messenger = messenger;
-      this.apiToken = apiToken;
       this.verboseDisplayLog = verboseDisplayLog;
 
-      apiClient = new SpeckleApiClient() { BaseUrl = serverAddress.ToString() };
+      apiClient = new SpeckleApiClient() { BaseUrl = serverAddress.ToString(), AuthToken = apiToken };
       LocalContext.Init();
     }
 
-    public async Task<StreamBasicData> GetStream(string streamId)
+    public async Task<bool> GetStream(string streamId)
     {
       try
       {
-        var response = await apiClient.StreamGetAsync(streamId, "fields=streamId,name");
+        var response = await apiClient.StreamGetAsync(streamId, "fields=streamId,baseProperties");
 
         if (response != null && response.Success.HasValue && response.Success.Value
           && response.Resource != null && response.Resource.StreamId.Equals(streamId, StringComparison.InvariantCultureIgnoreCase))
         {
-          return new StreamBasicData(response.Resource.StreamId, response.Resource.Name, response.Resource.Owner);
+          apiClient.Stream = response.Resource;
+          apiClient.StreamId = StreamId;  //It is a bit strange that there's another streamId here; I think it's necessary to be set here for a server API call later
+          return true;
+          //return new StreamBasicData(response.Resource.StreamId, response.Resource.Name, response.Resource.Owner);
         }
       }
       catch (Exception ex)
@@ -46,7 +47,7 @@ namespace SpeckleInterface
         messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, ex, "Unable to access stream information",
           "BaseUrl=" + apiClient.BaseUrl, "StreamId" + streamId);
       }
-      return null;
+      return false;
     }
 
     protected bool tryCatchWithEvents(Action action, string msgSuccessful, string msgFailure)
@@ -73,6 +74,46 @@ namespace SpeckleInterface
         }
       }
       return success;
+    }
+
+    protected Dictionary<string, object> CreateBaseProperties(BasePropertyUnits units, double tolerance, double angleTolerance)
+    {
+      var unitsMap = new Dictionary<BasePropertyUnits, string>()
+      {
+        { BasePropertyUnits.Centimetres, "Centimeters" },
+        { BasePropertyUnits.Meters, "Meters" },
+        { BasePropertyUnits.Millimetres, "Millimeters" },
+        { BasePropertyUnits.Feet, "Feet" },
+        { BasePropertyUnits.Inches, "Inches" }
+      };
+
+      return new Dictionary<string, object>()
+      {
+        { "units", unitsMap[units] },
+        { "tolerance", tolerance },
+        { "angleTolerance", angleTolerance }
+      };
+    }
+
+    protected void ConnectWebSocket()
+    {
+      tryCatchWithEvents(() =>
+      {
+        apiClient.SetupWebsocket();
+      }, "", "Unable to set up web socket");
+
+      tryCatchWithEvents(() =>
+      {
+        apiClient.JoinRoom("stream", apiClient.StreamId);
+      }, "", "Unable to join web socket");
+    }
+
+    protected void DisconnectWebSocket()
+    {
+      tryCatchWithEvents(() =>
+      {
+        apiClient.LeaveRoom("stream", apiClient.Stream.StreamId);
+      }, "", "Unable to leave web socket");
     }
   }
 }

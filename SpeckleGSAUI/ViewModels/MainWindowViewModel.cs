@@ -339,11 +339,16 @@ namespace SpeckleGSAUI.ViewModels
           else
           {
             //Sender coordinator is in the SpeckleGSA library, NOT the SpeckleInterface.  The sender coordinator calls the SpeckleInterface methods
-            var gsaReceiverCoordinator = new ReceiverCoordinator();  //Coordinates across multiple streams
+            continuousReceiverCoordinator = new ReceiverCoordinator();  //Coordinates across multiple streams
 
             Refresh(() => StateMachine.EnteredReceivingMode(ReceiveStreamMethod));
 
-            var result = await Task.Run(() => Commands.Receive(Coordinator, gsaReceiverCoordinator, streamCreationProgress, loggingProgress, statusProgress, percentageProgress));
+            var result = await Task.Run(() => Commands.Receive(Coordinator, continuousReceiverCoordinator, streamCreationProgress, loggingProgress, statusProgress, percentageProgress));
+
+            if (ReceiveStreamMethod != StreamMethod.Continuous)
+            {
+              continuousReceiverCoordinator.Dispose();
+            }
 
             Refresh(() => StateMachine.StoppedReceiving());
           }

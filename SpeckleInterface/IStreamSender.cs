@@ -10,11 +10,10 @@ namespace SpeckleInterface
     string StreamId { get; }
     string ClientId { get; }
 
-    Task InitializeSender(string documentName, BasePropertyUnits units, double tolerance, double angleTolerance, string streamID = "", 
-      string clientID = "", string streamName = "", IProgress<int> totalProgress = null, IProgress<int> incrementProgress = null);
-    Task UpdateName(string streamName);
+    bool InitializeSender(string documentName, string streamName, BasePropertyUnits units, double tolerance, double angleTolerance, IProgress<int> totalProgress, IProgress<int> incrementProgress);
+    bool InitializeSender(string documentName, string streamId, string clientId, IProgress<int> totalProgress, IProgress<int> incrementProgress);
+    Task<bool> UpdateName(string streamName);
     int SendObjects(Dictionary<string, List<SpeckleObject>> value, int maxPayloadBytes = 0, int apiTimeoutOverrideMilliseconds = 0, int numParallel = 0);
-    Task<StreamBasicData> GetStream(string streamId);
     void Dispose();
   }
 }

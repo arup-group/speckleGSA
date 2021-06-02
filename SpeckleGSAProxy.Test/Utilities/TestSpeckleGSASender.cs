@@ -19,16 +19,6 @@ namespace SpeckleGSAProxy.Test
 
     public void Dispose()
     {
-      ;
-    }
-
-    public Task InitializeSender(string documentName, BasePropertyUnits units, double tolerance, double angleTolerance, string streamID = "",
-      string clientID = "", string streamName = "", IProgress<int> totalProgress = null, IProgress<int> incrementProgress = null)
-    {
-      this.streamId = streamID;
-      this.clientId = clientID;
-      this.streamName = streamName;
-      return Task.CompletedTask;
     }
 
     //objects by layer name
@@ -45,15 +35,24 @@ namespace SpeckleGSAProxy.Test
       return 0;
     }
 
-    public Task UpdateName(string streamName)
+    public bool InitializeSender(string documentName, string streamName, BasePropertyUnits units, double tolerance, double angleTolerance, 
+      IProgress<int> totalProgress, IProgress<int> incrementProgress)
     {
       this.streamName = streamName;
-      return Task.CompletedTask;
+      return true;
     }
 
-    public async Task<StreamBasicData> GetStream(string streamId)
+    public bool InitializeSender(string documentName, string streamId, string clientId, IProgress<int> totalProgress, IProgress<int> incrementProgress)
     {
-      return await Task.FromResult(new StreamBasicData(streamId, "", ""));
+      this.streamId = streamId;
+      this.clientId = clientId;
+      return true;
+    }
+
+    public Task<bool> UpdateName(string streamName)
+    {
+      this.streamName = streamName;
+      return Task.FromResult(true);
     }
   }
 }

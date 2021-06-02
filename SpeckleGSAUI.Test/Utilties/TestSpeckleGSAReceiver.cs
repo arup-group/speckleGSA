@@ -51,7 +51,13 @@ namespace SpeckleGSAUI.Test
 
     public string ObjectUrl(string id) => HelperFunctions.Combine(ServerAddress, "object/" + id);
 
-    public Task<bool> InitializeReceiver(string streamId, string documentName, string clientID = "", IProgress<double> totalProgress = null, IProgress<double> incrementProgress = null)
+    public Task<bool> InitializeReceiver(string streamId, string documentName, string clientID, IProgress<int> totalProgress, IProgress<int> incrementProgress)
+    {
+      this.StreamId = streamId;
+      return Task.FromResult(true);
+    }
+
+    public Task<bool> InitializeReceiver(string streamId, string documentName, IProgress<int> totalProgress, IProgress<int> incrementProgress)
     {
       this.StreamId = streamId;
       return Task.FromResult(true);
