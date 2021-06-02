@@ -372,7 +372,7 @@ namespace SpeckleGSAUI.ViewModels
         (o) =>
         {
           Coordinator.ReceiverTab.StreamList.StreamListItems.Clear();
-          Coordinator.ReceiverTab.SidRecordsToStreamList();
+          Coordinator.ReceiverTab.StreamListToSidRecords();
           Refresh();
         },
         (o) => !StateMachine.StreamFileIsOccupied && ReceiverStreamListItems.Count() > 0);
