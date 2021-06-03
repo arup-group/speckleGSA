@@ -139,8 +139,20 @@ namespace SpeckleGSA
           {
             case MessageLevel.Debug: Log.Debug(messageEventArgs.Exception, string.Join(" ", messageEventArgs.MessagePortions)); break;
             case MessageLevel.Information: Log.Information(messageEventArgs.Exception, string.Join(" ", messageEventArgs.MessagePortions)); break;
-            case MessageLevel.Error: Log.Error(messageEventArgs.Exception, string.Join(" ", messageEventArgs.MessagePortions)); break;
-            case MessageLevel.Fatal: Log.Fatal(messageEventArgs.Exception, string.Join(" ", messageEventArgs.MessagePortions)); break;
+            case MessageLevel.Error: 
+              Log.Error(messageEventArgs.Exception, string.Join(" ", messageEventArgs.MessagePortions));
+              if (messageEventArgs.Exception.InnerException != null)
+              {
+                Log.Error(messageEventArgs.Exception.InnerException, "Inner exception");
+              }
+              break;
+            case MessageLevel.Fatal: 
+              Log.Fatal(messageEventArgs.Exception, string.Join(" ", messageEventArgs.MessagePortions));
+              if (messageEventArgs.Exception.InnerException != null)
+              {
+                Log.Fatal(messageEventArgs.Exception.InnerException, "Inner exception");
+              }
+              break;
           }
         }
       }
