@@ -11,5 +11,7 @@ namespace SpeckleGSAProxy
     void Clear();
 
     bool Upsert(string keyword, int index, string gwaWithoutSet, string streamId, string applicationId, GwaSetCommandType gwaSetCommandType);
+
+    bool SetStream(string applicationId, string streamId);
   }
 }

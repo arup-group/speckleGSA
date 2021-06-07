@@ -720,7 +720,7 @@ namespace SpeckleGSAProxy
         }
         if (streamIndexByApplicationId.ContainsKey(appId))
         {
-          return false;
+          return (streamIndexByApplicationId[appId] == streamIndex);
         }
         streamIndexByApplicationId.Add(appId, streamIndex);
         return true;

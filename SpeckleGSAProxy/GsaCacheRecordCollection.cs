@@ -297,6 +297,11 @@ namespace SpeckleGSAProxy
 
     public void Snapshot(string streamId)
     {
+      if (!collectionIndicesByStreamId.ContainsKey(streamId))
+      {
+        return;
+      }
+
       var indicesToRemove = new HashSet<int>();
       foreach (var keyword in collectionIndicesByKw.Keys)
       {
