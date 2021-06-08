@@ -22,10 +22,10 @@ namespace SpeckleInterface
     public static async Task<List<SpeckleStream>> GetStreams(string restApi, string apiToken, ISpeckleAppMessenger messenger)
     {
       SpeckleApiClient myClient = new SpeckleApiClient() { BaseUrl = restApi, AuthToken = apiToken };
-
+      var queryString = "limit=500&sort=-updatedAt&parent=&fields=name,streamId,parent";
       try
       {
-        ResponseStream response = await myClient.StreamsGetAllAsync("limit=500&sort=-updatedAt&parent=&fields=name,streamId,parent");
+        ResponseStream response = await myClient.StreamsGetAllAsync(queryString);
 
         List<SpeckleStream> ret = new List<SpeckleStream>();
 
@@ -35,6 +35,22 @@ namespace SpeckleInterface
         }
 
         return ret;
+      }
+      catch (SpeckleException se)
+      {
+        if (messenger != null)
+        {
+          messenger.Message(MessageIntent.Display, MessageLevel.Error, "Unable to access stream list information from the server");
+          var context = new List<string>() { "Unable to access stream list information from the server", 
+            "StatusCode=" + se.StatusCode, "ResponseData=" + se.Response, "Message=" + se.Message, "BaseUrl=" + restApi,
+            "Endpoint=StreamsGetAllAsync", "QueryString=\"" + queryString + "\"" };
+          if (se is SpeckleException<ResponseBase> && ((SpeckleException<ResponseBase>)se).Result != null)
+          {
+            var responseJson = ((SpeckleException<ResponseBase>)se).Result.ToJson();
+            context.Add("ResponseJson=" + responseJson);
+          }
+          messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, se, context.ToArray());
+        }
       }
       catch (Exception ex)
       {
@@ -51,15 +67,31 @@ namespace SpeckleInterface
     public static async Task<SpeckleStream> GetStream(string restApi, string apiToken, string streamId, ISpeckleAppMessenger messenger)
     {
       SpeckleApiClient myClient = new SpeckleApiClient() { BaseUrl = restApi, AuthToken = apiToken };
-
+      var queryString = "fields=streamId,name";
       try
       {
-        var response = await myClient.StreamGetAsync(streamId, "fields=streamId,name");
+        var response = await myClient.StreamGetAsync(streamId, queryString);
 
         if (response != null && response.Success.HasValue && response.Success.Value
           && response.Resource != null && response.Resource.StreamId.Equals(streamId, StringComparison.InvariantCultureIgnoreCase))
         {
           return response.Resource;
+        }
+      }
+      catch (SpeckleException se)
+      {
+        if (messenger != null)
+        {
+          messenger.Message(MessageIntent.Display, MessageLevel.Error, "Unable to access stream information for " + streamId);
+          var context = new List<string>() { "Unable to access stream information for " + streamId,
+            "StatusCode=" + se.StatusCode, "ResponseData=" + se.Response, "Message=" + se.Message, "BaseUrl=" + restApi,
+          "Endpoint=StreamGetAsync", "QueryString=\"" + queryString + "\"" };
+          if (se is SpeckleException<ResponseBase> && ((SpeckleException<ResponseBase>)se).Result != null)
+          {
+            var responseJson = ((SpeckleException<ResponseBase>)se).Result.ToJson();
+            context.Add("ResponseJson=" + responseJson);
+          }
+          messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, se, context.ToArray());
         }
       }
       catch (Exception ex)
@@ -69,7 +101,6 @@ namespace SpeckleInterface
           messenger.Message(MessageIntent.Display, MessageLevel.Error, "Unable to access stream information for " + streamId);
           messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, ex, "Unable to access stream information",
             "BaseUrl=" + restApi, "StreamId" + streamId);
-          return null;
         }
       }
       return null;
@@ -83,6 +114,23 @@ namespace SpeckleInterface
       try
       {
         user = await myClient.UserGetAsync();
+      }
+      catch (SpeckleException se)
+      {
+        if (messenger != null)
+        {
+          messenger.Message(MessageIntent.Display, MessageLevel.Error, "Unable to get user's name from server");
+          var context = new List<string>() { "Unable to get user's name from server",
+            "StatusCode=" + se.StatusCode, "ResponseData=" + se.Response, "Message=" + se.Message, "BaseUrl=" + restApi,
+            "Endpoint=UserGetAsync" };
+          if (se is SpeckleException<ResponseBase> && ((SpeckleException<ResponseBase>)se).Result != null)
+          {
+            var responseJson = ((SpeckleException<ResponseBase>)se).Result.ToJson();
+            context.Add("ResponseJson=" + responseJson);
+          }
+          messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, se, context.ToArray());
+          return "";
+        }
       }
       catch (Exception ex)
       {
@@ -116,6 +164,22 @@ namespace SpeckleInterface
         ResponseStreamClone response = await myClient.StreamCloneAsync(streamId);
         return response.Clone.StreamId;
       }
+      catch (SpeckleException se)
+      {
+        if (messenger != null)
+        {
+          messenger.Message(MessageIntent.Display, MessageLevel.Error, "Unable to clone stream name for " + streamId);
+          var context = new List<string>() { "Unable to clone stream name for " + streamId,
+            "StatusCode=" + se.StatusCode, "ResponseData=" + se.Response, "Message=" + se.Message, "BaseUrl=" + restApi,
+            "Endpoint=StreamCloneAsync" };
+          if (se is SpeckleException<ResponseBase> && ((SpeckleException<ResponseBase>)se).Result != null)
+          {
+            var responseJson = ((SpeckleException<ResponseBase>)se).Result.ToJson();
+            context.Add("ResponseJson=" + responseJson);
+          }
+          messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, se, context.ToArray());
+        }
+      }
       catch (Exception ex)
       {
         if (messenger != null)
@@ -135,6 +199,22 @@ namespace SpeckleInterface
       {
         var response = await myClient.StreamUpdateAsync(streamId, new SpeckleStream() { Name = streamName });
         return (response.Success.HasValue && response.Success.Value);
+      }
+      catch (SpeckleException se)
+      {
+        if (messenger != null)
+        {
+          messenger.Message(MessageIntent.Display, MessageLevel.Error, "Unable to update stream name for " + streamId);
+          var context = new List<string>() { "Unable to update stream name for " + streamId, 
+            "StatusCode=" + se.StatusCode, "ResponseData=" + se.Response, "Message=" + se.Message, "BaseUrl=" + restApi};
+          if (se is SpeckleException<ResponseBase> && ((SpeckleException<ResponseBase>)se).Result != null)
+          {
+            var responseJson = ((SpeckleException<ResponseBase>)se).Result.ToJson();
+            context.Add("ResponseJson=" + responseJson);
+          }
+          messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, se, context.ToArray());
+        }
+        return false;
       }
       catch (Exception ex)
       {

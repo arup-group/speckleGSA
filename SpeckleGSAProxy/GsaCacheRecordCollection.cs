@@ -155,7 +155,7 @@ namespace SpeckleGSAProxy
 
     public List<string> GetGwaCommandsWithSet()
     {
-      return validRecords.OrderBy(r => r.Keyword).ThenBy(r => r.Index).Select(r => (r.GwaSetCommandType == GwaSetCommandType.Set) 
+      return validRecords.Where(r => r.Latest).OrderBy(r => r.Keyword).ThenBy(r => r.Index).Select(r => (r.GwaSetCommandType == GwaSetCommandType.Set) 
         ? "SET\t" + r.Gwa 
         : string.Join(GSAProxy.GwaDelimiter.ToString(), new[] { "SET_AT", r.Index.ToString(), r.Gwa })).ToList();
     }

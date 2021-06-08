@@ -28,9 +28,10 @@ namespace SpeckleInterface
 
     public async Task<bool> GetStream(string streamId)
     {
+      var queryString = "fields=streamId,baseProperties";
       try
       {
-        var response = await apiClient.StreamGetAsync(streamId, "fields=streamId,baseProperties");
+        var response = await apiClient.StreamGetAsync(streamId, queryString);
 
         if (response != null && response.Success.HasValue && response.Success.Value
           && response.Resource != null && response.Resource.StreamId.Equals(streamId, StringComparison.InvariantCultureIgnoreCase))
@@ -38,7 +39,22 @@ namespace SpeckleInterface
           apiClient.Stream = response.Resource;
           apiClient.StreamId = StreamId;  //It is a bit strange that there's another streamId here; I think it's necessary to be set here for a server API call later
           return true;
-          //return new StreamBasicData(response.Resource.StreamId, response.Resource.Name, response.Resource.Owner);
+        }
+      }
+      catch (SpeckleException se)
+      {
+        if (messenger != null)
+        {
+          messenger.Message(MessageIntent.Display, MessageLevel.Error, "Unable to access stream list information from the server");
+          var context = new List<string>() { "Unable to access stream list information from the server",
+            "StatusCode=" + se.StatusCode, "ResponseData=" + se.Response, "Message=" + se.Message,
+            "Endpoint=StreamsGetAllAsync", "QueryString=\"" + queryString + "\"" };
+          if (se is SpeckleException<ResponseBase> && ((SpeckleException<ResponseBase>)se).Result != null)
+          {
+            var responseJson = ((SpeckleException<ResponseBase>)se).Result.ToJson();
+            context.Add("ResponseJson=" + responseJson);
+          }
+          messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, se, context.ToArray());
         }
       }
       catch (Exception ex)

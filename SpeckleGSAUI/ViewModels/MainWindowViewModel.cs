@@ -238,24 +238,20 @@ namespace SpeckleGSAUI.ViewModels
 
             if (newAccountForUI != null && newAccountForUI.IsValid)
             {
-              if (Coordinator.Account == null)
-              {
-                Coordinator.Account = newAccountForUI;
-              }
-              else
-              {
-                Coordinator.Account.Update(newAccountForUI.ServerUrl, newAccountForUI.EmailAddress, newAccountForUI.Token);
-              }
-
-              Refresh(() => StateMachine.LoggedIn());
-
               Refresh(() => StateMachine.StartedUpdatingStreams());
 
-              var completed = await Commands.CompleteLogin(Coordinator, loggingProgress);
+              var completed = await Commands.CompleteLogin(Coordinator, newAccountForUI, loggingProgress);
 
               if (completed)
               {
+                Refresh(() => StateMachine.LoggedIn());
+
                 var retrievedStreamInfoFromFile = await Task.Run(() => Commands.ReadSavedStreamInfo(Coordinator, loggingProgress));
+              }
+              else
+              {
+                Refresh(() => StateMachine.CancelledLoggingIn());
+                GSA.App.Messenger.Message(MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, "Failed to log in");
               }
 
               Refresh(() => StateMachine.StoppedUpdatingStreams());
@@ -264,7 +260,7 @@ namespace SpeckleGSAUI.ViewModels
             }
           }
           Refresh(() => StateMachine.CancelledLoggingIn());
-          GSA.App.Messenger.Message(MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, "Failed to log in");         
+          GSA.App.Messenger.Message(MessageIntent.Display, SpeckleGSAInterfaces.MessageLevel.Error, "Failed to log in");
         },
         (o) => !StateMachine.StreamIsOccupied);
 
@@ -273,7 +269,7 @@ namespace SpeckleGSAUI.ViewModels
         {
           Refresh(() => StateMachine.StartedUpdatingStreams());
 
-          var result = await Task.Run(() => Commands.GetStreamList(Coordinator, loggingProgress));
+          var result = await Task.Run(() => Commands.GetStreamList(Coordinator, Coordinator.Account, loggingProgress));
 
           Refresh(() => StateMachine.StoppedUpdatingStreams());
         },

@@ -32,11 +32,11 @@ namespace SpeckleGSAUI.ViewModels
       {
         //This will throw an exception if there is no default account
         var account = LocalContext.GetDefaultAccount();
-        if (account != null)
+        if (account == null)
         {
-          coordinator.Account = new SpeckleAccountForUI(account.RestApi, account.Email, account.Token);
+          return false;
         }
-        return await CompleteLogin(coordinator, loggingProgress);
+        return await CompleteLogin(coordinator, new SpeckleAccountForUI(account.RestApi, account.Email, account.Token), loggingProgress);
       }
       catch
       {
@@ -45,21 +45,31 @@ namespace SpeckleGSAUI.ViewModels
       }
     }
 
-    public static async Task<bool> CompleteLogin(TabCoordinator coordinator, IProgress<MessageEventArgs> loggingProgress)
+    public static async Task<bool> CompleteLogin(TabCoordinator coordinator, SpeckleAccountForUI accountCandidate, IProgress<MessageEventArgs> loggingProgress)
     {
       var messenger = new ProgressMessenger(loggingProgress);
 
-      var accountName = await SpeckleInterface.SpeckleStreamManager.GetClientName(coordinator.Account.ServerUrl, coordinator.Account.Token, messenger);
-      if (!string.IsNullOrEmpty(accountName))
+      var accountName = await SpeckleInterface.SpeckleStreamManager.GetClientName(accountCandidate.ServerUrl, accountCandidate.Token, messenger);
+      if (string.IsNullOrEmpty(accountName))
       {
-        coordinator.Account.Update(accountName);
+        return false;
+      }
+      else
+      {
+        accountCandidate.Update(accountName);
       }
 
-      if (coordinator.Account != null && coordinator.Account.IsValid)
+      if (accountCandidate != null && accountCandidate.IsValid)
       {
+        var streamData = await SpeckleInterface.SpeckleStreamManager.GetStreams(accountCandidate.ServerUrl, accountCandidate.Token, messenger);
+        if (streamData == null)
+        {
+          return false;
+        }
 
-        var streamData = await SpeckleInterface.SpeckleStreamManager.GetStreams(coordinator.Account.ServerUrl, coordinator.Account.Token, messenger);
+        coordinator.Account = accountCandidate;
         coordinator.ServerStreamList.StreamListItems.Clear();
+        
         foreach (var sd in streamData)
         {
           coordinator.ServerStreamList.StreamListItems.Add(new StreamListItem(sd.StreamId, sd.Name));
@@ -171,9 +181,9 @@ namespace SpeckleGSAUI.ViewModels
       }
     }
 
-    public static async Task<bool> GetStreamList(TabCoordinator coordinator, IProgress<MessageEventArgs> loggingProgress)
+    public static async Task<bool> GetStreamList(TabCoordinator coordinator, SpeckleAccountForUI account, IProgress<MessageEventArgs> loggingProgress)
     {
-      return await CompleteLogin(coordinator, loggingProgress);
+      return await CompleteLogin(coordinator, account, loggingProgress);
     }
 
     public static bool Receive(TabCoordinator coordinator, ReceiverCoordinator gsaReceiverCoordinator, IProgress<SidSpeckleRecord> streamCreationProgress,
