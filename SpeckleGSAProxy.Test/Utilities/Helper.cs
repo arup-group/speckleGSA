@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -22,7 +21,7 @@ namespace SpeckleGSAProxy.Test
           NullValueHandling = NullValueHandling.Ignore
         });
       }
-      catch (Exception e)
+      catch
       {
         return default(T);
       }

@@ -13,10 +13,11 @@ namespace SpeckleGSA
   public static class GSA
   {
     public static List<IGSAKit> kits = new List<IGSAKit>();
-    public static GsaAppResources GsaApp = new GsaAppResources();
+    public static IGSAAppResources GsaApp { get => App; } 
+    public static IGSALocalAppResources App { get; set; } = new GsaAppResources();
 
-    public static Dictionary<string, Tuple<string, string>> SenderInfo { get; set; }
-    public static List<Tuple<string, string>> ReceiverInfo { get; set; }
+    //public static Dictionary<string, SidSpeckleRecord> SenderInfo { get; set; }  // [ Stream Name, [ StreamId, Client Id ]
+    //public static List<SidSpeckleRecord> ReceiverInfo { get; set; }
 
     public static List<IGSASenderDictionary> SenderDictionaries => kits.Select(k => k.GSASenderObjects).ToList();
 
@@ -75,26 +76,26 @@ namespace SpeckleGSA
       IsInit = false;
 
       kits = new List<IGSAKit>();
-      GsaApp = new GsaAppResources();
     }
 
     public static void Init(string speckleGsaAppVersion)
     {
       if (IsInit) return;
 
-      SenderInfo = new Dictionary<string, Tuple<string, string>>();
-      ReceiverInfo = new List<Tuple<string, string>>();
+      kits = new List<IGSAKit>();
+
+      //SenderInfo = new Dictionary<string, SidSpeckleRecord>();
+      //ReceiverInfo = new List<SidSpeckleRecord>();
 
       IsInit = true;
 
-      GSA.GsaApp.gsaMessenger.MessageAdded += GSA.ProcessMessageForLog;
+      GSA.App.LocalMessenger.MessageAdded += GSA.ProcessMessageForLog;
 
       //Avoid sending telemetry when debugging this code
 #if !DEBUG
-      GSA.GsaApp.gsaMessenger.MessageAdded += GSA.ProcessMessageForTelemetry;
-      GSA.GsaApp.gsaProxy.SetAppVersionForTelemetry(speckleGsaAppVersion);
+      GSA.App.LocalMessenger.MessageAdded += GSA.ProcessMessageForTelemetry;
+      GSA.App.LocalProxy.SetAppVersionForTelemetry(speckleGsaAppVersion);
 #endif
-      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Linked to GSA.");
 
       InitialiseKits(out List<string> statusMessages);
 
@@ -102,7 +103,7 @@ namespace SpeckleGSA
       {
         foreach (var msg in statusMessages)
         {
-          GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, msg);
+          GSA.App.Messenger.Message(MessageIntent.Display, MessageLevel.Information, msg);
         }
       }
     }
@@ -111,7 +112,7 @@ namespace SpeckleGSA
     {
       if (messageEventArgs.Intent == MessageIntent.Telemetry)
       {
-        GsaApp.gsaProxy.SendTelemetry(messageEventArgs.MessagePortions);
+        App.LocalProxy.SendTelemetry(messageEventArgs.MessagePortions);
         //Also log all telemetry transmissions, although the log entries won't have any additional info (prefixes etc) that the proxy has
         //been coded to add
         Log.Debug("Telemetry: " + string.Join(" ", messageEventArgs.MessagePortions));
@@ -138,8 +139,20 @@ namespace SpeckleGSA
           {
             case MessageLevel.Debug: Log.Debug(messageEventArgs.Exception, string.Join(" ", messageEventArgs.MessagePortions)); break;
             case MessageLevel.Information: Log.Information(messageEventArgs.Exception, string.Join(" ", messageEventArgs.MessagePortions)); break;
-            case MessageLevel.Error: Log.Error(messageEventArgs.Exception, string.Join(" ", messageEventArgs.MessagePortions)); break;
-            case MessageLevel.Fatal: Log.Fatal(messageEventArgs.Exception, string.Join(" ", messageEventArgs.MessagePortions)); break;
+            case MessageLevel.Error: 
+              Log.Error(messageEventArgs.Exception, string.Join(" ", messageEventArgs.MessagePortions));
+              if (messageEventArgs.Exception.InnerException != null)
+              {
+                Log.Error(messageEventArgs.Exception.InnerException, "Inner exception");
+              }
+              break;
+            case MessageLevel.Fatal: 
+              Log.Fatal(messageEventArgs.Exception, string.Join(" ", messageEventArgs.MessagePortions));
+              if (messageEventArgs.Exception.InnerException != null)
+              {
+                Log.Fatal(messageEventArgs.Exception.InnerException, "Inner exception");
+              }
+              break;
           }
         }
       }
@@ -206,7 +219,7 @@ namespace SpeckleGSA
         }
         catch
         {
-          GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Error, 
+          GSA.App.Messenger.Message(MessageIntent.Display, MessageLevel.Error, 
             $"Unable to fully connect to {ass.GetName().Name}.dll. Please check the versions of the kit you have installed.");
         }
 
@@ -227,10 +240,10 @@ namespace SpeckleGSA
           }
         }
       }
-      GSA.GsaApp.Merger.Initialise(mappableTypes);
+      GSA.App.Merger.Initialise(mappableTypes);
     }
 
-#region kit_resources
+  #region kit_resources
 
     public static void ClearSenderDictionaries()
     {
@@ -268,7 +281,7 @@ namespace SpeckleGSA
             }
           }
         }
-        catch (Exception ex)
+        catch
         {
 
         }
@@ -276,9 +289,10 @@ namespace SpeckleGSA
       return currentObjects;
     }
 
-#endregion
+    #endregion
 
-#region streamInfo
+    /*
+  #region streamInfo
     public static void RemoveUnusedStreamInfo(List<string> streamNames)
     {
       //Remove any streams that will no longer need to be used - if the "Separate sender streams" item has been toggled, for example
@@ -290,7 +304,7 @@ namespace SpeckleGSA
     }
 #endregion
 
-#region File Operations
+    #region File Operations
     /// <summary>
     /// Creates a new GSA file. Email address and server address is needed for logging purposes.
     /// </summary>
@@ -300,14 +314,14 @@ namespace SpeckleGSA
     {
       if (!IsInit) return;
 
-      GSA.GsaApp.gsaProxy.NewFile(showWindow);
+      GSA.App.Proxy.NewFile(showWindow);
 
-      if (emailAddress != null && serverAddress != null)
-      {
-        GetSpeckleClients(emailAddress, serverAddress);
-      }
+      //if (emailAddress != null && serverAddress != null)
+      //{
+      //  GetSpeckleClients(emailAddress, serverAddress, out _, out _);
+      //}
 
-      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Created new file.");
+      GSA.App.Messenger.Message(MessageIntent.Display, MessageLevel.Information, "Created new file.");
     }
 
     /// <summary>
@@ -316,17 +330,20 @@ namespace SpeckleGSA
     /// <param name="path">Absolute path to GSA file</param>
     /// <param name="emailAddress">User email address</param>
     /// <param name="serverAddress">Speckle server address</param>
-    public static void OpenFile(string path, string emailAddress, string serverAddress, bool showWindow = true)
+    public static void OpenFile(string path, string emailAddress, string serverAddress, 
+      out List<SidSpeckleRecord> receiverStreamInfo, out List<SidSpeckleRecord> senderStreamInfo, bool showWindow = true)
     {
+      receiverStreamInfo = new List<SidSpeckleRecord>();
+      senderStreamInfo = new List<SidSpeckleRecord>();
       if (!IsInit) return;
 
-      GSA.GsaApp.gsaProxy.OpenFile(path, showWindow);
+      GSA.App.Proxy.OpenFile(path, showWindow);
       if (emailAddress != null && serverAddress != null)
       {
-        GetSpeckleClients(emailAddress, serverAddress);
+        GetSpeckleClients(emailAddress, serverAddress, out receiverStreamInfo, out senderStreamInfo);
       }
 
-      GSA.GsaApp.gsaMessenger.Message(MessageIntent.Display, MessageLevel.Information, "Opened new file.");
+      GSA.App.Messenger.Message(MessageIntent.Display, MessageLevel.Information, "Opened new file.");
     }
 
     /// <summary>
@@ -336,28 +353,32 @@ namespace SpeckleGSA
     {
       if (!IsInit) return;
 
-      GSA.GsaApp.gsaProxy.Close();
-      SenderInfo.Clear();
-      ReceiverInfo.Clear();
+      GSA.App.Proxy.Close();
+      //SenderInfo.Clear();
+      //ReceiverInfo.Clear();
     }
-#endregion
+  #endregion
 
-#region Speckle Client
+  #region Speckle Client
     /// <summary>
     /// Extracts sender and receiver streams associated with the account.
     /// </summary>
     /// <param name="emailAddress">User email address</param>
     /// <param name="serverAddress">Speckle server address</param>
-    public static bool GetSpeckleClients(string emailAddress, string serverAddress)
+    ///
+    //LEGACY USE ONLY
+    public static bool GetSpeckleClients(string emailAddress, string serverAddress, out List<SidSpeckleRecord> receiverStreamInfo, out List<SidSpeckleRecord> senderStreamInfo)
     {
-      SenderInfo.Clear();
-      ReceiverInfo.Clear();
+      //SenderInfo.Clear();
+      //ReceiverInfo.Clear();
+      receiverStreamInfo = new List<SidSpeckleRecord>();
+      senderStreamInfo = new List<SidSpeckleRecord>();
 
       try
       {
         string key = emailAddress + "&" + serverAddress.Replace(':', '&');
 
-        string res = GSA.GsaApp.gsaProxy.GetTopLevelSid();
+        string res = GSA.App.Proxy.GetTopLevelSid();
 
         if (res == "")
         {
@@ -378,7 +399,8 @@ namespace SpeckleGSA
 
           for (int i = 0; i < senders.Length; i += 3)
           {
-            SenderInfo[senders[i]] = new Tuple<string, string>(senders[i + 1], senders[i + 2]);
+            senderStreamInfo.Add(new SidSpeckleRecord(senders[i + 1], senders[i], senders[i + 2]));
+            //SenderInfo[senders[i]] = new SidSpeckleRecord(senders[i + 1], senders[i], senders[i + 2]);
           }
         }
 
@@ -388,7 +410,8 @@ namespace SpeckleGSA
 
           for (int i = 0; i < receivers.Length; i += 2)
           {
-            ReceiverInfo.Add(new Tuple<string, string>(receivers[i], receivers[i + 1]));
+            receiverStreamInfo.Add(new SidSpeckleRecord(receivers[i], receivers[i + 1]));
+            //ReceiverInfo.Add(new SidSpeckleRecord(receivers[i], receivers[i + 1]));
           }
         }
         return true;
@@ -396,9 +419,9 @@ namespace SpeckleGSA
       catch
       {
         // If fail to read, clear client SIDs
-        SenderInfo.Clear();
-        ReceiverInfo.Clear();
-        return SetSpeckleClients(emailAddress, serverAddress);
+        //SenderInfo.Clear();
+        //ReceiverInfo.Clear();
+        return SetSpeckleClients(emailAddress, serverAddress, null, null);
       }
     }
 
@@ -407,10 +430,12 @@ namespace SpeckleGSA
     /// </summary>
     /// <param name="emailAddress">User email address</param>
     /// <param name="serverAddress">Speckle server address</param>
-    public static bool SetSpeckleClients(string emailAddress, string serverAddress)
+    /// 
+    // LEGACY USE ONLY
+    public static bool SetSpeckleClients(string emailAddress, string serverAddress, List<SidSpeckleRecord> receiverStreamInfo, List<SidSpeckleRecord> senderStreamInfo)
     {
       string key = emailAddress + "&" + serverAddress.Replace(':', '&');
-      string res = GSA.GsaApp.gsaProxy.GetTopLevelSid();
+      string res = GSA.App.Proxy.GetTopLevelSid();
 
       List<string[]> sids = Regex.Matches(res, @"(?<={).*?(?=})").Cast<Match>()
               .Select(m => m.Value.Split(new char[] { ':' }))
@@ -420,27 +445,36 @@ namespace SpeckleGSA
       sids.RemoveAll(S => S[0] == "SpeckleSender&" + key || S[0] == "SpeckleReceiver&" + key || string.IsNullOrEmpty(S[1]));
 
       List<string> senderList = new List<string>();
-      foreach (KeyValuePair<string, Tuple<string, string>> kvp in SenderInfo)
+      //foreach (KeyValuePair<string, SidSpeckleRecord> kvp in SenderInfo)
+      if (senderStreamInfo != null)
       {
-        senderList.Add(kvp.Key);
-        senderList.Add(kvp.Value.Item1);
-        senderList.Add(kvp.Value.Item2);
+        foreach (var si in senderStreamInfo)
+        {
+          senderList.AddRange(new[] { si.Bucket, si.StreamId, si.ClientId });
+          //senderList.Add(kvp.Key);
+          //senderList.Add(kvp.Value.StreamId);
+          //senderList.Add(kvp.Value.ClientId);
+        }
+        if (senderList.Count() > 0)
+        {
+          sids.Add(new string[] { "SpeckleSender&" + key, string.Join("&", senderList) });
+        }
       }
 
       List<string> receiverList = new List<string>();
-      foreach (Tuple<string, string> t in ReceiverInfo)
+      //foreach (var t in ReceiverInfo)
+      if (receiverStreamInfo != null)
       {
-        receiverList.Add(t.Item1);
-        receiverList.Add(t.Item2);
-      }
-
-      if (senderList.Count() > 0)
-      {
-        sids.Add(new string[] { "SpeckleSender&" + key, string.Join("&", senderList) });
-      }
-      if (receiverList.Count() > 0)
-      {
-        sids.Add(new string[] { "SpeckleReceiver&" + key, string.Join("&", receiverList) });
+        foreach (var si in receiverStreamInfo)
+        {
+          receiverList.AddRange(new[] { si.StreamId, si.Bucket });
+          //receiverList.Add(t.StreamId);
+          //receiverList.Add(t.StreamName);
+        }
+        if (receiverList.Count() > 0)
+        {
+          sids.Add(new string[] { "SpeckleReceiver&" + key, string.Join("&", receiverList) });
+        }
       }
 
       string sidRecord = "";
@@ -449,7 +483,7 @@ namespace SpeckleGSA
         sidRecord += "{" + s[0] + ":" + s[1] + "}";
       }
 
-      return GSA.GsaApp.gsaProxy.SetTopLevelSid(sidRecord);
+      return GSA.App.Proxy.SetTopLevelSid(sidRecord);
     }
 #endregion
 
@@ -461,12 +495,13 @@ namespace SpeckleGSA
     /// <returns>Base property dictionary</returns>
     public static Dictionary<string, object> GetBaseProperties()
     {
-      var baseProps = new Dictionary<string, object>();
-
-      baseProps["units"] = GSA.GsaApp.Settings.Units.LongUnitName();
+      var baseProps = new Dictionary<string, object>
+      {
+        ["units"] = GSA.GsaApp.Settings.Units.LongUnitName()
+      };
       // TODO: Add other units
 
-      var tolerances = GSA.GsaApp.gsaProxy.GetTolerances();
+      var tolerances = GSA.App.Proxy.GetTolerances();
 
       var lengthTolerances = new List<double>() {
                 Convert.ToDouble(tolerances[3]), // edge
@@ -494,8 +529,9 @@ namespace SpeckleGSA
     /// </summary>
     public static void UpdateCasesAndTasks()
     {
-      GSA.GsaApp.gsaProxy.UpdateCasesAndTasks();
+      GSA.App.Proxy.UpdateCasesAndTasks();
     }
-#endregion
+    #endregion
+    */
   }
 }

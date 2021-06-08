@@ -1,0 +1,41 @@
+!" This file was originally written by GSA version 10.1.46.2 on Wednesday, 17 Mar 2021 at 12:34:48"
+!
+! Notes:
+! 1 All data in this file will be interpreted as being in SI units
+!   (ie. N m and kg) by GSA.
+! 2 The date specified in the description for catalogue sections is
+!   optional. If omitted then the most recent section in the catalogue
+!   bearing that name will be assumed.
+!
+TITLE.1					
+SPEC.1	SPACE	0	0	0	0	0	0	PRESSURE
+TOL.1	0.01745506493	0.01	0.01	2	0.001	1	0.01	2	0.01745506493	0.01
+SPEC_STEEL_DESIGN.1	<steel generic>	YES	15	YES	15	15	YES	NO	NO	NO
+SPEC_CONC_DESIGN.1	GENERIC	
+SPEC_LOAD_DESIGN.1	LOAD_UNDEF
+SPEC_RAFT.1	0	1.5	0.2	WEIGHTED_AVERAGE
+SPEC_BRIDGE.1	CODE_NONE	RAILWAY_YES	UK_HK	100
+SPEC_BRIDGE_NDP.1	1	1	1	1	1	1	1	1	0.75	0.4	0.4	0.4	0	0.75	0.4	0.4	0.4	0
+LOCATION.1	90	0	UNDEF	0	0
+ENV_PARAM.2	STEEL	UNDEF			<user>	NULL	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+ENV_PARAM.2	CONCRETE	UNDEF			<user>	NULL	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+ENV_PARAM.2	ALUMINIUM	UNDEF			<user>	NULL	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+ENV_PARAM.2	GLASS	UNDEF			<user>	NULL	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+ENV_PARAM.2	FRP	UNDEF			<user>	NULL	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+ENV_PARAM.2	REBAR	UNDEF			<user>	NULL	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+ENV_PARAM.2	TIMBER	UNDEF			<user>	NULL	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+ENV_PARAM.2	FABRIC	UNDEF			<user>	NULL	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+ENV_PARAM.2	SOIL	UNDEF			<user>	NULL	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+SID.1	
+CURRENCY.1	AUD
+GRID_LAYOUT.1	1	Default grid layout	0	NO_LOCK	1	1	-10.5	-10.5	10.5	10.5	1	1
+UNIT_DATA.1	FORCE	kip	0.000224809
+UNIT_DATA.1	LENGTH	in	39.370079
+UNIT_DATA.1	DISP	in	39.370079
+UNIT_DATA.1	SECTION	in	39.370079
+UNIT_DATA.1	MASS	lb	2.20462
+UNIT_DATA.1	TIME	s	1
+UNIT_DATA.1	TEMP	°F	1.8
+UNIT_DATA.1	STRESS	ksi	1.450377e-07
+UNIT_DATA.1	ACCEL	ft/s²	3.280839
+END

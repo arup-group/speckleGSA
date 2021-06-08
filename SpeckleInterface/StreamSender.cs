@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -8,10 +7,10 @@ using SpeckleCore;
 
 namespace SpeckleInterface
 {
-	/// <summary>
-	/// Packages and sends objects as a stream.
-	/// </summary>
-	public class StreamSender : StreamBase, IStreamSender
+  /// <summary>
+  /// Packages and sends objects as a stream.
+  /// </summary>
+  public class StreamSender : StreamBase, IStreamSender
   {
     const int DEFAULT_MAX_BUCKET_SIZE = 1000000;
     const int DEFAULT_API_TIMEOUT = 30000;
@@ -21,110 +20,86 @@ namespace SpeckleInterface
     private int apiTimeoutOverride = DEFAULT_API_TIMEOUT;
     private int numParallelApiRequests = DEFAULT_PARALLEL_API_REQUESTS;
 
-    private BasePropertyUnits units;
-    double tolerance;
-    double angleTolerance;
-
-    private Dictionary<string, object> BaseProperties  { get => new Dictionary<string, object>()
-    {
-      { "units", this.units.ToString() },
-      { "tolerance", this.tolerance },
-      { "angleTolerance", this.angleTolerance }
-    }; }
+    private IProgress<int> incrementProgress;
+    private IProgress<int> totalProgress;
 
     /// <summary>
     /// Create SpeckleGSASender object.
     /// </summary>
     /// <param name="serverAddress">Server address</param>
     /// <param name="apiToken">API token</param>
-    public StreamSender(string serverAddress, string apiToken, ISpeckleAppMessenger messenger) : base(serverAddress, apiToken, messenger)
+    public StreamSender(string serverAddress, string apiToken, ISpeckleAppMessenger messenger) : base(serverAddress, apiToken, messenger)  {  }
+
+    public bool InitializeSender(string documentName, string streamName, BasePropertyUnits units, double tolerance, double angleTolerance, 
+      IProgress<int> totalProgress, IProgress<int> incrementProgress)
     {
+      this.totalProgress = totalProgress;
+      this.incrementProgress = incrementProgress;
 
-    }
-
-    /// <summary>
-    /// Initializes sender.
-    /// </summary>
-    /// <param name="streamId">Stream ID of stream. If no stream ID is given, a new stream is created.</param>
-    /// <param name="streamName">Stream name</param>
-    /// <returns>Task</returns>
-    public async Task InitializeSender(string documentName, BasePropertyUnits units, double tolerance, double angleTolerance, 
-      string streamId = "", string clientId = "", string streamName = "")
-    {
-      apiClient.AuthToken = apiToken;
-
-      this.units = units;
-      this.tolerance = tolerance;
-      this.angleTolerance = angleTolerance;
-
-      if (string.IsNullOrEmpty(clientId))
+      tryCatchWithEvents(() =>
       {
-        tryCatchWithEvents(() =>
-        {
-          var streamResponse = apiClient.StreamCreateAsync(new SpeckleStream()).Result;
-          apiClient.Stream = streamResponse.Resource;
-          apiClient.StreamId = streamResponse.Resource.StreamId;
-        },
+        var streamToCreate = new SpeckleStream() { BaseProperties = CreateBaseProperties(units, tolerance, angleTolerance), Name = streamName };
+        var streamResponse = apiClient.StreamCreateAsync(streamToCreate, timeoutMillisecondsOverride: DEFAULT_API_TIMEOUT).Result;
+        apiClient.Stream = streamResponse.Resource;
+        apiClient.StreamId = apiClient.Stream.StreamId;
+      },
         "", "Unable to create stream on the server");
 
-        tryCatchWithEvents(() =>
-        {
-          var clientResponse = apiClient.ClientCreateAsync(new AppClient()
-          {
-            DocumentName = documentName,
-            DocumentType = "GSA",
-            Role = "Sender",
-            StreamId = this.StreamId,
-            Online = true,
-          }).Result;
-          apiClient.ClientId = clientResponse.Resource._id;
-        }, "", "Unable to create client on the server");
-      }
-      else
-      {
-        tryCatchWithEvents(() =>
-        {
-          var streamResponse = apiClient.StreamGetAsync(streamId, null).Result;
-
-          apiClient.Stream = streamResponse.Resource;
-          apiClient.StreamId = streamResponse.Resource.StreamId;
-        }, "", "Unable to get stream response");
-
-        tryCatchWithEvents(() =>
-        {
-          var clientResponse = apiClient.ClientUpdateAsync(clientId, new AppClient()
-          {
-            //DocumentName = Path.GetFileNameWithoutExtension(GSA.GsaApp.gsaProxy.FilePath),
-            DocumentName = documentName,
-            Online = true,
-          }).Result;
-
-          apiClient.ClientId = clientId;
-        }, "", "Unable to update client on the server");
-      }
-
-      apiClient.Stream.Name = streamName;
-
       tryCatchWithEvents(() =>
       {
-        apiClient.SetupWebsocket();
-      }, "", "Unable to set up web socket");
+        var clientResponse = apiClient.ClientCreateAsync(new AppClient()
+        {
+          DocumentName = documentName,
+          DocumentType = "GSA",
+          Role = "Sender",
+          StreamId = this.StreamId,
+          Online = true,
+        }, timeoutMillisecondsOverride: DEFAULT_API_TIMEOUT).Result;
+        apiClient.ClientId = clientResponse.Resource._id;
+      }, "", "Unable to create client on the server");
 
-      tryCatchWithEvents(() =>
+      ConnectWebSocket();
+
+      return true;
+    }
+
+    public bool InitializeSender(string documentName, string streamId, string clientId, IProgress<int> totalProgress, IProgress<int> incrementProgress)
+    {
+      this.totalProgress = totalProgress;
+      this.incrementProgress = incrementProgress;
+
+      tryCatchWithEvents(async () =>
       {
-        apiClient.JoinRoom("stream", streamId);
-      }, "", "Uable to join web socket");
+        var streamResponse = await apiClient.StreamGetAsync(streamId, null, timeoutMillisecondsOverride: DEFAULT_API_TIMEOUT);
+        apiClient.Stream = streamResponse.Resource;
+        apiClient.StreamId = streamId;
+      }, "", "Unable to get stream response");
+
+      tryCatchWithEvents(async () =>
+      {
+        var clientResponse = await apiClient.ClientUpdateAsync(clientId, new AppClient()
+        {
+          DocumentName = documentName,
+          Online = true,
+        }, timeoutMillisecondsOverride: DEFAULT_API_TIMEOUT);
+
+        apiClient.ClientId = clientId;
+      }, "", "Unable to update client on the server");
+
+      ConnectWebSocket();
+
+      return true;
     }
 
     /// <summary>
     /// Update stream name.
     /// </summary>
     /// <param name="streamName">Stream name</param>
-    public void UpdateName(string streamName)
+    public async Task<bool> UpdateName(string streamName)
     {
-      apiClient.StreamUpdateAsync(apiClient.StreamId, new SpeckleStream() { Name = streamName });
-
       apiClient.Stream.Name = streamName;
+      var response = await apiClient.StreamUpdateAsync(apiClient.StreamId, apiClient.Stream);
+      return ((response.Success.HasValue && response.Success.Value));
     }
 
     /// <summary>
@@ -158,8 +133,7 @@ namespace SpeckleInterface
 
       GroupIntoLayers(payloadObjects, out List<Layer> layers, out List<SpeckleObject> bucketObjects);
 
-      messenger.Message(MessageIntent.Display, MessageLevel.Information,
-        "Successfully grouped " + bucketObjects.Count() + " objects into " + layers.Count() + " layers");
+      messenger.Message(MessageIntent.Display, MessageLevel.Information, "Successfully grouped " + bucketObjects.Count() + " objects into " + layers.Count() + " layers");
 
       DetermineObjectsToBeSent(bucketObjects, baseUrl, out List<SpeckleObject> changedObjects);
 
@@ -169,8 +143,7 @@ namespace SpeckleInterface
       var numUnchanged = bucketObjects.Count() - numChanged;
       if (numChanged == 0)
       {
-        messenger.Message(MessageIntent.Display, MessageLevel.Information,
-          "All " + numUnchanged + " objects are unchanged on the server for stream " + StreamId);
+        messenger.Message(MessageIntent.Display, MessageLevel.Information, "All " + numUnchanged + " objects are unchanged on the server for stream " + StreamId);
       }
       else
       {
@@ -281,12 +254,11 @@ namespace SpeckleInterface
     {
       tryCatchWithEvents(() =>
       {
-        //lock (apiClientLock)
-        {
-          _ = apiClient.ClientUpdateAsync(apiClient.ClientId, new AppClient() { Online = false }).Result;
-        }
+        _ = apiClient.ClientUpdateAsync(apiClient.ClientId, new AppClient() { Online = false }).Result;
       },
         "", "Unable to update client on server with offline status");
+
+      //DisconnectWebSocket();
     }
 
     private List<string> ExtractSpeckleExceptionContext(Exception ex)
@@ -373,19 +345,12 @@ namespace SpeckleInterface
         placeholders.Add(new SpecklePlaceholder() { _id = id });
       }
 
-      SpeckleStream updateStream = new SpeckleStream
-      {
-        Layers = layers,
-        Objects = placeholders,
-        Name = StreamName,
-        BaseProperties = BaseProperties
-      };
+      apiClient.Stream.Objects = placeholders;
+      apiClient.Stream.Layers = layers;
 
       try
       {
-        _ = apiClient.StreamUpdateAsync(StreamId, updateStream).Result;
-        apiClient.Stream.Layers = updateStream.Layers.ToList();
-        apiClient.Stream.Objects = placeholders;
+        _ = apiClient.StreamUpdateAsync(StreamId, apiClient.Stream).Result;
         messenger.Message(MessageIntent.Display, MessageLevel.Information, "Updated the stream's object list on the server", StreamId);
       }
       catch (Exception ex)
@@ -405,61 +370,55 @@ namespace SpeckleInterface
       // Separate objects into sizeable payloads
       var payloads = CreatePayloads(bucketObjects);
 
+      if (totalProgress != null)
+      {
+        totalProgress.Report(payloads.Count());
+      }
+
       if (bucketObjects.Count(o => o.Type == "Placeholder") == bucketObjects.Count)
       {
         numErrors = 0;
         return;
       }
 
-      /*
-      var cumulative = 0;
-
-      do
-      {
-        var parallelPayloads = payloads.Skip(cumulative).Take(numParallelApiRequests);
-
-        var tasks = new List>Task
-        foreach (var p in parallelPayloads)
-        {
-          Task.Run
-        }
-
-        cumulative += parallelPayloads.Count();
-      }
-      */
-
       //var payloadTasks = payloads.Select(p => apiClient.ObjectCreateAsync(p, 30000)).ToArray();
 
       // Send objects which are in payload and add to local DB with updated IDs
-      //foreach (List<SpeckleObject> payload in payloads)
       for (var j = 0; j < payloads.Count(); j++)
       {
         ResponseObject res = null;
+        //Make a copy so that the task below doesn't use the j variable, which could change (by looping) by the time the task is run
+        var payload = payloads[j].ToList();   
 
         try
         {
-          res = apiClient.ObjectCreateAsync(payloads[j], apiTimeoutOverride).Result;
+          res = apiClient.ObjectCreateAsync(payload, apiTimeoutOverride).Result;
+          if (incrementProgress != null)
+          {
+            incrementProgress.Report(1);
+          }
         }
         catch (Exception ex)
         {
           numErrors++;
           var speckleExceptionContext = ExtractSpeckleExceptionContext(ex);
           var errContext = speckleExceptionContext.Concat(new[] { "StreamId=" + StreamId,
-                "Error in updating the server with a payload of " + payloads[j].Count() + " objects" });
+                "Error in updating the server with a payload of " + payload.Count() + " objects" });
           messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, ex, errContext.ToArray());
         }
 
         if (res != null && res.Resources.Count() > 0)
         {
-          for (int i = 0; i < payloads[j].Count(); i++)
+          for (int i = 0; i < payload.Count(); i++)
           {
-            payloads[j][i]._id = res.Resources[i]._id;
+            payload[i]._id = res.Resources[i]._id;
           }
         }
 
+
         Task.Run(() =>
         {
-          foreach (SpeckleObject obj in payloads[j].Where(o => o.Hash != null && o._id != null))
+          foreach (SpeckleObject obj in payload.Where(o => o.Hash != null && o._id != null))
           {
             tryCatchWithEvents(() => LocalContext.AddSentObject(obj, baseUrl), "", "Error in updating local db");
           }

@@ -4,22 +4,34 @@ using SpeckleUtil;
 
 namespace SpeckleGSA
 {
-  public class GsaAppResources : IGSAAppResources
+  public class GsaAppResources : IGSAAppResources, IGSALocalAppResources
   {
-    public IGSASettings Settings { get => gsaSettings; }
-    public IGSAProxy Proxy { get => gsaProxy; }
+    //For the kit(s) use only
     public IGSACacheForKit Cache { get => gsaCache; }
-    public IGSAMessenger Messenger { get => gsaMessenger; }
+    public IGSAProxy Proxy { get => LocalProxy; }
+    public IGSASettings Settings { get => LocalSettings; }
+    public IGSAMessenger Messenger { get => LocalMessenger; }
 
-    /// <summary>
-    /// Static class which interfaces with GSA
-    /// </summary>
+    //For local use only - which can be overridden with mocks for testing purposes
+    public IGSACache LocalCache
+    {
+      get => gsaCache;
+      set
+      {
+        if (value is GSACache)
+        {
+          gsaCache = (GSACache)value;
+        }
+      }
+    }
+    public IGSALocalSettings LocalSettings { get; set; } = new Settings();
+    public IGSALocalMessenger LocalMessenger { get; set; } = new GsaMessenger();
 
-    public Settings gsaSettings = new Settings();
-    public ISpeckleObjectMerger Merger = new SpeckleObjectMerger();
-    public GSAProxy gsaProxy = new GSAProxy();
-    public GSACache gsaCache = new GSACache();
-    public GsaMessenger gsaMessenger = new GsaMessenger();
+    public ISpeckleObjectMerger Merger { get; set; } = new SpeckleObjectMerger();
+
+    public IGSALocalProxy LocalProxy { get; set; } = new GSAProxy();
+
+    private GSACache gsaCache = new GSACache();
 
     public GsaAppResources()
     {

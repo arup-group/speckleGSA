@@ -1,6 +1,5 @@
 ﻿using SpeckleCore;
 using SpeckleGSAInterfaces;
-using System.Linq;
 
 namespace SpeckleGSAProxy
 {

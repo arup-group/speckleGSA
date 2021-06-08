@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SpeckleGSAInterfaces
 {
@@ -13,6 +10,7 @@ namespace SpeckleGSAInterfaces
     bool AddRange<T>(List<T> os);
 
     int Count<T>();
+    int Count(Type t);
 
     List<T> Get<T>();
     Dictionary<Type, List<object>> GetAll();

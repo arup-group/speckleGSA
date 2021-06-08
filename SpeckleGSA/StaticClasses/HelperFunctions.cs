@@ -1,17 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Interop.Gsa_10_1;
-using System.Text.RegularExpressions;
-using System.Windows.Media.Media3D;
-using System.Drawing;
-using SpeckleCore;
-using System.Reflection;
-using System.Collections;
 using System.IO;
-using System.Runtime.Serialization.Formatters.Binary;
+using System.Linq;
+using System.Text.RegularExpressions;
 using SpeckleGSAInterfaces;
 
 namespace SpeckleGSA
@@ -162,7 +153,7 @@ namespace SpeckleGSA
       {
         if (!string.IsNullOrEmpty(msgFailure))
         {
-          GSA.GsaApp.Messenger.Message(MessageIntent.Display, MessageLevel.Error, msgFailure, GSA.GsaApp.gsaSettings.VerboseErrors ? ex.Message : null);
+          GSA.GsaApp.Messenger.Message(MessageIntent.Display, MessageLevel.Error, msgFailure, GSA.App.LocalSettings.VerboseErrors ? ex.Message : null);
           GSA.GsaApp.Messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, ex, msgFailure);
         }
       }
@@ -187,6 +178,119 @@ namespace SpeckleGSA
     {
       return (new List<string>() { param }).Concat(endParams).ToList();
     }
+
+    public static bool GetSidSpeckleRecords(string emailAddress, string serverAddress, IGSAProxy proxy, 
+      out List<SidSpeckleRecord> receiverStreamInfo, out List<SidSpeckleRecord> senderStreamInfo)
+    {
+      receiverStreamInfo = new List<SidSpeckleRecord>();
+      senderStreamInfo = new List<SidSpeckleRecord>();
+
+      try
+      {
+        string key = emailAddress + "&" + serverAddress.Replace(':', '&');
+
+        string res = proxy.GetTopLevelSid();
+
+        if (res == "")
+        {
+          return true;
+        }
+
+        List<string[]> sids = Regex.Matches(res, @"(?<={).*?(?=})").Cast<Match>()
+                .Select(m => m.Value.Split(new char[] { ':' }))
+                .Where(s => s.Length == 2)
+                .ToList();
+
+        string[] senderList = sids.Where(s => s[0].TrimEnd('/').Equals(("SpeckleSender&" + key).TrimEnd('/'))).FirstOrDefault();
+        string[] receiverList = sids.Where(s => s[0].TrimEnd('/').Equals(("SpeckleReceiver&" + key).TrimEnd('/'))).FirstOrDefault();
+
+        if (senderList != null && !string.IsNullOrEmpty(senderList[1]))
+        {
+          string[] senders = senderList[1].Split(new char[] { '&' });
+
+          for (int i = 0; i < senders.Length; i += 3)
+          {
+            senderStreamInfo.Add(new SidSpeckleRecord(senders[i + 1], senders[i], senders[i + 2]));
+          }
+        }
+
+        if (receiverList != null && !string.IsNullOrEmpty(receiverList[1]))
+        {
+          string[] receivers = receiverList[1].Split(new char[] { '&' });
+
+          for (int i = 0; i < receivers.Length; i += 2)
+          {
+            receiverStreamInfo.Add(new SidSpeckleRecord(receivers[i], receivers[i + 1]));
+          }
+        }
+        return true;
+      }
+      catch
+      {
+        // If fail to read, clear client SIDs
+        //SenderInfo.Clear();
+        //ReceiverInfo.Clear();
+        return SetSidSpeckleRecords(emailAddress, serverAddress, proxy, null, null);
+      }
+    }
+
+    public static bool SetSidSpeckleRecords(string emailAddress, string serverAddress, IGSAProxy proxy, 
+      List<SidSpeckleRecord> receiverStreamInfo, List<SidSpeckleRecord> senderStreamInfo)
+    {
+      string key = emailAddress + "&" + serverAddress.Replace(':', '&');
+      string res = proxy.GetTopLevelSid();
+
+      List<string[]> sids = Regex.Matches(res, @"(?<={).*?(?=})").Cast<Match>()
+              .Select(m => m.Value.Split(new char[] { ':' }))
+              .Where(s => s.Length == 2)
+              .ToList();
+
+      sids.RemoveAll(S => S[0] == "SpeckleSender&" + key || S[0] == "SpeckleReceiver&" + key || string.IsNullOrEmpty(S[1]));
+
+      List<string> senderList = new List<string>();
+      if (senderStreamInfo != null)
+      {
+        foreach (var si in senderStreamInfo)
+        {
+          senderList.AddRange(new[] { si.Bucket, si.StreamId, si.ClientId });
+        }
+        if (senderList.Count() > 0)
+        {
+          sids.Add(new string[] { "SpeckleSender&" + key, string.Join("&", senderList) });
+        }
+      }
+
+      List<string> receiverList = new List<string>();
+      if (receiverStreamInfo != null)
+      {
+        foreach (var si in receiverStreamInfo)
+        {
+          receiverList.AddRange(new[] { si.StreamId, si.Bucket });
+        }
+        if (receiverList.Count() > 0)
+        {
+          sids.Add(new string[] { "SpeckleReceiver&" + key, string.Join("&", receiverList) });
+        }
+      }
+
+      string sidRecord = "";
+      foreach (string[] s in sids)
+      {
+        sidRecord += "{" + s[0] + ":" + s[1] + "}";
+      }
+
+      return proxy.SetTopLevelSid(sidRecord);
+    }
     #endregion
+
+    public static string GetFullPath(string relative)
+    {
+      if (relative.StartsWith("."))
+      {
+        string sCurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
+        return Path.GetFullPath(Path.Combine(sCurrentDirectory, relative));
+      }
+      return relative;
+    }
   }
 }

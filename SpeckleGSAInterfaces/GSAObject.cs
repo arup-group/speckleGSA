@@ -1,15 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SpeckleGSAInterfaces
 {
-	/// <summary>
-	/// Attribute containing read and write information for the object.
-	/// </summary>
-	[AttributeUsage(AttributeTargets.Class)]
+  /// <summary>
+  /// Attribute containing read and write information for the object.
+  /// </summary>
+  [AttributeUsage(AttributeTargets.Class)]
 	public class GSAObject : Attribute
 	{
 		/// <summary>

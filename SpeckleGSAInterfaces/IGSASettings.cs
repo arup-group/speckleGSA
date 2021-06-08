@@ -1,24 +1,23 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace SpeckleGSAInterfaces
 {
-	public interface IGSASettings
+  public interface IGSASettings
 	{
 		string ObjectUrl(string id);  //The app owns the connection with the server.  This is used for logging in the kits
-		GSATargetLayer TargetLayer { get;  }
-		string Units { get; }
-		double CoincidentNodeAllowance { get; }
+		GSATargetLayer TargetLayer { get; set; }
+		string Units { get; set; }
+		double CoincidentNodeAllowance { get; set; }
 
-		Dictionary<string, Tuple<int, int, List<string>>> NodalResults { get; }
-		Dictionary<string, Tuple<int, int, List<string>>> Element1DResults { get; }
-		Dictionary<string, Tuple<int, int, List<string>>> Element2DResults { get; }
-		Dictionary<string, Tuple<string, int, int, List<string>>> MiscResults { get; } 
+		Dictionary<string, IGSAResultParams> NodalResults { get; set; }
+		Dictionary<string, IGSAResultParams> Element1DResults { get; set; }
+		Dictionary<string, IGSAResultParams> Element2DResults { get; set; }
+		Dictionary<string, IGSAResultParams> MiscResults { get; set; } 
 
-		bool SendResults { get; }
-		List<string> ResultCases { get; }
-		bool ResultInLocalAxis { get; }
-		int Result1DNumPosition { get; }
-		bool EmbedResults { get; }
+		bool SendResults { get; set; }
+		List<string> ResultCases { get; set; }
+		bool ResultInLocalAxis { get; set; }
+		int Result1DNumPosition { get; set; }
+		bool EmbedResults { get; set; }
 	}
 }
