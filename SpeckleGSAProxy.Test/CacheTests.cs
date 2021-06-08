@@ -96,20 +96,19 @@ namespace SpeckleGSAProxy.Test
       Assert.AreEqual(5, cache.ResolveIndex("LOAD_2D_THERMAL"));
     }
 
+    [Ignore("Doesn't need to be run every time")]
     [Test]
     public void GenerateDesignCache()
     {
       var resources = new GsaAppResources();
       resources.Settings.TargetLayer = GSATargetLayer.Design;
       resources.LocalSettings.SeparateStreams = true;
-      //GSA.SenderInfo = new Dictionary<string, SidSpeckleRecord>() { { "testStream", new SidSpeckleRecord("testStreamId", "testStream", "testClientId") } };
+
       var senderStreamInfo = new List<SidSpeckleRecord> { new SidSpeckleRecord("testStreamId", "testStream", "testClientId") };
 
       //This runs SpeckleInitializer.Initialize() and fills WriteTypePrereqs and ReadTypePrereqs
       GSA.Init("");
 
-      //Status.MessageAdded += (s, e) => Debug.WriteLine("Message: " + e.Message);
-      //Status.ErrorAdded += (s, e) => Debug.WriteLine("Error: " + e.Message);
       Status.StatusChanged += (s, e) => Debug.WriteLine("Status: " + e.Name);
 
       var filePath = @"C:\Users\Nic.Burgers\OneDrive - Arup\Issues\Nguyen Le\2D result\shear wall system-seismic v10.1.gwb";
@@ -125,7 +124,7 @@ namespace SpeckleGSAProxy.Test
         senderCoordinator.Initialize("", "", senderStreamInfo, (restApi, apiToken) => new TestSpeckleGSASender(), new Progress<MessageEventArgs>(), 
           new Progress<string>(), new Progress<double>(), new Progress<SidSpeckleRecord>(), new Progress<SidSpeckleRecord>());
 
-        senderCoordinator.Trigger();
+        _ = senderCoordinator.Trigger();
 
         //Each kit stores their own objects to be sent
         var speckleObjects = GSA.GetSpeckleObjectsFromSenderDictionaries();
@@ -134,7 +133,7 @@ namespace SpeckleGSAProxy.Test
 
         Helper.WriteFile(jsonToWrite, designLayerExpectedFile, TestDataDirectory);
       }
-      catch (Exception ex)
+      catch
       {
         failed = true;
       }
@@ -152,7 +151,6 @@ namespace SpeckleGSAProxy.Test
 
       //This runs SpeckleInitializer.Initialize() and fills WriteTypePrereqs and ReadTypePrereqs
       GSA.Init("");
-      //GSA.SenderInfo = new Dictionary<string, SidSpeckleRecord>() { { "testStream", new SidSpeckleRecord("testStreamId", "testStream", "testClientId") } };
       var senderStreamInfo = new List<SidSpeckleRecord> { new SidSpeckleRecord("testStreamId", "testStream", "testClientId") };
 
       var json = Helper.ReadFile(designLayerExpectedFile, TestDataDirectory);
@@ -160,8 +158,6 @@ namespace SpeckleGSAProxy.Test
       var response = ResponseObject.FromJson(json);
       var expectedDesignLayerSpeckleObjects = response.Resources;
 
-      //Status.MessageAdded += (s, e) => Debug.WriteLine("Message: " + e.Message);
-      //Status.ErrorAdded += (s, e) => Debug.WriteLine("Error: " + e.Message);
       Status.StatusChanged += (s, e) => Debug.WriteLine("Status: " + e.Name);
 
       var filePath = @"C:\Users\Nic.Burgers\OneDrive - Arup\Issues\Nguyen Le\2D result\shear wall system-seismic v10.1.gwb";

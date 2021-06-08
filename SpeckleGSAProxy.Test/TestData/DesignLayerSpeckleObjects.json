@@ -704,12 +704,10 @@
         15.0,
         -10.0
       ],
-      "hash": "7773d581270e6908022a16039a4beca9",
       "applicationId": "gsa/NODE-1",
-      "name": "",
       "properties": {
         "structural": {
-          "restraint": {"type":"StructuralVectorBoolSix","value":[true,true,true,true,true,true],"hash":"4d8dc7866fe2f80672e65c3a2620ae93","properties":{}}
+          "restraint": {"type":"StructuralVectorBoolSix","value":[true,true,true,true,true,true],"hash":"b9a3c327532ae6c0df9305e97e3c853e","properties":{}}
         }
       }
     },
@@ -720,9 +718,8 @@
         15.0,
         15.0
       ],
-      "hash": "9293230aac663af5e82301620ee50fc0",
+      "hash": "3df4943e3e3b4d01035cee250d8b09fb",
       "applicationId": "gsa/NODE-2",
-      "name": "",
       "properties": {}
     },
     {
@@ -733,7 +730,6 @@
         15.0
       ],
       "applicationId": "gsa/NODE-3",
-      "name": "",
       "properties": {}
     },
     {
@@ -743,12 +739,10 @@
         10.0,
         -10.0
       ],
-      "hash": "09c4e1deff47ebc2c91b7a1586508b14",
       "applicationId": "gsa/NODE-4",
-      "name": "",
       "properties": {
         "structural": {
-          "restraint": {"type":"StructuralVectorBoolSix","value":[true,true,true,true,true,true],"hash":"4d8dc7866fe2f80672e65c3a2620ae93","properties":{}}
+          "restraint": {"type":"StructuralVectorBoolSix","value":[true,true,true,true,true,true],"hash":"b9a3c327532ae6c0df9305e97e3c853e","properties":{}}
         }
       }
     },
@@ -759,12 +753,10 @@
         5.0,
         -10.0
       ],
-      "hash": "4e0b961a4df00c46426ddf5525997579",
       "applicationId": "gsa/NODE-5",
-      "name": "",
       "properties": {
         "structural": {
-          "restraint": {"type":"StructuralVectorBoolSix","value":[true,true,true,true,true,true],"hash":"4d8dc7866fe2f80672e65c3a2620ae93","properties":{}}
+          "restraint": {"type":"StructuralVectorBoolSix","value":[true,true,true,true,true,true],"hash":"b9a3c327532ae6c0df9305e97e3c853e","properties":{}}
         }
       }
     },
@@ -776,7 +768,6 @@
         15.0
       ],
       "applicationId": "gsa/NODE-6",
-      "name": "",
       "properties": {}
     },
     {
@@ -786,12 +777,10 @@
         0.0,
         -10.0
       ],
-      "hash": "5c7d4047845d1f1fcc4e5c65c65a289d",
       "applicationId": "gsa/NODE-7",
-      "name": "",
       "properties": {
         "structural": {
-          "restraint": {"type":"StructuralVectorBoolSix","value":[true,true,true,true,true,true],"hash":"4d8dc7866fe2f80672e65c3a2620ae93","properties":{}}
+          "restraint": {"type":"StructuralVectorBoolSix","value":[true,true,true,true,true,true],"hash":"b9a3c327532ae6c0df9305e97e3c853e","properties":{}}
         }
       }
     },
@@ -803,7 +792,6 @@
         15.0
       ],
       "applicationId": "gsa/NODE-8",
-      "name": "",
       "properties": {}
     },
     {
@@ -813,9 +801,8 @@
         15.0,
         -5.0
       ],
-      "hash": "dc51c2db0c6bfe3fb623010d796ae9d0",
+      "hash": "d87abfaafe94a8e18b9602dbc51132a0",
       "applicationId": "gsa/NODE-9",
-      "name": "",
       "properties": {}
     },
     {
@@ -826,7 +813,6 @@
         -5.0
       ],
       "applicationId": "gsa/NODE-10",
-      "name": "",
       "properties": {}
     },
     {
@@ -837,7 +823,6 @@
         -5.0
       ],
       "applicationId": "gsa/NODE-11",
-      "name": "",
       "properties": {}
     },
     {
@@ -848,7 +833,6 @@
         -5.0
       ],
       "applicationId": "gsa/NODE-12",
-      "name": "",
       "properties": {}
     },
     {
@@ -858,9 +842,8 @@
         15.0,
         0.0
       ],
-      "hash": "26f70afdfac9ea7eb7562facef3f5fdb",
+      "hash": "c6391e3a915859dc6a8243a85676950a",
       "applicationId": "gsa/NODE-13",
-      "name": "",
       "properties": {}
     },
     {
@@ -871,7 +854,6 @@
         0.0
       ],
       "applicationId": "gsa/NODE-14",
-      "name": "",
       "properties": {}
     },
     {
@@ -882,7 +864,6 @@
         0.0
       ],
       "applicationId": "gsa/NODE-15",
-      "name": "",
       "properties": {}
     },
     {
@@ -893,7 +874,6 @@
         0.0
       ],
       "applicationId": "gsa/NODE-16",
-      "name": "",
       "properties": {}
     },
     {
@@ -903,9 +883,8 @@
         15.0,
         5.0
       ],
-      "hash": "15f74b0ed4395951b19a278ea96d3b8b",
+      "hash": "1aadf3a5684d18dff345677e72bf1cc9",
       "applicationId": "gsa/NODE-17",
-      "name": "",
       "properties": {}
     },
     {
@@ -916,7 +895,6 @@
         5.0
       ],
       "applicationId": "gsa/NODE-18",
-      "name": "",
       "properties": {}
     },
     {
@@ -927,7 +905,6 @@
         5.0
       ],
       "applicationId": "gsa/NODE-19",
-      "name": "",
       "properties": {}
     },
     {
@@ -938,7 +915,6 @@
         5.0
       ],
       "applicationId": "gsa/NODE-20",
-      "name": "",
       "properties": {}
     },
     {
@@ -948,9 +924,8 @@
         15.0,
         10.0
       ],
-      "hash": "9377a33d7b11da9564d505d0d9247fb8",
+      "hash": "14d084fa3a7d0f78cb6b9453ae7e1ffe",
       "applicationId": "gsa/NODE-21",
-      "name": "",
       "properties": {}
     },
     {
@@ -961,7 +936,6 @@
         10.0
       ],
       "applicationId": "gsa/NODE-22",
-      "name": "",
       "properties": {}
     },
     {
@@ -972,7 +946,6 @@
         10.0
       ],
       "applicationId": "gsa/NODE-23",
-      "name": "",
       "properties": {}
     },
     {
@@ -983,7 +956,6 @@
         10.0
       ],
       "applicationId": "gsa/NODE-24",
-      "name": "",
       "properties": {}
     },
     {
@@ -994,7 +966,6 @@
         20.0
       ],
       "applicationId": "gsa/NODE-25",
-      "name": "",
       "properties": {}
     },
     {
@@ -1005,7 +976,6 @@
         20.0
       ],
       "applicationId": "gsa/NODE-26",
-      "name": "",
       "properties": {}
     },
     {
@@ -1016,7 +986,6 @@
         20.0
       ],
       "applicationId": "gsa/NODE-27",
-      "name": "",
       "properties": {}
     },
     {
@@ -1027,7 +996,6 @@
         20.0
       ],
       "applicationId": "gsa/NODE-28",
-      "name": "",
       "properties": {}
     },
     {
@@ -1038,7 +1006,6 @@
         -10.0
       ],
       "applicationId": "gsa/NODE-71",
-      "name": "",
       "properties": {}
     },
     {
@@ -1049,7 +1016,6 @@
         -10.0
       ],
       "applicationId": "gsa/NODE-72",
-      "name": "",
       "properties": {}
     },
     {
@@ -1060,7 +1026,6 @@
         -10.0
       ],
       "applicationId": "gsa/NODE-73",
-      "name": "",
       "properties": {}
     },
     {
@@ -1071,7 +1036,6 @@
         -10.0
       ],
       "applicationId": "gsa/NODE-74",
-      "name": "",
       "properties": {}
     },
     {
@@ -1082,7 +1046,6 @@
         -9.0
       ],
       "applicationId": "gsa/NODE-75",
-      "name": "",
       "properties": {}
     },
     {
@@ -1093,7 +1056,6 @@
         -8.0
       ],
       "applicationId": "gsa/NODE-76",
-      "name": "",
       "properties": {}
     },
     {
@@ -1104,7 +1066,6 @@
         -7.0
       ],
       "applicationId": "gsa/NODE-77",
-      "name": "",
       "properties": {}
     },
     {
@@ -1115,7 +1076,6 @@
         -6.0
       ],
       "applicationId": "gsa/NODE-78",
-      "name": "",
       "properties": {}
     },
     {
@@ -1126,7 +1086,6 @@
         -4.0
       ],
       "applicationId": "gsa/NODE-79",
-      "name": "",
       "properties": {}
     },
     {
@@ -1137,7 +1096,6 @@
         -3.0
       ],
       "applicationId": "gsa/NODE-80",
-      "name": "",
       "properties": {}
     },
     {
@@ -1148,7 +1106,6 @@
         -2.0
       ],
       "applicationId": "gsa/NODE-81",
-      "name": "",
       "properties": {}
     },
     {
@@ -1159,7 +1116,6 @@
         -1.0
       ],
       "applicationId": "gsa/NODE-82",
-      "name": "",
       "properties": {}
     },
     {
@@ -1170,7 +1126,6 @@
         1.0
       ],
       "applicationId": "gsa/NODE-83",
-      "name": "",
       "properties": {}
     },
     {
@@ -1181,7 +1136,6 @@
         2.0
       ],
       "applicationId": "gsa/NODE-84",
-      "name": "",
       "properties": {}
     },
     {
@@ -1192,7 +1146,6 @@
         3.0
       ],
       "applicationId": "gsa/NODE-85",
-      "name": "",
       "properties": {}
     },
     {
@@ -1203,7 +1156,6 @@
         4.0
       ],
       "applicationId": "gsa/NODE-86",
-      "name": "",
       "properties": {}
     },
     {
@@ -1214,7 +1166,6 @@
         6.0
       ],
       "applicationId": "gsa/NODE-87",
-      "name": "",
       "properties": {}
     },
     {
@@ -1225,7 +1176,6 @@
         7.0
       ],
       "applicationId": "gsa/NODE-88",
-      "name": "",
       "properties": {}
     },
     {
@@ -1236,7 +1186,6 @@
         8.0
       ],
       "applicationId": "gsa/NODE-89",
-      "name": "",
       "properties": {}
     },
     {
@@ -1247,7 +1196,6 @@
         9.0
       ],
       "applicationId": "gsa/NODE-90",
-      "name": "",
       "properties": {}
     },
     {
@@ -1258,7 +1206,6 @@
         11.0
       ],
       "applicationId": "gsa/NODE-91",
-      "name": "",
       "properties": {}
     },
     {
@@ -1269,7 +1216,6 @@
         12.0
       ],
       "applicationId": "gsa/NODE-92",
-      "name": "",
       "properties": {}
     },
     {
@@ -1280,7 +1226,6 @@
         13.0
       ],
       "applicationId": "gsa/NODE-93",
-      "name": "",
       "properties": {}
     },
     {
@@ -1291,7 +1236,6 @@
         14.0
       ],
       "applicationId": "gsa/NODE-94",
-      "name": "",
       "properties": {}
     },
     {
@@ -1302,7 +1246,6 @@
         15.0
       ],
       "applicationId": "gsa/NODE-95",
-      "name": "",
       "properties": {}
     },
     {
@@ -1313,7 +1256,6 @@
         15.0
       ],
       "applicationId": "gsa/NODE-96",
-      "name": "",
       "properties": {}
     },
     {
@@ -1324,7 +1266,6 @@
         15.0
       ],
       "applicationId": "gsa/NODE-97",
-      "name": "",
       "properties": {}
     },
     {
@@ -1335,7 +1276,6 @@
         15.0
       ],
       "applicationId": "gsa/NODE-98",
-      "name": "",
       "properties": {}
     },
     {
@@ -1346,7 +1286,6 @@
         14.0
       ],
       "applicationId": "gsa/NODE-99",
-      "name": "",
       "properties": {}
     },
     {
@@ -1357,7 +1296,6 @@
         13.0
       ],
       "applicationId": "gsa/NODE-100",
-      "name": "",
       "properties": {}
     },
     {
@@ -1368,7 +1306,6 @@
         12.0
       ],
       "applicationId": "gsa/NODE-101",
-      "name": "",
       "properties": {}
     },
     {
@@ -1379,7 +1316,6 @@
         11.0
       ],
       "applicationId": "gsa/NODE-102",
-      "name": "",
       "properties": {}
     },
     {
@@ -1390,7 +1326,6 @@
         9.0
       ],
       "applicationId": "gsa/NODE-103",
-      "name": "",
       "properties": {}
     },
     {
@@ -1401,7 +1336,6 @@
         8.0
       ],
       "applicationId": "gsa/NODE-104",
-      "name": "",
       "properties": {}
     },
     {
@@ -1412,7 +1346,6 @@
         7.0
       ],
       "applicationId": "gsa/NODE-105",
-      "name": "",
       "properties": {}
     },
     {
@@ -1423,7 +1356,6 @@
         6.0
       ],
       "applicationId": "gsa/NODE-106",
-      "name": "",
       "properties": {}
     },
     {
@@ -1434,7 +1366,6 @@
         4.0
       ],
       "applicationId": "gsa/NODE-107",
-      "name": "",
       "properties": {}
     },
     {
@@ -1445,7 +1376,6 @@
         3.0
       ],
       "applicationId": "gsa/NODE-108",
-      "name": "",
       "properties": {}
     },
     {
@@ -1456,7 +1386,6 @@
         2.0
       ],
       "applicationId": "gsa/NODE-109",
-      "name": "",
       "properties": {}
     },
     {
@@ -1467,7 +1396,6 @@
         1.0
       ],
       "applicationId": "gsa/NODE-110",
-      "name": "",
       "properties": {}
     },
     {
@@ -1478,7 +1406,6 @@
         -1.0
       ],
       "applicationId": "gsa/NODE-111",
-      "name": "",
       "properties": {}
     },
     {
@@ -1489,7 +1416,6 @@
         -2.0
       ],
       "applicationId": "gsa/NODE-112",
-      "name": "",
       "properties": {}
     },
     {
@@ -1500,7 +1426,6 @@
         -3.0
       ],
       "applicationId": "gsa/NODE-113",
-      "name": "",
       "properties": {}
     },
     {
@@ -1511,7 +1436,6 @@
         -4.0
       ],
       "applicationId": "gsa/NODE-114",
-      "name": "",
       "properties": {}
     },
     {
@@ -1522,7 +1446,6 @@
         -6.0
       ],
       "applicationId": "gsa/NODE-115",
-      "name": "",
       "properties": {}
     },
     {
@@ -1533,7 +1456,6 @@
         -7.0
       ],
       "applicationId": "gsa/NODE-116",
-      "name": "",
       "properties": {}
     },
     {
@@ -1544,7 +1466,6 @@
         -8.0
       ],
       "applicationId": "gsa/NODE-117",
-      "name": "",
       "properties": {}
     },
     {
@@ -1555,7 +1476,6 @@
         -9.0
       ],
       "applicationId": "gsa/NODE-118",
-      "name": "",
       "properties": {}
     },
     {
@@ -1566,7 +1486,6 @@
         14.0
       ],
       "applicationId": "gsa/NODE-119",
-      "name": "",
       "properties": {}
     },
     {
@@ -1577,7 +1496,6 @@
         12.999999
       ],
       "applicationId": "gsa/NODE-120",
-      "name": "",
       "properties": {}
     },
     {
@@ -1588,7 +1506,6 @@
         12.0
       ],
       "applicationId": "gsa/NODE-121",
-      "name": "",
       "properties": {}
     },
     {
@@ -1599,7 +1516,6 @@
         11.0
       ],
       "applicationId": "gsa/NODE-122",
-      "name": "",
       "properties": {}
     },
     {
@@ -1610,7 +1526,6 @@
         9.999999
       ],
       "applicationId": "gsa/NODE-123",
-      "name": "",
       "properties": {}
     },
     {
@@ -1621,7 +1536,6 @@
         8.999999
       ],
       "applicationId": "gsa/NODE-124",
-      "name": "",
       "properties": {}
     },
     {
@@ -1632,7 +1546,6 @@
         8.0
       ],
       "applicationId": "gsa/NODE-125",
-      "name": "",
       "properties": {}
     },
     {
@@ -1643,7 +1556,6 @@
         7.0
       ],
       "applicationId": "gsa/NODE-126",
-      "name": "",
       "properties": {}
     },
     {
@@ -1654,7 +1566,6 @@
         5.999999
       ],
       "applicationId": "gsa/NODE-127",
-      "name": "",
       "properties": {}
     },
     {
@@ -1665,7 +1576,6 @@
         5.0
       ],
       "applicationId": "gsa/NODE-128",
-      "name": "",
       "properties": {}
     },
     {
@@ -1676,7 +1586,6 @@
         4.0
       ],
       "applicationId": "gsa/NODE-129",
-      "name": "",
       "properties": {}
     },
     {
@@ -1687,7 +1596,6 @@
         3.0
       ],
       "applicationId": "gsa/NODE-130",
-      "name": "",
       "properties": {}
     },
     {
@@ -1698,7 +1606,6 @@
         2.0
       ],
       "applicationId": "gsa/NODE-131",
-      "name": "",
       "properties": {}
     },
     {
@@ -1709,7 +1616,6 @@
         1.0
       ],
       "applicationId": "gsa/NODE-132",
-      "name": "",
       "properties": {}
     },
     {
@@ -1720,7 +1626,6 @@
         0.0
       ],
       "applicationId": "gsa/NODE-133",
-      "name": "",
       "properties": {}
     },
     {
@@ -1731,7 +1636,6 @@
         -1.0
       ],
       "applicationId": "gsa/NODE-134",
-      "name": "",
       "properties": {}
     },
     {
@@ -1742,7 +1646,6 @@
         -1.999999
       ],
       "applicationId": "gsa/NODE-135",
-      "name": "",
       "properties": {}
     },
     {
@@ -1753,7 +1656,6 @@
         -3.0
       ],
       "applicationId": "gsa/NODE-136",
-      "name": "",
       "properties": {}
     },
     {
@@ -1764,7 +1666,6 @@
         -3.999999
       ],
       "applicationId": "gsa/NODE-137",
-      "name": "",
       "properties": {}
     },
     {
@@ -1775,7 +1676,6 @@
         -4.999999
       ],
       "applicationId": "gsa/NODE-138",
-      "name": "",
       "properties": {}
     },
     {
@@ -1786,7 +1686,6 @@
         -6.0
       ],
       "applicationId": "gsa/NODE-139",
-      "name": "",
       "properties": {}
     },
     {
@@ -1797,7 +1696,6 @@
         -7.0
       ],
       "applicationId": "gsa/NODE-140",
-      "name": "",
       "properties": {}
     },
     {
@@ -1808,7 +1706,6 @@
         -7.999999
       ],
       "applicationId": "gsa/NODE-141",
-      "name": "",
       "properties": {}
     },
     {
@@ -1819,7 +1716,6 @@
         -9.0
       ],
       "applicationId": "gsa/NODE-142",
-      "name": "",
       "properties": {}
     },
     {
@@ -1830,7 +1726,6 @@
         14.0
       ],
       "applicationId": "gsa/NODE-143",
-      "name": "",
       "properties": {}
     },
     {
@@ -1841,7 +1736,6 @@
         13.0
       ],
       "applicationId": "gsa/NODE-144",
-      "name": "",
       "properties": {}
     },
     {
@@ -1852,7 +1746,6 @@
         12.0
       ],
       "applicationId": "gsa/NODE-145",
-      "name": "",
       "properties": {}
     },
     {
@@ -1863,7 +1756,6 @@
         11.0
       ],
       "applicationId": "gsa/NODE-146",
-      "name": "",
       "properties": {}
     },
     {
@@ -1874,7 +1766,6 @@
         9.999999
       ],
       "applicationId": "gsa/NODE-147",
-      "name": "",
       "properties": {}
     },
     {
@@ -1885,7 +1776,6 @@
         9.0
       ],
       "applicationId": "gsa/NODE-148",
-      "name": "",
       "properties": {}
     },
     {
@@ -1896,7 +1786,6 @@
         8.0
       ],
       "applicationId": "gsa/NODE-149",
-      "name": "",
       "properties": {}
     },
     {
@@ -1907,7 +1796,6 @@
         7.0
       ],
       "applicationId": "gsa/NODE-150",
-      "name": "",
       "properties": {}
     },
     {
@@ -1918,7 +1806,6 @@
         6.0
       ],
       "applicationId": "gsa/NODE-151",
-      "name": "",
       "properties": {}
     },
     {
@@ -1929,7 +1816,6 @@
         5.0
       ],
       "applicationId": "gsa/NODE-152",
-      "name": "",
       "properties": {}
     },
     {
@@ -1940,7 +1826,6 @@
         4.0
       ],
       "applicationId": "gsa/NODE-153",
-      "name": "",
       "properties": {}
     },
     {
@@ -1951,7 +1836,6 @@
         2.999999
       ],
       "applicationId": "gsa/NODE-154",
-      "name": "",
       "properties": {}
     },
     {
@@ -1962,7 +1846,6 @@
         2.0
       ],
       "applicationId": "gsa/NODE-155",
-      "name": "",
       "properties": {}
     },
     {
@@ -1973,7 +1856,6 @@
         1.0
       ],
       "applicationId": "gsa/NODE-156",
-      "name": "",
       "properties": {}
     },
     {
@@ -1984,7 +1866,6 @@
         0.0
       ],
       "applicationId": "gsa/NODE-157",
-      "name": "",
       "properties": {}
     },
     {
@@ -1995,7 +1876,6 @@
         -1.0
       ],
       "applicationId": "gsa/NODE-158",
-      "name": "",
       "properties": {}
     },
     {
@@ -2006,7 +1886,6 @@
         -2.0
       ],
       "applicationId": "gsa/NODE-159",
-      "name": "",
       "properties": {}
     },
     {
@@ -2017,7 +1896,6 @@
         -3.0
       ],
       "applicationId": "gsa/NODE-160",
-      "name": "",
       "properties": {}
     },
     {
@@ -2028,7 +1906,6 @@
         -4.0
       ],
       "applicationId": "gsa/NODE-161",
-      "name": "",
       "properties": {}
     },
     {
@@ -2039,7 +1916,6 @@
         -5.0
       ],
       "applicationId": "gsa/NODE-162",
-      "name": "",
       "properties": {}
     },
     {
@@ -2050,7 +1926,6 @@
         -6.0
       ],
       "applicationId": "gsa/NODE-163",
-      "name": "",
       "properties": {}
     },
     {
@@ -2061,7 +1936,6 @@
         -7.0
       ],
       "applicationId": "gsa/NODE-164",
-      "name": "",
       "properties": {}
     },
     {
@@ -2072,7 +1946,6 @@
         -8.0
       ],
       "applicationId": "gsa/NODE-165",
-      "name": "",
       "properties": {}
     },
     {
@@ -2083,7 +1956,6 @@
         -9.0
       ],
       "applicationId": "gsa/NODE-166",
-      "name": "",
       "properties": {}
     },
     {
@@ -2094,7 +1966,6 @@
         14.0
       ],
       "applicationId": "gsa/NODE-167",
-      "name": "",
       "properties": {}
     },
     {
@@ -2105,7 +1976,6 @@
         13.0
       ],
       "applicationId": "gsa/NODE-168",
-      "name": "",
       "properties": {}
     },
     {
@@ -2116,7 +1986,6 @@
         12.0
       ],
       "applicationId": "gsa/NODE-169",
-      "name": "",
       "properties": {}
     },
     {
@@ -2127,7 +1996,6 @@
         11.0
       ],
       "applicationId": "gsa/NODE-170",
-      "name": "",
       "properties": {}
     },
     {
@@ -2138,7 +2006,6 @@
         10.0
       ],
       "applicationId": "gsa/NODE-171",
-      "name": "",
       "properties": {}
     },
     {
@@ -2149,7 +2016,6 @@
         9.0
       ],
       "applicationId": "gsa/NODE-172",
-      "name": "",
       "properties": {}
     },
     {
@@ -2160,7 +2026,6 @@
         8.0
       ],
       "applicationId": "gsa/NODE-173",
-      "name": "",
       "properties": {}
     },
     {
@@ -2171,7 +2036,6 @@
         7.0
       ],
       "applicationId": "gsa/NODE-174",
-      "name": "",
       "properties": {}
     },
     {
@@ -2182,7 +2046,6 @@
         6.0
       ],
       "applicationId": "gsa/NODE-175",
-      "name": "",
       "properties": {}
     },
     {
@@ -2193,7 +2056,6 @@
         5.0
       ],
       "applicationId": "gsa/NODE-176",
-      "name": "",
       "properties": {}
     },
     {
@@ -2204,7 +2066,6 @@
         4.0
       ],
       "applicationId": "gsa/NODE-177",
-      "name": "",
       "properties": {}
     },
     {
@@ -2215,7 +2076,6 @@
         2.999999
       ],
       "applicationId": "gsa/NODE-178",
-      "name": "",
       "properties": {}
     },
     {
@@ -2226,7 +2086,6 @@
         2.0
       ],
       "applicationId": "gsa/NODE-179",
-      "name": "",
       "properties": {}
     },
     {
@@ -2237,7 +2096,6 @@
         1.0
       ],
       "applicationId": "gsa/NODE-180",
-      "name": "",
       "properties": {}
     },
     {
@@ -2248,7 +2106,6 @@
         0.0
       ],
       "applicationId": "gsa/NODE-181",
-      "name": "",
       "properties": {}
     },
     {
@@ -2259,7 +2116,6 @@
         -1.0
       ],
       "applicationId": "gsa/NODE-182",
-      "name": "",
       "properties": {}
     },
     {
@@ -2270,7 +2126,6 @@
         -2.0
       ],
       "applicationId": "gsa/NODE-183",
-      "name": "",
       "properties": {}
     },
     {
@@ -2281,7 +2136,6 @@
         -3.0
       ],
       "applicationId": "gsa/NODE-184",
-      "name": "",
       "properties": {}
     },
     {
@@ -2292,7 +2146,6 @@
         -4.0
       ],
       "applicationId": "gsa/NODE-185",
-      "name": "",
       "properties": {}
     },
     {
@@ -2303,7 +2156,6 @@
         -4.999999
       ],
       "applicationId": "gsa/NODE-186",
-      "name": "",
       "properties": {}
     },
     {
@@ -2314,7 +2166,6 @@
         -6.0
       ],
       "applicationId": "gsa/NODE-187",
-      "name": "",
       "properties": {}
     },
     {
@@ -2325,7 +2176,6 @@
         -7.0
       ],
       "applicationId": "gsa/NODE-188",
-      "name": "",
       "properties": {}
     },
     {
@@ -2336,7 +2186,6 @@
         -8.0
       ],
       "applicationId": "gsa/NODE-189",
-      "name": "",
       "properties": {}
     },
     {
@@ -2347,7 +2196,6 @@
         -9.0
       ],
       "applicationId": "gsa/NODE-190",
-      "name": "",
       "properties": {}
     },
     {
@@ -2358,7 +2206,6 @@
         14.0
       ],
       "applicationId": "gsa/NODE-191",
-      "name": "",
       "properties": {}
     },
     {
@@ -2369,7 +2216,6 @@
         12.999999
       ],
       "applicationId": "gsa/NODE-192",
-      "name": "",
       "properties": {}
     },
     {
@@ -2380,7 +2226,6 @@
         12.0
       ],
       "applicationId": "gsa/NODE-193",
-      "name": "",
       "properties": {}
     },
     {
@@ -2391,7 +2236,6 @@
         11.0
       ],
       "applicationId": "gsa/NODE-194",
-      "name": "",
       "properties": {}
     },
     {
@@ -2402,7 +2246,6 @@
         9.999999
       ],
       "applicationId": "gsa/NODE-195",
-      "name": "",
       "properties": {}
     },
     {
@@ -2413,7 +2256,6 @@
         8.999999
       ],
       "applicationId": "gsa/NODE-196",
-      "name": "",
       "properties": {}
     },
     {
@@ -2424,7 +2266,6 @@
         8.0
       ],
       "applicationId": "gsa/NODE-197",
-      "name": "",
       "properties": {}
     },
     {
@@ -2435,7 +2276,6 @@
         7.0
       ],
       "applicationId": "gsa/NODE-198",
-      "name": "",
       "properties": {}
     },
     {
@@ -2446,7 +2286,6 @@
         5.999999
       ],
       "applicationId": "gsa/NODE-199",
-      "name": "",
       "properties": {}
     },
     {
@@ -2457,7 +2296,6 @@
         5.0
       ],
       "applicationId": "gsa/NODE-200",
-      "name": "",
       "properties": {}
     },
     {
@@ -2468,7 +2306,6 @@
         3.999999
       ],
       "applicationId": "gsa/NODE-201",
-      "name": "",
       "properties": {}
     },
     {
@@ -2479,7 +2316,6 @@
         2.999999
       ],
       "applicationId": "gsa/NODE-202",
-      "name": "",
       "properties": {}
     },
     {
@@ -2490,7 +2326,6 @@
         2.0
       ],
       "applicationId": "gsa/NODE-203",
-      "name": "",
       "properties": {}
     },
     {
@@ -2501,7 +2336,6 @@
         1.0
       ],
       "applicationId": "gsa/NODE-204",
-      "name": "",
       "properties": {}
     },
     {
@@ -2512,7 +2346,6 @@
         0.0
       ],
       "applicationId": "gsa/NODE-205",
-      "name": "",
       "properties": {}
     },
     {
@@ -2523,7 +2356,6 @@
         -1.0
       ],
       "applicationId": "gsa/NODE-206",
-      "name": "",
       "properties": {}
     },
     {
@@ -2534,7 +2366,6 @@
         -1.999999
       ],
       "applicationId": "gsa/NODE-207",
-      "name": "",
       "properties": {}
     },
     {
@@ -2545,7 +2376,6 @@
         -3.0
       ],
       "applicationId": "gsa/NODE-208",
-      "name": "",
       "properties": {}
     },
     {
@@ -2556,7 +2386,6 @@
         -4.0
       ],
       "applicationId": "gsa/NODE-209",
-      "name": "",
       "properties": {}
     },
     {
@@ -2567,7 +2396,6 @@
         -4.999999
       ],
       "applicationId": "gsa/NODE-210",
-      "name": "",
       "properties": {}
     },
     {
@@ -2578,7 +2406,6 @@
         -6.0
       ],
       "applicationId": "gsa/NODE-211",
-      "name": "",
       "properties": {}
     },
     {
@@ -2589,7 +2416,6 @@
         -7.0
       ],
       "applicationId": "gsa/NODE-212",
-      "name": "",
       "properties": {}
     },
     {
@@ -2600,7 +2426,6 @@
         -7.999999
       ],
       "applicationId": "gsa/NODE-213",
-      "name": "",
       "properties": {}
     },
     {
@@ -2611,7 +2436,6 @@
         -9.0
       ],
       "applicationId": "gsa/NODE-214",
-      "name": "",
       "properties": {}
     },
     {
@@ -2622,7 +2446,6 @@
         -5.0
       ],
       "applicationId": "gsa/NODE-227",
-      "name": "",
       "properties": {}
     },
     {
@@ -2633,7 +2456,6 @@
         -5.0
       ],
       "applicationId": "gsa/NODE-228",
-      "name": "",
       "properties": {}
     },
     {
@@ -2644,7 +2466,6 @@
         -5.0
       ],
       "applicationId": "gsa/NODE-231",
-      "name": "",
       "properties": {}
     },
     {
@@ -2655,7 +2476,6 @@
         -5.0
       ],
       "applicationId": "gsa/NODE-232",
-      "name": "",
       "properties": {}
     },
     {
@@ -2666,7 +2486,6 @@
         0.0
       ],
       "applicationId": "gsa/NODE-235",
-      "name": "",
       "properties": {}
     },
     {
@@ -2677,7 +2496,6 @@
         0.0
       ],
       "applicationId": "gsa/NODE-236",
-      "name": "",
       "properties": {}
     },
     {
@@ -2688,7 +2506,6 @@
         0.0
       ],
       "applicationId": "gsa/NODE-239",
-      "name": "",
       "properties": {}
     },
     {
@@ -2699,7 +2516,6 @@
         0.0
       ],
       "applicationId": "gsa/NODE-240",
-      "name": "",
       "properties": {}
     },
     {
@@ -2710,7 +2526,6 @@
         5.0
       ],
       "applicationId": "gsa/NODE-243",
-      "name": "",
       "properties": {}
     },
     {
@@ -2721,7 +2536,6 @@
         5.0
       ],
       "applicationId": "gsa/NODE-244",
-      "name": "",
       "properties": {}
     },
     {
@@ -2732,7 +2546,6 @@
         5.0
       ],
       "applicationId": "gsa/NODE-247",
-      "name": "",
       "properties": {}
     },
     {
@@ -2743,7 +2556,6 @@
         5.0
       ],
       "applicationId": "gsa/NODE-248",
-      "name": "",
       "properties": {}
     },
     {
@@ -2754,7 +2566,6 @@
         10.0
       ],
       "applicationId": "gsa/NODE-251",
-      "name": "",
       "properties": {}
     },
     {
@@ -2765,7 +2576,6 @@
         10.0
       ],
       "applicationId": "gsa/NODE-252",
-      "name": "",
       "properties": {}
     },
     {
@@ -2776,7 +2586,6 @@
         10.0
       ],
       "applicationId": "gsa/NODE-255",
-      "name": "",
       "properties": {}
     },
     {
@@ -2787,7 +2596,6 @@
         10.0
       ],
       "applicationId": "gsa/NODE-256",
-      "name": "",
       "properties": {}
     },
     {
@@ -2798,7 +2606,6 @@
         15.0
       ],
       "applicationId": "gsa/NODE-259",
-      "name": "",
       "properties": {}
     },
     {
@@ -2809,7 +2616,6 @@
         15.0
       ],
       "applicationId": "gsa/NODE-260",
-      "name": "",
       "properties": {}
     },
     {
@@ -2820,7 +2626,6 @@
         15.0
       ],
       "applicationId": "gsa/NODE-263",
-      "name": "",
       "properties": {}
     },
     {
@@ -2831,7 +2636,6 @@
         15.0
       ],
       "applicationId": "gsa/NODE-264",
-      "name": "",
       "properties": {}
     },
     {
