@@ -1,6 +1,5 @@
 ﻿using SpeckleGSAInterfaces;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 
 namespace SpeckleGSAProxy
 {
@@ -8,9 +7,11 @@ namespace SpeckleGSAProxy
   {
     List<string> GetGwaSetCommands();
 
-    ReadOnlyCollection<GSACacheRecord> Records { get; }
+    List<GSACacheRecord> Records { get; }
     void Clear();
 
     bool Upsert(string keyword, int index, string gwaWithoutSet, string streamId, string applicationId, GwaSetCommandType gwaSetCommandType);
+
+    bool SetStream(string applicationId, string streamId);
   }
 }

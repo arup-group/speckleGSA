@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace SpeckleGSA
 {
-  public class GsaMessenger : IGSAMessenger, ISpeckleAppMessenger
+  public class GsaMessenger : IGSALocalMessenger, ISpeckleAppMessenger
   {
     public event EventHandler<MessageEventArgs> MessageAdded;
 
@@ -21,6 +21,23 @@ namespace SpeckleGSA
       {
         LoggedMessageCount = 0;
       }
+    }
+
+    public bool Append(IEnumerable<string> messagePortionsToMatch, IEnumerable<string> additional)
+    {
+      lock (syncLock)
+      {
+        if (MessageCache.Count() > 0 && messagePortionsToMatch != null && messagePortionsToMatch.Count() > 0 && additional != null && additional.Count() > 0)
+        {
+          //This uses LINQ which isn't efficient but when there are messages, there shouldn't be too many - there isn't a great need to make this very efficient
+          var matching = MessageCache.Where(mc => (messagePortionsToMatch.All(mptm => mc.MessagePortions.Any(mp => mp.Equals(mptm, StringComparison.InvariantCultureIgnoreCase))))).ToList();
+          foreach (var m in matching)
+          {
+            m.MessagePortions = m.MessagePortions.Concat(additional).ToArray();
+          }
+        }
+      }
+      return true;
     }
 
     public bool CacheMessage(SpeckleGSAInterfaces.MessageIntent intent, SpeckleGSAInterfaces.MessageLevel level, Exception ex, params string[] messagePortions)
@@ -43,6 +60,8 @@ namespace SpeckleGSA
 
     public bool Message(SpeckleGSAInterfaces.MessageIntent intent, SpeckleGSAInterfaces.MessageLevel level, params string[] messagePortions)
     {
+      return CacheMessage(intent, level, messagePortions);
+      /*
       if ((intent == SpeckleGSAInterfaces.MessageIntent.TechnicalLog)
         //TO DO: review this assumption that messages with 2 portions are to be consolidated
         || (intent == SpeckleGSAInterfaces.MessageIntent.Display && messagePortions.Count() == 2))  
@@ -55,10 +74,13 @@ namespace SpeckleGSA
         MessageAdded?.Invoke(null, new MessageEventArgs(intent, level, messagePortions));
       }
       return true;
+      */
     }
 
     public bool Message(SpeckleGSAInterfaces.MessageIntent intent, SpeckleGSAInterfaces.MessageLevel level, Exception ex, params string[] messagePortions)
     {
+      return CacheMessage(intent, level, ex, messagePortions);
+      /*
       if (intent == SpeckleGSAInterfaces.MessageIntent.TechnicalLog)
       {
         //Currently cache these so that the app has the provision to add more context before it's logged
@@ -69,6 +91,7 @@ namespace SpeckleGSA
         MessageAdded?.Invoke(null, new MessageEventArgs(intent, level, ex, messagePortions));
       }
       return true;
+      */
     }
 
     public void Trigger()

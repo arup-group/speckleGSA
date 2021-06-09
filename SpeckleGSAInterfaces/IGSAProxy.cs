@@ -31,7 +31,7 @@ namespace SpeckleGSAInterfaces
     /// </summary>
     /// <param name="command">GET GWA command</param>
     /// <returns>Array of GWA records</returns>
-    List<ProxyGwaLine> GetGwaData(IEnumerable<string> keywords, bool nodeApplicationIdFilter);
+    List<ProxyGwaLine> GetGwaData(IEnumerable<string> keywords, bool nodeApplicationIdFilter, IProgress<int> incrementProgress = null);
 
     //Queueing up a new addition to the model
     //Assumed to be the full SET or SET_AT command
@@ -122,6 +122,6 @@ namespace SpeckleGSAInterfaces
 
     string FormatSidTags(string streamId = "", string applicationId = "");
 
-    void ParseGeneralGwa(string fullGwa, out string keyword, out int? index, out string streamId, out string applicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType, bool includeKwVersion = false);
+    //void ParseGeneralGwa(string fullGwa, out string keyword, out int? index, out string streamId, out string applicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType, bool includeKwVersion = false);
   }
 }

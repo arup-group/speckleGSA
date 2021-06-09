@@ -1,15 +1,11 @@
-﻿using SpeckleGSAInterfaces;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace SpeckleGSAProxy
 {
-	public static class Extensions
+  public static class Extensions
 	{
     #region general
     public static List<T> AddIfNotContains<T>(this List<T> list, T val)

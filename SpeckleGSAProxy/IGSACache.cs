@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace SpeckleGSAProxy
 {
-  public interface IGSACache
+  public interface IGSACache : IGSACacheForKit
   {
     bool Upsert(string keyword, int index, string gwa, string applicationId = "", SpeckleObject so = null, GwaSetCommandType gwaSetCommandType = GwaSetCommandType.Set, bool? latest = true, string streamId = null);
 
@@ -33,6 +33,8 @@ namespace SpeckleGSAProxy
     List<Tuple<string, int, string, GwaSetCommandType>> GetDeletableData();
 
     void MarkAsPrevious(string keyword, string sid);
+
+    List<string> KeywordsForLoadCaseExpansion { get; }
 
     List<string> ExpandLoadCasesAndCombinations(string loadCaseString);
   }

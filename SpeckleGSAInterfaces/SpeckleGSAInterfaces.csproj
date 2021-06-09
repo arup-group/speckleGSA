@@ -50,6 +50,7 @@
     <Compile Include="IGSAKit.cs" />
     <Compile Include="IGSAMessenger.cs" />
     <Compile Include="IGSAProxy.cs" />
+    <Compile Include="IGSAResultParams.cs" />
     <Compile Include="IGSASenderDictionary.cs" />
     <Compile Include="IGSASettings.cs" />
     <Compile Include="IGSASpeckleContainer.cs" />

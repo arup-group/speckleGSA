@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -8,7 +7,7 @@ using System.Threading.Tasks.Dataflow;
 
 namespace SpeckleGSA
 {
-	public static class Extensions
+  public static class Extensions
 	{
 		public static Dictionary<U, V> MergeDictionaries<U, V>(this IEnumerable<Dictionary<U, V>> ds)
     {

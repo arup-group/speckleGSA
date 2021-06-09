@@ -1,12 +1,9 @@
 ﻿using Interop.Gsa_10_1;
 using Moq;
-using SpeckleGSA;
 using SpeckleGSAInterfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SpeckleGSAProxy.Test
 {
@@ -51,7 +48,7 @@ namespace SpeckleGSAProxy.Test
       ExecuteWithLock(() => data.Add(line));
     }
 
-    public new List<ProxyGwaLine> GetGwaData(IEnumerable<string> keywords, bool nodeApplicationIdFilter)
+    public new List<ProxyGwaLine> GetGwaData(IEnumerable<string> keywords, bool nodeApplicationIdFilter, IProgress<int> incrementProgress = null)
     {
       return data;
     }
