@@ -66,6 +66,37 @@ namespace SpeckleInterface
       return false;
     }
 
+    protected async Task InitialiseUser()
+    {
+      try
+      {
+        await apiClient.IntializeUser();
+      }
+      catch (SpeckleException se)
+      {
+        if (messenger != null)
+        {
+          var context = new List<string>() { "Unable to initialise user",
+            "StatusCode=" + se.StatusCode, "ResponseData=" + se.Response, "Message=" + se.Message, "Endpoint=IntializeUser" };
+          if (se is SpeckleException<ResponseBase> && ((SpeckleException<ResponseBase>)se).Result != null)
+          {
+            var responseJson = ((SpeckleException<ResponseBase>)se).Result.ToJson();
+            context.Add("ResponseJson=" + responseJson);
+          }
+          messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, se, context.ToArray());
+        }
+      }
+      catch (Exception ex)
+      {
+        //No need to update the UI
+        if (messenger != null)
+        {
+          messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, ex, "Unable to initialise user");
+        }
+      }
+      apiClient.ClientType = "GSA";
+    }
+
     protected bool tryCatchWithEvents(Action action, string msgSuccessful, string msgFailure)
     {
       bool success = false;

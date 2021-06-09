@@ -35,14 +35,14 @@ namespace SpeckleGSAProxy.Test
       return 0;
     }
 
-    public bool InitializeSender(string documentName, string streamName, BasePropertyUnits units, double tolerance, double angleTolerance, 
+    public async Task<bool> InitializeSender(string documentName, string streamName, BasePropertyUnits units, double tolerance, double angleTolerance, 
       IProgress<int> totalProgress, IProgress<int> incrementProgress)
     {
       this.streamName = streamName;
       return true;
     }
 
-    public bool InitializeSender(string documentName, string streamId, string clientId, IProgress<int> totalProgress, IProgress<int> incrementProgress)
+    public async Task<bool> InitializeSender(string documentName, string streamId, string clientId, IProgress<int> totalProgress, IProgress<int> incrementProgress)
     {
       this.streamId = streamId;
       this.clientId = clientId;

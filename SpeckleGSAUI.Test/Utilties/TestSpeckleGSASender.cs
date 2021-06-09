@@ -57,7 +57,7 @@ namespace SpeckleGSAUI.Test
 
     }
 
-    public bool InitializeSender(string documentName, string streamName, BasePropertyUnits units, double tolerance, double angleTolerance, IProgress<int> totalProgress, IProgress<int> incrementProgress)
+    public async Task<bool> InitializeSender(string documentName, string streamName, BasePropertyUnits units, double tolerance, double angleTolerance, IProgress<int> totalProgress, IProgress<int> incrementProgress)
     {
       //Just like the real thing, this simulates the creation of a stream if the client ID is not present
       this.StreamId = RandomString(8);
@@ -65,7 +65,7 @@ namespace SpeckleGSAUI.Test
       return true;
     }
 
-    public bool InitializeSender(string documentName, string streamId, string clientId, IProgress<int> totalProgress, IProgress<int> incrementProgress)
+    public async Task<bool> InitializeSender(string documentName, string streamId, string clientId, IProgress<int> totalProgress, IProgress<int> incrementProgress)
     {
       this.StreamId = streamId;
       this.clientId = clientId;
