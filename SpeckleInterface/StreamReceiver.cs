@@ -61,6 +61,8 @@ namespace SpeckleInterface
         return false;
       }
 
+      await InitialiseUser();
+
       ConnectWebSocket();
 
       apiClient.OnWsMessage += OnWsMessage;
@@ -91,6 +93,8 @@ namespace SpeckleInterface
 
         apiClient.ClientId = clientId;
       }, "", "Unable to update client on server");
+
+      await InitialiseUser();
 
       ConnectWebSocket();
 
@@ -190,18 +194,26 @@ namespace SpeckleInterface
 
       if (apiClient.Stream.Objects == null || apiClient.Stream.Objects.Count() == 0)
       {
+        //This shouldn't happen as the apiClient.Stream.Objects should at least be filled with placeholders as a results of the ObjectGetBulkAsync call above,
+        //but including this alternative just in case
         apiClient.Stream.Objects = receivedObjects;
       }
       else
       {
+        var currObjsDict = apiClient.Stream.Objects.ToDictionary(o => o._id, o => o);
         foreach (SpeckleObject obj in receivedObjects)
         {
-          var index = apiClient.Stream.Objects.FindIndex(o => o._id == obj._id);
-          if (index >= 0)
+          if (currObjsDict.ContainsKey(obj._id))
           {
-            apiClient.Stream.Objects[index] = obj;
+            currObjsDict[obj._id] = obj;
+          }
+          else
+          {
+            //This shouldn't happen either, for the same reasons as above, but including this anyway just in case, to be as defensive as possible
+            currObjsDict.Add(obj._id, obj);
           }
         }
+        apiClient.Stream.Objects = currObjsDict.Values.ToList();
       }
 
       messenger.Message(MessageIntent.Display, MessageLevel.Information, 

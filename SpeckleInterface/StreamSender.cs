@@ -30,7 +30,7 @@ namespace SpeckleInterface
     /// <param name="apiToken">API token</param>
     public StreamSender(string serverAddress, string apiToken, ISpeckleAppMessenger messenger) : base(serverAddress, apiToken, messenger)  {  }
 
-    public bool InitializeSender(string documentName, string streamName, BasePropertyUnits units, double tolerance, double angleTolerance, 
+    public async Task<bool> InitializeSender(string documentName, string streamName, BasePropertyUnits units, double tolerance, double angleTolerance, 
       IProgress<int> totalProgress, IProgress<int> incrementProgress)
     {
       this.totalProgress = totalProgress;
@@ -58,12 +58,14 @@ namespace SpeckleInterface
         apiClient.ClientId = clientResponse.Resource._id;
       }, "", "Unable to create client on the server");
 
+      await InitialiseUser();
+
       ConnectWebSocket();
 
       return true;
     }
 
-    public bool InitializeSender(string documentName, string streamId, string clientId, IProgress<int> totalProgress, IProgress<int> incrementProgress)
+    public async Task<bool> InitializeSender(string documentName, string streamId, string clientId, IProgress<int> totalProgress, IProgress<int> incrementProgress)
     {
       this.totalProgress = totalProgress;
       this.incrementProgress = incrementProgress;
@@ -85,6 +87,8 @@ namespace SpeckleInterface
 
         apiClient.ClientId = clientId;
       }, "", "Unable to update client on the server");
+
+      await InitialiseUser();
 
       ConnectWebSocket();
 
@@ -347,6 +351,7 @@ namespace SpeckleInterface
 
       apiClient.Stream.Objects = placeholders;
       apiClient.Stream.Layers = layers;
+      apiClient.ClientType = "GSA";
 
       try
       {
@@ -380,8 +385,6 @@ namespace SpeckleInterface
         numErrors = 0;
         return;
       }
-
-      //var payloadTasks = payloads.Select(p => apiClient.ObjectCreateAsync(p, 30000)).ToArray();
 
       // Send objects which are in payload and add to local DB with updated IDs
       for (var j = 0; j < payloads.Count(); j++)

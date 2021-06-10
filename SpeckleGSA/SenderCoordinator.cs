@@ -171,7 +171,7 @@ namespace SpeckleGSA
           foreach (var bucket in reuseBuckets)
           {
             var sender = gsaSenderCreator(restApi, apiToken);
-            var initialised = sender.InitializeSender(documentName, sidRecordByBucket[bucket].StreamId, sidRecordByBucket[bucket].ClientId, totalProgress, incrementProgress);
+            var initialised = await sender.InitializeSender(documentName, sidRecordByBucket[bucket].StreamId, sidRecordByBucket[bucket].ClientId, totalProgress, incrementProgress);
             if (initialised)
             { 
               Senders.Add(bucket, sender);
@@ -190,7 +190,7 @@ namespace SpeckleGSA
           var streamName = string.IsNullOrEmpty(documentTitle) ? "GSA " + sn : documentTitle + " (" + sn + ")";
 
           var sender = gsaSenderCreator(restApi, apiToken);
-          var initialised = sender.InitializeSender(documentName, streamName, basePropertyUnits, tolerance, angleTolerance, totalProgress, incrementProgress);
+          var initialised = await sender.InitializeSender(documentName, streamName, basePropertyUnits, tolerance, angleTolerance, totalProgress, incrementProgress);
           if (initialised)
           {
             Senders.Add(sn, sender);
