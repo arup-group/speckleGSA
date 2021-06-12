@@ -374,6 +374,13 @@ namespace SpeckleGSAProxy
 
       var cachedAnalIndices = ExecuteWithLock(() => recordCollection.GetRecordIndices(analKeyword));
       var cachedComboIndices = ExecuteWithLock(() => recordCollection.GetRecordIndices(comboKeyword));
+      if (loadCaseString.Equals("all", StringComparison.InvariantCultureIgnoreCase))
+      {
+        retList.AddRange(cachedAnalIndices.Select(ai => "A" + ai));
+        retList.AddRange(cachedComboIndices.Select(ai => "C" + ai));
+        return retList;
+      }
+
       var tasks = new List<Task>();
       var retListLock = new object();
 

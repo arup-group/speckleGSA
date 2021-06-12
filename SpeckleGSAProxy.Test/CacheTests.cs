@@ -171,7 +171,7 @@ namespace SpeckleGSAProxy.Test
         var sender = new SenderCoordinator();
         GSA.App.LocalSettings = new Settings() { TargetLayer = GSATargetLayer.Analysis, SeparateStreams = true };
         sender.Initialize("", "", senderStreamInfo,
-          (restApi, apiToken) => new TestSpeckleGSASender(), new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>(), 
+          (restApi, apiToken) => new TestSpeckleGSASender(), new Progress<MessageEventArgs>(), new Progress<string>(), new Progress<double>(),
           new Progress<SidSpeckleRecord>(), new Progress<SidSpeckleRecord>());
         sender.Trigger().Wait();
 
@@ -199,6 +199,5 @@ namespace SpeckleGSAProxy.Test
       }
       Assert.IsFalse(failed);
     }
-
   }
 }

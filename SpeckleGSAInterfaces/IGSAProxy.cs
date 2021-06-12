@@ -122,6 +122,11 @@ namespace SpeckleGSAInterfaces
 
     string FormatSidTags(string streamId = "", string applicationId = "");
 
+    bool PrepareResults(int numBeamPoints, List<string> resultTypes, List<string> cases);
+
+    // format for data is [ result_type, [ [ headers ], [ row, column ] ] ]
+    bool GetResults(string keyword, int index, out Dictionary<string, Tuple<List<string>, object[,]>> data);
+
     //void ParseGeneralGwa(string fullGwa, out string keyword, out int? index, out string streamId, out string applicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType, bool includeKwVersion = false);
   }
 }

@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Interop.Gsa_10_1;
 using SpeckleGSAInterfaces;
+using SpeckleGSAProxy.Results;
 
 namespace SpeckleGSAProxy
 {
@@ -37,6 +39,57 @@ namespace SpeckleGSAProxy
     public string FilePath { get; set; }
 
     char IGSAProxy.GwaDelimiter => GSAProxy.GwaDelimiter;
+
+    //Results-related
+    private string resultDir = null;
+    private IGSAResultsContext resultsContext = null;
+    private List<string> resultTypes = null;
+    private List<string> cases = null;
+    private struct ColumnData
+    {
+      public string ElementIdCol;
+      public string CaseIdCol;
+      public Dictionary<string, Dictionary<string, string>> ResultTypeCsvColumnMap;
+    }
+    private static Dictionary<ResultCsvGroup, ColumnData> resultColData = new Dictionary<ResultCsvGroup, ColumnData>
+    {
+      {
+        ResultCsvGroup.Node, new ColumnData()
+        {
+          CaseIdCol = "case_id", ElementIdCol = "id", ResultTypeCsvColumnMap = new Dictionary<string, Dictionary<string, string>>
+          {
+            { "Nodal Displacements", new Dictionary<string, string>()
+              {
+                { "disp_x", "ux" }, { "disp_y", "uy" } , { "disp_z", "uz" } , { "disp_xx", "rxx" } , { "disp_yy", "ryy" } , { "disp_zz", "rzz" }
+              }
+            },
+            { "Nodal Velocity", new Dictionary<string, string>()
+              {
+                { "vel_x", "vx" }, { "vel_y", "vy" } , { "vel_z", "vz" } , { "vel_xx", "vxx" } , { "vel_yy", "vyy" } , { "vel_zz", "vzz" }
+              }
+            }
+          }
+        }
+      },
+      {
+        ResultCsvGroup.Element1d, new ColumnData()
+        {
+          CaseIdCol = "case_id", ElementIdCol = "id", ResultTypeCsvColumnMap = new Dictionary<string, Dictionary<string, string>>
+          {
+            { "1D Element Displacement", new Dictionary<string, string>()
+              {
+                { "disp_x", "ux" }, { "disp_y", "uy" } , { "disp_z", "uz" }
+              }
+            },
+            { "1D Element Force", new Dictionary<string, string>()
+              {
+                { "force_x", "fx" }, { "force_y", "fy" } , { "force_z", "fz" } , { "moment_x", "mxx" } , { "moment_y", "myy" } , { "moment_z", "mzz" }
+              }
+            }
+          }
+        }
+      }
+    };
 
     private string SpeckleGsaVersion;
     private string units = "m";
@@ -1043,6 +1096,188 @@ namespace SpeckleGSAProxy
         : new List<int>();
     }
 
+    private bool ClearResultsDirectory()
+    {
+      var di = new DirectoryInfo(resultDir);
+      if (!di.Exists)
+      {
+        return true;
+      }
+
+      foreach (DirectoryInfo dir in di.GetDirectories())
+      {
+        foreach (FileInfo file in dir.GetFiles())
+        {
+          if (!file.Extension.Equals(".csv", StringComparison.InvariantCultureIgnoreCase))
+          {
+            return false;
+          }
+        }
+      }
+
+      foreach (FileInfo file in di.GetFiles())
+      {
+        file.Delete();
+      }
+      foreach (DirectoryInfo dir in di.GetDirectories())
+      {
+        dir.Delete(true);
+      }
+      return true;
+    }
+
+    public bool PrepareResults(int numBeamPoints, List<string> resultTypes, List<string> cases)
+    {
+      this.resultTypes = resultTypes;
+      this.resultDir = Path.Combine(Environment.CurrentDirectory, "GSAExport");
+      this.cases = cases;
+      var relativePathsToLoad = new List<string>
+      {
+        @".\result_node\result_node.csv",
+        @".\result_elem_1d\result_elem_1d.csv",
+        @".\result_elem_2d\result_elem_2d.csv",
+        @".\result_global\result_global.csv"
+      };
+      //First delete all existing csv files in the results directory to avoid confusion
+      if (!ClearResultsDirectory())
+      {
+        return false;
+      }
+
+      var retCode = GSAObject.ExportToCsv(resultDir, numBeamPoints, true, true, ",");
+      if (retCode == 0)
+      {
+        resultsContext = new SpeckleGSAResultsContext(resultDir);
+        var pathsToLoad = relativePathsToLoad.Select(rptl => Path.Combine(resultDir, rptl)).Where(p => File.Exists(p)).ToList();
+        pathsToLoad.ForEach(p => resultsContext.ImportResultsFromFile(p, "case_id", "id"));
+        return true;
+      }
+      return false;
+    }
+
+    // format for data is [ result_type, [ [ headers ], [ row, column ] ] ]
+    public bool GetResults(string keyword, int index, out Dictionary<string, Tuple<List<string>, object[,]>> allData)
+    {
+      allData = new Dictionary<string, Tuple<List<string>, object[,]>>();
+
+      var groups = GetResultCsvGroups(keyword);
+      if (groups == null)
+      {
+        return false;
+      }
+
+      bool found = false;
+      foreach (var g in groups)
+      {
+        var tableName = GetTableName(g);
+        if (GetResults(tableName, g, index, out Dictionary<string, Tuple<List<string>, object[,]>> data) && data != null)
+        {
+          foreach (var k in data.Keys)
+          {
+            if (!allData.ContainsKey(k))
+            {
+              allData.Add(k, data[k]);
+              found = true;
+            }
+          }
+        }
+      }
+      return found;
+    }
+
+    private bool GetResults(string tableName, ResultCsvGroup group, int elemId, out Dictionary<string, Tuple<List<string>, object[,]>> data)
+    {
+      data = new Dictionary<string, Tuple<List<string>, object[,]>>();
+      if (ImportResultsFileIfNecessary(tableName) && resultColData.ContainsKey(group))
+      {
+        //For each result type applicable to the data offered in this table (read from file)
+        foreach (var grt in resultColData[group].ResultTypeCsvColumnMap.Keys)
+        {
+          var cols = (new[] { resultColData[group].ElementIdCol, resultColData[group].CaseIdCol }).Concat(resultColData[group].ResultTypeCsvColumnMap[grt].Keys);
+          if (resultsContext.Query(tableName, cols, cases, out var results, new int[] { elemId }))
+          {
+            data.Add(grt, new Tuple<List<string>, object[,]>(cols.ToList(), results));
+          }
+        }
+      }
+      return (data.Keys.Count() > 0);
+    }
+
+    private List<ResultCsvGroup> GetResultCsvGroups(string keyword)
+    {
+      ResultCsvGroup g = ResultCsvGroup.Unknown;
+      if (keyword.Equals("NODE", StringComparison.InvariantCultureIgnoreCase))
+      {
+        return new List<ResultCsvGroup> { ResultCsvGroup.Node };
+      }
+      else if (keyword.Equals("EL", StringComparison.InvariantCultureIgnoreCase))
+      {
+        return new List<ResultCsvGroup> { ResultCsvGroup.Element1d, ResultCsvGroup.Element1d };
+      }
+      else if (keyword.Equals("ASSEMBLY", StringComparison.InvariantCultureIgnoreCase))
+      {
+        return new List<ResultCsvGroup> { ResultCsvGroup.Assembly };
+      }
+      return null;
+    }
+
+    private string GetTableName(ResultCsvGroup csvGroup)
+    {
+      switch (csvGroup)
+      {
+        case ResultCsvGroup.Node: return "result_node";
+        case ResultCsvGroup.Element1d: return "result_elem_1d";
+        case ResultCsvGroup.Element2d: return "result_elem_2d";
+        case ResultCsvGroup.Assembly: return "result_assembly";
+        default: return null;
+      }
+    }
+
+    private bool ImportResultsFileIfNecessary(string tableName)
+    {
+      if (!resultsContext.ResultTables.Contains(tableName))
+      {
+        return resultsContext.ImportResultsFromFile(@".\" + tableName + @"\" + tableName + ".csv", "case_id", "id");
+      }
+      return true;
+    }
+
+    public bool QueryResults(string tableName, IEnumerable<string> columns, string loadCase, out object[,] results, int? elemId = null)
+    {
+
+      results = new object[0, 0];
+      elemId = null;
+      return true;
+    }
+
+    private class ResultQuery
+    {
+      public string TableName;
+      public List<string> SrcCols;
+      public List<string> DestCols;
+      public ResultQuery(string tn, List<string> src, List<string> dest)
+      {
+        this.TableName = tn;
+        this.SrcCols = src;
+        this.DestCols = dest;
+      }
+    }
+
+    private Dictionary<string, ResultQuery> ResultQueries = new Dictionary<string, ResultQuery>()
+    {
+      {  "Nodal Displacements", new ResultQuery("", new List<string>() {"a", "b" }, new List<string>() {"a", "b" }) },
+      {  "1D Element Displacement", new ResultQuery("", new List<string>() {"a", "b" }, new List<string>() {"a", "b" }) },
+      {  "Assembly Forces and Moments", new ResultQuery("", new List<string>() {"a", "b" }, new List<string>() {"a", "b" }) }
+    };
     #endregion
+
+    private enum ResultCsvGroup
+    {
+      Unknown = 0,
+      Node,
+      Element1d,
+      Element2d,
+      Assembly
+    }
   }
 }
