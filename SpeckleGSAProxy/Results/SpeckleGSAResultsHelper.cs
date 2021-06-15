@@ -5,7 +5,7 @@ using System.IO;
 
 namespace SpeckleGSAProxy.Results
 {
-  public static class SpeckleGSAResultsHelper
+  internal static class SpeckleGSAResultsHelper
   {
     public static string gsaShellPath = @"C:\Program Files\Oasys\GSA 10.1\GsaShell.exe";
     public static string gsaResultsSubdirectoryName = "Results";

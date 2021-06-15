@@ -31,21 +31,15 @@ namespace SpeckleGSAProxy.Test
 
       var path = Path.Combine(TestDataDirectory, "200602_timberPlint 3d model.gwb");
       proxy.OpenFile(path, false);
-      try
-      {
-        Assert.IsTrue(proxy.PrepareResults(3, allResultTypes, new List<string> { "A1", "C3", "C10" }));
-        Assert.IsTrue(proxy.GetResults("NODE", 13, out var nodeResults));
-        Assert.IsNotNull(nodeResults);
-        Assert.IsTrue(nodeResults.Keys.Count > 0);
-        Assert.IsTrue(proxy.GetResults("EL", 1, out var elem1dResults));
-        Assert.IsNotNull(elem1dResults);
-        Assert.IsTrue(elem1dResults.Keys.Count > 0);
-      }
-      catch { }
-      finally
-      {
-        proxy.Close();
-      }
+      Assert.IsTrue(proxy.PrepareResults(3, allResultTypes, new List<string> { "A1", "C3", "C10" }));
+      Assert.IsTrue(proxy.GetResults("NODE", 13, out var nodeResults));
+      Assert.IsNotNull(nodeResults);
+      Assert.IsTrue(nodeResults.Keys.Count > 0);
+      Assert.IsTrue(proxy.GetResults("EL", 1, out var elem1dResults));
+      Assert.IsNotNull(elem1dResults);
+      Assert.IsTrue(elem1dResults.Keys.Count > 0);
+
+      proxy.Close();
     }
   }
 }

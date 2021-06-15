@@ -2,7 +2,7 @@
 
 namespace SpeckleGSAProxy
 {
-  public interface IGSAResultsContext
+  internal interface IGSAResultsContext
   {
     string ResultsDir { get; }
     bool ImportResultsFromFile(string filePath, string loadCaseField, string elemIdField = null);

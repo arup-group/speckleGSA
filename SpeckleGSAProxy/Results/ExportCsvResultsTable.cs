@@ -45,7 +45,7 @@ namespace SpeckleGSAProxy.Results
     public bool Query(IEnumerable<string> columns, IEnumerable<string> loadCases, out object[,] results, IEnumerable<int> elemIds = null)
     {
       results = null; //default
-      ConcurrentDictionary<int, string[]> tempValues = new ConcurrentDictionary<int, string[]>();
+      ConcurrentDictionary<int, object[]> tempValues = new ConcurrentDictionary<int, object[]>();
 
       if (!GetQueryHeaderIndices(columns, out var queryHeaderIndices)
         || !GetQueryRowIndices(loadCases, out var queryRowIndices, elemIds))
@@ -58,7 +58,7 @@ namespace SpeckleGSAProxy.Results
       {
         var rowData = Values[currRowIndex];
 
-        var tempRow = new string[queryHeaderIndices.Count()];
+        var tempRow = new object[queryHeaderIndices.Count()];
         var i = 0;
         foreach (var hi in queryHeaderIndices)
         {

@@ -164,6 +164,7 @@
     <Compile Include="Results\ExportCsvTable.cs" />
     <Compile Include="Results\SpeckleGSAResultsContext.cs" />
     <Compile Include="Results\SpeckleGSAResultsHelper.cs" />
+    <Compile Include="Results\FileToResultTableSpec.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SpeckleGSAInterfaces\SpeckleGSAInterfaces.csproj">

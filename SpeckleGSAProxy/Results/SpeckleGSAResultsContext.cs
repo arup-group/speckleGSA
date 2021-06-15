@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace SpeckleGSAProxy.Results
 {
-  public class SpeckleGSAResultsContext : IGSAResultsContext
+  internal class SpeckleGSAResultsContext : IGSAResultsContext
   {
     private readonly ConcurrentBag<ExportCsvResultsTable> resultsTables = new ConcurrentBag<ExportCsvResultsTable>();
     private readonly ConcurrentBag<ExportCsvTable> dataTables = new ConcurrentBag<ExportCsvTable>();

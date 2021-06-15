@@ -22,12 +22,12 @@ namespace SpeckleGSAProxy
     public static readonly char GwaDelimiter = '\t';
 
     //These are the exceptions to the rule that, in GSA, all records that relate to each table (i.e. the set with mutually-exclusive indices) have the same keyword
-    public static Dictionary<string, string[]> IrregularKeywordGroups = new Dictionary<string, string[]> { 
-      { "LOAD_BEAM", new string[] { "LOAD_BEAM_POINT", "LOAD_BEAM_UDL", "LOAD_BEAM_LINE", "LOAD_BEAM_PATCH", "LOAD_BEAM_TRILIN" } } 
+    public static Dictionary<string, string[]> IrregularKeywordGroups = new Dictionary<string, string[]> {
+      { "LOAD_BEAM", new string[] { "LOAD_BEAM_POINT", "LOAD_BEAM_UDL", "LOAD_BEAM_LINE", "LOAD_BEAM_PATCH", "LOAD_BEAM_TRILIN" } }
     };
 
     //Note that When a GET_ALL is called for LOAD_BEAM, it returns LOAD_BEAM_UDL, LOAD_BEAM_LINE, LOAD_BEAM_PATCH and LOAD_BEAM_TRILIN
-    public static string[] SetAtKeywords = new string[] { "LOAD_NODE", "LOAD_BEAM", "LOAD_GRID_POINT", "LOAD_GRID_LINE", "LOAD_2D_FACE", 
+    public static string[] SetAtKeywords = new string[] { "LOAD_NODE", "LOAD_BEAM", "LOAD_GRID_POINT", "LOAD_GRID_LINE", "LOAD_2D_FACE",
       "LOAD_GRID_AREA", "LOAD_2D_THERMAL", "LOAD_GRAVITY", "INF_BEAM", "INF_NODE", "RIGID", "GEN_REST" };
     //----
 
@@ -45,12 +45,94 @@ namespace SpeckleGSAProxy
     private IGSAResultsContext resultsContext = null;
     private List<string> resultTypes = null;
     private List<string> cases = null;
-    private struct ColumnData
+
+    private static Dictionary<ResultCsvGroup, FileToResultTableSpec> resultTypeSpecs = new Dictionary<ResultCsvGroup, FileToResultTableSpec>()
     {
-      public string ElementIdCol;
-      public string CaseIdCol;
-      public Dictionary<string, Dictionary<string, string>> ResultTypeCsvColumnMap;
+      {
+        ResultCsvGroup.Node, new FileToResultTableSpec("id", "case_id")
+        {
+          ResultTypeCsvColumnMap = new Dictionary<string, ColMap>()
+          {
+            {
+              "Nodal Displacements", new ColMap(
+                new Dictionary<string, ImportedField>()
+                {
+                  { "ux", new ImportedField("disp_x", typeof(double)) }, 
+                  { "uy", new ImportedField("disp_y", typeof(double)) }, 
+                  { "uz", new ImportedField("disp_z", typeof(double)) }, 
+                  { "rxx", new ImportedField("disp_xx", typeof(double)) }, 
+                  { "ryy", new ImportedField("disp_yy", typeof(double)) }, 
+                  { "rzz", new ImportedField("disp_zz", typeof(double)) }
+                },
+                new Dictionary<string, CalculatedField>()
+                {
+                  { "|u|", new CalculatedField((v) => Magnitude(v), 0, 1, 2) }
+                },
+                new List<string>() {  "ux", "uy", "uz", "|u|", "rxx", "ryy", "rzz" })
+            },
+            {
+              "Nodal Velocity", new ColMap(
+                new Dictionary<string, ImportedField>()
+                {
+                  { "vx", new ImportedField("vel_x", typeof(double)) }, 
+                  { "vy", new ImportedField("vel_y", typeof(double)) }, 
+                  { "vz", new ImportedField("vel_z", typeof(double)) }, 
+                  { "vxx", new ImportedField("vel_xx", typeof(double)) }, 
+                  { "vyy", new ImportedField("vel_yy", typeof(double)) }, 
+                  { "vzz", new ImportedField("vel_zz", typeof(double)) }
+                },
+                null,
+                new List<string>() { "vx", "vy", "vz", "vxx", "vyy", "vzz" })
+            }
+          }
+        }
+      },
+      {
+        ResultCsvGroup.Element1d, new FileToResultTableSpec("id", "case_id")
+        {
+          ResultTypeCsvColumnMap = new Dictionary<string, ColMap>()
+          {
+            {
+              "1D Element Displacement", new ColMap(
+                new Dictionary<string, ImportedField>()
+                {
+                  { "ux", new ImportedField("disp_x", typeof(double)) }, 
+                  { "uy", new ImportedField("disp_y",  typeof(double)) }, 
+                  { "uz", new ImportedField("disp_z",  typeof(double)) }
+                },
+                null,
+                new List<string>() { "ux", "uy", "uz" })
+            },
+            {
+              "1D Element Force", new ColMap(
+                new Dictionary<string, ImportedField>()
+                {
+                  { "fx", new ImportedField( "force_x", typeof(double)) }, 
+                  { "fy", new ImportedField("force_y", typeof(double)) }, 
+                  { "fz", new ImportedField("force_z", typeof(double)) }, 
+                  { "mxx", new ImportedField("moment_x", typeof(double)) }, 
+                  { "myy", new ImportedField("moment_y", typeof(double)) }, 
+                  { "mzz", new ImportedField("moment_z", typeof(double)) }
+                },
+                null,
+                new List<string>()  { "fx", "fy", "fz",  "mxx", "myy", "mzz" })
+            }
+          }
+        }
+      }
+    };
+
+    private static object Magnitude(params object[] dims)
+    {
+      if (!(dims.All(d => d is double)))
+      {
+        return null;
+      }
+      var vals = dims.Cast<double>().ToArray();
+      return Math.Sqrt(vals.Select(d => Math.Pow((double)d, 2)).Sum());
     }
+
+    /*
     private static Dictionary<ResultCsvGroup, ColumnData> resultColData = new Dictionary<ResultCsvGroup, ColumnData>
     {
       {
@@ -90,6 +172,7 @@ namespace SpeckleGSAProxy
         }
       }
     };
+    */
 
     private string SpeckleGsaVersion;
     private string units = "m";
@@ -1185,6 +1268,7 @@ namespace SpeckleGSAProxy
       return found;
     }
 
+    /*
     private bool GetResults(string tableName, ResultCsvGroup group, int elemId, out Dictionary<string, Tuple<List<string>, object[,]>> data)
     {
       data = new Dictionary<string, Tuple<List<string>, object[,]>>();
@@ -1201,6 +1285,83 @@ namespace SpeckleGSAProxy
         }
       }
       return (data.Keys.Count() > 0);
+    }
+    */
+
+    private bool GetResults(string tableName, ResultCsvGroup group, int elemId, out Dictionary<string, Tuple<List<string>, object[,]>> data)
+    {
+      data = new Dictionary<string, Tuple<List<string>, object[,]>>();
+      if (ImportResultsFileIfNecessary(tableName) && resultTypeSpecs.ContainsKey(group))
+      {
+        var spec = resultTypeSpecs[group];
+
+        foreach (var rt in spec.ResultTypeCsvColumnMap.Keys)
+        {
+          var rtMap = spec.ResultTypeCsvColumnMap[rt];
+          var fileCols = rtMap.FileCols.Keys.Select(k => rtMap.FileCols[k].FileCol).ToList();
+          var fileColTypes = rtMap.FileCols.Values.Select(i => i.DestType).ToList();
+
+          if (!resultsContext.Query(tableName, fileCols, cases, out var rtResults, new int[] { elemId }))
+          {
+            continue;
+          }
+
+          if (rtResults == null || rtResults.GetLength(0) == 0)
+          {
+            continue;
+          }
+
+          var numRows = rtResults.GetLength(0);
+
+          for (int r = 0; r < numRows; r++)
+          {
+            for (int c = 0; c < fileCols.Count(); c++)
+            {
+              if (fileColTypes[c] != null)
+              {
+                rtResults[r, c] = Convert.ChangeType(rtResults[r, c], fileColTypes[c]);
+              }
+            }
+          }
+
+          var fileColFinalIndex = rtMap.FileCols.Keys.Select(fc => rtMap.OrderedColumns.IndexOf(fc)).ToList();
+          
+
+          var rtData = new object[numRows, rtMap.OrderedColumns.Count()];
+
+          //First add the retrieved-from-file data
+          for (int r = 0; r < numRows; r++)
+          {
+            for (int c = 0; c < fileColFinalIndex.Count(); c++)
+            {
+              rtData[r, fileColFinalIndex[c]] = rtResults[r, c];
+            }
+          }
+
+          if (rtMap.CalcFields != null && rtMap.CalcFields.Keys.Count() > 0 && rtMap.CalcFields.First().Value != null)
+          {
+            var calcColFinalIndex = rtMap.CalcFields.Keys.Select(cc => rtMap.OrderedColumns.IndexOf(cc)).ToList();
+
+            var numCalcCols = rtMap.CalcFields.Keys.Count();
+            //var calculated = new object[numRows, numCalcCols];
+            for (int r = 0; r < numRows; r++)
+            {
+              var calculatedCols = rtMap.CalcFields.Keys.ToList();
+              for (int c = 0; c < calcColFinalIndex.Count(); c++)
+              {
+                var indices = rtMap.CalcFields[calculatedCols[c]].FileColIndices;
+                var values = indices.Select(i => rtResults[r, i]).ToArray();
+                rtData[r, calcColFinalIndex[c]] = rtMap.CalcFields[calculatedCols[c]].CalcFn(values);
+              }
+            }
+          }
+          if (!data.ContainsKey(rt))
+          {
+            data.Add(rt, new Tuple<List<string>, object[,]>(rtMap.OrderedColumns, rtData));
+          }
+        }
+      }
+      return (data.Keys.Count > 0);
     }
 
     private List<ResultCsvGroup> GetResultCsvGroups(string keyword)
@@ -1270,14 +1431,5 @@ namespace SpeckleGSAProxy
       {  "Assembly Forces and Moments", new ResultQuery("", new List<string>() {"a", "b" }, new List<string>() {"a", "b" }) }
     };
     #endregion
-
-    private enum ResultCsvGroup
-    {
-      Unknown = 0,
-      Node,
-      Element1d,
-      Element2d,
-      Assembly
-    }
   }
 }

@@ -12,13 +12,13 @@ namespace SpeckleGSAProxy.Results
     public string TableName;
     public string[] Headers;
     public int NumRows;
-    public ConcurrentDictionary<int, string[]> Values;
+    public ConcurrentDictionary<int, object[]> Values;
     public List<int> ErrRowIndices;
 
     public ExportCsvTable(string tableName)
     {
       this.TableName = tableName;
-      Values = new ConcurrentDictionary<int, string[]>();
+      Values = new ConcurrentDictionary<int, object[]>();
       ErrRowIndices = new List<int>();
     }
 
