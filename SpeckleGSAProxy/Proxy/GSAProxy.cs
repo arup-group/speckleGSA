@@ -54,6 +54,7 @@ namespace SpeckleGSAProxy
           ResultTypeCsvColumnMap = new Dictionary<string, ColMap>()
           {
             {
+              //Note: the element ID and case ID columns are default columns (not need to be specified here) which will be automatically added to the output
               "Nodal Displacements", new ColMap(
                 new Dictionary<string, ImportedField>()
                 {
@@ -66,9 +67,13 @@ namespace SpeckleGSAProxy
                 },
                 new Dictionary<string, CalculatedField>()
                 {
-                  { "|u|", new CalculatedField((v) => Magnitude(v), 0, 1, 2) }
+                  //Note: the calculated field indices are the zero-based column numbers based on the spec above, *before* the default columns are added
+                  { "|u|", new CalculatedField((v) => Magnitude(v), 0, 1, 2) },
+                  { "|r|", new CalculatedField((v) => Magnitude(v), 3, 4, 5) },
+                  { "uxy", new CalculatedField((v) => Magnitude(v), 0, 1) },
                 },
-                new List<string>() {  "ux", "uy", "uz", "|u|", "rxx", "ryy", "rzz" })
+                //The default columns will be added to the output too
+                new List<string>() {  "ux", "uy", "uz", "|u|", "rxx", "ryy", "rzz", "|r|", "uxy" })
             },
             {
               "Nodal Velocity", new ColMap(
@@ -81,8 +86,12 @@ namespace SpeckleGSAProxy
                   { "vyy", new ImportedField("vel_yy", typeof(double)) }, 
                   { "vzz", new ImportedField("vel_zz", typeof(double)) }
                 },
-                null,
-                new List<string>() { "vx", "vy", "vz", "vxx", "vyy", "vzz" })
+                new Dictionary<string, CalculatedField>()
+                {
+                  { "|u|", new CalculatedField((v) => Magnitude(v), 0, 1, 2) },
+                  { "|v|", new CalculatedField((v) => Magnitude(v), 3, 4, 5) }
+                 },
+                new List<string>() { "vx", "vy", "vz", "|u|", "vxx", "vyy", "vzz", "|v|" })
             }
           }
         }
@@ -100,8 +109,11 @@ namespace SpeckleGSAProxy
                   { "uy", new ImportedField("disp_y",  typeof(double)) }, 
                   { "uz", new ImportedField("disp_z",  typeof(double)) }
                 },
-                null,
-                new List<string>() { "ux", "uy", "uz" })
+                new Dictionary<string, CalculatedField>()
+                {
+                  { "|u|", new CalculatedField((v) => Magnitude(v), 0, 1, 2) }
+                },
+                new List<string>() { "ux", "uy", "uz", "|u|"   })
             },
             {
               "1D Element Force", new ColMap(
@@ -114,8 +126,14 @@ namespace SpeckleGSAProxy
                   { "myy", new ImportedField("moment_y", typeof(double)) }, 
                   { "mzz", new ImportedField("moment_z", typeof(double)) }
                 },
-                null,
-                new List<string>()  { "fx", "fy", "fz",  "mxx", "myy", "mzz" })
+                new Dictionary<string, CalculatedField>()
+                {
+                  { "|f|", new CalculatedField((v) => Magnitude(v), 0, 1, 2) },
+                  { "|m|", new CalculatedField((v) => Magnitude(v), 0, 1, 2) },
+                  { "fxy", new CalculatedField((v) => Magnitude(v), 1, 2) },
+                  { "mxy", new CalculatedField((v) => Magnitude(v), 4, 5) }
+                },
+                new List<string>()  { "fx", "fy", "fz", "|f|", "mxx", "myy", "mzz", "|m|", "fxy", "mxy" })
             }
           }
         }
@@ -1219,7 +1237,7 @@ namespace SpeckleGSAProxy
         @".\result_node\result_node.csv",
         @".\result_elem_1d\result_elem_1d.csv",
         @".\result_elem_2d\result_elem_2d.csv",
-        @".\result_global\result_global.csv"
+        @".\result_assembly\result_assembly.csv"
       };
       //First delete all existing csv files in the results directory to avoid confusion
       if (!ClearResultsDirectory())
@@ -1295,11 +1313,20 @@ namespace SpeckleGSAProxy
       {
         var spec = resultTypeSpecs[group];
 
+        var defaultFileCols = new[] { spec.ElementIdCol, spec.CaseIdCol };
+        var defaultFileColTypes = new[] { typeof(int), typeof(string) };
+        var indexOffsetForCalcs = defaultFileCols.Count();
+
         foreach (var rt in spec.ResultTypeCsvColumnMap.Keys)
         {
           var rtMap = spec.ResultTypeCsvColumnMap[rt];
-          var fileCols = rtMap.FileCols.Keys.Select(k => rtMap.FileCols[k].FileCol).ToList();
-          var fileColTypes = rtMap.FileCols.Values.Select(i => i.DestType).ToList();
+          
+          var fileCols = defaultFileCols.Concat(rtMap.FileCols.Keys.Select(k => rtMap.FileCols[k].FileCol)).ToList();
+          var fileColTypes = defaultFileColTypes.Concat(rtMap.FileCols.Values.Select(i => i.DestType)).ToList();
+
+          var resultCols = defaultFileCols.Concat(rtMap.FileCols.Keys).ToList();
+
+          var orderedFinalCols = defaultFileCols.Concat(rtMap.OrderedColumns).ToList();
 
           if (!resultsContext.Query(tableName, fileCols, cases, out var rtResults, new int[] { elemId }))
           {
@@ -1324,23 +1351,25 @@ namespace SpeckleGSAProxy
             }
           }
 
-          var fileColFinalIndex = rtMap.FileCols.Keys.Select(fc => rtMap.OrderedColumns.IndexOf(fc)).ToList();
-          
+          var fileColFinalIndices = resultCols.Select(fc => orderedFinalCols.IndexOf(fc)).ToList();
 
-          var rtData = new object[numRows, rtMap.OrderedColumns.Count()];
+          var rtData = new object[numRows, orderedFinalCols.Count()];
 
           //First add the retrieved-from-file data
           for (int r = 0; r < numRows; r++)
           {
-            for (int c = 0; c < fileColFinalIndex.Count(); c++)
+            for (int c = 0; c < fileColFinalIndices.Count(); c++)
             {
-              rtData[r, fileColFinalIndex[c]] = rtResults[r, c];
+              if (fileColFinalIndices[c] >= 0)
+              {
+                rtData[r, fileColFinalIndices[c]] = rtResults[r, c];
+              }
             }
           }
 
           if (rtMap.CalcFields != null && rtMap.CalcFields.Keys.Count() > 0 && rtMap.CalcFields.First().Value != null)
           {
-            var calcColFinalIndex = rtMap.CalcFields.Keys.Select(cc => rtMap.OrderedColumns.IndexOf(cc)).ToList();
+            var calcColFinalIndex = rtMap.CalcFields.Keys.Select(cc => orderedFinalCols.IndexOf(cc)).ToList();
 
             var numCalcCols = rtMap.CalcFields.Keys.Count();
             //var calculated = new object[numRows, numCalcCols];
@@ -1350,14 +1379,14 @@ namespace SpeckleGSAProxy
               for (int c = 0; c < calcColFinalIndex.Count(); c++)
               {
                 var indices = rtMap.CalcFields[calculatedCols[c]].FileColIndices;
-                var values = indices.Select(i => rtResults[r, i]).ToArray();
+                var values = indices.Select(i => rtResults[r, i + indexOffsetForCalcs]).ToArray();
                 rtData[r, calcColFinalIndex[c]] = rtMap.CalcFields[calculatedCols[c]].CalcFn(values);
               }
             }
           }
           if (!data.ContainsKey(rt))
           {
-            data.Add(rt, new Tuple<List<string>, object[,]>(rtMap.OrderedColumns, rtData));
+            data.Add(rt, new Tuple<List<string>, object[,]>(orderedFinalCols, rtData));
           }
         }
       }
