@@ -45,6 +45,9 @@ namespace SpeckleGSAProxy
     private IGSAResultsContext resultsContext = null;
     private List<string> resultTypes = null;
     private List<string> cases = null;
+    //This is the factor relative to the SI units (N, m, etc) that the model is currently set to - this is relevant for results as they're always
+    //exported to CSV in SI units
+    private Dictionary<ResultUnitType, double> unitData = new Dictionary<ResultUnitType, double>();
 
     private static Dictionary<ResultCsvGroup, FileToResultTableSpec> resultTypeSpecs = new Dictionary<ResultCsvGroup, FileToResultTableSpec>()
     {
@@ -58,19 +61,19 @@ namespace SpeckleGSAProxy
               "Nodal Displacements", new ColMap(
                 new Dictionary<string, ImportedField>()
                 {
-                  { "ux", new ImportedField("disp_x", typeof(double)) }, 
-                  { "uy", new ImportedField("disp_y", typeof(double)) }, 
-                  { "uz", new ImportedField("disp_z", typeof(double)) }, 
-                  { "rxx", new ImportedField("disp_xx", typeof(double)) }, 
-                  { "ryy", new ImportedField("disp_yy", typeof(double)) }, 
-                  { "rzz", new ImportedField("disp_zz", typeof(double)) }
+                  { "ux", new ImportedField("disp_x", typeof(double), ResultUnitType.Length ) },
+                  { "uy", new ImportedField("disp_y", typeof(double), ResultUnitType.Length) },
+                  { "uz", new ImportedField("disp_z", typeof(double), ResultUnitType.Length) },
+                  { "rxx", new ImportedField("disp_xx", typeof(double), ResultUnitType.Length) },
+                  { "ryy", new ImportedField("disp_yy", typeof(double), ResultUnitType.Length) },
+                  { "rzz", new ImportedField("disp_zz", typeof(double), ResultUnitType.Length) }
                 },
                 new Dictionary<string, CalculatedField>()
                 {
                   //Note: the calculated field indices are the zero-based column numbers based on the spec above, *before* the default columns are added
-                  { "|u|", new CalculatedField((v) => Magnitude(v), 0, 1, 2) },
-                  { "|r|", new CalculatedField((v) => Magnitude(v), 3, 4, 5) },
-                  { "uxy", new CalculatedField((v) => Magnitude(v), 0, 1) },
+                  { "|u|", new CalculatedField((v) => Magnitude(v), ResultUnitType.Length, 0, 1, 2) },
+                  { "|r|", new CalculatedField((v) => Magnitude(v), ResultUnitType.Angle, 3, 4, 5) },
+                  { "uxy", new CalculatedField((v) => Magnitude(v), ResultUnitType.Length, 0, 1) },
                 },
                 //The default columns will be added to the output too
                 new List<string>() {  "ux", "uy", "uz", "|u|", "rxx", "ryy", "rzz", "|r|", "uxy" })
@@ -79,19 +82,73 @@ namespace SpeckleGSAProxy
               "Nodal Velocity", new ColMap(
                 new Dictionary<string, ImportedField>()
                 {
-                  { "vx", new ImportedField("vel_x", typeof(double)) }, 
-                  { "vy", new ImportedField("vel_y", typeof(double)) }, 
-                  { "vz", new ImportedField("vel_z", typeof(double)) }, 
-                  { "vxx", new ImportedField("vel_xx", typeof(double)) }, 
-                  { "vyy", new ImportedField("vel_yy", typeof(double)) }, 
-                  { "vzz", new ImportedField("vel_zz", typeof(double)) }
+                  { "vx", new ImportedField("vel_x",  typeof(double), new [] { ResultUnitType.Length, ResultUnitType.Time }) },
+                  { "vy", new ImportedField("vel_y", typeof(double), new [] { ResultUnitType.Length, ResultUnitType.Time }) },
+                  { "vz", new ImportedField("vel_z", typeof(double), new [] { ResultUnitType.Length, ResultUnitType.Time }) },
+                  { "vxx", new ImportedField("vel_xx", typeof(double), new [] { ResultUnitType.Length, ResultUnitType.Time }) },
+                  { "vyy", new ImportedField("vel_yy", typeof(double), new [] { ResultUnitType.Length, ResultUnitType.Time }) },
+                  { "vzz", new ImportedField("vel_zz", typeof(double), new [] { ResultUnitType.Length, ResultUnitType.Time }) }
                 },
                 new Dictionary<string, CalculatedField>()
                 {
-                  { "|u|", new CalculatedField((v) => Magnitude(v), 0, 1, 2) },
-                  { "|v|", new CalculatedField((v) => Magnitude(v), 3, 4, 5) }
+                  { "|v|", new CalculatedField((v) => Magnitude(v), new [] { ResultUnitType.Length, ResultUnitType.Time }, 0, 1, 2) },
+                  { "|r|", new CalculatedField((v) => Magnitude(v), new [] { ResultUnitType.Length, ResultUnitType.Time }, 3, 4, 5) }
                  },
-                new List<string>() { "vx", "vy", "vz", "|u|", "vxx", "vyy", "vzz", "|v|" })
+                new List<string>() { "vx", "vy", "vz", "|v|", "vxx", "vyy", "vzz", "|r|" })
+            },
+            {
+              "Nodal Acceleration", new ColMap(
+                new Dictionary<string, ImportedField>()
+                {
+                  { "ax", new ImportedField("acc_x", typeof(double), ResultUnitType.Accel) },
+                  { "ay", new ImportedField("acc_y", typeof(double), ResultUnitType.Accel) },
+                  { "az", new ImportedField("acc_z", typeof(double), ResultUnitType.Accel) },
+                  { "axx", new ImportedField("acc_xx", typeof(double), ResultUnitType.Accel) },
+                  { "ayy", new ImportedField("acc_yy", typeof(double), ResultUnitType.Accel) },
+                  { "azz", new ImportedField("acc_zz", typeof(double), ResultUnitType.Accel) }
+                },
+                new Dictionary<string, CalculatedField>()
+                {
+                  { "|a|", new CalculatedField((v) => Magnitude(v), ResultUnitType.Accel, 0, 1, 2) },
+                  { "|r|", new CalculatedField((v) => Magnitude(v), ResultUnitType.Accel, 3, 4, 5) }
+                 },
+                new List<string>() { "ax", "ay", "az", "|a|", "axx", "ayy", "azz", "|r|" })
+            },
+            {
+              "Nodal Reaction", new ColMap(
+                new Dictionary<string, ImportedField>()
+                {
+                  { "fx", new ImportedField("reaction_x", typeof(double), ResultUnitType.Force) },
+                  { "fy", new ImportedField("reaction_y", typeof(double), ResultUnitType.Force) },
+                  { "fz", new ImportedField("reaction_z", typeof(double), ResultUnitType.Force) },
+                  { "mxx", new ImportedField("reaction_xx", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
+                  { "myy", new ImportedField("reaction_yy", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
+                  { "mzz", new ImportedField("reaction_zz", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) }
+                },
+                new Dictionary<string, CalculatedField>()
+                {
+                  { "|f|", new CalculatedField((v) => Magnitude(v), ResultUnitType.Force, 0, 1, 2) },
+                  { "|m|", new CalculatedField((v) => Magnitude(v), new [] { ResultUnitType.Force, ResultUnitType.Length }, 3, 4, 5) }
+                 },
+                new List<string>() { "fx", "fy", "fz", "|f|", "mxx", "myy", "mzz", "|m|" })
+            },
+            {
+              "Constraint Forces", new ColMap(
+                new Dictionary<string, ImportedField>()
+                {
+                  { "fx", new ImportedField("constraint_x", typeof(double), ResultUnitType.Force) },
+                  { "fy", new ImportedField("constraint_y", typeof(double), ResultUnitType.Force) },
+                  { "fz", new ImportedField("constraint_z", typeof(double), ResultUnitType.Force) },
+                  { "mxx", new ImportedField("constraint_xx", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
+                  { "myy", new ImportedField("constraint_yy", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
+                  { "mzz", new ImportedField("constraint_zz", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) }
+                },
+                new Dictionary<string, CalculatedField>()
+                {
+                  { "|f|", new CalculatedField((v) => Magnitude(v), ResultUnitType.Force, 0, 1, 2) },
+                  { "|m|", new CalculatedField((v) => Magnitude(v), new [] { ResultUnitType.Force, ResultUnitType.Length }, 3, 4, 5) }
+                 },
+                new List<string>() { "fx", "fy", "fz", "|f|", "mxx", "myy", "mzz", "|m|" })
             }
           }
         }
@@ -105,35 +162,127 @@ namespace SpeckleGSAProxy
               "1D Element Displacement", new ColMap(
                 new Dictionary<string, ImportedField>()
                 {
-                  { "ux", new ImportedField("disp_x", typeof(double)) }, 
-                  { "uy", new ImportedField("disp_y",  typeof(double)) }, 
-                  { "uz", new ImportedField("disp_z",  typeof(double)) }
+                  { "ux", new ImportedField("disp_x", typeof(double), ResultUnitType.Length) },
+                  { "uy", new ImportedField("disp_y",  typeof(double), ResultUnitType.Length) },
+                  { "uz", new ImportedField("disp_z",  typeof(double), ResultUnitType.Length) }
                 },
                 new Dictionary<string, CalculatedField>()
                 {
-                  { "|u|", new CalculatedField((v) => Magnitude(v), 0, 1, 2) }
+                  { "|u|", new CalculatedField((v) => Magnitude(v), ResultUnitType.Length, 0, 1, 2) }
                 },
-                new List<string>() { "ux", "uy", "uz", "|u|"   })
+                new List<string>() { "ux", "uy", "uz", "|u|" })
             },
             {
               "1D Element Force", new ColMap(
                 new Dictionary<string, ImportedField>()
                 {
-                  { "fx", new ImportedField( "force_x", typeof(double)) }, 
-                  { "fy", new ImportedField("force_y", typeof(double)) }, 
-                  { "fz", new ImportedField("force_z", typeof(double)) }, 
-                  { "mxx", new ImportedField("moment_x", typeof(double)) }, 
-                  { "myy", new ImportedField("moment_y", typeof(double)) }, 
-                  { "mzz", new ImportedField("moment_z", typeof(double)) }
+                  { "fx", new ImportedField("force_x", typeof(double), ResultUnitType.Force) },
+                  { "fy", new ImportedField("force_y", typeof(double), ResultUnitType.Force) },
+                  { "fz", new ImportedField("force_z", typeof(double), ResultUnitType.Force) },
+                  { "mxx", new ImportedField("moment_x", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
+                  { "myy", new ImportedField("moment_y", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
+                  { "mzz", new ImportedField("moment_z", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) }
                 },
                 new Dictionary<string, CalculatedField>()
                 {
-                  { "|f|", new CalculatedField((v) => Magnitude(v), 0, 1, 2) },
-                  { "|m|", new CalculatedField((v) => Magnitude(v), 0, 1, 2) },
-                  { "fxy", new CalculatedField((v) => Magnitude(v), 1, 2) },
-                  { "mxy", new CalculatedField((v) => Magnitude(v), 4, 5) }
+                  { "|f|", new CalculatedField((v) => Magnitude(v), ResultUnitType.Force, 0, 1, 2) },
+                  { "|m|", new CalculatedField((v) => Magnitude(v), new [] { ResultUnitType.Force, ResultUnitType.Length }, 0, 1, 2) },
+                  { "fxy", new CalculatedField((v) => Magnitude(v), ResultUnitType.Force, 1, 2) },
+                  { "mxy", new CalculatedField((v) => Magnitude(v), new [] { ResultUnitType.Force, ResultUnitType.Length }, 4, 5) }
                 },
                 new List<string>()  { "fx", "fy", "fz", "|f|", "mxx", "myy", "mzz", "|m|", "fxy", "mxy" })
+            }
+          }
+        }
+      },
+      {
+        ResultCsvGroup.Element2d, new FileToResultTableSpec("id", "case_id")
+        {
+          ResultTypeCsvColumnMap = new Dictionary<string, ColMap>()
+          {
+            {
+              "2D Element Displacement", new ColMap(
+                new Dictionary<string, ImportedField>()
+                {
+                  { "ux", new ImportedField("disp_x", typeof(double), ResultUnitType.Length) }, 
+                  { "uy", new ImportedField("disp_y",  typeof(double), ResultUnitType.Length) }, 
+                  { "uz", new ImportedField("disp_z",  typeof(double), ResultUnitType.Length) }
+                },
+                new Dictionary<string, CalculatedField>()
+                {
+                  { "|u|", new CalculatedField((v) => Magnitude(v), ResultUnitType.Length, 0, 1, 2) }
+                },
+                new List<string>() { "ux", "uy", "uz", "|u|" })
+            },
+            {
+              "2D Element Projected Moment", new ColMap(
+                new Dictionary<string, ImportedField>()
+                {
+                  { "mx", new ImportedField("moment_xx", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) }, 
+                  { "my", new ImportedField("moment_yy", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) }, 
+                  { "mxy", new ImportedField("moment_xy", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) }
+                },
+                new Dictionary<string, CalculatedField>()
+                {
+                  { "mx+mxy", new CalculatedField((v) => MomentResult(v), new [] { ResultUnitType.Force, ResultUnitType.Length }, 0, 2) },
+                  {  "my+myx", new CalculatedField((v) => MomentResult(v), new [] { ResultUnitType.Force, ResultUnitType.Length }, 1, 2) }
+                },
+                new List<string>()  { "mx", "my", "mxy", "mx+mxy", "my+myx" })
+            },
+            {
+              "2D Element Projected Force", new ColMap(
+                new Dictionary<string, ImportedField>()
+                {
+                  { "nx", new ImportedField("force_xx", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
+                  { "ny", new ImportedField("force_yy", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
+                  { "nxy", new ImportedField("force_xy", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
+                  { "qx", new ImportedField("shear_x", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
+                  { "qy", new ImportedField("shear_y", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) }
+                },
+                null,
+                new List<string>()  { "nx", "ny", "nxy", "qx", "qy"})
+            },
+            {
+              "2D Element Projected Stress - Bottom", new ColMap(
+                new Dictionary<string, ImportedField>()
+                {
+                  { "xx", new ImportedField("stress_bottom_xx", typeof(double), ResultUnitType.Stress) },
+                  { "yy", new ImportedField("stress_bottom_yy", typeof(double), ResultUnitType.Stress) },
+                  { "zz", new ImportedField("stress_bottom_zz", typeof(double), ResultUnitType.Stress) },
+                  { "xy", new ImportedField("stress_bottom_xy", typeof(double), ResultUnitType.Stress) },
+                  { "yz", new ImportedField("stress_bottom_yz", typeof(double), ResultUnitType.Stress) },
+                  { "zx", new ImportedField("stress_bottom_zx", typeof(double), ResultUnitType.Stress) }
+                },
+                null,
+                new List<string>()  { "xx", "yy", "zz", "xy", "yz", "zx"})
+            },
+            {
+              "2D Element Projected Stress - Middle", new ColMap(
+                new Dictionary<string, ImportedField>()
+                {
+                  { "xx", new ImportedField("stress_middle_xx", typeof(double), ResultUnitType.Stress) },
+                  { "yy", new ImportedField("stress_middle_yy", typeof(double), ResultUnitType.Stress) },
+                  { "zz", new ImportedField("stress_middle_zz", typeof(double), ResultUnitType.Stress) },
+                  { "xy", new ImportedField("stress_middle_xy", typeof(double), ResultUnitType.Stress) },
+                  { "yz", new ImportedField("stress_middle_yz", typeof(double), ResultUnitType.Stress) },
+                  { "zx", new ImportedField("stress_middle_zx", typeof(double), ResultUnitType.Stress) }
+                },
+                null,
+                new List<string>()  { "xx", "yy", "zz", "xy", "yz", "zx"})
+            },
+            {
+              "2D Element Projected Stress - Top", new ColMap(
+                new Dictionary<string, ImportedField>()
+                {
+                  { "xx", new ImportedField("stress_top_xx", typeof(double), ResultUnitType.Stress) },
+                  { "yy", new ImportedField("stress_top_yy", typeof(double), ResultUnitType.Stress) },
+                  { "zz", new ImportedField("stress_top_zz", typeof(double), ResultUnitType.Stress) },
+                  { "xy", new ImportedField("stress_top_xy", typeof(double), ResultUnitType.Stress) },
+                  { "yz", new ImportedField("stress_top_yz", typeof(double), ResultUnitType.Stress) },
+                  { "zx", new ImportedField("stress_top_zx", typeof(double), ResultUnitType.Stress) }
+                },
+                null,
+                new List<string>()  { "xx", "yy", "zz", "xy", "yz", "zx"})
             }
           }
         }
@@ -148,6 +297,18 @@ namespace SpeckleGSAProxy
       }
       var vals = dims.Cast<double>().ToArray();
       return Math.Sqrt(vals.Select(d => Math.Pow((double)d, 2)).Sum());
+    }
+
+    private static object MomentResult(params object[] dims)
+    {
+      if (!(dims.All(d => d is double)))
+      {
+        return null;
+      }
+      var first = (double)dims.First();
+      var last = (double)dims.Last();
+      var magnitude = Math.Abs(first) + Math.Abs(last);
+      return (first < 0) ? (-1) * magnitude : magnitude;
     }
 
     /*
@@ -326,8 +487,12 @@ namespace SpeckleGSAProxy
     /// <param name="path">Absolute path to GSA file</param>
     /// <param name="emailAddress">User email address</param>
     /// <param name="serverAddress">Speckle server address</param>
-    public void OpenFile(string path, bool showWindow = true, object gsaInstance = null)
+    public bool OpenFile(string path, bool showWindow = true, object gsaInstance = null)
     {
+      if (!File.Exists(path))
+      {
+        return false;
+      }
       ExecuteWithLock(() =>
       {
         if (GSAObject != null)
@@ -357,6 +522,7 @@ namespace SpeckleGSAProxy
           GSAObject.DisplayGsaWindow(true);
         }
       });
+      return true;
     }
 
     public int SaveAs(string filePath) => ExecuteWithLock(() => GSAObject.SaveAs(filePath));
@@ -514,6 +680,11 @@ namespace SpeckleGSAProxy
         catch
         {
           gwaRecords = new string[0];
+        }
+
+        if (setKeywords[i].Equals("UNIT_DATA", StringComparison.InvariantCultureIgnoreCase))
+        {
+          return gwaRecords.Select(r => new ProxyGwaLine() { GwaWithoutSet = r, Keyword = "UNIT_DATA" }).ToList();
         }
 
         Parallel.ForEach(gwaRecords, gwa =>
@@ -1227,11 +1398,35 @@ namespace SpeckleGSAProxy
       return true;
     }
 
+    private bool ProcessUnitGwaData()
+    {
+      var unitGwaLines = GetGwaData(new[] { "UNIT_DATA" }, false);
+      if (unitGwaLines == null || unitGwaLines.Count() == 0)
+      {
+        return false;
+      }
+      unitData.Clear();
+
+      foreach (var gwa in unitGwaLines.Select(l => l.GwaWithoutSet).ToList())
+      {
+        var pieces = gwa.Split(GwaDelimiter);
+
+        if (Enum.TryParse(pieces[1], true, out ResultUnitType rut) && double.TryParse(pieces.Last(), out double factor))
+        {
+          unitData.Add(rut, factor);
+        }
+      }
+      return true;
+    }
+
     public bool PrepareResults(int numBeamPoints, List<string> resultTypes, List<string> cases)
     {
       this.resultTypes = resultTypes;
       this.resultDir = Path.Combine(Environment.CurrentDirectory, "GSAExport");
       this.cases = cases;
+
+      ProcessUnitGwaData();
+
       var relativePathsToLoad = new List<string>
       {
         @".\result_node\result_node.csv",
@@ -1315,14 +1510,118 @@ namespace SpeckleGSAProxy
 
         var defaultFileCols = new[] { spec.ElementIdCol, spec.CaseIdCol };
         var defaultFileColTypes = new[] { typeof(int), typeof(string) };
+        var defaultColFactors = new List<double>[] { null, null };
+
         var indexOffsetForCalcs = defaultFileCols.Count();
 
         foreach (var rt in spec.ResultTypeCsvColumnMap.Keys)
         {
           var rtMap = spec.ResultTypeCsvColumnMap[rt];
-          
+          var specFileColFinalNames = rtMap.FileCols.Keys.ToList();
+          var specFileColOriginalNames = specFileColFinalNames.Select(fn => rtMap.FileCols[fn].FileCol).ToList();
+          var allFileCols = specFileColOriginalNames.Concat(defaultFileCols).ToList();
+          var allFileIndices = allFileCols.Select((fc, i) => new { fc, i }).ToDictionary(x => x.fc, x => x.i);
+
+          //The default columns are always tacked onto the end so there is no issue with the indices used in the calculated fields
+          if (!resultsContext.Query(tableName, allFileCols, cases, out var rtResults, new int[] { elemId }) 
+            || rtResults == null || rtResults.GetLength(0) == 0)
+          {
+            continue;
+          }
+
+          var numRows = rtResults.GetLength(0);
+          var numSpecFileCols = specFileColFinalNames.Count();
+          //Convert the newly-retrieved values from the CSV files into their correct destination type
+          for (int r = 0; r < numRows; r++)
+          {
+            for (int c = 0; c < numSpecFileCols; c++)
+            {
+              var colName = specFileColFinalNames[c];
+              if (rtMap.FileCols[specFileColFinalNames[c]] != null && rtResults[r, c] != null)
+              {
+                rtResults[r, c] = Convert.ChangeType(rtResults[r, c], rtMap.FileCols[specFileColFinalNames[c]].DestType);
+              }
+            }
+            for (int cd = 0; cd < defaultFileCols.Count(); cd++)
+            {
+              rtResults[r, numSpecFileCols + cd] = Convert.ChangeType(rtResults[r, numSpecFileCols + cd], defaultFileColTypes[cd]);
+            }
+          }
+
+          var numCols = rtMap.OrderedColumns.Count() + defaultFileCols.Count();
+          var rtData = new object[numRows, numCols];
+
+          if (rtMap.CalcFields != null && rtMap.CalcFields.Keys.Count() > 0 && rtMap.CalcFields.First().Value != null)
+          {
+            //Add in calculated fields based on the table returned from the query
+            for (int r = 0; r < numRows; r++)
+            {
+              for (int c = 0; c < rtMap.OrderedColumns.Count(); c++)
+              {
+                var colFinalName = rtMap.OrderedColumns[c];
+                if (rtMap.CalcFields.ContainsKey(colFinalName))
+                {
+                  var indices = rtMap.CalcFields[colFinalName].FileColIndices;
+                  var values = indices.Select(i => rtResults[r, i]).ToArray();
+                  rtData[r, c] = rtMap.CalcFields[colFinalName].CalcFn(values);
+                }
+              }
+            }
+          }
+
+          var orderedFieldSpecs = rtMap.OrderedFieldSpecs.Keys.ToList();
+          var numOrderedCols = rtMap.OrderedColumns.Count();
+
+          //Now fill in the rest and apply factors
+          for (int r = 0; r < numRows; r++)
+          {
+            for (int c = 0; c < numOrderedCols; c++)
+            {
+              if (orderedFieldSpecs[c] is ImportedField)
+              {
+                var rtResultColIndex = rtMap.OrderedFieldSpecs[orderedFieldSpecs[c]];
+                rtData[r, c] = rtResults[r, rtResultColIndex];
+              }
+              rtData[r, c] = ApplyFactors(rtData[r, c], GetFactors(orderedFieldSpecs[c].UnitTypes));
+            }
+            for (int cd = 0; cd < defaultFileCols.Count(); cd++)
+            {
+              var rtResultColIndex = allFileIndices[defaultFileCols[cd]];
+              rtData[r, numOrderedCols + cd] = rtResults[r, rtResultColIndex];
+            }
+          }
+
+          if (!data.ContainsKey(rt))
+          {
+            data.Add(rt, new Tuple<List<string>, object[,]>(rtMap.OrderedColumns.Concat(defaultFileCols).ToList(), rtData));
+          }
+        }
+      }
+      return (data.Keys.Count > 0);
+    }
+
+    /*
+    private bool GetResults(string tableName, ResultCsvGroup group, int elemId, out Dictionary<string, Tuple<List<string>, object[,]>> data)
+    {
+      data = new Dictionary<string, Tuple<List<string>, object[,]>>();
+      if (ImportResultsFileIfNecessary(tableName) && resultTypeSpecs.ContainsKey(group))
+      {
+        var spec = resultTypeSpecs[group];
+
+        var defaultFileCols = new[] { spec.ElementIdCol, spec.CaseIdCol };
+        var defaultFileColTypes = new[] { typeof(int), typeof(string) };
+        var defaultColFactors = new List<double>[] { null, null };
+
+        var indexOffsetForCalcs = defaultFileCols.Count();
+
+        foreach (var rt in spec.ResultTypeCsvColumnMap.Keys)
+        {
+          var rtMap = spec.ResultTypeCsvColumnMap[rt];
+
           var fileCols = defaultFileCols.Concat(rtMap.FileCols.Keys.Select(k => rtMap.FileCols[k].FileCol)).ToList();
           var fileColTypes = defaultFileColTypes.Concat(rtMap.FileCols.Values.Select(i => i.DestType)).ToList();
+
+          var fileColFactors = defaultColFactors.Concat(rtMap.FileCols.Values.Select(i => GetFactors(i.UnitTypes))).ToList();
 
           var resultCols = defaultFileCols.Concat(rtMap.FileCols.Keys).ToList();
 
@@ -1344,9 +1643,10 @@ namespace SpeckleGSAProxy
           {
             for (int c = 0; c < fileCols.Count(); c++)
             {
-              if (fileColTypes[c] != null)
+              if (fileColTypes[c] != null && rtResults[r, c] != null)
               {
                 rtResults[r, c] = Convert.ChangeType(rtResults[r, c], fileColTypes[c]);
+                rtResults[r, c] = ApplyFactors(rtResults[r, c], fileColFactors[c]);
               }
             }
           }
@@ -1369,18 +1669,21 @@ namespace SpeckleGSAProxy
 
           if (rtMap.CalcFields != null && rtMap.CalcFields.Keys.Count() > 0 && rtMap.CalcFields.First().Value != null)
           {
-            var calcColFinalIndex = rtMap.CalcFields.Keys.Select(cc => orderedFinalCols.IndexOf(cc)).ToList();
+            var calcColFinalIndices = rtMap.CalcFields.Keys.Select(cc => orderedFinalCols.IndexOf(cc)).ToList();
+            var calcColFactors = rtMap.CalcFields.Keys.Select(cc => GetFactors(rtMap.CalcFields[cc].UnitTypes)).ToList();
 
             var numCalcCols = rtMap.CalcFields.Keys.Count();
-            //var calculated = new object[numRows, numCalcCols];
+
             for (int r = 0; r < numRows; r++)
             {
               var calculatedCols = rtMap.CalcFields.Keys.ToList();
-              for (int c = 0; c < calcColFinalIndex.Count(); c++)
+              for (int c = 0; c < calcColFinalIndices.Count(); c++)
               {
                 var indices = rtMap.CalcFields[calculatedCols[c]].FileColIndices;
                 var values = indices.Select(i => rtResults[r, i + indexOffsetForCalcs]).ToArray();
-                rtData[r, calcColFinalIndex[c]] = rtMap.CalcFields[calculatedCols[c]].CalcFn(values);
+                var colIndex = calcColFinalIndices[c];
+                rtData[r, colIndex] = rtMap.CalcFields[calculatedCols[c]].CalcFn(values);
+                rtData[r, colIndex] = ApplyFactors(rtData[r, colIndex], calcColFactors[c]);
               }
             }
           }
@@ -1391,6 +1694,29 @@ namespace SpeckleGSAProxy
         }
       }
       return (data.Keys.Count > 0);
+    }
+    */
+
+    private object ApplyFactors(object val, List<double> factors)
+    {
+      if (factors == null || factors.Count() == 0 || !(val is double))
+      {
+        return val;
+      }
+      if ((double)val == 0)
+      {
+        return val;
+      }
+      foreach (var f in factors)
+      {
+        val = ((double)val * f);
+      }
+      return val;
+    }
+
+    private List<double> GetFactors(IEnumerable<ResultUnitType> ruts)
+    {
+      return ruts.Where(r => unitData.ContainsKey(r)).Select(r => unitData[r]).ToList();
     }
 
     private List<ResultCsvGroup> GetResultCsvGroups(string keyword)

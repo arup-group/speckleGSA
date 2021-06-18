@@ -134,6 +134,7 @@ namespace SpeckleGSAUI.ViewModels
       set => Refresh(() => Coordinator.SenderTab.StreamContentConfig = value); }
 
     public bool SendMeaningfulNodes { get; set; } = true;
+    public int Additional1DPositions { get; set; } = 3;
 
     public double CoincidentNodeAllowance { get => Coordinator.ReceiverTab.CoincidentNodeAllowance; set { Coordinator.ReceiverTab.CoincidentNodeAllowance = value; } }
     public List<GsaUnit> CoincidentNodeAllowanceUnitOptions { get => new List<GsaUnit> { GsaUnit.Millimetres, GsaUnit.Metres, GsaUnit.Inches }; }

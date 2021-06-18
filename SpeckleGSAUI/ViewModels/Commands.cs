@@ -226,6 +226,7 @@ namespace SpeckleGSAUI.ViewModels
         || coordinator.SenderTab.StreamContentConfig == StreamContentConfig.ModelWithTabularResults 
         || coordinator.SenderTab.StreamContentConfig == StreamContentConfig.TabularResultsOnly);
       GSA.App.LocalSettings.SendOnlyResults = (coordinator.SenderTab.StreamContentConfig == StreamContentConfig.TabularResultsOnly);
+      GSA.App.LocalSettings.Result1DNumPosition = 2 + coordinator.SenderTab.AdditionalPositionsFor1dElements; //end points (2) plus additional
 
       UpdateResultSettings(coordinator.SenderTab.ResultSettings.ResultSettingItems.Where(rsi => rsi.Selected).ToList(), 
         coordinator.SenderTab.LoadCaseList);
@@ -340,6 +341,11 @@ namespace SpeckleGSAUI.ViewModels
       GSA.App.Settings.Element1DResults = ExtractResultParams(ref Result.Element1DResultMap, selectedResultNames);
       GSA.App.Settings.Element2DResults = ExtractResultParams(ref Result.Element2DResultMap, selectedResultNames);
       GSA.App.Settings.MiscResults = ExtractResultParams(ref Result.MiscResultMap, selectedResultNames);
+
+      if (GSA.App.LocalSettings.SendResults && resultCases.Count() > 0)
+      {
+        GSA.App.LocalProxy.PrepareResults(GSA.App.LocalSettings.Result1DNumPosition, selectedResultNames, resultCases);
+      }
 
       return true;
     }
