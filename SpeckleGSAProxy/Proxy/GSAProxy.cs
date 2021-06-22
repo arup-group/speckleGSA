@@ -186,11 +186,11 @@ namespace SpeckleGSAProxy
                 new Dictionary<string, CalculatedField>()
                 {
                   { "|f|", new CalculatedField((v) => Magnitude(v), ResultUnitType.Force, 0, 1, 2) },
-                  { "|m|", new CalculatedField((v) => Magnitude(v), new [] { ResultUnitType.Force, ResultUnitType.Length }, 0, 1, 2) },
-                  { "fxy", new CalculatedField((v) => Magnitude(v), ResultUnitType.Force, 1, 2) },
-                  { "mxy", new CalculatedField((v) => Magnitude(v), new [] { ResultUnitType.Force, ResultUnitType.Length }, 4, 5) }
+                  { "|m|", new CalculatedField((v) => Magnitude(v), new [] { ResultUnitType.Force, ResultUnitType.Length }, 3, 4, 5) },
+                  { "fyz", new CalculatedField((v) => Magnitude(v), ResultUnitType.Force, 1, 2) },
+                  { "myz", new CalculatedField((v) => Magnitude(v), new [] { ResultUnitType.Force, ResultUnitType.Length }, 4, 5) }
                 },
-                new List<string>()  { "fx", "fy", "fz", "|f|", "mxx", "myy", "mzz", "|m|", "fxy", "mxy" })
+                new List<string>()  { "fx", "fy", "fz", "|f|", "mxx", "myy", "mzz", "|m|", "fyz", "myz" })
             }
           }
         }
@@ -1421,7 +1421,16 @@ namespace SpeckleGSAProxy
 
     public bool PrepareResults(int numBeamPoints, List<string> resultTypes, List<string> cases)
     {
-      this.resultTypes = resultTypes;
+      if (resultTypes == null || resultTypes.Count() == 0 || cases == null || cases.Count() == 0)
+      {
+        return false;
+      }
+      var allResultTypes = resultTypeSpecs.Keys.SelectMany(g => resultTypeSpecs[g].ResultTypeCsvColumnMap.Select(m => m.Key)).ToList();
+      this.resultTypes = resultTypes.Where(rt => allResultTypes.Any(art => art.Equals(rt, StringComparison.InvariantCultureIgnoreCase))).ToList();
+      if (this.resultTypes.Count() == 0)
+      {
+        return false;
+      }
       this.resultDir = Path.Combine(Environment.CurrentDirectory, "GSAExport");
       this.cases = cases;
 
@@ -1514,7 +1523,14 @@ namespace SpeckleGSAProxy
 
         var indexOffsetForCalcs = defaultFileCols.Count();
 
-        foreach (var rt in spec.ResultTypeCsvColumnMap.Keys)
+        var relevantResultTypes = spec.ResultTypeCsvColumnMap.Keys.Intersect(this.resultTypes);
+        if (relevantResultTypes == null || relevantResultTypes.Count() == 0)
+        {
+          //No results but successful
+          return true;
+        }
+
+        foreach (var rt in relevantResultTypes)
         {
           var rtMap = spec.ResultTypeCsvColumnMap[rt];
           var specFileColFinalNames = rtMap.FileCols.Keys.ToList();
@@ -1721,16 +1737,17 @@ namespace SpeckleGSAProxy
 
     private List<ResultCsvGroup> GetResultCsvGroups(string keyword)
     {
+      var kw = keyword.Split('.').First();
       ResultCsvGroup g = ResultCsvGroup.Unknown;
-      if (keyword.Equals("NODE", StringComparison.InvariantCultureIgnoreCase))
+      if (kw.Equals("NODE", StringComparison.InvariantCultureIgnoreCase))
       {
         return new List<ResultCsvGroup> { ResultCsvGroup.Node };
       }
-      else if (keyword.Equals("EL", StringComparison.InvariantCultureIgnoreCase))
+      else if (kw.Equals("EL", StringComparison.InvariantCultureIgnoreCase))
       {
-        return new List<ResultCsvGroup> { ResultCsvGroup.Element1d, ResultCsvGroup.Element1d };
+        return new List<ResultCsvGroup> { ResultCsvGroup.Element1d };
       }
-      else if (keyword.Equals("ASSEMBLY", StringComparison.InvariantCultureIgnoreCase))
+      else if (kw.Equals("ASSEMBLY", StringComparison.InvariantCultureIgnoreCase))
       {
         return new List<ResultCsvGroup> { ResultCsvGroup.Assembly };
       }
