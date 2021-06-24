@@ -8,8 +8,6 @@ using System.Threading.Tasks;
 
 namespace SpeckleGSAProxy.Results
 {
-  
-
   internal class ExportCsvResultsTable : ExportCsvTable
   {
     private enum KnownResultCsvHeaders
@@ -23,7 +21,7 @@ namespace SpeckleGSAProxy.Results
     private readonly ConcurrentDictionary<KnownResultCsvHeaders, int> colIndicesByHeader = new ConcurrentDictionary<KnownResultCsvHeaders, int>();
 
     //"A1", "C2", etc - empty value here will cause the entire file to be loaded
-    public List<string> LoadCases;
+    //public List<string> LoadCases;
 
     public string LoadCaseField;
     public string ElemIdField;
@@ -53,7 +51,7 @@ namespace SpeckleGSAProxy.Results
         return false;
       }
 
-      //foreach (var kvp in Values)
+      //foreach (var currRowIndex in queryRowIndices)
       Parallel.ForEach(queryRowIndices, currRowIndex =>
       {
         var rowData = Values[currRowIndex];
@@ -72,11 +70,12 @@ namespace SpeckleGSAProxy.Results
       results = new object[tempValues.Count(), queryHeaderIndices.Count()];
 
       var r = 0;
-      foreach (var k in tempValues.Keys)
+      var sortedRowIndices = tempValues.Keys.OrderBy(ri => ri).ToList();
+      foreach (var ri in sortedRowIndices)
       {
         for (int j = 0; j < queryHeaderIndices.Count(); j++)
         {
-          results[r, j] = tempValues[k][j];
+          results[r, j] = tempValues[ri][j];
         }
         r++;
       }
@@ -89,6 +88,11 @@ namespace SpeckleGSAProxy.Results
       queryHeaderIndices = new List<int>();
       foreach (var c in columns)
       {
+        if (Headers.ContainsKey(c))
+        {
+          queryHeaderIndices.Add(Headers[c]);
+        }
+        /*
         for (int i = 0; i < Headers.Length; i++)
         {
           if (Headers[i].Equals(c, StringComparison.InvariantCultureIgnoreCase))
@@ -96,6 +100,7 @@ namespace SpeckleGSAProxy.Results
             queryHeaderIndices.Add(i);
           }
         }
+        */
       }
       return (queryHeaderIndices.Count() > 0);
     }
@@ -123,22 +128,7 @@ namespace SpeckleGSAProxy.Results
       }
       else
       {
-        var relevantByLoadCase = new SortedSet<int>();
-        foreach (var lc in loadCases)
-        {
-          var lcBase = lc.Split('m').First();
-          var matching = rowIndicesByLoadCase.Keys.Where(k => k.Split('m').First().Equals(lcBase)).SelectMany(k => rowIndicesByLoadCase[k]);
-          if (matching.Count() > 0)
-          //if (rowIndicesByLoadCase.ContainsKey(lc))
-          {
-            foreach (var ilc in matching)
-            //foreach (var ilc in rowIndicesByLoadCase[lc])
-            {
-              relevantByLoadCase.Add(ilc);
-            }
-          }
-        }
-        var relevantByElemId = new SortedSet<int>();
+        var relevantByElemId = new HashSet<int>();
         if (elemIds != null)
         {
           foreach (var ei in elemIds)
@@ -153,17 +143,44 @@ namespace SpeckleGSAProxy.Results
           }
         }
 
+
+        //var relevantByLoadCase = new SortedSet<int>();
+        var tempIndices = new List<int>();
+        foreach (var lc in loadCases)
+        {
+          var lcBase = lc.Split('m').First();
+          var matching = rowIndicesByLoadCase.Keys.Where(k => k.Split('m').First().Equals(lcBase)).SelectMany(k => rowIndicesByLoadCase[k]);
+          if (matching.Count() > 0)
+          //if (rowIndicesByLoadCase.ContainsKey(lc))
+          {
+            foreach (var ilc in matching)
+            //foreach (var ilc in rowIndicesByLoadCase[lc])
+            {
+              //relevantByLoadCase.Add(ilc);
+              if (relevantByElemId.Contains(ilc))
+              {
+                tempIndices.Add(ilc);
+              }
+            }
+          }
+        }
+
+        queryRowIndices = tempIndices.OrderBy(i => i).ToList();
+        /*
         var tempIndices = (from i in relevantByLoadCase.Intersect(relevantByElemId) select i);
         foreach (var ti in tempIndices)
         {
           queryRowIndices.Add(ti);
         }
+        */
       }
       return (queryRowIndices.Count() > 0);
     }
 
     private int? HeaderIndexOf(string headerToFind)
     {
+      return (Headers.ContainsKey(headerToFind) ? (int?) Headers[headerToFind] : null);
+      /*
       for (var i = 0; i < Headers.Count(); i++)
       {
         if (Headers[i].Equals(headerToFind, StringComparison.InvariantCultureIgnoreCase))
@@ -172,6 +189,7 @@ namespace SpeckleGSAProxy.Results
         }
       }
       return null;
+      */
     }
 
     private void SetSpecifiedColumnIndices()

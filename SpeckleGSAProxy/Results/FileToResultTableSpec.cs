@@ -17,6 +17,7 @@ namespace SpeckleGSAProxy.Results
 
   internal enum ResultUnitType
   {
+    None = 0,
     Force,
     Length,
     Disp,

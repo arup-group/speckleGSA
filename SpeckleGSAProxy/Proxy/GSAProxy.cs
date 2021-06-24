@@ -206,13 +206,15 @@ namespace SpeckleGSAProxy
                 {
                   { "ux", new ImportedField("disp_x", typeof(double), ResultUnitType.Length) }, 
                   { "uy", new ImportedField("disp_y",  typeof(double), ResultUnitType.Length) }, 
-                  { "uz", new ImportedField("disp_z",  typeof(double), ResultUnitType.Length) }
+                  { "uz", new ImportedField("disp_z",  typeof(double), ResultUnitType.Length) },
+                  { "position_r", new ImportedField("position_r", typeof(double), ResultUnitType.None) },
+                  { "position_s", new ImportedField("position_s", typeof(double), ResultUnitType.None) }
                 },
                 new Dictionary<string, CalculatedField>()
                 {
                   { "|u|", new CalculatedField((v) => Magnitude(v), ResultUnitType.Length, 0, 1, 2) }
                 },
-                new List<string>() { "ux", "uy", "uz", "|u|" })
+                new List<string>() { "ux", "uy", "uz", "|u|", "position_r", "position_s" })
             },
             {
               "2D Element Projected Moment", new ColMap(
@@ -220,14 +222,16 @@ namespace SpeckleGSAProxy
                 {
                   { "mx", new ImportedField("moment_xx", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) }, 
                   { "my", new ImportedField("moment_yy", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) }, 
-                  { "mxy", new ImportedField("moment_xy", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) }
+                  { "mxy", new ImportedField("moment_xy", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
+                  { "position_r", new ImportedField("position_r", typeof(double), ResultUnitType.None) },
+                  { "position_s", new ImportedField("position_s", typeof(double), ResultUnitType.None) }
                 },
                 new Dictionary<string, CalculatedField>()
                 {
                   { "mx+mxy", new CalculatedField((v) => MomentResult(v), new [] { ResultUnitType.Force, ResultUnitType.Length }, 0, 2) },
                   {  "my+myx", new CalculatedField((v) => MomentResult(v), new [] { ResultUnitType.Force, ResultUnitType.Length }, 1, 2) }
                 },
-                new List<string>()  { "mx", "my", "mxy", "mx+mxy", "my+myx" })
+                new List<string>()  { "mx", "my", "mxy", "mx+mxy", "my+myx", "position_r", "position_s" })
             },
             {
               "2D Element Projected Force", new ColMap(
@@ -237,10 +241,12 @@ namespace SpeckleGSAProxy
                   { "ny", new ImportedField("force_yy", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
                   { "nxy", new ImportedField("force_xy", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
                   { "qx", new ImportedField("shear_x", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
-                  { "qy", new ImportedField("shear_y", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) }
+                  { "qy", new ImportedField("shear_y", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
+                  { "position_r", new ImportedField("position_r", typeof(double), ResultUnitType.None) },
+                  { "position_s", new ImportedField("position_s", typeof(double), ResultUnitType.None) }
                 },
                 null,
-                new List<string>()  { "nx", "ny", "nxy", "qx", "qy"})
+                new List<string>()  { "nx", "ny", "nxy", "qx", "qy", "position_r", "position_s"})
             },
             {
               "2D Element Projected Stress - Bottom", new ColMap(
@@ -251,10 +257,12 @@ namespace SpeckleGSAProxy
                   { "zz", new ImportedField("stress_bottom_zz", typeof(double), ResultUnitType.Stress) },
                   { "xy", new ImportedField("stress_bottom_xy", typeof(double), ResultUnitType.Stress) },
                   { "yz", new ImportedField("stress_bottom_yz", typeof(double), ResultUnitType.Stress) },
-                  { "zx", new ImportedField("stress_bottom_zx", typeof(double), ResultUnitType.Stress) }
+                  { "zx", new ImportedField("stress_bottom_zx", typeof(double), ResultUnitType.Stress) },
+                  { "position_r", new ImportedField("position_r", typeof(double), ResultUnitType.None) },
+                  { "position_s", new ImportedField("position_s", typeof(double), ResultUnitType.None) }
                 },
                 null,
-                new List<string>()  { "xx", "yy", "zz", "xy", "yz", "zx"})
+                new List<string>()  { "xx", "yy", "zz", "xy", "yz", "zx", "position_r", "position_s"})
             },
             {
               "2D Element Projected Stress - Middle", new ColMap(
@@ -265,10 +273,12 @@ namespace SpeckleGSAProxy
                   { "zz", new ImportedField("stress_middle_zz", typeof(double), ResultUnitType.Stress) },
                   { "xy", new ImportedField("stress_middle_xy", typeof(double), ResultUnitType.Stress) },
                   { "yz", new ImportedField("stress_middle_yz", typeof(double), ResultUnitType.Stress) },
-                  { "zx", new ImportedField("stress_middle_zx", typeof(double), ResultUnitType.Stress) }
+                  { "zx", new ImportedField("stress_middle_zx", typeof(double), ResultUnitType.Stress) },
+                  { "position_r", new ImportedField("position_r", typeof(double), ResultUnitType.None) },
+                  { "position_s", new ImportedField("position_s", typeof(double), ResultUnitType.None) }
                 },
                 null,
-                new List<string>()  { "xx", "yy", "zz", "xy", "yz", "zx"})
+                new List<string>()  { "xx", "yy", "zz", "xy", "yz", "zx", "position_r", "position_s"})
             },
             {
               "2D Element Projected Stress - Top", new ColMap(
@@ -279,10 +289,12 @@ namespace SpeckleGSAProxy
                   { "zz", new ImportedField("stress_top_zz", typeof(double), ResultUnitType.Stress) },
                   { "xy", new ImportedField("stress_top_xy", typeof(double), ResultUnitType.Stress) },
                   { "yz", new ImportedField("stress_top_yz", typeof(double), ResultUnitType.Stress) },
-                  { "zx", new ImportedField("stress_top_zx", typeof(double), ResultUnitType.Stress) }
+                  { "zx", new ImportedField("stress_top_zx", typeof(double), ResultUnitType.Stress) },
+                  { "position_r", new ImportedField("position_r", typeof(double), ResultUnitType.None) },
+                  { "position_s", new ImportedField("position_s", typeof(double), ResultUnitType.None) }
                 },
                 null,
-                new List<string>()  { "xx", "yy", "zz", "xy", "yz", "zx"})
+                new List<string>()  { "xx", "yy", "zz", "xy", "yz", "zx", "position_r", "position_s"})
             }
           }
         }
@@ -1461,29 +1473,40 @@ namespace SpeckleGSAProxy
     }
 
     // format for data is [ result_type, [ [ headers ], [ row, column ] ] ]
-    public bool GetResults(string keyword, int index, out Dictionary<string, Tuple<List<string>, object[,]>> allData)
+    public bool GetResults(string keyword, int index, out Dictionary<string, Tuple<List<string>, object[,]>> allData, int dimension = 1)
     {
       allData = new Dictionary<string, Tuple<List<string>, object[,]>>();
 
-      var groups = GetResultCsvGroups(keyword);
-      if (groups == null)
+      var kw = keyword.Split('.').First();
+      ResultCsvGroup g = ResultCsvGroup.Unknown;
+      if (kw.Equals("NODE", StringComparison.InvariantCultureIgnoreCase))
+      {
+        g = ResultCsvGroup.Node;
+      }
+      else if (kw.Equals("EL", StringComparison.InvariantCultureIgnoreCase))
+      {
+        g = dimension == 2 ? ResultCsvGroup.Element2d : ResultCsvGroup.Element1d;
+      }
+      else if (kw.Equals("ASSEMBLY", StringComparison.InvariantCultureIgnoreCase))
+      {
+        g = ResultCsvGroup.Assembly;
+      }
+
+      if (g == ResultCsvGroup.Node)
       {
         return false;
       }
 
       bool found = false;
-      foreach (var g in groups)
+      var tableName = GetTableName(g);
+      if (GetResults(tableName, g, index, out Dictionary<string, Tuple<List<string>, object[,]>> data) && data != null)
       {
-        var tableName = GetTableName(g);
-        if (GetResults(tableName, g, index, out Dictionary<string, Tuple<List<string>, object[,]>> data) && data != null)
+        foreach (var k in data.Keys)
         {
-          foreach (var k in data.Keys)
+          if (!allData.ContainsKey(k))
           {
-            if (!allData.ContainsKey(k))
-            {
-              allData.Add(k, data[k]);
-              found = true;
-            }
+            allData.Add(k, data[k]);
+            found = true;
           }
         }
       }
@@ -1733,25 +1756,6 @@ namespace SpeckleGSAProxy
     private List<double> GetFactors(IEnumerable<ResultUnitType> ruts)
     {
       return ruts.Where(r => unitData.ContainsKey(r)).Select(r => unitData[r]).ToList();
-    }
-
-    private List<ResultCsvGroup> GetResultCsvGroups(string keyword)
-    {
-      var kw = keyword.Split('.').First();
-      ResultCsvGroup g = ResultCsvGroup.Unknown;
-      if (kw.Equals("NODE", StringComparison.InvariantCultureIgnoreCase))
-      {
-        return new List<ResultCsvGroup> { ResultCsvGroup.Node };
-      }
-      else if (kw.Equals("EL", StringComparison.InvariantCultureIgnoreCase))
-      {
-        return new List<ResultCsvGroup> { ResultCsvGroup.Element1d };
-      }
-      else if (kw.Equals("ASSEMBLY", StringComparison.InvariantCultureIgnoreCase))
-      {
-        return new List<ResultCsvGroup> { ResultCsvGroup.Assembly };
-      }
-      return null;
     }
 
     private string GetTableName(ResultCsvGroup csvGroup)

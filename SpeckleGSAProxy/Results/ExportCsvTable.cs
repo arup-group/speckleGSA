@@ -10,7 +10,7 @@ namespace SpeckleGSAProxy.Results
   internal class ExportCsvTable
   {
     public string TableName;
-    public string[] Headers;
+    public ConcurrentDictionary<string, int> Headers;
     public int NumRows;
     public ConcurrentDictionary<int, object[]> Values;
     public List<int> ErrRowIndices;
@@ -30,7 +30,13 @@ namespace SpeckleGSAProxy.Results
 
       //Headers
       var line = sr.ReadLine();
-      Headers = line.Split(new[] { ',' }, StringSplitOptions.None);
+      //Storing it in a dictionary like this is for performance reasons, as dictionary keys are a HashSet implementation
+      var headerIndex = 0;
+      Headers = new ConcurrentDictionary<string, int>();
+      foreach (var h in line.Split(new[] { ',' }, StringSplitOptions.None))
+      {
+        Headers.TryAdd(h, headerIndex++);
+      }
       ErrRowIndices.Clear();
       Values.Clear();
       NumRows = 0;
@@ -69,7 +75,7 @@ namespace SpeckleGSAProxy.Results
 
     protected virtual bool AddRow(int RowIndex, List<string> rowData)
     {
-      return (Headers != null && Headers.Length > 0 && Values.TryAdd(RowIndex, rowData.ToArray()));
+      return (Headers != null && Headers.Keys.Count > 0 && Values.TryAdd(RowIndex, rowData.ToArray()));
     }
 
     protected List<string> ParseLine(string line, char[] delimiters)
