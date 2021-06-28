@@ -38,4 +38,13 @@
     Set,
     SetAt
   }
+
+	public enum StreamContentConfig
+	{
+		None,
+		ModelOnly,
+		ModelWithEmbeddedResults,
+		ModelWithTabularResults,
+		TabularResultsOnly
+	}
 }

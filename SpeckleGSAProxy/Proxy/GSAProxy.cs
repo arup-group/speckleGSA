@@ -298,8 +298,39 @@ namespace SpeckleGSAProxy
             }
           }
         }
+      },
+      {
+        ResultCsvGroup.Assembly, new FileToResultTableSpec("id", "case_id")
+        {
+          ResultTypeCsvColumnMap = new Dictionary<string, ColMap>()
+          {
+            {
+              //Note: the element ID and case ID columns are default columns (not need to be specified here) which will be automatically added to the output
+              "Assembly Forces and Moments", new ColMap(
+                new Dictionary<string, ImportedField>()
+                {
+                  { "fx", new ImportedField("force_x", typeof(double), ResultUnitType.Length ) },
+                  { "fy", new ImportedField("force_y", typeof(double), ResultUnitType.Length) },
+                  { "fz", new ImportedField("force_z", typeof(double), ResultUnitType.Length) },
+                  { "mxx", new ImportedField("moment_x", typeof(double), ResultUnitType.Length) },
+                  { "myy", new ImportedField("moment_y", typeof(double), ResultUnitType.Length) },
+                  { "mzz", new ImportedField("moment_z", typeof(double), ResultUnitType.Length) }
+                },
+                new Dictionary<string, CalculatedField>()
+                {
+                  //Note: the calculated field indices are the zero-based column numbers based on the spec above, *before* the default columns are added
+                  { "frc", new CalculatedField((v) => Magnitude(v), ResultUnitType.Length, 0, 1, 2) },
+                  { "mom", new CalculatedField((v) => Magnitude(v), ResultUnitType.Length, 3, 4, 5) },
+                },
+                //The default columns will be added to the output too
+                new List<string>() {  "fx", "fy", "fz", "frc", "mxx", "myy", "mzz", "mom" })
+            }
+          }
+        }
       }
     };
+
+    public static List<string> ResultTypes = resultTypeSpecs.SelectMany(rts => rts.Value.ResultTypeCsvColumnMap.Keys).ToList();
 
     private static object Magnitude(params object[] dims)
     {
@@ -1578,7 +1609,14 @@ namespace SpeckleGSAProxy
               var colName = specFileColFinalNames[c];
               if (rtMap.FileCols[specFileColFinalNames[c]] != null && rtResults[r, c] != null)
               {
-                rtResults[r, c] = Convert.ChangeType(rtResults[r, c], rtMap.FileCols[specFileColFinalNames[c]].DestType);
+                if (rtResults[r, c] is string && string.IsNullOrEmpty((string)rtResults[r, c]))
+                {
+                  rtResults[r, c] = null;
+                }
+                else
+                {
+                  rtResults[r, c] = Convert.ChangeType(rtResults[r, c], rtMap.FileCols[specFileColFinalNames[c]].DestType);
+                }
               }
             }
             for (int cd = 0; cd < defaultFileCols.Count(); cd++)

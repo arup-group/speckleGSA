@@ -220,13 +220,8 @@ namespace SpeckleGSAUI.ViewModels
       IProgress<MessageEventArgs> loggingProgress, IProgress<string> statusProgress, IProgress<double> percentageProgress)
     {
       GSA.App.Settings.TargetLayer = coordinator.SenderTab.TargetLayer;
-      GSA.App.LocalSettings.SeparateStreams = (coordinator.SenderTab.StreamContentConfig == StreamContentConfig.ModelWithTabularResults 
-        || coordinator.SenderTab.StreamContentConfig == StreamContentConfig.TabularResultsOnly);
-      GSA.App.Settings.SendResults = (coordinator.SenderTab.StreamContentConfig == StreamContentConfig.ModelWithEmbeddedResults 
-        || coordinator.SenderTab.StreamContentConfig == StreamContentConfig.ModelWithTabularResults 
-        || coordinator.SenderTab.StreamContentConfig == StreamContentConfig.TabularResultsOnly);
-      GSA.App.LocalSettings.SendOnlyResults = (coordinator.SenderTab.StreamContentConfig == StreamContentConfig.TabularResultsOnly);
-      GSA.App.LocalSettings.Result1DNumPosition = 2 + coordinator.SenderTab.AdditionalPositionsFor1dElements; //end points (2) plus additional
+      GSA.App.Settings.StreamSendConfig = coordinator.SenderTab.StreamContentConfig;
+      GSA.App.LocalSettings.Result1DNumPosition = coordinator.SenderTab.AdditionalPositionsFor1dElements; //end points (2) plus additional
 
       UpdateResultSettings(coordinator.SenderTab.ResultSettings.ResultSettingItems.Where(rsi => rsi.Selected).ToList(), 
         coordinator.SenderTab.LoadCaseList);
@@ -344,7 +339,7 @@ namespace SpeckleGSAUI.ViewModels
 
       if (GSA.App.LocalSettings.SendResults && resultCases.Count() > 0)
       {
-        GSA.App.LocalProxy.PrepareResults(GSA.App.LocalSettings.Result1DNumPosition, selectedResultNames, resultCases);
+        GSA.App.LocalProxy.PrepareResults(GSA.App.LocalSettings.Result1DNumPosition + 2, selectedResultNames, resultCases);
       }
 
       return true;

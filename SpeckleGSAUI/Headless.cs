@@ -251,19 +251,27 @@ namespace SpeckleGSAUI
       {
         GSA.App.LocalSettings.SendOnlyMeaningfulNodes = false;
       }
-      if (arguments.ContainsKey("separateStreams"))
-      {
-        GSA.App.LocalSettings.SeparateStreams = true;
-        GSA.App.Settings.EmbedResults = false;
-      }
+
       if (arguments.ContainsKey("resultOnly"))
       {
-        GSA.App.LocalSettings.SendOnlyResults = true;
+        GSA.App.LocalSettings.StreamSendConfig = StreamContentConfig.TabularResultsOnly;
       }
-      if (arguments.ContainsKey("resultUnembedded"))
+      else if (arguments.ContainsKey("result"))
       {
-        GSA.App.Settings.EmbedResults = false;
+        if (arguments.ContainsKey("separateStreams") || arguments.ContainsKey("resultUnembedded"))
+        {
+          GSA.App.LocalSettings.StreamSendConfig = StreamContentConfig.ModelWithTabularResults;
+        }
+        else
+        {
+          GSA.App.LocalSettings.StreamSendConfig = StreamContentConfig.ModelWithEmbeddedResults;
+        }
       }
+      else
+      {
+        GSA.App.LocalSettings.StreamSendConfig = StreamContentConfig.ModelOnly;
+      }
+
       if (arguments.ContainsKey("resultInLocalAxis"))
       {
         GSA.App.Settings.ResultInLocalAxis = true;
@@ -277,10 +285,8 @@ namespace SpeckleGSAUI
         catch { }
       }
 
-      if (arguments.ContainsKey("result"))
+      if (GSA.App.LocalSettings.SendResults)
       {
-        GSA.App.Settings.SendResults = true;
-
         var results = arguments["result"].Split(new char[] { ',' }).Select(x => x.Replace("\"", ""));
 
         foreach (string r in results)

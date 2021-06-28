@@ -14,10 +14,9 @@ namespace SpeckleGSAInterfaces
 		Dictionary<string, IGSAResultParams> Element2DResults { get; set; }
 		Dictionary<string, IGSAResultParams> MiscResults { get; set; } 
 
-		bool SendResults { get; set; }
+		StreamContentConfig StreamSendConfig { get; set; }
 		List<string> ResultCases { get; set; }
 		bool ResultInLocalAxis { get; set; }
 		int Result1DNumPosition { get; set; }
-		bool EmbedResults { get; set; }
 	}
 }
