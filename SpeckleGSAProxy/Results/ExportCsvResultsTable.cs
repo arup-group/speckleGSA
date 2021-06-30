@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace SpeckleGSAProxy.Results
 {
-  internal class ExportCsvResultsTable : ExportCsvTable
+  public class ExportCsvResultsTable : ExportCsvTable
   {
     private enum KnownResultCsvHeaders
     {

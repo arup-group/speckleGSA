@@ -1523,7 +1523,7 @@ namespace SpeckleGSAProxy
         g = ResultCsvGroup.Assembly;
       }
 
-      if (g == ResultCsvGroup.Node)
+      if (g == ResultCsvGroup.Unknown)
       {
         return false;
       }

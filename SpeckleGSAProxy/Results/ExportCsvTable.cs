@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace SpeckleGSAProxy.Results
 {
-  internal class ExportCsvTable
+  public class ExportCsvTable
   {
     public string TableName;
     public ConcurrentDictionary<string, int> Headers;
