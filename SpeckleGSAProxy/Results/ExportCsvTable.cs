@@ -1,6 +1,8 @@
-﻿using System;
+﻿using CsvHelper;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,10 +12,15 @@ namespace SpeckleGSAProxy.Results
   public class ExportCsvTable
   {
     public string TableName;
-    public ConcurrentDictionary<string, int> Headers;
+    public Dictionary<string, int> Headers;
     public int NumRows;
     public ConcurrentDictionary<int, object[]> Values;
     public List<int> ErrRowIndices;
+
+    protected List<string> fields;
+
+    //private object valuesLock = new object();
+    protected int numHeaders = 0;
 
     public ExportCsvTable(string tableName)
     {
@@ -24,129 +31,58 @@ namespace SpeckleGSAProxy.Results
 
     public bool LoadFromFile(string filePath)
     {
-      var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-      var sr = new StreamReader(fs);
-      var delimiters = new[] { ',' };
+      var delimiters = new HashSet<char> { ',' };
 
-      //Headers
-      var line = sr.ReadLine();
-      //Storing it in a dictionary like this is for performance reasons, as dictionary keys are a HashSet implementation
-      var headerIndex = 0;
-      Headers = new ConcurrentDictionary<string, int>();
-      foreach (var h in line.Split(new[] { ',' }, StringSplitOptions.None))
-      {
-        Headers.TryAdd(h, headerIndex++);
-      }
-      ErrRowIndices.Clear();
-      Values.Clear();
-      NumRows = 0;
+      var reader = new StreamReader(filePath);
 
-      //Rest of file
-      while ((line = sr.ReadLine()) != null)
+      using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
       {
-        try
+        var records = new List<object>();
+        csv.Read();
+        csv.ReadHeader();
+
+        var fileHeaders = csv.HeaderRecord.ToList();
+        Headers = new Dictionary<string, int>();
+        for (int f = 0; f < fields.Count; f++)
         {
-          var rowValues = ParseLine(line, delimiters);
-          for (var i = 0; i < rowValues.Count(); i++)
+          if (fileHeaders.Contains(fields[f]))
           {
-            //This is a recognised value
-            if (rowValues[i].Equals("null"))
-            {
-              rowValues[i] = "";
-            }
-          }
-          if (!AddRow(NumRows, rowValues))
-          {
-            ErrRowIndices.Add(NumRows);
+            Headers.Add(fields[f], f);
           }
         }
-        catch
+        numHeaders = Headers.Count();
+
+        int rowIndex = 0;
+        while (csv.Read())
         {
-          ErrRowIndices.Add(NumRows);
-        }
-        finally
-        {
-          NumRows++;
+          var vals = new object[fields.Count()];
+          for (int c = 0; c < fields.Count(); c++)
+          {
+            vals[c] = csv.GetField(fields[c]);
+          }
+          if (!AddRow(rowIndex, vals.ToList()))
+          {
+            ErrRowIndices.Add(rowIndex);
+          }
+          rowIndex++;
         }
       }
-      sr.Close();
+
+      NumRows = Values.Keys.Count();
+
+      reader.Close();
       return true;
     }
 
-    protected virtual bool AddRow(int RowIndex, List<string> rowData)
+    protected virtual bool AddRow(int RowIndex, List<object> rowData)
     {
-      return (Headers != null && Headers.Keys.Count > 0 && Values.TryAdd(RowIndex, rowData.ToArray()));
-    }
-
-    protected List<string> ParseLine(string line, char[] delimiters)
-    {
-      var lineTrimmed = line.Trim();
-      if (lineTrimmed.StartsWith("//") || lineTrimmed.Length == 0)
+      if (numHeaders > 0)
       {
-        return null;
+        Values[RowIndex] = rowData.ToArray();
+        return true;
       }
 
-      //Check if there are any unclosed quotes on the line
-      var numQuotes = line.Count(c => c.Equals('"'));
-      if (numQuotes % 2 == 1)
-      {
-        line += "\"";
-      }
-
-      var pieces = new List<string>();
-      string currWord = "";
-
-      var inQuote = false;
-      for (int i = 0; i < line.Length; i++)
-      {
-        if (delimiters.Any(d => line[i] == d))
-        {
-          if (inQuote)
-          {
-            currWord += line[i];
-          }
-          else
-          {
-            pieces.Add(currWord);
-            currWord = "";
-            /*
-            if (!string.IsNullOrEmpty(currWord))
-            {
-              pieces.Add(currWord);
-              currWord = "";
-            }
-            */
-          }
-        }
-        else if (line[i] == '\"')
-        {
-          if (inQuote)
-          {
-            if (!string.IsNullOrEmpty(currWord))
-            {
-              pieces.Add(currWord);
-            }
-            currWord = "";
-            inQuote = false;
-          }
-          else
-          {
-            inQuote = true;
-          }
-        }
-        else
-        {
-          currWord += line[i];
-        }
-      }
-      pieces.Add(currWord);
-      /*
-      if (!string.IsNullOrEmpty(currWord))
-      {
-        pieces.Add(currWord);
-      }
-      */
-      return pieces;
+      return false;
     }
   }
 }

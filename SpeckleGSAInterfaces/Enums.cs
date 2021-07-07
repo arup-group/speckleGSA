@@ -47,4 +47,13 @@
 		ModelWithTabularResults,
 		TabularResultsOnly
 	}
+
+	public enum ResultCsvGroup
+	{
+		Unknown = 0,
+		Node,
+		Element1d,
+		Element2d,
+		Assembly
+	}
 }

@@ -107,6 +107,8 @@ namespace SpeckleGSA
       var startTime = DateTime.Now;
       statusProgress.Report("Reading GSA data into cache");
 
+      var txTypePrereqs = GSA.TxTypeDependencies;
+
       //Update cache
       var updatedCache = UpdateCache();
       if (!updatedCache)

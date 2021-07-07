@@ -12,43 +12,63 @@ namespace SpeckleGSAProxy.Results
 {
   internal class SpeckleGSAResultsContext : IGSAResultsContext
   {
-    private readonly ConcurrentBag<ExportCsvResultsTable> resultsTables = new ConcurrentBag<ExportCsvResultsTable>();
+    private readonly ConcurrentDictionary<ResultCsvGroup, ExportCsvResultsTable> resultsTables = new ConcurrentDictionary<ResultCsvGroup, ExportCsvResultsTable>();
     private readonly ConcurrentBag<ExportCsvTable> dataTables = new ConcurrentBag<ExportCsvTable>();
     public string ResultsDir { get; private set; }
-    public List<string> ResultTables { get => resultsTables.Select(dt => dt.TableName).ToList(); }
-
+    public List<string> ResultTableNames { get => resultsTables.Keys.Select(rtk => resultsTables[rtk].TableName).ToList(); }
+    public List<ResultCsvGroup> ResultTableGroups { get => resultsTables.Keys.ToList(); }
     public SpeckleGSAResultsContext(string resultsDir)
     {
       this.ResultsDir = resultsDir;
     }
 
-    public bool Query(string tableName, IEnumerable<string> columns, string loadCase, out object[,] results, int? elemId = null)
+    public bool Query(ResultCsvGroup group, IEnumerable<string> columns, string loadCase, out object[,] results, int? elemId = null)
     {
       results = null; //default
 
-      var t = resultsTables.FirstOrDefault(rt => rt.TableName.Equals(tableName, StringComparison.InvariantCultureIgnoreCase));
-      if (t == null)
+      if (!resultsTables.ContainsKey(group) || resultsTables[group] == null)
       {
         return false;
       }
 
-      return t.Query(columns, new[] { loadCase }, out results, elemId.HasValue ? new[] { elemId.Value }: null);
+      return resultsTables[group].Query(columns, new[] { loadCase }, out results, elemId.HasValue ? new[] { elemId.Value }: null);
     }
 
-    public bool Query(string tableName, IEnumerable<string> columns, IEnumerable<string> loadCases, out object[,] results, IEnumerable<int> elemIds = null)
+    public bool Query(ResultCsvGroup group, IEnumerable<string> columns, IEnumerable<string> loadCases, out object[,] results, IEnumerable<int> elemIds = null)
     {
       results = null; //default
 
-      var t = resultsTables.FirstOrDefault(rt => rt.TableName.Equals(tableName, StringComparison.InvariantCultureIgnoreCase));
-      if (t == null)
+      if (!resultsTables.ContainsKey(group) || resultsTables[group] == null)
       {
         return false;
       }
 
-      return t.Query(columns, loadCases, out results, elemIds);
+      return resultsTables[group].Query(columns, loadCases, out results, elemIds);
     }
 
-    public bool ImportResultsFromFile(string fileName, string caseIdField, string elemIdField)
+    public bool Clear(ResultCsvGroup group = ResultCsvGroup.Unknown)
+    {
+      if (group == ResultCsvGroup.Unknown)
+      {
+        foreach (var g in resultsTables.Keys)
+        {
+          resultsTables[g].Clear();
+        }
+      }
+      else if (resultsTables.ContainsKey(group))
+      {
+        resultsTables[group].Clear();
+      }
+      else
+      {
+        return false;
+      }
+
+      return true;
+    }
+
+    public bool ImportResultsFromFile(string fileName, ResultCsvGroup group, string caseIdField, string elemIdField, List<string> otherFields, 
+      List<string> cases, List<int> elemIds)
     {
       var fn = Path.HasExtension(fileName) ? fileName : fileName + ".csv";
       var filePath = fn.Contains(":") ? fn : Path.Combine(ResultsDir, fn);
@@ -61,87 +81,22 @@ namespace SpeckleGSAProxy.Results
       var tableName = Path.GetFileNameWithoutExtension(filePath);
       var isResultsTable = tableName.StartsWith("result_", StringComparison.InvariantCultureIgnoreCase);
 
-      ExportCsvTable t = isResultsTable ? new ExportCsvResultsTable(tableName, caseIdField, elemIdField) : new ExportCsvTable(tableName);
-      if (t.LoadFromFile(filePath))
+      if (isResultsTable)
       {
-        if (isResultsTable)
+        var t = new ExportCsvResultsTable(tableName, group, caseIdField, elemIdField, otherFields);
+        if (t.LoadFromFile(filePath, cases, elemIds))
         {
-          resultsTables.Add((ExportCsvResultsTable)t);
-        }
-        else
-        {
-          dataTables.Add(t);
+          resultsTables.TryAdd(group, (ExportCsvResultsTable)t);
         }
       }
       else
       {
+        var t = new ExportCsvTable(tableName);
+        t.LoadFromFile(filePath);
+        //TO DO: add to local data tables
         return false;
       }
       return true;
     }
-
-    /*
-    public bool ImportResultsFromFileDir(string dir, IEnumerable<string> tableNames = null)
-    {
-      //Names of files that will be needed regardless of the later queries
-      var otherTableNamesToImport = new List<string>() { "analysis_case.csv" };  //All IDS here are combined with "A" to form the load case string
-
-      var allResultFiles = Directory.GetFiles(dir, "result*.csv").ToList();
-
-      var filesToImport = new List<string>();
-      filesToImport.AddRange(otherTableNamesToImport.Select(otn => Path.Combine(dir, otn)));
-      filesToImport.AddRange((tableNames == null) ? allResultFiles : allResultFiles.Where(f => tableNames.Any(tn => f.Contains(tn))));
-
-      foreach (var f in filesToImport)
-      {
-        var tableName = Path.GetFileNameWithoutExtension(f);
-        var isResultsTable = tableName.StartsWith("result_", StringComparison.InvariantCultureIgnoreCase);
-
-        ExportCsvTable t = isResultsTable ? new ExportCsvResultsTable(tableName, "case_id") : new ExportCsvTable(tableName);
-        if (t.LoadFromFile(f))
-        {
-          if (isResultsTable)
-          {
-            resultsTables.Add((ExportCsvResultsTable)t);
-          }
-          else
-          {
-            dataTables.Add(t);
-          }
-        }
-        else
-        {
-          return false;
-        }
-      }
-
-      return true;
-    }
-    */
-
-    /*
-    private bool LoadTable(string filePath, List<string> loadCases)
-    {
-      var t = new ResultsTable() { TableName = Path.GetFileNameWithoutExtension(filePath) };
-      using (TextFieldParser parser = new TextFieldParser(filePath))
-      {
-        parser.Delimiters = new string[] { "," };
-        parser.HasFieldsEnclosedInQuotes = true;
-        //Read column headers
-        string[] parts = parser.ReadFields();
-
-        while (true)
-        {
-          string[] parts = parser.re();
-          if (parts == null)
-          {
-            break;
-          }
-          Console.WriteLine("{0} field(s)", parts.Length);
-        }
-      }
-      return true;
-    }
-    */
   }
 }

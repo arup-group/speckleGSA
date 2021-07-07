@@ -9,7 +9,7 @@ namespace SpeckleGSAUI.Models
 
     public ResultSettings()
     {
-      ResultSettingItems = SpeckleGSAProxy.GSAProxy.ResultTypes.Select(rt => new ResultSettingItem(rt, true)).ToList();
+      ResultSettingItems = SpeckleGSAProxy.GSAProxy.resultTypeSpecs.Keys.SelectMany(k => SpeckleGSAProxy.GSAProxy.resultTypeSpecs[k].ResultTypeCsvColumnMap.Keys.Select(rt => new ResultSettingItem(rt, true))).ToList();
 
       /*
       ResultSettingItems = new List<ResultSettingItem>()

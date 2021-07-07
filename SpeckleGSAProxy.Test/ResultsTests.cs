@@ -1,7 +1,12 @@
-﻿using NUnit.Framework;
+﻿using CsvHelper;
+using NUnit.Framework;
 using SpeckleGSA;
+using SpeckleGSAInterfaces;
+using SpeckleGSAProxy.Results;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -22,16 +27,19 @@ namespace SpeckleGSAProxy.Test
       GSA.App = new TestAppResources(proxy, new Settings() { Units = "m", TargetLayer = SpeckleGSAInterfaces.GSATargetLayer.Analysis });
       GSA.Init("");
 
-      GSA.App.Settings.NodalResults = new Dictionary<string, SpeckleGSAInterfaces.IGSAResultParams>() { { "Nodal Displacements", null }, { "Nodal Velocity", null } };
-      GSA.App.Settings.Element1DResults = new Dictionary<string, SpeckleGSAInterfaces.IGSAResultParams>() { { "1D Element Displacement", null } };
+      GSA.App.Settings.NodalResults = new Dictionary<string, IGSAResultParams>() { { "Nodal Displacements", null }, { "Nodal Velocity", null } };
+      GSA.App.Settings.Element1DResults = new Dictionary<string, IGSAResultParams>() { { "1D Element Displacement", null } };
 
       var allResultTypes = new List<string>();
       allResultTypes.AddRange(GSA.App.Settings.NodalResults.Keys);
       allResultTypes.AddRange(GSA.App.Settings.Element1DResults.Keys);
+      var cases = new List<string> { "A1", "C3", "C10" };
 
       var path = Path.Combine(TestDataDirectory, "200602_timberPlint 3d model.gwb");
       Assert.IsTrue(proxy.OpenFile(path, true));
-      Assert.IsTrue(proxy.PrepareResults(3, allResultTypes, new List<string> { "A1", "C3", "C10" }));
+      Assert.IsTrue(proxy.PrepareResults(3));
+
+      Assert.IsTrue(proxy.LoadResults(GSA.App.Settings.NodalResults.Keys.ToList(), cases, new List<int> { 13 }));
       Assert.IsTrue(proxy.GetResults("NODE", 13, out var nodeResults));
       Assert.IsNotNull(nodeResults);
       Assert.IsTrue(nodeResults.Keys.Count > 0);
@@ -81,6 +89,67 @@ namespace SpeckleGSAProxy.Test
       }
 
       return value;
+    }
+
+    [TestCase(@"C:\Nicolaas\Repo\speckleGSA-github\SpeckleGSAUI\bin\Debug\GSAExport\result_elem_2d\result_elem_2d.csv")]
+    public void LoadFileTest(string filePath)
+    {
+      var startTime = DateTime.Now;
+      
+      var context = new ExportCsvResultsTable("", ResultCsvGroup.Element2d, "case_id", "id", new List<string>());
+      context.LoadFromFile(filePath);
+
+      TimeSpan duration = DateTime.Now - startTime;
+      var durationString = duration.ToString(@"hh\:mm\:ss");
+
+    }
+
+    [TestCase(@"C:\Nicolaas\Repo\speckleGSA-github\SpeckleGSAUI\bin\Debug\GSAExport\result_elem_1d\result_elem_1d.csv")]
+    public void LoadFileTestControl(string filePath)
+    {
+      var startTime = DateTime.Now;
+
+      var lines = new List<string>();
+
+      var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+      var sr = new StreamReader(fs);
+
+      string line;
+      while ((line = sr.ReadLine()) != null)
+      {
+        lines.Add(line);
+      }
+
+      TimeSpan duration = DateTime.Now - startTime;
+      var durationString = duration.ToString(@"hh\:mm\:ss");
+
+    }
+
+    [TestCase(@"C:\Nicolaas\Repo\speckleGSA-github\SpeckleGSAUI\bin\Debug\GSAExport\result_elem_1d\result_elem_1d.csv")]
+    public void CsvHelpersTest(string filePath)
+    {
+      var startTime = DateTime.Now;
+
+      var allFields = new List<string>();
+
+      foreach (var rt in GSAProxy.resultTypeSpecs[ResultCsvGroup.Element1d].ResultTypeCsvColumnMap.Keys)
+      {
+        foreach (var importedField in GSAProxy.resultTypeSpecs[ResultCsvGroup.Element1d].ResultTypeCsvColumnMap[rt].FileCols)
+        {
+          if (!allFields.Contains(importedField.Value.FileCol))
+          {
+            allFields.Add(importedField.Value.FileCol);
+          }
+        }
+      }
+      
+      
+      var context = new ExportCsvResultsTable("", ResultCsvGroup.Element1d, "case_id", "id", allFields);
+      context.LoadFromFile(filePath);
+
+      TimeSpan duration = DateTime.Now - startTime;
+      var durationString = duration.ToString(@"hh\:mm\:ss");
+
     }
   }
 }

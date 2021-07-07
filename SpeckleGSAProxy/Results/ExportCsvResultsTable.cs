@@ -1,9 +1,10 @@
-﻿using System;
+﻿using CsvHelper;
+using SpeckleGSAInterfaces;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Linq;
-using System.Runtime.Remoting;
-using System.Runtime.Remoting.Messaging;
 using System.Threading.Tasks;
 
 namespace SpeckleGSAProxy.Results
@@ -16,8 +17,16 @@ namespace SpeckleGSAProxy.Results
       LoadCase = 2
     }
     //Optimisations designed specifically for results tables
-    private readonly ConcurrentDictionary<string, ConcurrentBag<int>> rowIndicesByLoadCase = new ConcurrentDictionary<string, ConcurrentBag<int>>();
-    private readonly ConcurrentDictionary<int, ConcurrentBag<int>> rowIndicesByElemId = new ConcurrentDictionary<int, ConcurrentBag<int>>();
+    //private readonly ConcurrentDictionary<string, ConcurrentBag<int>> rowIndicesByTrimmedLoadCase = new ConcurrentDictionary<string, ConcurrentBag<int>>();
+    //private readonly ConcurrentDictionary<string, ConcurrentBag<int>> rowIndicesByFullLoadCase = new ConcurrentDictionary<string, ConcurrentBag<int>>();
+    //private readonly ConcurrentDictionary<int, ConcurrentBag<int>> rowIndicesByElemId = new ConcurrentDictionary<int, ConcurrentBag<int>>();
+
+    //These dictionaries don't need locks as they're (at least at time of writing this comment) being written-to serially during file load, and during
+    //querying, there is no writing going on, only reading
+    private readonly Dictionary<int, List<int>> rowIndicesByElemId = new Dictionary<int, List<int>>();
+    private readonly Dictionary<string, List<int>> rowIndicesByTrimmedLoadCase = new Dictionary<string, List<int>>();
+    private readonly Dictionary<string, List<int>> rowIndicesByFullLoadCase = new Dictionary<string, List<int>>();
+
     private readonly ConcurrentDictionary<KnownResultCsvHeaders, int> colIndicesByHeader = new ConcurrentDictionary<KnownResultCsvHeaders, int>();
 
     //"A1", "C2", etc - empty value here will cause the entire file to be loaded
@@ -25,21 +34,97 @@ namespace SpeckleGSAProxy.Results
 
     public string LoadCaseField;
     public string ElemIdField;
+    public List<string> OtherFields;
+    public ResultCsvGroup Group;
 
-    public ExportCsvResultsTable(string tableName, string loadCaseField, string elemIdField)
+    public ExportCsvResultsTable(string tableName, ResultCsvGroup group, string loadCaseField, string elemIdField, List<string> otherFields) 
       : base(tableName)
     {
+      this.fields = (new List<string>() { loadCaseField, elemIdField }).Concat(otherFields).ToList();
+
       this.LoadCaseField = loadCaseField;
       this.ElemIdField = elemIdField;
+      this.OtherFields = otherFields;
+      this.colIndicesByHeader.TryAdd(KnownResultCsvHeaders.LoadCase, 0);
+      this.colIndicesByHeader.TryAdd(KnownResultCsvHeaders.ElementId, 1);
+      this.Group = group;
     }
 
-    public ExportCsvResultsTable(string tableName, string loadCaseField)
+    public ExportCsvResultsTable(string tableName, ResultCsvGroup group, string loadCaseField, List<string> otherFields)
       : base(tableName)
     {
       this.LoadCaseField = loadCaseField;
+      this.OtherFields = otherFields;
+      this.fields = (new List<string>() { loadCaseField }).Concat(otherFields).ToList();
+      this.colIndicesByHeader.TryAdd(KnownResultCsvHeaders.LoadCase, 0);
+      this.Group = group;
     }
 
-    
+    public bool LoadFromFile(string filePath, List<string> cases, List<int> elemIds)
+    {
+      var delimiters = new HashSet<char> { ',' };
+
+      var elemIdHashes = new HashSet<int>(elemIds);
+      var loadCaseHashes = new HashSet<string>(cases);
+
+      var reader = new StreamReader(filePath);
+
+      using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+      {
+        var records = new List<object>();
+        csv.Read();
+        csv.ReadHeader();
+
+        var fileHeaders = csv.HeaderRecord.ToList();
+        Headers = new Dictionary<string, int>();
+        for (int f = 0; f < fields.Count; f++)
+        {
+          if (fileHeaders.Contains(fields[f]))
+          {
+            Headers.Add(fields[f], f);
+          }
+        }
+        numHeaders = Headers.Count();
+
+        int rowIndex = 0;
+        while (csv.Read())
+        {
+          var caseId = csv.GetField<string>("case_id");
+          var elemId = csv.GetField<int>("id");
+
+          if (elemIdHashes.Contains(elemId) && loadCaseHashes.Contains(caseId))
+          {
+            var vals = new object[fields.Count()];
+            for (int c = 0; c < fields.Count(); c++)
+            {
+              if (fields[c].Equals("case_id"))
+              {
+                vals[c] = caseId;
+              }
+              else if (fields[c].Equals("id"))
+              {
+                vals[c] = elemId;
+              }
+              else
+              {
+                vals[c] = csv.GetField<double?>(fields[c]);
+              }
+            }
+            if (!AddRow(rowIndex, vals.ToList()))
+            {
+              ErrRowIndices.Add(rowIndex);
+            }
+          }
+          rowIndex++;
+        }
+      }
+
+      NumRows = Values.Keys.Count();
+
+      reader.Close();
+      return true;
+    }
+
     public bool Query(IEnumerable<string> columns, IEnumerable<string> loadCases, out object[,] results, IEnumerable<int> elemIds = null)
     {
       results = null; //default
@@ -92,15 +177,6 @@ namespace SpeckleGSAProxy.Results
         {
           queryHeaderIndices.Add(Headers[c]);
         }
-        /*
-        for (int i = 0; i < Headers.Length; i++)
-        {
-          if (Headers[i].Equals(c, StringComparison.InvariantCultureIgnoreCase))
-          {
-            queryHeaderIndices.Add(i);
-          }
-        }
-        */
       }
       return (queryHeaderIndices.Count() > 0);
     }
@@ -112,11 +188,19 @@ namespace SpeckleGSAProxy.Results
       {
         foreach (var lc in loadCases)
         {
-          var lcBase = lc.Split('m').First();
-          if (rowIndicesByLoadCase.Keys.Any(k => k.Split('m').First().Equals(lcBase)))
-          //if (rowIndicesByLoadCase.ContainsKey(lc))
+          List<int> loadCaseIndices = null;
+          if (rowIndicesByFullLoadCase.ContainsKey(lc))
           {
-            foreach (var ilc in rowIndicesByLoadCase[lc])
+            loadCaseIndices = rowIndicesByFullLoadCase[lc];
+          }
+          else if (rowIndicesByTrimmedLoadCase.ContainsKey(lc))
+          {
+            loadCaseIndices = rowIndicesByTrimmedLoadCase[lc];
+          }
+
+          if (loadCaseIndices != null)
+          {
+            foreach (var ilc in loadCaseIndices)
             {
               if (!queryRowIndices.Contains(ilc))
               {
@@ -143,20 +227,38 @@ namespace SpeckleGSAProxy.Results
           }
         }
 
+        if (relevantByElemId.Count() == 0)
+        {
+          return false;
+        }
 
-        //var relevantByLoadCase = new SortedSet<int>();
         var tempIndices = new List<int>();
         foreach (var lc in loadCases)
         {
-          var lcBase = lc.Split('m').First();
-          var matching = rowIndicesByLoadCase.Keys.Where(k => k.Split('m').First().Equals(lcBase)).SelectMany(k => rowIndicesByLoadCase[k]);
-          if (matching.Count() > 0)
-          //if (rowIndicesByLoadCase.ContainsKey(lc))
+          List<int> matching = null;
+          
+          if (rowIndicesByFullLoadCase.ContainsKey(lc))
+          {
+            matching = rowIndicesByFullLoadCase[lc];
+          }
+          else if (char.IsDigit(lc.Last()))
+          {
+            var loadCaseTrimmed = lc;  //Default, could be overridden below
+            var dividingIndex = lc.IndexOf('m');
+            if (dividingIndex >= 0)
+            {
+              loadCaseTrimmed = lc.Substring(0, dividingIndex);
+            }
+            if (rowIndicesByTrimmedLoadCase.ContainsKey(loadCaseTrimmed))
+            {
+              matching = rowIndicesByTrimmedLoadCase[loadCaseTrimmed];
+            }
+          }
+
+          if (matching != null && matching.Count() > 0)
           {
             foreach (var ilc in matching)
-            //foreach (var ilc in rowIndicesByLoadCase[lc])
             {
-              //relevantByLoadCase.Add(ilc);
               if (relevantByElemId.Contains(ilc))
               {
                 tempIndices.Add(ilc);
@@ -166,84 +268,84 @@ namespace SpeckleGSAProxy.Results
         }
 
         queryRowIndices = tempIndices.OrderBy(i => i).ToList();
-        /*
-        var tempIndices = (from i in relevantByLoadCase.Intersect(relevantByElemId) select i);
-        foreach (var ti in tempIndices)
-        {
-          queryRowIndices.Add(ti);
-        }
-        */
       }
       return (queryRowIndices.Count() > 0);
     }
 
     private int? HeaderIndexOf(string headerToFind)
     {
-      return (Headers.ContainsKey(headerToFind) ? (int?) Headers[headerToFind] : null);
-      /*
-      for (var i = 0; i < Headers.Count(); i++)
-      {
-        if (Headers[i].Equals(headerToFind, StringComparison.InvariantCultureIgnoreCase))
-        {
-          return i;
-        }
-      }
-      return null;
-      */
+      return (Headers.ContainsKey(headerToFind) ? (int?)Headers[headerToFind] : null);
     }
 
-    private void SetSpecifiedColumnIndices()
+    protected override bool AddRow(int rowIndex, List<object> rowData)
     {
-      if (!colIndicesByHeader.ContainsKey(KnownResultCsvHeaders.LoadCase) && !string.IsNullOrEmpty(LoadCaseField))
-      {
-        var index = HeaderIndexOf(LoadCaseField);
-        if (index.HasValue)
-        {
-          colIndicesByHeader.TryAdd(KnownResultCsvHeaders.LoadCase, index.Value);
-        }
-      }
-      if (!colIndicesByHeader.ContainsKey(KnownResultCsvHeaders.ElementId) && !string.IsNullOrEmpty(ElemIdField))
-      {
-        var index = HeaderIndexOf(ElemIdField);
-        if (index.HasValue)
-        {
-          colIndicesByHeader.TryAdd(KnownResultCsvHeaders.ElementId, index.Value);
-        }
-      }
-    }
-
-    protected override bool AddRow(int rowIndex, List<string> rowData)
-    {
-      //Do this on first row only - it's assumed the first row will always contain headers (column names)
-      if (rowIndex == 0)
-      {
-        SetSpecifiedColumnIndices();
-      }
-
       base.AddRow(rowIndex, rowData);
 
       if (colIndicesByHeader.ContainsKey(KnownResultCsvHeaders.LoadCase))
       {
-        var loadCase = rowData[colIndicesByHeader[KnownResultCsvHeaders.LoadCase]];
-        if (!rowIndicesByLoadCase.ContainsKey(loadCase))
+        var loadCase = rowData[colIndicesByHeader[KnownResultCsvHeaders.LoadCase]].ToString();
+
+        if (!rowIndicesByFullLoadCase.ContainsKey(loadCase))
         {
-          rowIndicesByLoadCase.TryAdd(loadCase, new ConcurrentBag<int>());
+          rowIndicesByFullLoadCase.Add(loadCase, new List<int>());
         }
-        rowIndicesByLoadCase[loadCase].Add(rowIndex);
+        rowIndicesByFullLoadCase[loadCase].Add(rowIndex);
+
+        var loadCaseTrimmed = loadCase;  //Default, could be overridden below
+        if (!char.IsDigit(loadCase.Last()))
+        {
+          var dividingIndex = loadCase.IndexOf('m');
+          if (dividingIndex >= 0)
+          {
+            loadCaseTrimmed = loadCase.Substring(0, dividingIndex);
+          }
+
+          if (!rowIndicesByTrimmedLoadCase.ContainsKey(loadCaseTrimmed))
+          {
+            rowIndicesByTrimmedLoadCase.Add(loadCaseTrimmed, new List<int>());
+          }
+          rowIndicesByTrimmedLoadCase[loadCaseTrimmed].Add(rowIndex);
+        }
       }
 
       if (colIndicesByHeader.ContainsKey(KnownResultCsvHeaders.ElementId))
       {
-        if (int.TryParse(rowData[colIndicesByHeader[KnownResultCsvHeaders.ElementId]], out int elemId))
+        int elemId = (int)rowData[colIndicesByHeader[KnownResultCsvHeaders.ElementId]];
+        if (!rowIndicesByElemId.ContainsKey(elemId))
         {
-          if (!rowIndicesByElemId.ContainsKey(elemId))
-          {
-            rowIndicesByElemId.TryAdd(elemId, new ConcurrentBag<int>());
-          }
-          rowIndicesByElemId[elemId].Add(rowIndex);
+          rowIndicesByElemId.Add(elemId, new List<int>());
         }
+        rowIndicesByElemId[elemId].Add(rowIndex);
       }
 
+      return true;
+    }
+
+    public bool ClearForElementId(int id)
+    {
+      if (Values.ContainsKey(id) && Values[id] != null)
+      {
+        Values[id] = null;
+      }
+      if (rowIndicesByElemId.ContainsKey(id))
+      {
+        rowIndicesByElemId.Remove(id);
+      }
+      return true;
+    }
+
+    public bool Clear()
+    {
+      Headers.Clear();
+      NumRows = 0;
+      Values.Clear();
+      ErrRowIndices.Clear();
+      rowIndicesByElemId.Clear();
+      rowIndicesByTrimmedLoadCase.Clear();
+      rowIndicesByFullLoadCase.Clear();
+      colIndicesByHeader.Clear();
+      fields.Clear();
+      OtherFields.Clear();
       return true;
     }
   }

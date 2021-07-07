@@ -223,8 +223,51 @@ namespace SpeckleGSAUI.ViewModels
       GSA.App.Settings.StreamSendConfig = coordinator.SenderTab.StreamContentConfig;
       GSA.App.LocalSettings.Result1DNumPosition = coordinator.SenderTab.AdditionalPositionsFor1dElements; //end points (2) plus additional
 
-      UpdateResultSettings(coordinator.SenderTab.ResultSettings.ResultSettingItems.Where(rsi => rsi.Selected).ToList(), 
-        coordinator.SenderTab.LoadCaseList);
+      var resultsToSend = coordinator.SenderTab.ResultSettings.ResultSettingItems.Where(rsi => rsi.Selected).ToList();
+      if (resultsToSend == null || resultsToSend.Count() == 0 || string.IsNullOrEmpty(coordinator.SenderTab.LoadCaseList))
+      {
+        return false;
+      }
+
+      //Prepare the cache for the ability to parse the load case string
+      var initialData = GSA.App.Proxy.GetGwaData(GSA.App.LocalCache.KeywordsForLoadCaseExpansion, false);
+      for (int i = 0; i < initialData.Count(); i++)
+      {
+        var applicationId = (string.IsNullOrEmpty(initialData[i].ApplicationId)) ? null : initialData[i].ApplicationId;
+        GSA.App.Cache.Upsert(
+          initialData[i].Keyword,
+          initialData[i].Index,
+          initialData[i].GwaWithoutSet,
+          streamId: initialData[i].StreamId,
+          applicationId: applicationId,
+          gwaSetCommandType: initialData[i].GwaSetType);
+      }
+
+      var resultCases = GSA.App.LocalCache.ExpandLoadCasesAndCombinations(coordinator.SenderTab.LoadCaseList);
+      if (resultCases == null || resultCases.Count() == 0)
+      {
+        return false;
+      }
+      percentageProgress.Report(5);
+
+      loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Resolved load cases"));
+
+      GSA.App.Settings.ResultCases = resultCases;
+
+      var selectedResultNames = resultsToSend.Select(rts => rts.Name).ToList();
+      GSA.App.Settings.NodalResults = ExtractResultParams(ref Result.NodalResultMap, selectedResultNames);
+      GSA.App.Settings.Element1DResults = ExtractResultParams(ref Result.Element1DResultMap, selectedResultNames);
+      GSA.App.Settings.Element2DResults = ExtractResultParams(ref Result.Element2DResultMap, selectedResultNames);
+      GSA.App.Settings.MiscResults = ExtractResultParams(ref Result.MiscResultMap, selectedResultNames);
+
+      if (GSA.App.LocalSettings.SendResults && resultCases.Count() > 0)
+      {
+        //GSA.App.LocalProxy.PrepareResults(GSA.App.LocalSettings.Result1DNumPosition + 2, selectedResultNames, resultCases, percentageProgress);
+        GSA.App.LocalProxy.PrepareResults(GSA.App.LocalSettings.Result1DNumPosition + 2);
+      }
+
+      loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Extracted results"));
+
       coordinator.SenderTab.SetDocumentName(GSA.App.Proxy.GetTitle());
 
       var messenger = new ProgressMessenger(loggingProgress);
@@ -300,49 +343,6 @@ namespace SpeckleGSAUI.ViewModels
       loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Cloned to: " + clonedStreamId));
       return true;
       */
-    }
-
-    private static bool UpdateResultSettings(List<ResultSettingItem> resultsToSend, string loadCaseString)
-    {
-      if (resultsToSend == null || resultsToSend.Count() == 0 || string.IsNullOrEmpty(loadCaseString))
-      {
-        return false;
-      }
-
-      //Prepare the cache for the ability to parse the load case string
-      var initialData = GSA.App.Proxy.GetGwaData(GSA.App.LocalCache.KeywordsForLoadCaseExpansion, false);
-      for (int i = 0; i < initialData.Count(); i++)
-      {
-        var applicationId = (string.IsNullOrEmpty(initialData[i].ApplicationId)) ? null : initialData[i].ApplicationId;
-        GSA.App.Cache.Upsert(
-          initialData[i].Keyword,
-          initialData[i].Index,
-          initialData[i].GwaWithoutSet,
-          streamId: initialData[i].StreamId,
-          applicationId: applicationId,
-          gwaSetCommandType: initialData[i].GwaSetType);
-      }
-
-      var resultCases = GSA.App.LocalCache.ExpandLoadCasesAndCombinations(loadCaseString);
-      if (resultCases == null || resultCases.Count() == 0)
-      {
-        return false;
-      }
-
-      GSA.App.Settings.ResultCases = resultCases;
-
-      var selectedResultNames = resultsToSend.Select(rts => rts.Name).ToList();
-      GSA.App.Settings.NodalResults = ExtractResultParams(ref Result.NodalResultMap, selectedResultNames);
-      GSA.App.Settings.Element1DResults = ExtractResultParams(ref Result.Element1DResultMap, selectedResultNames);
-      GSA.App.Settings.Element2DResults = ExtractResultParams(ref Result.Element2DResultMap, selectedResultNames);
-      GSA.App.Settings.MiscResults = ExtractResultParams(ref Result.MiscResultMap, selectedResultNames);
-
-      if (GSA.App.LocalSettings.SendResults && resultCases.Count() > 0)
-      {
-        GSA.App.LocalProxy.PrepareResults(GSA.App.LocalSettings.Result1DNumPosition + 2, selectedResultNames, resultCases);
-      }
-
-      return true;
     }
 
     private static Dictionary<string, IGSAResultParams> ExtractResultParams(ref Dictionary<string, GsaResultParams> map, List<string> names)

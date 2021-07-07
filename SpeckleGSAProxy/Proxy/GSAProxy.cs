@@ -49,7 +49,15 @@ namespace SpeckleGSAProxy
     //exported to CSV in SI units
     private Dictionary<ResultUnitType, double> unitData = new Dictionary<ResultUnitType, double>();
 
-    private static Dictionary<ResultCsvGroup, FileToResultTableSpec> resultTypeSpecs = new Dictionary<ResultCsvGroup, FileToResultTableSpec>()
+    private static Dictionary<ResultCsvGroup, string> relativePathsToLoad = new Dictionary<ResultCsvGroup, string>
+      {
+        {  ResultCsvGroup.Node, @".\result_node\result_node.csv" },
+        {  ResultCsvGroup.Element1d, @".\result_elem_1d\result_elem_1d.csv" },
+        {  ResultCsvGroup.Element2d, @".\result_elem_2d\result_elem_2d.csv" },
+        {  ResultCsvGroup.Assembly, @".\result_assembly\result_assembly.csv" }
+      };
+
+    public static Dictionary<ResultCsvGroup, FileToResultTableSpec> resultTypeSpecs = new Dictionary<ResultCsvGroup, FileToResultTableSpec>()
     {
       {
         ResultCsvGroup.Node, new FileToResultTableSpec("id", "case_id")
@@ -330,7 +338,23 @@ namespace SpeckleGSAProxy
       }
     };
 
+    /*
     public static List<string> ResultTypes = resultTypeSpecs.SelectMany(rts => rts.Value.ResultTypeCsvColumnMap.Keys).ToList();
+    public static List<string> ResultTypeFields(string rt)
+    {
+      foreach (var g in resultTypeSpecs.Keys)
+      {
+        foreach (var rtSpec in resultTypeSpecs[g].ResultTypeCsvColumnMap.Keys)
+        {
+          if (rtSpec.Equals(rt, StringComparison.InvariantCultureIgnoreCase))
+          {
+            return resultTypeSpecs[g].ResultTypeCsvColumnMap[rt].OrderedColumns;
+          }
+        }
+      }
+      return null;
+    }
+    */
 
     private static object Magnitude(params object[] dims)
     {
@@ -1462,6 +1486,95 @@ namespace SpeckleGSAProxy
       return true;
     }
 
+    public bool PrepareResults(int numBeamPoints = 3)
+    {
+      this.resultDir = Path.Combine(Environment.CurrentDirectory, "GSAExport");
+
+      ProcessUnitGwaData();
+
+      //First delete all existing csv files in the results directory to avoid confusion
+      if (!ClearResultsDirectory())
+      {
+        return false;
+      }
+      var retCode = GSAObject.ExportToCsv(resultDir, numBeamPoints, true, true, ",");
+      if (retCode == 0)
+      {
+        //Assume that
+        resultsContext = new SpeckleGSAResultsContext(resultDir);
+        return true;
+      }
+      return false;
+    }
+
+    public bool LoadResults(List<string> resultTypes, List<string> cases = null, List<int> elemIds = null)
+    {
+      var fieldsPerGroup = new Dictionary<ResultCsvGroup, List<string>>();
+
+      if (this.resultTypes == null)
+      {
+        this.resultTypes = new List<string>();
+      }
+      foreach (var rt in resultTypes)
+      {
+        if (!this.resultTypes.Contains(rt))
+        {
+          this.resultTypes.Add(rt);
+        }
+      }
+      this.cases = cases;
+
+      foreach (var rt in resultTypes)
+      {
+        var groups = resultTypeSpecs.Keys.Where(k => resultTypeSpecs[k].ResultTypeCsvColumnMap.Keys.Any(r => r.Equals(rt, StringComparison.InvariantCultureIgnoreCase)));
+        if (groups != null && groups.Count() > 0)
+        {
+          var g = groups.First();
+
+          foreach (var f in resultTypeSpecs[g].ResultTypeCsvColumnMap[rt].FileCols.Values.Select(cm => cm.FileCol))
+          {
+            if (!fieldsPerGroup.ContainsKey(g))
+            {
+              fieldsPerGroup.Add(g, new List<string>());
+            }
+            if (!fieldsPerGroup[g].Contains(f))
+            {
+              fieldsPerGroup[g].Add(f);
+            }
+          }
+        }
+      }
+
+      try
+      {
+        Parallel.ForEach(fieldsPerGroup.Keys, 
+          g => resultsContext.ImportResultsFromFile(relativePathsToLoad[g], g, "case_id", "id", fieldsPerGroup[g], cases, elemIds));
+      }
+      catch (Exception ex)
+      {
+        return false;
+      }
+
+      return true;
+    }
+
+    public bool ClearResults(List<string> resultTypes)
+    {
+      foreach (var rt in resultTypes)
+      {
+        var groups = resultTypeSpecs.Keys.Where(k => resultTypeSpecs[k].ResultTypeCsvColumnMap.Keys.Any(r => r.Equals(rt, StringComparison.InvariantCultureIgnoreCase)));
+        if (groups != null && groups.Count() > 0)
+        {
+          resultsContext.Clear(groups.First());
+        }
+      }
+
+      GC.Collect();
+
+      return true;
+    }
+
+    /*
     public bool PrepareResults(int numBeamPoints, List<string> resultTypes, List<string> cases)
     {
       if (resultTypes == null || resultTypes.Count() == 0 || cases == null || cases.Count() == 0)
@@ -1479,29 +1592,60 @@ namespace SpeckleGSAProxy
 
       ProcessUnitGwaData();
 
-      var relativePathsToLoad = new List<string>
-      {
-        @".\result_node\result_node.csv",
-        @".\result_elem_1d\result_elem_1d.csv",
-        @".\result_elem_2d\result_elem_2d.csv",
-        @".\result_assembly\result_assembly.csv"
-      };
       //First delete all existing csv files in the results directory to avoid confusion
       if (!ClearResultsDirectory())
       {
         return false;
       }
 
+      var fieldsPerGroup = new Dictionary<ResultCsvGroup, List<string>>();
+
+      foreach (var rt in resultTypes)
+      {
+        var groups = resultTypeSpecs.Keys.Where(k => resultTypeSpecs[k].ResultTypeCsvColumnMap.Keys.Any(r => r.Equals(rt, StringComparison.InvariantCultureIgnoreCase)));
+        if (groups != null && groups.Count() > 0)
+        {
+          var g = groups.First();
+
+          foreach (var f in resultTypeSpecs[g].ResultTypeCsvColumnMap[rt].FileCols.Values.Select(cm => cm.FileCol))
+          {
+            if (!fieldsPerGroup.ContainsKey(g))
+            {
+              fieldsPerGroup.Add(g, new List<string>());
+            }
+            if (!fieldsPerGroup[g].Contains(f))
+            {
+              fieldsPerGroup[g].Add(f);
+            }
+          }
+        }
+      }
+
+      //var progressPercentage = 5;  //TO DO: remove this hardcoded magic number - it's currently the assumed starting point after resolving the load cases
       var retCode = GSAObject.ExportToCsv(resultDir, numBeamPoints, true, true, ",");
+      //progressPercentage += 10;
+      //var progressPercentageLock = new object();
+
       if (retCode == 0)
       {
+        //Assume that
         resultsContext = new SpeckleGSAResultsContext(resultDir);
-        var pathsToLoad = relativePathsToLoad.Select(rptl => Path.Combine(resultDir, rptl)).Where(p => File.Exists(p)).ToList();
-        pathsToLoad.ForEach(p => resultsContext.ImportResultsFromFile(p, "case_id", "id"));
+
+        Parallel.ForEach(fieldsPerGroup.Keys, g =>
+        //foreach (var g in relativePathsToLoad.Keys)
+        {
+          resultsContext.ImportResultsFromFile(relativePathsToLoad[g], g, "case_id", "id", fieldsPerGroup[g]);
+          //lock (progressPercentageLock)
+          //{
+          //  progressPercentage += (40 / relativePathsToLoad.Count());
+          //}
+        }
+        );
         return true;
       }
       return false;
     }
+    */
 
     // format for data is [ result_type, [ [ headers ], [ row, column ] ] ]
     public bool GetResults(string keyword, int index, out Dictionary<string, Tuple<List<string>, object[,]>> allData, int dimension = 1)
@@ -1529,8 +1673,7 @@ namespace SpeckleGSAProxy
       }
 
       bool found = false;
-      var tableName = GetTableName(g);
-      if (GetResults(tableName, g, index, out Dictionary<string, Tuple<List<string>, object[,]>> data) && data != null)
+      if (GetResults(g, index, out Dictionary<string, Tuple<List<string>, object[,]>> data) && data != null)
       {
         foreach (var k in data.Keys)
         {
@@ -1564,215 +1707,120 @@ namespace SpeckleGSAProxy
     }
     */
 
-    private bool GetResults(string tableName, ResultCsvGroup group, int elemId, out Dictionary<string, Tuple<List<string>, object[,]>> data)
+    private bool GetResults(ResultCsvGroup group, int elemId, out Dictionary<string, Tuple<List<string>, object[,]>> data)
     {
       data = new Dictionary<string, Tuple<List<string>, object[,]>>();
-      if (ImportResultsFileIfNecessary(tableName) && resultTypeSpecs.ContainsKey(group))
+      if (!resultTypeSpecs.ContainsKey(group) || !resultsContext.ResultTableGroups.Contains(group))
       {
-        var spec = resultTypeSpecs[group];
+        return false;
+      }
 
-        var defaultFileCols = new[] { spec.ElementIdCol, spec.CaseIdCol };
-        var defaultFileColTypes = new[] { typeof(int), typeof(string) };
-        var defaultColFactors = new List<double>[] { null, null };
+      var spec = resultTypeSpecs[group];
 
-        var indexOffsetForCalcs = defaultFileCols.Count();
+      var defaultFileCols = new[] { spec.ElementIdCol, spec.CaseIdCol };
+      var defaultFileColTypes = new[] { typeof(int), typeof(string) };
+      var defaultColFactors = new List<double>[] { null, null };
 
-        var relevantResultTypes = spec.ResultTypeCsvColumnMap.Keys.Intersect(this.resultTypes);
-        if (relevantResultTypes == null || relevantResultTypes.Count() == 0)
+      var indexOffsetForCalcs = defaultFileCols.Count();
+
+      var relevantResultTypes = spec.ResultTypeCsvColumnMap.Keys.Intersect(this.resultTypes);
+      if (relevantResultTypes == null || relevantResultTypes.Count() == 0)
+      {
+        //No results but successful
+        return true;
+      }
+
+      foreach (var rt in relevantResultTypes)
+      {
+        var rtMap = spec.ResultTypeCsvColumnMap[rt];
+        var specFileColFinalNames = rtMap.FileCols.Keys.ToList();
+        var specFileColOriginalNames = specFileColFinalNames.Select(fn => rtMap.FileCols[fn].FileCol).ToList();
+        var allFileCols = specFileColOriginalNames.Concat(defaultFileCols).ToList();
+        var allFileIndices = allFileCols.Select((fc, i) => new { fc, i }).ToDictionary(x => x.fc, x => x.i);
+
+        //The default columns are always tacked onto the end so there is no issue with the indices used in the calculated fields
+        if (!resultsContext.Query(group, allFileCols, cases, out var rtResults, new int[] { elemId })
+          || rtResults == null || rtResults.GetLength(0) == 0)
         {
-          //No results but successful
-          return true;
+          continue;
         }
 
-        foreach (var rt in relevantResultTypes)
+        var numRows = rtResults.GetLength(0);
+        var numSpecFileCols = specFileColFinalNames.Count();
+        //Convert the newly-retrieved values from the CSV files into their correct destination type
+        for (int r = 0; r < numRows; r++)
         {
-          var rtMap = spec.ResultTypeCsvColumnMap[rt];
-          var specFileColFinalNames = rtMap.FileCols.Keys.ToList();
-          var specFileColOriginalNames = specFileColFinalNames.Select(fn => rtMap.FileCols[fn].FileCol).ToList();
-          var allFileCols = specFileColOriginalNames.Concat(defaultFileCols).ToList();
-          var allFileIndices = allFileCols.Select((fc, i) => new { fc, i }).ToDictionary(x => x.fc, x => x.i);
-
-          //The default columns are always tacked onto the end so there is no issue with the indices used in the calculated fields
-          if (!resultsContext.Query(tableName, allFileCols, cases, out var rtResults, new int[] { elemId }) 
-            || rtResults == null || rtResults.GetLength(0) == 0)
+          for (int c = 0; c < numSpecFileCols; c++)
           {
-            continue;
+            var colName = specFileColFinalNames[c];
+            if (rtMap.FileCols[specFileColFinalNames[c]] != null && rtResults[r, c] != null)
+            {
+              if (rtResults[r, c] is string && string.IsNullOrEmpty((string)rtResults[r, c]))
+              {
+                rtResults[r, c] = null;
+              }
+              else
+              {
+                rtResults[r, c] = Convert.ChangeType(rtResults[r, c], rtMap.FileCols[specFileColFinalNames[c]].DestType);
+              }
+            }
           }
+          for (int cd = 0; cd < defaultFileCols.Count(); cd++)
+          {
+            rtResults[r, numSpecFileCols + cd] = Convert.ChangeType(rtResults[r, numSpecFileCols + cd], defaultFileColTypes[cd]);
+          }
+        }
 
-          var numRows = rtResults.GetLength(0);
-          var numSpecFileCols = specFileColFinalNames.Count();
-          //Convert the newly-retrieved values from the CSV files into their correct destination type
+        var numCols = rtMap.OrderedColumns.Count() + defaultFileCols.Count();
+        var rtData = new object[numRows, numCols];
+
+        if (rtMap.CalcFields != null && rtMap.CalcFields.Keys.Count() > 0 && rtMap.CalcFields.First().Value != null)
+        {
+          //Add in calculated fields based on the table returned from the query
           for (int r = 0; r < numRows; r++)
           {
-            for (int c = 0; c < numSpecFileCols; c++)
+            for (int c = 0; c < rtMap.OrderedColumns.Count(); c++)
             {
-              var colName = specFileColFinalNames[c];
-              if (rtMap.FileCols[specFileColFinalNames[c]] != null && rtResults[r, c] != null)
+              var colFinalName = rtMap.OrderedColumns[c];
+              if (rtMap.CalcFields.ContainsKey(colFinalName))
               {
-                if (rtResults[r, c] is string && string.IsNullOrEmpty((string)rtResults[r, c]))
-                {
-                  rtResults[r, c] = null;
-                }
-                else
-                {
-                  rtResults[r, c] = Convert.ChangeType(rtResults[r, c], rtMap.FileCols[specFileColFinalNames[c]].DestType);
-                }
-              }
-            }
-            for (int cd = 0; cd < defaultFileCols.Count(); cd++)
-            {
-              rtResults[r, numSpecFileCols + cd] = Convert.ChangeType(rtResults[r, numSpecFileCols + cd], defaultFileColTypes[cd]);
-            }
-          }
-
-          var numCols = rtMap.OrderedColumns.Count() + defaultFileCols.Count();
-          var rtData = new object[numRows, numCols];
-
-          if (rtMap.CalcFields != null && rtMap.CalcFields.Keys.Count() > 0 && rtMap.CalcFields.First().Value != null)
-          {
-            //Add in calculated fields based on the table returned from the query
-            for (int r = 0; r < numRows; r++)
-            {
-              for (int c = 0; c < rtMap.OrderedColumns.Count(); c++)
-              {
-                var colFinalName = rtMap.OrderedColumns[c];
-                if (rtMap.CalcFields.ContainsKey(colFinalName))
-                {
-                  var indices = rtMap.CalcFields[colFinalName].FileColIndices;
-                  var values = indices.Select(i => rtResults[r, i]).ToArray();
-                  rtData[r, c] = rtMap.CalcFields[colFinalName].CalcFn(values);
-                }
+                var indices = rtMap.CalcFields[colFinalName].FileColIndices;
+                var values = indices.Select(i => rtResults[r, i]).ToArray();
+                rtData[r, c] = rtMap.CalcFields[colFinalName].CalcFn(values);
               }
             }
           }
+        }
 
-          var orderedFieldSpecs = rtMap.OrderedFieldSpecs.Keys.ToList();
-          var numOrderedCols = rtMap.OrderedColumns.Count();
+        var orderedFieldSpecs = rtMap.OrderedFieldSpecs.Keys.ToList();
+        var numOrderedCols = rtMap.OrderedColumns.Count();
 
-          //Now fill in the rest and apply factors
-          for (int r = 0; r < numRows; r++)
+        //Now fill in the rest and apply factors
+        for (int r = 0; r < numRows; r++)
+        {
+          for (int c = 0; c < numOrderedCols; c++)
           {
-            for (int c = 0; c < numOrderedCols; c++)
+            if (orderedFieldSpecs[c] is ImportedField)
             {
-              if (orderedFieldSpecs[c] is ImportedField)
-              {
-                var rtResultColIndex = rtMap.OrderedFieldSpecs[orderedFieldSpecs[c]];
-                rtData[r, c] = rtResults[r, rtResultColIndex];
-              }
-              rtData[r, c] = ApplyFactors(rtData[r, c], GetFactors(orderedFieldSpecs[c].UnitTypes));
+              var rtResultColIndex = rtMap.OrderedFieldSpecs[orderedFieldSpecs[c]];
+              rtData[r, c] = rtResults[r, rtResultColIndex];
             }
-            for (int cd = 0; cd < defaultFileCols.Count(); cd++)
-            {
-              var rtResultColIndex = allFileIndices[defaultFileCols[cd]];
-              rtData[r, numOrderedCols + cd] = rtResults[r, rtResultColIndex];
-            }
+            rtData[r, c] = ApplyFactors(rtData[r, c], GetFactors(orderedFieldSpecs[c].UnitTypes));
           }
-
-          if (!data.ContainsKey(rt))
+          for (int cd = 0; cd < defaultFileCols.Count(); cd++)
           {
-            data.Add(rt, new Tuple<List<string>, object[,]>(rtMap.OrderedColumns.Concat(defaultFileCols).ToList(), rtData));
+            var rtResultColIndex = allFileIndices[defaultFileCols[cd]];
+            rtData[r, numOrderedCols + cd] = rtResults[r, rtResultColIndex];
           }
+        }
+
+        if (!data.ContainsKey(rt))
+        {
+          data.Add(rt, new Tuple<List<string>, object[,]>(rtMap.OrderedColumns.Concat(defaultFileCols).ToList(), rtData));
         }
       }
       return (data.Keys.Count > 0);
     }
-
-    /*
-    private bool GetResults(string tableName, ResultCsvGroup group, int elemId, out Dictionary<string, Tuple<List<string>, object[,]>> data)
-    {
-      data = new Dictionary<string, Tuple<List<string>, object[,]>>();
-      if (ImportResultsFileIfNecessary(tableName) && resultTypeSpecs.ContainsKey(group))
-      {
-        var spec = resultTypeSpecs[group];
-
-        var defaultFileCols = new[] { spec.ElementIdCol, spec.CaseIdCol };
-        var defaultFileColTypes = new[] { typeof(int), typeof(string) };
-        var defaultColFactors = new List<double>[] { null, null };
-
-        var indexOffsetForCalcs = defaultFileCols.Count();
-
-        foreach (var rt in spec.ResultTypeCsvColumnMap.Keys)
-        {
-          var rtMap = spec.ResultTypeCsvColumnMap[rt];
-
-          var fileCols = defaultFileCols.Concat(rtMap.FileCols.Keys.Select(k => rtMap.FileCols[k].FileCol)).ToList();
-          var fileColTypes = defaultFileColTypes.Concat(rtMap.FileCols.Values.Select(i => i.DestType)).ToList();
-
-          var fileColFactors = defaultColFactors.Concat(rtMap.FileCols.Values.Select(i => GetFactors(i.UnitTypes))).ToList();
-
-          var resultCols = defaultFileCols.Concat(rtMap.FileCols.Keys).ToList();
-
-          var orderedFinalCols = defaultFileCols.Concat(rtMap.OrderedColumns).ToList();
-
-          if (!resultsContext.Query(tableName, fileCols, cases, out var rtResults, new int[] { elemId }))
-          {
-            continue;
-          }
-
-          if (rtResults == null || rtResults.GetLength(0) == 0)
-          {
-            continue;
-          }
-
-          var numRows = rtResults.GetLength(0);
-
-          for (int r = 0; r < numRows; r++)
-          {
-            for (int c = 0; c < fileCols.Count(); c++)
-            {
-              if (fileColTypes[c] != null && rtResults[r, c] != null)
-              {
-                rtResults[r, c] = Convert.ChangeType(rtResults[r, c], fileColTypes[c]);
-                rtResults[r, c] = ApplyFactors(rtResults[r, c], fileColFactors[c]);
-              }
-            }
-          }
-
-          var fileColFinalIndices = resultCols.Select(fc => orderedFinalCols.IndexOf(fc)).ToList();
-
-          var rtData = new object[numRows, orderedFinalCols.Count()];
-
-          //First add the retrieved-from-file data
-          for (int r = 0; r < numRows; r++)
-          {
-            for (int c = 0; c < fileColFinalIndices.Count(); c++)
-            {
-              if (fileColFinalIndices[c] >= 0)
-              {
-                rtData[r, fileColFinalIndices[c]] = rtResults[r, c];
-              }
-            }
-          }
-
-          if (rtMap.CalcFields != null && rtMap.CalcFields.Keys.Count() > 0 && rtMap.CalcFields.First().Value != null)
-          {
-            var calcColFinalIndices = rtMap.CalcFields.Keys.Select(cc => orderedFinalCols.IndexOf(cc)).ToList();
-            var calcColFactors = rtMap.CalcFields.Keys.Select(cc => GetFactors(rtMap.CalcFields[cc].UnitTypes)).ToList();
-
-            var numCalcCols = rtMap.CalcFields.Keys.Count();
-
-            for (int r = 0; r < numRows; r++)
-            {
-              var calculatedCols = rtMap.CalcFields.Keys.ToList();
-              for (int c = 0; c < calcColFinalIndices.Count(); c++)
-              {
-                var indices = rtMap.CalcFields[calculatedCols[c]].FileColIndices;
-                var values = indices.Select(i => rtResults[r, i + indexOffsetForCalcs]).ToArray();
-                var colIndex = calcColFinalIndices[c];
-                rtData[r, colIndex] = rtMap.CalcFields[calculatedCols[c]].CalcFn(values);
-                rtData[r, colIndex] = ApplyFactors(rtData[r, colIndex], calcColFactors[c]);
-              }
-            }
-          }
-          if (!data.ContainsKey(rt))
-          {
-            data.Add(rt, new Tuple<List<string>, object[,]>(orderedFinalCols, rtData));
-          }
-        }
-      }
-      return (data.Keys.Count > 0);
-    }
-    */
 
     private object ApplyFactors(object val, List<double> factors)
     {
@@ -1808,15 +1856,7 @@ namespace SpeckleGSAProxy
       }
     }
 
-    private bool ImportResultsFileIfNecessary(string tableName)
-    {
-      if (!resultsContext.ResultTables.Contains(tableName))
-      {
-        return resultsContext.ImportResultsFromFile(@".\" + tableName + @"\" + tableName + ".csv", "case_id", "id");
-      }
-      return true;
-    }
-
+    /*
     public bool QueryResults(string tableName, IEnumerable<string> columns, string loadCase, out object[,] results, int? elemId = null)
     {
 
@@ -1824,6 +1864,7 @@ namespace SpeckleGSAProxy
       elemId = null;
       return true;
     }
+    */
 
     private class ResultQuery
     {

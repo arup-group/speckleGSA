@@ -6,16 +6,7 @@ using System.Threading.Tasks;
 
 namespace SpeckleGSAProxy.Results
 {
-  internal enum ResultCsvGroup
-  {
-    Unknown = 0,
-    Node,
-    Element1d,
-    Element2d,
-    Assembly
-  }
-
-  internal enum ResultUnitType
+  public enum ResultUnitType
   {
     None = 0,
     Force,
@@ -42,7 +33,7 @@ namespace SpeckleGSAProxy.Results
     rad
   }
 
-  internal class FileToResultTableSpec
+  public class FileToResultTableSpec
   {
     public string ElementIdCol;
     public string CaseIdCol;
@@ -54,7 +45,7 @@ namespace SpeckleGSAProxy.Results
     }
   }
 
-  internal class ColMap
+  public class ColMap
   {
     //Input values from the specification
     public Dictionary<string, ImportedField> FileCols { get; }
@@ -89,7 +80,7 @@ namespace SpeckleGSAProxy.Results
     }
   }
 
-  internal abstract class FieldSpec
+  public abstract class FieldSpec
   {
     public ResultUnitType[] UnitTypes;  //Multiple, because they can be N/m, etc
     public FieldSpec(ResultUnitType[] unitTypes)
@@ -98,7 +89,7 @@ namespace SpeckleGSAProxy.Results
     }
   }
   
-  internal class CalculatedField : FieldSpec
+  public class CalculatedField : FieldSpec
   {
     public int[] FileColIndices;
     public Func<object[], object> CalcFn;
@@ -116,7 +107,7 @@ namespace SpeckleGSAProxy.Results
     }
   }
 
-  internal class ImportedField : FieldSpec
+  public class ImportedField : FieldSpec
   {
     public string FileCol;
     public Type DestType;
