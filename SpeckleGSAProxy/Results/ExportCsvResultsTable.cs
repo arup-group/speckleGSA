@@ -16,10 +16,6 @@ namespace SpeckleGSAProxy.Results
       ElementId = 1,
       LoadCase = 2
     }
-    //Optimisations designed specifically for results tables
-    //private readonly ConcurrentDictionary<string, ConcurrentBag<int>> rowIndicesByTrimmedLoadCase = new ConcurrentDictionary<string, ConcurrentBag<int>>();
-    //private readonly ConcurrentDictionary<string, ConcurrentBag<int>> rowIndicesByFullLoadCase = new ConcurrentDictionary<string, ConcurrentBag<int>>();
-    //private readonly ConcurrentDictionary<int, ConcurrentBag<int>> rowIndicesByElemId = new ConcurrentDictionary<int, ConcurrentBag<int>>();
 
     //These dictionaries don't need locks as they're (at least at time of writing this comment) being written-to serially during file load, and during
     //querying, there is no writing going on, only reading
@@ -27,7 +23,7 @@ namespace SpeckleGSAProxy.Results
     private readonly Dictionary<string, List<int>> rowIndicesByTrimmedLoadCase = new Dictionary<string, List<int>>();
     private readonly Dictionary<string, List<int>> rowIndicesByFullLoadCase = new Dictionary<string, List<int>>();
 
-    private readonly ConcurrentDictionary<KnownResultCsvHeaders, int> colIndicesByHeader = new ConcurrentDictionary<KnownResultCsvHeaders, int>();
+    private readonly Dictionary<KnownResultCsvHeaders, int> colIndicesByHeader = new Dictionary<KnownResultCsvHeaders, int>();
 
     //"A1", "C2", etc - empty value here will cause the entire file to be loaded
     //public List<string> LoadCases;
@@ -45,8 +41,8 @@ namespace SpeckleGSAProxy.Results
       this.LoadCaseField = loadCaseField;
       this.ElemIdField = elemIdField;
       this.OtherFields = otherFields;
-      this.colIndicesByHeader.TryAdd(KnownResultCsvHeaders.LoadCase, 0);
-      this.colIndicesByHeader.TryAdd(KnownResultCsvHeaders.ElementId, 1);
+      this.colIndicesByHeader.Add(KnownResultCsvHeaders.LoadCase, 0);
+      this.colIndicesByHeader.Add(KnownResultCsvHeaders.ElementId, 1);
       this.Group = group;
     }
 
@@ -56,7 +52,7 @@ namespace SpeckleGSAProxy.Results
       this.LoadCaseField = loadCaseField;
       this.OtherFields = otherFields;
       this.fields = (new List<string>() { loadCaseField }).Concat(otherFields).ToList();
-      this.colIndicesByHeader.TryAdd(KnownResultCsvHeaders.LoadCase, 0);
+      this.colIndicesByHeader.Add(KnownResultCsvHeaders.LoadCase, 0);
       this.Group = group;
     }
 
@@ -119,7 +115,10 @@ namespace SpeckleGSAProxy.Results
         }
       }
 
-      NumRows = Values.Keys.Count();
+      lock (valuesLock)
+      {
+        NumRows = Values.Keys.Count();
+      }
 
       reader.Close();
       return true;
@@ -139,7 +138,11 @@ namespace SpeckleGSAProxy.Results
       //foreach (var currRowIndex in queryRowIndices)
       Parallel.ForEach(queryRowIndices, currRowIndex =>
       {
-        var rowData = Values[currRowIndex];
+        object[] rowData;
+        lock (valuesLock)
+        {
+          rowData = Values[currRowIndex];
+        }
 
         var tempRow = new object[queryHeaderIndices.Count()];
         var i = 0;
@@ -323,9 +326,12 @@ namespace SpeckleGSAProxy.Results
 
     public bool ClearForElementId(int id)
     {
-      if (Values.ContainsKey(id) && Values[id] != null)
+      lock (valuesLock)
       {
-        Values[id] = null;
+        if (Values.ContainsKey(id) && Values[id] != null)
+        {
+          Values[id] = null;
+        }
       }
       if (rowIndicesByElemId.ContainsKey(id))
       {
@@ -338,7 +344,10 @@ namespace SpeckleGSAProxy.Results
     {
       Headers.Clear();
       NumRows = 0;
-      Values.Clear();
+      lock (valuesLock)
+      {
+        Values.Clear();
+      }
       ErrRowIndices.Clear();
       rowIndicesByElemId.Clear();
       rowIndicesByTrimmedLoadCase.Clear();

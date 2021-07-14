@@ -52,8 +52,6 @@ namespace SpeckleGSAInterfaces
     /// <returns>Node index</returns>
     int NodeAt(double x, double y, double z, double coincidenceTol);
 
-    void GetGSATotal2DElementOffset(int index, double insertionPointOffset, out double offset, out string offsetRec);
-
     /// <summary>
     /// Converts a GSA list to a list of indices.
     /// </summary>
@@ -72,14 +70,14 @@ namespace SpeckleGSAInterfaces
     /// <param name="loadCase">Load case</param>
     /// <param name="axis">Result axis</param>
     /// <returns>Dictionary of reactions with keys {x,y,z,xx,yy,zz}.</returns>
-    Dictionary<string, object> GetGSAResult(int id, int resHeader, int flags, List<string> keys, string loadCase, string axis = "local", int num1DPoints = 2);
+    //Dictionary<string, object> GetGSAResult(int id, int resHeader, int flags, List<string> keys, string loadCase, string axis = "local", int num1DPoints = 2);
 
     /// <summary>
     /// Checks if the load case exists in the GSA file
     /// </summary>
     /// <param name="loadCase">GSA load case description</param>
     /// <returns>True if load case exists</returns>
-    bool CaseExist(string loadCase);
+    //bool CaseExist(string loadCase);
 
     #endregion
 

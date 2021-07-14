@@ -14,9 +14,9 @@ namespace SpeckleGSAProxy.Results
     public string TableName;
     public Dictionary<string, int> Headers;
     public int NumRows;
-    public ConcurrentDictionary<int, object[]> Values;
+    public Dictionary<int, object[]> Values;
     public List<int> ErrRowIndices;
-
+    protected object valuesLock = new object();
     protected List<string> fields;
 
     //private object valuesLock = new object();
@@ -25,7 +25,10 @@ namespace SpeckleGSAProxy.Results
     public ExportCsvTable(string tableName)
     {
       this.TableName = tableName;
-      Values = new ConcurrentDictionary<int, object[]>();
+      lock (valuesLock)
+      {
+        Values = new Dictionary<int, object[]>();
+      }
       ErrRowIndices = new List<int>();
     }
 
@@ -78,7 +81,10 @@ namespace SpeckleGSAProxy.Results
     {
       if (numHeaders > 0)
       {
-        Values[RowIndex] = rowData.ToArray();
+        lock (valuesLock)
+        {
+          Values[RowIndex] = rowData.ToArray();
+        }
         return true;
       }
 

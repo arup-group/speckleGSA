@@ -10,6 +10,7 @@ namespace SpeckleGSAProxy
   {
     private readonly List<GSACacheRecord> records = new List<GSACacheRecord>();
     private readonly Dictionary<string, HashSet<int>> collectionIndicesByKw = new Dictionary<string, HashSet<int>>();
+    private readonly Dictionary<string, Dictionary<int, HashSet<int>>> collectionIndicesByKwGsaId = new Dictionary<string, Dictionary<int, HashSet<int>>>();
     private readonly Dictionary<string, HashSet<int>> collectionIndicesByApplicationId = new Dictionary<string, HashSet<int>>();
     private readonly Dictionary<string, HashSet<int>> collectionIndicesByStreamId = new Dictionary<string, HashSet<int>>();
     private readonly Dictionary<string, HashSet<int>> collectionIndicesBySpeckleTypeName = new Dictionary<string, HashSet<int>>();
@@ -20,16 +21,21 @@ namespace SpeckleGSAProxy
 
     public bool AssignApplicationId(string kw, int gsaIndex, string applicationId)
     {
-      if (string.IsNullOrEmpty(kw) || !collectionIndicesByKw.ContainsKey(kw) || string.IsNullOrEmpty(applicationId))
+      if (string.IsNullOrEmpty(kw) || !collectionIndicesByKwGsaId.ContainsKey(kw) || !collectionIndicesByKwGsaId[kw].ContainsKey(gsaIndex)
+        || collectionIndicesByKwGsaId[kw][gsaIndex] == null || collectionIndicesByKwGsaId[kw][gsaIndex].Count == 0 
+        || string.IsNullOrEmpty(applicationId))
       {
         return false;
       }
+      /*
       var colIndices = collectionIndicesByKw[kw].Where(i => records[i].Index == gsaIndex).OrderBy(i => records[i].Index).ToList();
       if (colIndices.Count() == 0)
       {
         return false;
       }
       var colIndex = colIndices.First();
+      */
+      var colIndex = collectionIndicesByKwGsaId[kw][gsaIndex].First();
       records[colIndex].ApplicationId = applicationId;
       if (!collectionIndicesByApplicationId.ContainsKey(applicationId))
       {
@@ -72,6 +78,7 @@ namespace SpeckleGSAProxy
       records.Clear();
       collectionIndicesByApplicationId.Clear();
       collectionIndicesByKw.Clear();
+      collectionIndicesByKwGsaId.Clear();
       collectionIndicesBySpeckleTypeName.Clear();
       collectionIndicesByStreamId.Clear();
     }
@@ -82,6 +89,11 @@ namespace SpeckleGSAProxy
         || string.IsNullOrEmpty(applicationId) || !collectionIndicesByApplicationId.ContainsKey(applicationId))
       {
         return false;
+      }
+      if (collectionIndicesByApplicationId[applicationId].Count == 1)
+      {
+        var index = collectionIndicesByApplicationId[applicationId].First();
+        return collectionIndicesByKw[keyword].Contains(index);
       }
       var colIndices = collectionIndicesByApplicationId[applicationId].Intersect(collectionIndicesByKw[keyword]).ToList();
       return colIndices.Count() > 0;
@@ -94,11 +106,13 @@ namespace SpeckleGSAProxy
 
     public List<GSACacheRecord> GetAllRecords(string kw, int gsaIndex)
     {
-      if (string.IsNullOrEmpty(kw) || !collectionIndicesByKw.ContainsKey(kw))
+      if (string.IsNullOrEmpty(kw) || !collectionIndicesByKwGsaId.ContainsKey(kw) || collectionIndicesByKwGsaId[kw] == null
+        || !collectionIndicesByKwGsaId[kw].ContainsKey(gsaIndex) || collectionIndicesByKwGsaId[kw][gsaIndex] == null 
+        || collectionIndicesByKwGsaId[kw][gsaIndex].Count == 0)
       {
         return new List<GSACacheRecord>();
       }
-      return collectionIndicesByKw[kw].Where(i => records[i].Index == gsaIndex).Select(i => records[i]).ToList();
+      return collectionIndicesByKwGsaId[kw][gsaIndex].Select(i => records[i]).ToList();
     }
 
     public List<GSACacheRecord> GetAllRecords()
@@ -117,11 +131,13 @@ namespace SpeckleGSAProxy
 
     public string GetApplicationId(string kw, int gsaIndex)
     {
-      if (string.IsNullOrEmpty(kw) || !collectionIndicesByKw.ContainsKey(kw))
+      if (string.IsNullOrEmpty(kw) || !collectionIndicesByKwGsaId.ContainsKey(kw) || collectionIndicesByKwGsaId[kw] == null 
+        || !collectionIndicesByKwGsaId[kw].ContainsKey(gsaIndex) || collectionIndicesByKwGsaId[kw][gsaIndex] == null
+        || collectionIndicesByKwGsaId[kw][gsaIndex].Count == 0)
       {
         return "";
       }
-      return collectionIndicesByKw[kw].Where(i => records[i].Index == gsaIndex).OrderBy(i => i).Select(i => records[i].ApplicationId).FirstOrDefault();
+      return collectionIndicesByKwGsaId[kw][gsaIndex].OrderBy(i => i).Select(i => records[i].ApplicationId).FirstOrDefault();
     }
 
     public List<Tuple<string, int, string, GwaSetCommandType>> GetDeletableData()
@@ -231,11 +247,13 @@ namespace SpeckleGSAProxy
 
     public List<string> GetRecord(string keyword, int gsaIndex)
     {
-      if (string.IsNullOrEmpty(keyword) || !collectionIndicesByKw.ContainsKey(keyword))
+      if (string.IsNullOrEmpty(keyword) || !collectionIndicesByKwGsaId.ContainsKey(keyword) || collectionIndicesByKwGsaId[keyword] == null
+        || !collectionIndicesByKwGsaId[keyword].ContainsKey(gsaIndex) || collectionIndicesByKwGsaId[keyword][gsaIndex] == null
+        || collectionIndicesByKwGsaId[keyword][gsaIndex].Count == 0)
       {
         return new List<string>();
       }
-      var colIndices = collectionIndicesByKw[keyword].Where(i => records[i].Index == gsaIndex);
+      var colIndices = collectionIndicesByKwGsaId[keyword][gsaIndex];
       return (colIndices.Count() == 0) ? new List<string>() : colIndices.Select(i => records[i].Gwa).ToList();
     }
 
@@ -338,6 +356,7 @@ namespace SpeckleGSAProxy
       {
         var record = records[i];
         collectionIndicesByKw[record.Keyword].Remove(i);
+        collectionIndicesByKwGsaId[record.Keyword].Remove(i);
         if (!string.IsNullOrEmpty(record.ApplicationId) && collectionIndicesByApplicationId.ContainsKey(record.ApplicationId))
         {
           collectionIndicesByApplicationId[record.ApplicationId].Remove(i);
@@ -375,6 +394,15 @@ namespace SpeckleGSAProxy
         collectionIndicesByKw.Add(kw, new HashSet<int>());
       }
       collectionIndicesByKw[kw].Add(newColIndex);
+      if (!collectionIndicesByKwGsaId.ContainsKey(kw))
+      {
+        collectionIndicesByKwGsaId.Add(kw, new Dictionary<int, HashSet<int>>());
+      }
+      if (!collectionIndicesByKwGsaId[kw].ContainsKey(gsaIndex))
+      {
+        collectionIndicesByKwGsaId[kw].Add(gsaIndex, new HashSet<int>());
+      }
+      collectionIndicesByKwGsaId[kw][gsaIndex].Add(newColIndex);
       if (!string.IsNullOrEmpty(trimmedAppId))
       {
         if (!collectionIndicesByApplicationId.ContainsKey(trimmedAppId))

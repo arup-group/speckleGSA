@@ -691,7 +691,15 @@ namespace SpeckleGSAProxy
 
     #region applicationIdLookup
     public string GetApplicationId(string keyword, int index)
-      => ExecuteWithLock(() => recordCollection.GetApplicationId(keyword.Split('.').First(), index));
+      => ExecuteWithLock(() =>
+      {
+        if (char.IsDigit(keyword.Last()))
+        {
+          var splitIndex = keyword.IndexOf('.');
+          keyword = keyword.Substring(0, splitIndex);
+        }
+        return recordCollection.GetApplicationId(keyword, index);
+      });
 
     public bool SetApplicationId(string keyword, int index, string applicationId)
       => ExecuteWithLock(() => 

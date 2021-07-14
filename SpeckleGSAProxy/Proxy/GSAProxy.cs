@@ -47,7 +47,7 @@ namespace SpeckleGSAProxy
     private List<string> cases = null;
     //This is the factor relative to the SI units (N, m, etc) that the model is currently set to - this is relevant for results as they're always
     //exported to CSV in SI units
-    private Dictionary<ResultUnitType, double> unitData = new Dictionary<ResultUnitType, double>();
+    private Dictionary<ResultUnitType, float> unitData = new Dictionary<ResultUnitType, float>();
 
     private static Dictionary<ResultCsvGroup, string> relativePathsToLoad = new Dictionary<ResultCsvGroup, string>
       {
@@ -69,12 +69,12 @@ namespace SpeckleGSAProxy
               "Nodal Displacements", new ColMap(
                 new Dictionary<string, ImportedField>()
                 {
-                  { "ux", new ImportedField("disp_x", typeof(double), ResultUnitType.Length ) },
-                  { "uy", new ImportedField("disp_y", typeof(double), ResultUnitType.Length) },
-                  { "uz", new ImportedField("disp_z", typeof(double), ResultUnitType.Length) },
-                  { "rxx", new ImportedField("disp_xx", typeof(double), ResultUnitType.Length) },
-                  { "ryy", new ImportedField("disp_yy", typeof(double), ResultUnitType.Length) },
-                  { "rzz", new ImportedField("disp_zz", typeof(double), ResultUnitType.Length) }
+                  { "ux", new ImportedField("disp_x", typeof(float), ResultUnitType.Length ) },
+                  { "uy", new ImportedField("disp_y", typeof(float), ResultUnitType.Length) },
+                  { "uz", new ImportedField("disp_z", typeof(float), ResultUnitType.Length) },
+                  { "rxx", new ImportedField("disp_xx", typeof(float), ResultUnitType.Length) },
+                  { "ryy", new ImportedField("disp_yy", typeof(float), ResultUnitType.Length) },
+                  { "rzz", new ImportedField("disp_zz", typeof(float), ResultUnitType.Length) }
                 },
                 new Dictionary<string, CalculatedField>()
                 {
@@ -90,12 +90,12 @@ namespace SpeckleGSAProxy
               "Nodal Velocity", new ColMap(
                 new Dictionary<string, ImportedField>()
                 {
-                  { "vx", new ImportedField("vel_x",  typeof(double), new [] { ResultUnitType.Length, ResultUnitType.Time }) },
-                  { "vy", new ImportedField("vel_y", typeof(double), new [] { ResultUnitType.Length, ResultUnitType.Time }) },
-                  { "vz", new ImportedField("vel_z", typeof(double), new [] { ResultUnitType.Length, ResultUnitType.Time }) },
-                  { "vxx", new ImportedField("vel_xx", typeof(double), new [] { ResultUnitType.Length, ResultUnitType.Time }) },
-                  { "vyy", new ImportedField("vel_yy", typeof(double), new [] { ResultUnitType.Length, ResultUnitType.Time }) },
-                  { "vzz", new ImportedField("vel_zz", typeof(double), new [] { ResultUnitType.Length, ResultUnitType.Time }) }
+                  { "vx", new ImportedField("vel_x",  typeof(float), new [] { ResultUnitType.Length, ResultUnitType.Time }) },
+                  { "vy", new ImportedField("vel_y", typeof(float), new [] { ResultUnitType.Length, ResultUnitType.Time }) },
+                  { "vz", new ImportedField("vel_z", typeof(float), new [] { ResultUnitType.Length, ResultUnitType.Time }) },
+                  { "vxx", new ImportedField("vel_xx", typeof(float), new [] { ResultUnitType.Length, ResultUnitType.Time }) },
+                  { "vyy", new ImportedField("vel_yy", typeof(float), new [] { ResultUnitType.Length, ResultUnitType.Time }) },
+                  { "vzz", new ImportedField("vel_zz", typeof(float), new [] { ResultUnitType.Length, ResultUnitType.Time }) }
                 },
                 new Dictionary<string, CalculatedField>()
                 {
@@ -108,12 +108,12 @@ namespace SpeckleGSAProxy
               "Nodal Acceleration", new ColMap(
                 new Dictionary<string, ImportedField>()
                 {
-                  { "ax", new ImportedField("acc_x", typeof(double), ResultUnitType.Accel) },
-                  { "ay", new ImportedField("acc_y", typeof(double), ResultUnitType.Accel) },
-                  { "az", new ImportedField("acc_z", typeof(double), ResultUnitType.Accel) },
-                  { "axx", new ImportedField("acc_xx", typeof(double), ResultUnitType.Accel) },
-                  { "ayy", new ImportedField("acc_yy", typeof(double), ResultUnitType.Accel) },
-                  { "azz", new ImportedField("acc_zz", typeof(double), ResultUnitType.Accel) }
+                  { "ax", new ImportedField("acc_x", typeof(float), ResultUnitType.Accel) },
+                  { "ay", new ImportedField("acc_y", typeof(float), ResultUnitType.Accel) },
+                  { "az", new ImportedField("acc_z", typeof(float), ResultUnitType.Accel) },
+                  { "axx", new ImportedField("acc_xx", typeof(float), ResultUnitType.Accel) },
+                  { "ayy", new ImportedField("acc_yy", typeof(float), ResultUnitType.Accel) },
+                  { "azz", new ImportedField("acc_zz", typeof(float), ResultUnitType.Accel) }
                 },
                 new Dictionary<string, CalculatedField>()
                 {
@@ -126,12 +126,12 @@ namespace SpeckleGSAProxy
               "Nodal Reaction", new ColMap(
                 new Dictionary<string, ImportedField>()
                 {
-                  { "fx", new ImportedField("reaction_x", typeof(double), ResultUnitType.Force) },
-                  { "fy", new ImportedField("reaction_y", typeof(double), ResultUnitType.Force) },
-                  { "fz", new ImportedField("reaction_z", typeof(double), ResultUnitType.Force) },
-                  { "mxx", new ImportedField("reaction_xx", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
-                  { "myy", new ImportedField("reaction_yy", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
-                  { "mzz", new ImportedField("reaction_zz", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) }
+                  { "fx", new ImportedField("reaction_x", typeof(float), ResultUnitType.Force) },
+                  { "fy", new ImportedField("reaction_y", typeof(float), ResultUnitType.Force) },
+                  { "fz", new ImportedField("reaction_z", typeof(float), ResultUnitType.Force) },
+                  { "mxx", new ImportedField("reaction_xx", typeof(float), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
+                  { "myy", new ImportedField("reaction_yy", typeof(float), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
+                  { "mzz", new ImportedField("reaction_zz", typeof(float), new [] { ResultUnitType.Force, ResultUnitType.Length }) }
                 },
                 new Dictionary<string, CalculatedField>()
                 {
@@ -144,12 +144,12 @@ namespace SpeckleGSAProxy
               "Constraint Forces", new ColMap(
                 new Dictionary<string, ImportedField>()
                 {
-                  { "fx", new ImportedField("constraint_x", typeof(double), ResultUnitType.Force) },
-                  { "fy", new ImportedField("constraint_y", typeof(double), ResultUnitType.Force) },
-                  { "fz", new ImportedField("constraint_z", typeof(double), ResultUnitType.Force) },
-                  { "mxx", new ImportedField("constraint_xx", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
-                  { "myy", new ImportedField("constraint_yy", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
-                  { "mzz", new ImportedField("constraint_zz", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) }
+                  { "fx", new ImportedField("constraint_x", typeof(float), ResultUnitType.Force) },
+                  { "fy", new ImportedField("constraint_y", typeof(float), ResultUnitType.Force) },
+                  { "fz", new ImportedField("constraint_z", typeof(float), ResultUnitType.Force) },
+                  { "mxx", new ImportedField("constraint_xx", typeof(float), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
+                  { "myy", new ImportedField("constraint_yy", typeof(float), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
+                  { "mzz", new ImportedField("constraint_zz", typeof(float), new [] { ResultUnitType.Force, ResultUnitType.Length }) }
                 },
                 new Dictionary<string, CalculatedField>()
                 {
@@ -170,9 +170,9 @@ namespace SpeckleGSAProxy
               "1D Element Displacement", new ColMap(
                 new Dictionary<string, ImportedField>()
                 {
-                  { "ux", new ImportedField("disp_x", typeof(double), ResultUnitType.Length) },
-                  { "uy", new ImportedField("disp_y",  typeof(double), ResultUnitType.Length) },
-                  { "uz", new ImportedField("disp_z",  typeof(double), ResultUnitType.Length) }
+                  { "ux", new ImportedField("disp_x", typeof(float), ResultUnitType.Length) },
+                  { "uy", new ImportedField("disp_y",  typeof(float), ResultUnitType.Length) },
+                  { "uz", new ImportedField("disp_z",  typeof(float), ResultUnitType.Length) }
                 },
                 new Dictionary<string, CalculatedField>()
                 {
@@ -184,12 +184,12 @@ namespace SpeckleGSAProxy
               "1D Element Force", new ColMap(
                 new Dictionary<string, ImportedField>()
                 {
-                  { "fx", new ImportedField("force_x", typeof(double), ResultUnitType.Force) },
-                  { "fy", new ImportedField("force_y", typeof(double), ResultUnitType.Force) },
-                  { "fz", new ImportedField("force_z", typeof(double), ResultUnitType.Force) },
-                  { "mxx", new ImportedField("moment_x", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
-                  { "myy", new ImportedField("moment_y", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
-                  { "mzz", new ImportedField("moment_z", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) }
+                  { "fx", new ImportedField("force_x", typeof(float), ResultUnitType.Force) },
+                  { "fy", new ImportedField("force_y", typeof(float), ResultUnitType.Force) },
+                  { "fz", new ImportedField("force_z", typeof(float), ResultUnitType.Force) },
+                  { "mxx", new ImportedField("moment_x", typeof(float), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
+                  { "myy", new ImportedField("moment_y", typeof(float), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
+                  { "mzz", new ImportedField("moment_z", typeof(float), new [] { ResultUnitType.Force, ResultUnitType.Length }) }
                 },
                 new Dictionary<string, CalculatedField>()
                 {
@@ -212,11 +212,11 @@ namespace SpeckleGSAProxy
               "2D Element Displacement", new ColMap(
                 new Dictionary<string, ImportedField>()
                 {
-                  { "ux", new ImportedField("disp_x", typeof(double), ResultUnitType.Length) }, 
-                  { "uy", new ImportedField("disp_y",  typeof(double), ResultUnitType.Length) }, 
-                  { "uz", new ImportedField("disp_z",  typeof(double), ResultUnitType.Length) },
-                  { "position_r", new ImportedField("position_r", typeof(double), ResultUnitType.None) },
-                  { "position_s", new ImportedField("position_s", typeof(double), ResultUnitType.None) }
+                  { "ux", new ImportedField("disp_x", typeof(float), ResultUnitType.Length) }, 
+                  { "uy", new ImportedField("disp_y",  typeof(float), ResultUnitType.Length) }, 
+                  { "uz", new ImportedField("disp_z",  typeof(float), ResultUnitType.Length) },
+                  { "position_r", new ImportedField("position_r", typeof(float), ResultUnitType.None) },
+                  { "position_s", new ImportedField("position_s", typeof(float), ResultUnitType.None) }
                 },
                 new Dictionary<string, CalculatedField>()
                 {
@@ -228,11 +228,11 @@ namespace SpeckleGSAProxy
               "2D Element Projected Moment", new ColMap(
                 new Dictionary<string, ImportedField>()
                 {
-                  { "mx", new ImportedField("moment_xx", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) }, 
-                  { "my", new ImportedField("moment_yy", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) }, 
-                  { "mxy", new ImportedField("moment_xy", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
-                  { "position_r", new ImportedField("position_r", typeof(double), ResultUnitType.None) },
-                  { "position_s", new ImportedField("position_s", typeof(double), ResultUnitType.None) }
+                  { "mx", new ImportedField("moment_xx", typeof(float), new [] { ResultUnitType.Force, ResultUnitType.Length }) }, 
+                  { "my", new ImportedField("moment_yy", typeof(float), new [] { ResultUnitType.Force, ResultUnitType.Length }) }, 
+                  { "mxy", new ImportedField("moment_xy", typeof(float), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
+                  { "position_r", new ImportedField("position_r", typeof(float), ResultUnitType.None) },
+                  { "position_s", new ImportedField("position_s", typeof(float), ResultUnitType.None) }
                 },
                 new Dictionary<string, CalculatedField>()
                 {
@@ -245,13 +245,13 @@ namespace SpeckleGSAProxy
               "2D Element Projected Force", new ColMap(
                 new Dictionary<string, ImportedField>()
                 {
-                  { "nx", new ImportedField("force_xx", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
-                  { "ny", new ImportedField("force_yy", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
-                  { "nxy", new ImportedField("force_xy", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
-                  { "qx", new ImportedField("shear_x", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
-                  { "qy", new ImportedField("shear_y", typeof(double), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
-                  { "position_r", new ImportedField("position_r", typeof(double), ResultUnitType.None) },
-                  { "position_s", new ImportedField("position_s", typeof(double), ResultUnitType.None) }
+                  { "nx", new ImportedField("force_xx", typeof(float), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
+                  { "ny", new ImportedField("force_yy", typeof(float), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
+                  { "nxy", new ImportedField("force_xy", typeof(float), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
+                  { "qx", new ImportedField("shear_x", typeof(float), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
+                  { "qy", new ImportedField("shear_y", typeof(float), new [] { ResultUnitType.Force, ResultUnitType.Length }) },
+                  { "position_r", new ImportedField("position_r", typeof(float), ResultUnitType.None) },
+                  { "position_s", new ImportedField("position_s", typeof(float), ResultUnitType.None) }
                 },
                 null,
                 new List<string>()  { "nx", "ny", "nxy", "qx", "qy", "position_r", "position_s"})
@@ -260,14 +260,14 @@ namespace SpeckleGSAProxy
               "2D Element Projected Stress - Bottom", new ColMap(
                 new Dictionary<string, ImportedField>()
                 {
-                  { "xx", new ImportedField("stress_bottom_xx", typeof(double), ResultUnitType.Stress) },
-                  { "yy", new ImportedField("stress_bottom_yy", typeof(double), ResultUnitType.Stress) },
-                  { "zz", new ImportedField("stress_bottom_zz", typeof(double), ResultUnitType.Stress) },
-                  { "xy", new ImportedField("stress_bottom_xy", typeof(double), ResultUnitType.Stress) },
-                  { "yz", new ImportedField("stress_bottom_yz", typeof(double), ResultUnitType.Stress) },
-                  { "zx", new ImportedField("stress_bottom_zx", typeof(double), ResultUnitType.Stress) },
-                  { "position_r", new ImportedField("position_r", typeof(double), ResultUnitType.None) },
-                  { "position_s", new ImportedField("position_s", typeof(double), ResultUnitType.None) }
+                  { "xx", new ImportedField("stress_bottom_xx", typeof(float), ResultUnitType.Stress) },
+                  { "yy", new ImportedField("stress_bottom_yy", typeof(float), ResultUnitType.Stress) },
+                  { "zz", new ImportedField("stress_bottom_zz", typeof(float), ResultUnitType.Stress) },
+                  { "xy", new ImportedField("stress_bottom_xy", typeof(float), ResultUnitType.Stress) },
+                  { "yz", new ImportedField("stress_bottom_yz", typeof(float), ResultUnitType.Stress) },
+                  { "zx", new ImportedField("stress_bottom_zx", typeof(float), ResultUnitType.Stress) },
+                  { "position_r", new ImportedField("position_r", typeof(float), ResultUnitType.None) },
+                  { "position_s", new ImportedField("position_s", typeof(float), ResultUnitType.None) }
                 },
                 null,
                 new List<string>()  { "xx", "yy", "zz", "xy", "yz", "zx", "position_r", "position_s"})
@@ -276,14 +276,14 @@ namespace SpeckleGSAProxy
               "2D Element Projected Stress - Middle", new ColMap(
                 new Dictionary<string, ImportedField>()
                 {
-                  { "xx", new ImportedField("stress_middle_xx", typeof(double), ResultUnitType.Stress) },
-                  { "yy", new ImportedField("stress_middle_yy", typeof(double), ResultUnitType.Stress) },
-                  { "zz", new ImportedField("stress_middle_zz", typeof(double), ResultUnitType.Stress) },
-                  { "xy", new ImportedField("stress_middle_xy", typeof(double), ResultUnitType.Stress) },
-                  { "yz", new ImportedField("stress_middle_yz", typeof(double), ResultUnitType.Stress) },
-                  { "zx", new ImportedField("stress_middle_zx", typeof(double), ResultUnitType.Stress) },
-                  { "position_r", new ImportedField("position_r", typeof(double), ResultUnitType.None) },
-                  { "position_s", new ImportedField("position_s", typeof(double), ResultUnitType.None) }
+                  { "xx", new ImportedField("stress_middle_xx", typeof(float), ResultUnitType.Stress) },
+                  { "yy", new ImportedField("stress_middle_yy", typeof(float), ResultUnitType.Stress) },
+                  { "zz", new ImportedField("stress_middle_zz", typeof(float), ResultUnitType.Stress) },
+                  { "xy", new ImportedField("stress_middle_xy", typeof(float), ResultUnitType.Stress) },
+                  { "yz", new ImportedField("stress_middle_yz", typeof(float), ResultUnitType.Stress) },
+                  { "zx", new ImportedField("stress_middle_zx", typeof(float), ResultUnitType.Stress) },
+                  { "position_r", new ImportedField("position_r", typeof(float), ResultUnitType.None) },
+                  { "position_s", new ImportedField("position_s", typeof(float), ResultUnitType.None) }
                 },
                 null,
                 new List<string>()  { "xx", "yy", "zz", "xy", "yz", "zx", "position_r", "position_s"})
@@ -292,14 +292,14 @@ namespace SpeckleGSAProxy
               "2D Element Projected Stress - Top", new ColMap(
                 new Dictionary<string, ImportedField>()
                 {
-                  { "xx", new ImportedField("stress_top_xx", typeof(double), ResultUnitType.Stress) },
-                  { "yy", new ImportedField("stress_top_yy", typeof(double), ResultUnitType.Stress) },
-                  { "zz", new ImportedField("stress_top_zz", typeof(double), ResultUnitType.Stress) },
-                  { "xy", new ImportedField("stress_top_xy", typeof(double), ResultUnitType.Stress) },
-                  { "yz", new ImportedField("stress_top_yz", typeof(double), ResultUnitType.Stress) },
-                  { "zx", new ImportedField("stress_top_zx", typeof(double), ResultUnitType.Stress) },
-                  { "position_r", new ImportedField("position_r", typeof(double), ResultUnitType.None) },
-                  { "position_s", new ImportedField("position_s", typeof(double), ResultUnitType.None) }
+                  { "xx", new ImportedField("stress_top_xx", typeof(float), ResultUnitType.Stress) },
+                  { "yy", new ImportedField("stress_top_yy", typeof(float), ResultUnitType.Stress) },
+                  { "zz", new ImportedField("stress_top_zz", typeof(float), ResultUnitType.Stress) },
+                  { "xy", new ImportedField("stress_top_xy", typeof(float), ResultUnitType.Stress) },
+                  { "yz", new ImportedField("stress_top_yz", typeof(float), ResultUnitType.Stress) },
+                  { "zx", new ImportedField("stress_top_zx", typeof(float), ResultUnitType.Stress) },
+                  { "position_r", new ImportedField("position_r", typeof(float), ResultUnitType.None) },
+                  { "position_s", new ImportedField("position_s", typeof(float), ResultUnitType.None) }
                 },
                 null,
                 new List<string>()  { "xx", "yy", "zz", "xy", "yz", "zx", "position_r", "position_s"})
@@ -317,12 +317,12 @@ namespace SpeckleGSAProxy
               "Assembly Forces and Moments", new ColMap(
                 new Dictionary<string, ImportedField>()
                 {
-                  { "fx", new ImportedField("force_x", typeof(double), ResultUnitType.Length ) },
-                  { "fy", new ImportedField("force_y", typeof(double), ResultUnitType.Length) },
-                  { "fz", new ImportedField("force_z", typeof(double), ResultUnitType.Length) },
-                  { "mxx", new ImportedField("moment_x", typeof(double), ResultUnitType.Length) },
-                  { "myy", new ImportedField("moment_y", typeof(double), ResultUnitType.Length) },
-                  { "mzz", new ImportedField("moment_z", typeof(double), ResultUnitType.Length) }
+                  { "fx", new ImportedField("force_x", typeof(float), ResultUnitType.Length ) },
+                  { "fy", new ImportedField("force_y", typeof(float), ResultUnitType.Length) },
+                  { "fz", new ImportedField("force_z", typeof(float), ResultUnitType.Length) },
+                  { "mxx", new ImportedField("moment_x", typeof(float), ResultUnitType.Length) },
+                  { "myy", new ImportedField("moment_y", typeof(float), ResultUnitType.Length) },
+                  { "mzz", new ImportedField("moment_z", typeof(float), ResultUnitType.Length) }
                 },
                 new Dictionary<string, CalculatedField>()
                 {
@@ -358,22 +358,22 @@ namespace SpeckleGSAProxy
 
     private static object Magnitude(params object[] dims)
     {
-      if (!(dims.All(d => d is double)))
+      if (!(dims.All(d => d is float)))
       {
         return null;
       }
-      var vals = dims.Cast<double>().ToArray();
-      return Math.Sqrt(vals.Select(d => Math.Pow((double)d, 2)).Sum());
+      var vals = dims.Cast<float>().ToArray();
+      return Math.Sqrt(vals.Select(d => Math.Pow((float)d, 2)).Sum());
     }
 
     private static object MomentResult(params object[] dims)
     {
-      if (!(dims.All(d => d is double)))
+      if (!(dims.All(d => d is float)))
       {
         return null;
       }
-      var first = (double)dims.First();
-      var last = (double)dims.Last();
+      var first = (float)dims.First();
+      var last = (float)dims.Last();
       var magnitude = Math.Abs(first) + Math.Abs(last);
       return (first < 0) ? (-1) * magnitude : magnitude;
     }
@@ -426,12 +426,12 @@ namespace SpeckleGSAProxy
     #region nodeAt_factors
     public static bool NodeAtCalibrated = false;
     //Set to defaults, which will be updated at calibration
-    private static readonly Dictionary<string, double> UnitNodeAtFactors = new Dictionary<string, double>();
+    private static readonly Dictionary<string, float> UnitNodeAtFactors = new Dictionary<string, float>();
 
     public static void CalibrateNodeAt()
     {
-      double coordValue = 1000;
-      var unitCoincidentDict = new Dictionary<string, double>() { { "mm", 20 }, { "cm", 1 }, { "in", 1 }, { "m", 0.1 } };
+      float coordValue = 1000;
+      var unitCoincidentDict = new Dictionary<string, float>() { { "mm", 20 }, { "cm", 1 }, { "in", 1 }, { "m", 0.1f } };
       var units = new[] { "m", "cm", "mm", "in" };
 
       var proxy = new GSAProxy();
@@ -440,10 +440,10 @@ namespace SpeckleGSAProxy
       {
         proxy.SetUnits(u);
         var nodeIndex = proxy.NodeAt(coordValue, coordValue, coordValue, unitCoincidentDict[u]);
-        double factor = 1;
+        float factor = 1;
         var gwa = proxy.GetGwaForNode(nodeIndex);
         var pieces = gwa.Split(GSAProxy.GwaDelimiter);
-        if (double.TryParse(pieces.Last(), out double z1))
+        if (float.TryParse(pieces.Last(), out float z1))
         {
           if (z1 != coordValue)
           {
@@ -454,7 +454,7 @@ namespace SpeckleGSAProxy
             gwa = proxy.GetGwaForNode(nodeIndex);
             pieces = gwa.Split(GSAProxy.GwaDelimiter);
 
-            if (double.TryParse(pieces.Last(), out double z2) && z2 == 1000)
+            if (float.TryParse(pieces.Last(), out float z2) && z2 == 1000)
             {
               //it's confirmed
               factor = factorCandidate;
@@ -963,6 +963,7 @@ namespace SpeckleGSAProxy
       }
     }
 
+    /*
     public void GetGSATotal2DElementOffset(int index, double insertionPointOffset, out double offset, out string offsetRec)
     {
       double materialInsertionPointOffset = 0;
@@ -995,10 +996,11 @@ namespace SpeckleGSAProxy
       }
       return;
     }
+    */
 
     public int NodeAt(double x, double y, double z, double coincidenceTol)
     {
-      double factor = (UnitNodeAtFactors != null && UnitNodeAtFactors.ContainsKey(units)) ? UnitNodeAtFactors[units] : 1;
+      float factor = (UnitNodeAtFactors != null && UnitNodeAtFactors.ContainsKey(units)) ? UnitNodeAtFactors[units] : 1;
       //Note: the outcome of this might need to be added to the caches!
       var index = ExecuteWithLock(() => GSAObject.Gen_NodeAt(x * factor, y * factor, z * factor, coincidenceTol * factor));
       return index;
@@ -1095,6 +1097,7 @@ namespace SpeckleGSAProxy
       return items.ToArray();
     }
 
+    /*
     public Dictionary<string, object> GetGSAResult(int id, int resHeader, int flags, List<string> keys, string loadCase, string axis = "local", int num1DPoints = 2)
     {
       var ret = new Dictionary<string, object>();
@@ -1255,6 +1258,7 @@ namespace SpeckleGSAProxy
       }
       catch { return false; }
     }
+    */
 
     #region private_methods
     private int[] ConvertNamedGSAList(string list, GSAEntity type)
@@ -1478,7 +1482,7 @@ namespace SpeckleGSAProxy
       {
         var pieces = gwa.Split(GwaDelimiter);
 
-        if (Enum.TryParse(pieces[1], true, out ResultUnitType rut) && double.TryParse(pieces.Last(), out double factor))
+        if (Enum.TryParse(pieces[1], true, out ResultUnitType rut) && float.TryParse(pieces.Last(), out float factor))
         {
           unitData.Add(rut, factor);
         }
@@ -1822,24 +1826,24 @@ namespace SpeckleGSAProxy
       return (data.Keys.Count > 0);
     }
 
-    private object ApplyFactors(object val, List<double> factors)
+    private object ApplyFactors(object val, List<float> factors)
     {
-      if (factors == null || factors.Count() == 0 || !(val is double))
+      if (factors == null || factors.Count() == 0 || !(val is float))
       {
         return val;
       }
-      if ((double)val == 0)
+      if ((float)val == 0)
       {
         return val;
       }
       foreach (var f in factors)
       {
-        val = ((double)val * f);
+        val = ((float)val * f);
       }
       return val;
     }
 
-    private List<double> GetFactors(IEnumerable<ResultUnitType> ruts)
+    private List<float> GetFactors(IEnumerable<ResultUnitType> ruts)
     {
       return ruts.Where(r => unitData.ContainsKey(r)).Select(r => unitData[r]).ToList();
     }

@@ -13,6 +13,9 @@ namespace SpeckleGSAUI
       CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
       CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
+      var a = SpeckleStructuralClasses.Structural1DElementType.Beam;
+      var b = SpeckleStructuralGSA.StreamDirection.Receive;
+
       if (e.Args.Length == 0)
       {
         MainWindow wnd = new MainWindow();

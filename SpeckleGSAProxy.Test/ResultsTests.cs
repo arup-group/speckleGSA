@@ -54,7 +54,7 @@ namespace SpeckleGSAProxy.Test
 
     //For insertion into the Result.Value property
     // [ load case [ result type [ column [ values ] ] ] ]
-    private Dictionary<string, Dictionary<string, object>> GetSpeckleResultHierarchy(Dictionary<string, Tuple<List<string>, object[,]>> data, 
+    private Dictionary<string, Dictionary<string, object>> GetSpeckleResultHierarchy(Dictionary<string, Tuple<List<string>, object[,]>> data,
       int elementIdColIndex = 0, int caseColIndex = 1)
     {
       var value = new Dictionary<string, Dictionary<string, object>>();
@@ -95,7 +95,7 @@ namespace SpeckleGSAProxy.Test
     public void LoadFileTest(string filePath)
     {
       var startTime = DateTime.Now;
-      
+
       var context = new ExportCsvResultsTable("", ResultCsvGroup.Element2d, "case_id", "id", new List<string>());
       context.LoadFromFile(filePath);
 
@@ -142,14 +142,56 @@ namespace SpeckleGSAProxy.Test
           }
         }
       }
-      
-      
+
+
       var context = new ExportCsvResultsTable("", ResultCsvGroup.Element1d, "case_id", "id", allFields);
       context.LoadFromFile(filePath);
 
       TimeSpan duration = DateTime.Now - startTime;
       var durationString = duration.ToString(@"hh\:mm\:ss");
 
+    }
+
+    [TestCase(@"C:\Nicolaas\Repo\speckleGSA-github\SpeckleGSAUI\bin\Debug\GSAExport\result_elem_2d\result_elem_2d.csv", true)]
+    //[TestCase(@"C:\Temp\result_elem_2d.csv")]
+    public void CsvHelpersTest2(string filePath, bool parallel)
+    {
+      var startTime = DateTime.Now;
+
+      var cases = new List<string> { "A1", "A2", "A3" };
+
+      //var context = new ResultsTest.Results2dProcessor(GSAProxy.resultTypeSpecs[ResultCsvGroup.Element2d], filePath, new List<string>() { "A1", "A2" }, new List<int>() { 1, 2, 3 });
+      var context = new ResultsTest.Results2dProcessor(GSAProxy.resultTypeSpecs[ResultCsvGroup.Element2d], filePath, cases);
+      context.LoadFromFile(true);
+
+      var hierarchies1 = context.GetHierarchy(1, "A1");
+      var hierarchies2 = context.GetHierarchy(2, "A1");
+      var hierarchies3 = context.GetHierarchy(3, "A1");
+      var hierarchies4 = context.GetHierarchy(1, "A2");
+      var hierarchies5 = context.GetHierarchy(2, "A2");
+      var hierarchies6 = context.GetHierarchy(3, "A2");
+
+      TimeSpan duration = DateTime.Now - startTime;
+      var durationString = duration.ToString(@"hh\:mm\:ss");
+      Console.WriteLine("Duration of test: " + durationString);
+    }
+
+    [TestCase(@"C:\Nicolaas\Repo\speckleGSA-github\SpeckleGSAUI\bin\Debug\GSAExport\result_elem_2d\result_elem_2d.csv", true)]
+    //[TestCase(@"C:\Temp\result_elem_2d.csv", true)]
+    public void CsvHelpersTest3(string filePath, bool parallel)
+    {
+      var startTime = DateTime.Now;
+
+      var cases = new List<string> { "A1", "A2", "A3" };
+
+      var context = new ResultsTest.Results2dProcessor2(GSAProxy.resultTypeSpecs[ResultCsvGroup.Element2d], filePath);
+      context.LoadFromFile(true);
+
+      var hierarchies1 = context.GetHierarchy(1, "A1");
+      
+      TimeSpan duration = DateTime.Now - startTime;
+      var durationString = duration.ToString(@"hh\:mm\:ss");
+      Console.WriteLine("Duration of test: " + durationString);
     }
   }
 }
