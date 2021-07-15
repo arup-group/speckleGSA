@@ -19,10 +19,9 @@ namespace SpeckleGSAProxy.Test.ResultsTest
     protected List<ResultType> resultTypes;
 
     protected Dictionary<int, CsvElem2d> Records = new Dictionary<int, CsvElem2d>();
-    protected Dictionary<int, List<int>> FaceRecordIndicesByElemId = new Dictionary<int, List<int>>();
-    protected Dictionary<string, List<int>> FaceRecordIndicesByCaseId = new Dictionary<string, List<int>>();
-    protected Dictionary<int, List<int>> VertexRecordIndicesByElemId = new Dictionary<int, List<int>>();
-    protected Dictionary<string, List<int>> VertexRecordIndicesByCaseId = new Dictionary<string, List<int>>();
+    protected Dictionary<int, Dictionary<string, List<int>>> FaceRecordIndices = new Dictionary<int, Dictionary<string, List<int>>>();
+    protected Dictionary<int, Dictionary<string, List<int>>> VertexRecordIndices = new Dictionary<int, Dictionary<string, List<int>>>();
+    protected List<string> orderedCases = null; // will be updated in the first call to GetResultHierarchy
 
     protected static Dictionary<ResultType, Func<List<int>, Dictionary<string, List<object>>>> ColumnValuesFns;
 
@@ -117,29 +116,27 @@ namespace SpeckleGSAProxy.Test.ResultsTest
             Records.Add(rowIndex, record);
             if (record.IsVertex)
             {
-              if (!VertexRecordIndicesByElemId.ContainsKey(record.ElemId))
+              if (!VertexRecordIndices.ContainsKey(record.ElemId))
               {
-                VertexRecordIndicesByElemId.Add(record.ElemId, new List<int>());
+                VertexRecordIndices.Add(record.ElemId, new Dictionary<string, List<int>>());
               }
-              VertexRecordIndicesByElemId[record.ElemId].Add(rowIndex);
-              if (!VertexRecordIndicesByCaseId.ContainsKey(record.CaseId))
+              if (!VertexRecordIndices[record.ElemId].ContainsKey(record.CaseId))
               {
-                VertexRecordIndicesByCaseId.Add(record.CaseId, new List<int>());
+                VertexRecordIndices[record.ElemId].Add(record.CaseId, new List<int>());
               }
-              VertexRecordIndicesByCaseId[record.CaseId].Add(rowIndex);
+              VertexRecordIndices[record.ElemId][record.CaseId].Add(rowIndex);
             }
             else
             {
-              if (!FaceRecordIndicesByElemId.ContainsKey(record.ElemId))
+              if (!FaceRecordIndices.ContainsKey(record.ElemId))
               {
-                FaceRecordIndicesByElemId.Add(record.ElemId, new List<int>());
+                FaceRecordIndices.Add(record.ElemId, new Dictionary<string, List<int>>());
               }
-              FaceRecordIndicesByElemId[record.ElemId].Add(rowIndex);
-              if (!FaceRecordIndicesByCaseId.ContainsKey(record.CaseId))
+              if (!FaceRecordIndices[record.ElemId].ContainsKey(record.CaseId))
               {
-                FaceRecordIndicesByCaseId.Add(record.CaseId, new List<int>());
+                FaceRecordIndices[record.ElemId].Add(record.CaseId, new List<int>());
               }
-              FaceRecordIndicesByCaseId[record.CaseId].Add(rowIndex);
+              FaceRecordIndices[record.ElemId][record.CaseId].Add(rowIndex);
             }
           }
          
@@ -156,6 +153,8 @@ namespace SpeckleGSAProxy.Test.ResultsTest
         this.cases = foundCases;
       }
 
+      this.orderedCases = this.cases.OrderBy(c => c).ToList();
+
       reader.Close();
       return true;
     }
@@ -164,38 +163,37 @@ namespace SpeckleGSAProxy.Test.ResultsTest
     // [ load_case [ result_type [ column [ values ] ] ] ]
     public Dictionary<string, object> GetResultHierarchy(int elemId)
     {
-      var orderedCases = cases.Where(cid => VertexRecordIndicesByCaseId.ContainsKey(cid) && FaceRecordIndicesByCaseId.ContainsKey(cid)).OrderBy(c => c).ToList();
       var retDict = new Dictionary<string, object>();
-      List<int> indicesFace = null;
-      List<int> indicesVertex = null;
 
-      if (!VertexRecordIndicesByElemId.ContainsKey(elemId))
+      if (!VertexRecordIndices.ContainsKey(elemId) && !FaceRecordIndices.ContainsKey(elemId))
       {
         return null;
       }
 
       foreach (var caseId in orderedCases)
       {
-        indicesVertex = VertexRecordIndicesByElemId[elemId].Intersect(VertexRecordIndicesByCaseId[caseId]).ToList();
-        indicesFace = FaceRecordIndicesByElemId[elemId].Intersect(FaceRecordIndicesByCaseId[caseId]).ToList();
+        var indicesVertex = (VertexRecordIndices[elemId].ContainsKey(caseId)) ? VertexRecordIndices[elemId][caseId] : null;
+        var indicesFace = (FaceRecordIndices[elemId].ContainsKey(caseId)) ? FaceRecordIndices[elemId][caseId] : null;
 
-        if (indicesVertex.Count > 0 && indicesFace.Count > 0)
+        if (indicesVertex != null && indicesVertex.Count > 0 && indicesFace != null && indicesFace.Count > 0)
         {
-          var rtDict = new Dictionary<string, Dictionary<string, List<object>>>();
+          var rtDict = new Dictionary<string, Dictionary<string, List<object>>>(resultTypes.Count * 2);
           foreach (var rt in resultTypes)
           {
             var name = ResultTypeName(rt);
             if (!string.IsNullOrEmpty(name))
             {
-              //var faceValues = 
-              rtDict.Add(rt + "_face", ColumnValuesFns[rt](indicesFace));
-              rtDict.Add(rt + "vertex", ColumnValuesFns[rt](indicesVertex));
+              rtDict.Add(name + "_face", ColumnValuesFns[rt](indicesFace));
+              rtDict.Add(name + "_vertex", ColumnValuesFns[rt](indicesVertex));
             }
           }
-        } 
+          retDict.Add(caseId, rtDict);
+        }
       }
+
       return retDict;
     }
+
 
     public Dictionary<string, List<object>> ResultTypeColumnValues_Element2dDisplacement(List<int> indices)
     {
@@ -275,110 +273,6 @@ namespace SpeckleGSAProxy.Test.ResultsTest
         { "zx", indices.Select(i => Records[i].Zx_t).Cast<object>().ToList() }
       };
       return retDict;
-    }
-
-    private Dictionary<string, Dictionary<string, object>> GetSpeckleResultHierarchy(Dictionary<string, Tuple<List<string>, List<object[]>>> data,
-      bool simplifySingleItemLists = true, string caseCol = "case_id")
-    {
-      //This stores ALL the data in this one pass
-      var value = new Dictionary<string, Dictionary<string, object>>();
-      //This stores where there is at least one non-zero/null/"null" value in the whole result type, across all columns
-      var sendableValues = new Dictionary<string, Dictionary<string, bool>>();
-      //This stores the number of values in each column: [ load case [ result type [ col, num values ] ] ]
-      var numColValues = new Dictionary<string, Dictionary<string, Dictionary<string, int>>>();
-
-      //This loop has been designed with the intention that the data is traversed *once*
-
-      //Each result type (e.g. "Nodal Velocity")
-      foreach (var rt in data.Keys)
-      {
-        int caseColIndex = data[rt].Item1.IndexOf(caseCol);
-        for (var r = 0; r < data[rt].Item2.Count(); r++)
-        {
-          var loadCase = data[rt].Item2[r][caseColIndex].ToString();
-          if (!value.Keys.Contains(loadCase))
-          {
-            value.Add(loadCase, new Dictionary<string, object>());
-          }
-          if (!value[loadCase].ContainsKey(rt))
-          {
-            value[loadCase].Add(rt, new Dictionary<string, object>());
-          }
-          foreach (var c in Enumerable.Range(0, data[rt].Item1.Count()).Except(new[] { caseColIndex }))
-          {
-            var col = data[rt].Item1[c];
-            var val = data[rt].Item2[r][c];
-            if (!((Dictionary<string, object>)value[loadCase][rt]).ContainsKey(col))
-            {
-              ((Dictionary<string, object>)value[loadCase][rt]).Add(col, new List<object>());
-            }
-            ((List<object>)((Dictionary<string, object>)value[loadCase][rt])[col]).Add(val);
-            if (!sendableValues.ContainsKey(loadCase))
-            {
-              sendableValues.Add(loadCase, new Dictionary<string, bool>());
-            }
-            var sendable = SendableValue(val);
-            if (!sendableValues[loadCase].ContainsKey(rt))
-            {
-              sendableValues[loadCase].Add(rt, sendable);
-            }
-            else if (!sendableValues[loadCase][rt])
-            {
-              sendableValues[loadCase][rt] = sendable;
-            }
-            if (!numColValues.ContainsKey(loadCase))
-            {
-              numColValues.Add(loadCase, new Dictionary<string, Dictionary<string, int>>());
-            }
-            if (!numColValues[loadCase].ContainsKey(rt))
-            {
-              numColValues[loadCase].Add(rt, new Dictionary<string, int>());
-            }
-            if (!numColValues[loadCase][rt].ContainsKey(col))
-            {
-              numColValues[loadCase][rt].Add(col, 1);
-            }
-            else
-            {
-              numColValues[loadCase][rt][col]++;
-            }
-          }
-        }
-      }
-
-      var retValue = new Dictionary<string, Dictionary<string, object>>();
-      foreach (var loadCase in sendableValues.Keys)
-      {
-        foreach (var rt in sendableValues[loadCase].Keys.Where(k => sendableValues[loadCase][k]))
-        {
-          if (!retValue.ContainsKey(loadCase))
-          {
-            retValue.Add(loadCase, new Dictionary<string, object>());
-          }
-          foreach (var col in ((Dictionary<string, object>)value[loadCase][rt]).Keys)
-          {
-            var colValues = ((List<object>)((Dictionary<string, object>)value[loadCase][rt])[col]);
-          }
-          retValue[loadCase].Add(rt, value[loadCase][rt]);
-        }
-      }
-
-      if (simplifySingleItemLists)
-      {
-        foreach (var loadCase in retValue.Keys)
-        {
-          foreach (var rt in retValue[loadCase].Keys)
-          {
-            var singleValueCols = ((Dictionary<string, object>)retValue[loadCase][rt]).Keys.Where(k => numColValues[loadCase][rt][k] == 1).ToList();
-            foreach (var col in singleValueCols)
-            {
-              ((Dictionary<string, object>)retValue[loadCase][rt])[col] = ((List<object>)((Dictionary<string, object>)value[loadCase][rt])[col]).First();
-            }
-          }
-        }
-      }
-
-      return retValue;
     }
 
     private bool SendableValue(object v)

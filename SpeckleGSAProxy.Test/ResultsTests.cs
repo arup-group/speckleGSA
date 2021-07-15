@@ -187,7 +187,24 @@ namespace SpeckleGSAProxy.Test
       var context = new ResultsTest.Results2dProcessor2(GSAProxy.resultTypeSpecs[ResultCsvGroup.Element2d], filePath);
       context.LoadFromFile(true);
 
-      var hierarchies1 = context.GetHierarchy(1, "A1");
+      var elems = context.ElementIds;
+      var hierarchies = new Dictionary<int, object>(elems.Count);
+      foreach (var e in elems)
+      {
+        hierarchies.Add(e, null);
+      }
+      var hierarchiesLock = new object();
+      int numAdded = 0;
+      
+      Parallel.ForEach(elems, e =>
+      {
+        var h = context.GetResultHierarchy(e);
+        lock (hierarchiesLock)
+        {
+          hierarchies[e] = h;
+          numAdded++;
+        }
+      });
       
       TimeSpan duration = DateTime.Now - startTime;
       var durationString = duration.ToString(@"hh\:mm\:ss");
