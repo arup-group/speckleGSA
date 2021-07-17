@@ -12,25 +12,25 @@ namespace SpeckleGSAProxy.Test.ResultsTest
 {
   public class Results2dProcessor2 : ResultsProcessorBase
   {
+    //Not using the base class's records or indices as 2D elements are a special case
     protected Dictionary<int, CsvElem2d> Records2d = new Dictionary<int, CsvElem2d>();
     protected Dictionary<int, Dictionary<string, List<int>>> FaceRecordIndices = new Dictionary<int, Dictionary<string, List<int>>>();
     protected Dictionary<int, Dictionary<string, List<int>>> VertexRecordIndices = new Dictionary<int, Dictionary<string, List<int>>>();
 
-    //This isn't used for 2D elements
-    protected override Dictionary<int, Dictionary<string, List<int>>> RecordIndices => null;
+    public override ResultCsvGroup Group => ResultCsvGroup.Element2d;
 
     public Results2dProcessor2(string filePath, Dictionary<ResultUnitType, double> unitData, List<string> cases = null, List<int> elemIds = null)
       : base(filePath, unitData, cases, elemIds)
     {
-      this.resultTypes.AddRange(new[]
-          {
-            ResultType.Element2dDisplacement,
-            ResultType.Element2dProjectedForce,
-            ResultType.Element2dProjectedMoment,
-            ResultType.Element2dProjectedStressBottom,
-            ResultType.Element2dProjectedStressMiddle,
-            ResultType.Element2dProjectedStressTop
-          });
+      this.resultTypes = new List<ResultType>()
+      {
+        ResultType.Element2dDisplacement,
+        ResultType.Element2dProjectedForce,
+        ResultType.Element2dProjectedMoment,
+        ResultType.Element2dProjectedStressBottom,
+        ResultType.Element2dProjectedStressMiddle,
+        ResultType.Element2dProjectedStressTop
+      };
 
       ColumnValuesFns = new Dictionary<ResultType, Func<List<int>, Dictionary<string, List<object>>>>()
       {
@@ -45,7 +45,7 @@ namespace SpeckleGSAProxy.Test.ResultsTest
 
     //Assume order is always correct
     //the hierarchy to compile, to be converted, is
-    public bool LoadFromFile(bool parallel = true)
+    public override bool LoadFromFile(bool parallel = true)
     {
       var reader = new StreamReader(filePath);
 

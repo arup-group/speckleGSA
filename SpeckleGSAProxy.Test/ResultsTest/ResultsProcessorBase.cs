@@ -16,7 +16,7 @@ namespace SpeckleGSAProxy.Test.ResultsTest
     protected HashSet<string> cases;
     protected HashSet<int> elemIds;
     protected Dictionary<int, CsvRecord> Records = new Dictionary<int, CsvRecord>();
-    protected static Dictionary<ResultType, Func<List<int>, Dictionary<string, List<object>>>> ColumnValuesFns;
+    protected Dictionary<ResultType, Func<List<int>, Dictionary<string, List<object>>>> ColumnValuesFns;
     protected Dictionary<ResultUnitType, double> unitData;
     protected List<string> orderedCases = null; // will be updated in the first call to GetResultHierarchy
     protected List<ResultType> resultTypes;
@@ -39,11 +39,12 @@ namespace SpeckleGSAProxy.Test.ResultsTest
       { ResultType.AssemblyForcesAndMoments, "Assembly Forces and Moments" }
     };
 
-    protected abstract Dictionary<int, Dictionary<string, List<int>>> RecordIndices { get; }
+    protected Dictionary<int, Dictionary<string, List<int>>> RecordIndices = new Dictionary<int, Dictionary<string, List<int>>>();
 
     public string ResultTypeName(ResultType rt) => rtStrings[rt];
     public List<int> ElementIds => elemIds.OrderBy(i => i).ToList();
     public List<string> CaseIds => cases.OrderBy(c => c).ToList();
+    public abstract ResultCsvGroup Group { get; }
 
     public ResultsProcessorBase(string filePath, Dictionary<ResultUnitType, double> unitData, List<string> cases = null, List<int> elemIds = null)
     {
@@ -58,6 +59,8 @@ namespace SpeckleGSAProxy.Test.ResultsTest
       }
       this.unitData = unitData;
     }
+
+    public abstract bool LoadFromFile(bool parallel = true);
 
     protected bool LoadFromFile<T>(bool parallel = true) where T: CsvRecord
     {

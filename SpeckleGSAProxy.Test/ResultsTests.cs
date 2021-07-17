@@ -3,6 +3,7 @@ using NUnit.Framework;
 using SpeckleGSA;
 using SpeckleGSAInterfaces;
 using SpeckleGSAProxy.Results;
+using SpeckleGSAProxy.Test.ResultsTest;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -176,9 +177,9 @@ namespace SpeckleGSAProxy.Test
       Console.WriteLine("Duration of test: " + durationString);
     }
 
-    [TestCase(@"C:\Nicolaas\Repo\speckleGSA-github\SpeckleGSAUI\bin\Debug\GSAExport\result_elem_2d\result_elem_2d.csv", true)]
+    [TestCase(@"C:\Nicolaas\Repo\speckleGSA-github\SpeckleGSAUI\bin\Debug\GSAExport", true)]
     //[TestCase(@"C:\Temp\result_elem_2d.csv", true)]
-    public void CsvHelpersTest3(string filePath, bool parallel)
+    public void CsvHelpersTest3(string dir, bool parallel)
     {
       var startTime = DateTime.Now;
 
@@ -186,27 +187,39 @@ namespace SpeckleGSAProxy.Test
 
       var unitData = new Dictionary<ResultUnitType, double>() { { ResultUnitType.Length, 1 }, { ResultUnitType.Force, 1 } };
 
-      var context = new ResultsTest.Results2dProcessor2(GSAProxy.resultTypeSpecs[ResultCsvGroup.Element2d], filePath, unitData, cases: cases);
-      context.LoadFromFile(true);
-
-      var elems = context.ElementIds;
-      var hierarchies = new Dictionary<int, object>(elems.Count);
-      foreach (var e in elems)
+      var context = new List<ResultsProcessorBase>()
       {
-        hierarchies.Add(e, null);
-      }
+        new ResultsNodeProcessor(Path.Combine(dir, @"result_node\result_node.csv"), unitData, cases),
+        new Results1dProcessor(Path.Combine(dir, @"result_elem_1d\result_elem_1d.csv"), unitData, cases),
+        new Results2dProcessor2(Path.Combine(dir, @"result_elem_2d\result_elem_2d.csv"), unitData, cases),
+        new ResultsAssemblyProcessor(Path.Combine(dir, @"result_assembly\result_assembly.csv"), unitData, cases)
+      };
+
+      var hierarchiesByGroup = new Dictionary<ResultCsvGroup, Dictionary<int, object>>();
       var hierarchiesLock = new object();
       int numAdded = 0;
-      
-      Parallel.ForEach(elems, e =>
+
+      foreach (var processor in context)
       {
-        var h = context.GetResultHierarchy(e);
-        lock (hierarchiesLock)
+        hierarchiesByGroup.Add(processor.Group, new Dictionary<int, object>());
+
+        processor.LoadFromFile(true);
+      }
+        
+      foreach (var processor in context)
+      {
+          var elems = processor.ElementIds;
+
+        foreach (var e in elems.Take(10))
         {
-          hierarchies[e] = h;
-          numAdded++;
+          var h = processor.GetResultHierarchy(e);
+          lock (hierarchiesLock)
+          {
+            hierarchiesByGroup[processor.Group][e] = h;
+            numAdded++;
+          }
         }
-      });
+      }
       
       TimeSpan duration = DateTime.Now - startTime;
       var durationString = duration.ToString(@"hh\:mm\:ss");
