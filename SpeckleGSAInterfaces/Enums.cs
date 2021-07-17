@@ -71,6 +71,7 @@
 		Element2dProjectedForce,
 		Element2dProjectedStressBottom,
 		Element2dProjectedStressMiddle,
-		Element2dProjectedStressTop
+		Element2dProjectedStressTop,
+		AssemblyForcesAndMoments
 	}
 }

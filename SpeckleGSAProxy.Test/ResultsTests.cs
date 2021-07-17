@@ -182,9 +182,11 @@ namespace SpeckleGSAProxy.Test
     {
       var startTime = DateTime.Now;
 
-      var cases = new List<string> { "A1", "A2", "A3" };
+      var cases = new List<string> { "A1" };
 
-      var context = new ResultsTest.Results2dProcessor2(GSAProxy.resultTypeSpecs[ResultCsvGroup.Element2d], filePath);
+      var unitData = new Dictionary<ResultUnitType, double>() { { ResultUnitType.Length, 1 }, { ResultUnitType.Force, 1 } };
+
+      var context = new ResultsTest.Results2dProcessor2(GSAProxy.resultTypeSpecs[ResultCsvGroup.Element2d], filePath, unitData, cases: cases);
       context.LoadFromFile(true);
 
       var elems = context.ElementIds;

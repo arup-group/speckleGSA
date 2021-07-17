@@ -47,7 +47,7 @@ namespace SpeckleGSAProxy
     private List<string> cases = null;
     //This is the factor relative to the SI units (N, m, etc) that the model is currently set to - this is relevant for results as they're always
     //exported to CSV in SI units
-    private Dictionary<ResultUnitType, float> unitData = new Dictionary<ResultUnitType, float>();
+    private Dictionary<ResultUnitType, double> unitData = new Dictionary<ResultUnitType, double>();
 
     private static Dictionary<ResultCsvGroup, string> relativePathsToLoad = new Dictionary<ResultCsvGroup, string>
       {
@@ -1826,7 +1826,7 @@ namespace SpeckleGSAProxy
       return (data.Keys.Count > 0);
     }
 
-    private object ApplyFactors(object val, List<float> factors)
+    private object ApplyFactors(object val, List<double> factors)
     {
       if (factors == null || factors.Count() == 0 || !(val is float))
       {
@@ -1843,7 +1843,7 @@ namespace SpeckleGSAProxy
       return val;
     }
 
-    private List<float> GetFactors(IEnumerable<ResultUnitType> ruts)
+    private List<double> GetFactors(IEnumerable<ResultUnitType> ruts)
     {
       return ruts.Where(r => unitData.ContainsKey(r)).Select(r => unitData[r]).ToList();
     }

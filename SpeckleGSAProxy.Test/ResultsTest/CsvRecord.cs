@@ -1,13 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using CsvHelper.Configuration.Attributes;
+using System;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SpeckleGSAProxy.Test.ResultsTest
 {
   public class CsvRecord
   {
+    [Name("id")]
+    public int ElemId { get; set; }
+
+    [Name("case_id")]
+    public string CaseId { get; set; }
+
     protected float? Magnitude(params float[] dims)
     {
       if (dims.Length < 2)

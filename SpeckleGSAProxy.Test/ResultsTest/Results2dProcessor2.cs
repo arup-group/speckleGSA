@@ -12,60 +12,25 @@ namespace SpeckleGSAProxy.Test.ResultsTest
 {
   public class Results2dProcessor2 : ResultsProcessorBase
   {
-    protected FileToResultTableSpec spec;
-    protected string filePath;
-    protected HashSet<string> cases;
-    protected HashSet<int> elemIds;
-    protected List<ResultType> resultTypes;
-
-    protected Dictionary<int, CsvElem2d> Records = new Dictionary<int, CsvElem2d>();
+    protected Dictionary<int, CsvElem2d> Records2d = new Dictionary<int, CsvElem2d>();
     protected Dictionary<int, Dictionary<string, List<int>>> FaceRecordIndices = new Dictionary<int, Dictionary<string, List<int>>>();
     protected Dictionary<int, Dictionary<string, List<int>>> VertexRecordIndices = new Dictionary<int, Dictionary<string, List<int>>>();
-    protected List<string> orderedCases = null; // will be updated in the first call to GetResultHierarchy
 
-    protected static Dictionary<ResultType, Func<List<int>, Dictionary<string, List<object>>>> ColumnValuesFns;
+    //This isn't used for 2D elements
+    protected override Dictionary<int, Dictionary<string, List<int>>> RecordIndices => null;
 
-    public List<int> ElementIds => elemIds.OrderBy(i => i).ToList();
-    public List<string> CaseIds => cases.OrderBy(c => c).ToList();
-
-    public Results2dProcessor2(FileToResultTableSpec spec, string filePath, List<ResultType> resultTypes = null, 
-      List<string> cases = null, List<int> elemIds = null)
+    public Results2dProcessor2(string filePath, Dictionary<ResultUnitType, double> unitData, List<string> cases = null, List<int> elemIds = null)
+      : base(filePath, unitData, cases, elemIds)
     {
-      this.spec = spec;
-      this.filePath = filePath;
-      if (resultTypes == null)
-      {
-        this.resultTypes = new List<ResultType> 
-        { 
-          ResultType.Element2dDisplacement, 
-          ResultType.Element2dProjectedForce, 
-          ResultType.Element2dProjectedMoment, 
-          ResultType.Element2dProjectedStressBottom, 
-          ResultType.Element2dProjectedStressMiddle, 
-          ResultType.Element2dProjectedStressTop 
-        };
-      }
-      else
-      {
-        this.resultTypes = new List<ResultType>();
-        //this ensures only the 2D result types are considered
-        foreach (var rt in resultTypes)
-        {
-          if (rt == ResultType.Element2dDisplacement || rt == ResultType.Element2dProjectedForce || rt == ResultType.Element2dProjectedMoment
-            || rt == ResultType.Element2dProjectedStressBottom || rt == ResultType.Element2dProjectedStressMiddle || rt == ResultType.Element2dProjectedStressTop)
+      this.resultTypes.AddRange(new[]
           {
-            this.resultTypes.Add(rt);
-          }
-        }
-      }
-      if (cases != null)
-      {
-        this.cases = new HashSet<string>(cases);
-      }
-      if (elemIds != null)
-      {
-        this.elemIds = new HashSet<int>(elemIds);
-      }
+            ResultType.Element2dDisplacement,
+            ResultType.Element2dProjectedForce,
+            ResultType.Element2dProjectedMoment,
+            ResultType.Element2dProjectedStressBottom,
+            ResultType.Element2dProjectedStressMiddle,
+            ResultType.Element2dProjectedStressTop
+          });
 
       ColumnValuesFns = new Dictionary<ResultType, Func<List<int>, Dictionary<string, List<object>>>>()
       {
@@ -113,7 +78,7 @@ namespace SpeckleGSAProxy.Test.ResultsTest
 
           if ((elemIds == null || elemIds.Contains(record.ElemId)) && ((cases == null) || (cases.Contains(record.CaseId))))
           {
-            Records.Add(rowIndex, record);
+            Records2d.Add(rowIndex, record);
             if (record.IsVertex)
             {
               if (!VertexRecordIndices.ContainsKey(record.ElemId))
@@ -161,7 +126,7 @@ namespace SpeckleGSAProxy.Test.ResultsTest
 
     // For both embedded and separate results, the format needs to be, per element:
     // [ load_case [ result_type [ column [ values ] ] ] ]
-    public Dictionary<string, object> GetResultHierarchy(int elemId)
+    public new Dictionary<string, object> GetResultHierarchy(int elemId)
     {
       var retDict = new Dictionary<string, object>();
 
@@ -194,110 +159,92 @@ namespace SpeckleGSAProxy.Test.ResultsTest
       return retDict;
     }
 
-
-    public Dictionary<string, List<object>> ResultTypeColumnValues_Element2dDisplacement(List<int> indices)
+    #region column_values_fns
+    protected Dictionary<string, List<object>> ResultTypeColumnValues_Element2dDisplacement(List<int> indices)
     {
+      var factors = GetFactors(ResultUnitType.Length);
       var retDict = new Dictionary<string, List<object>>
       {
-        { "ux", indices.Select(i => Records[i].Ux).Cast<object>().ToList() },
-        { "uy", indices.Select(i => Records[i].Uy).Cast<object>().ToList() },
-        { "uz", indices.Select(i => Records[i].Uz).Cast<object>().ToList() },
-        { "|u|", indices.Select(i => Records[i].U.Value).Cast<object>().ToList() }
+        { "ux", indices.Select(i => ApplyFactors(Records2d[i].Ux, factors)).Cast<object>().ToList() },
+        { "uy", indices.Select(i => ApplyFactors(Records2d[i].Uy, factors)).Cast<object>().ToList() },
+        { "uz", indices.Select(i => ApplyFactors(Records2d[i].Uz, factors)).Cast<object>().ToList() },
+        { "|u|", indices.Select(i => ApplyFactors(Records2d[i].U.Value, factors)).Cast<object>().ToList() }
       };
       return retDict;
     }
 
     protected Dictionary<string, List<object>> ResultTypeColumnValues_Element2dProjectedMoment(List<int> indices)
     {
+      var factors = GetFactors(ResultUnitType.Force, ResultUnitType.Length);
       var retDict = new Dictionary<string, List<object>>
       {
-        { "mx", indices.Select(i => Records[i].Mx).Cast<object>().ToList() },
-        { "my", indices.Select(i => Records[i].My).Cast<object>().ToList() },
-        { "mxy", indices.Select(i => Records[i].Mxy).Cast<object>().ToList() },
-        { "mx+mxy", indices.Select(i => Records[i].Mx_Mxy.Value).Cast<object>().ToList() },
-        { "my+myx", indices.Select(i => Records[i].My_Myx.Value).Cast<object>().ToList() }
+        { "mx", indices.Select(i => ApplyFactors(Records2d[i].Mx, factors)).Cast<object>().ToList() },
+        { "my", indices.Select(i => ApplyFactors(Records2d[i].My, factors)).Cast<object>().ToList() },
+        { "mxy", indices.Select(i => ApplyFactors(Records2d[i].Mxy, factors)).Cast<object>().ToList() },
+        { "mx+mxy", indices.Select(i => ApplyFactors(Records2d[i].Mx_Mxy.Value, factors)).Cast<object>().ToList() },
+        { "my+myx", indices.Select(i => ApplyFactors(Records2d[i].My_Myx.Value, factors)).Cast<object>().ToList() }
       };
       return retDict;
     }
 
     protected Dictionary<string, List<object>> ResultTypeColumnValues_Element2dProjectedForce(List<int> indices)
     {
+      var factors = GetFactors(ResultUnitType.Force, ResultUnitType.Length);
       var retDict = new Dictionary<string, List<object>>
       {
-        { "nx", indices.Select(i => Records[i].Nx).Cast<object>().ToList() },
-        { "ny", indices.Select(i => Records[i].Ny).Cast<object>().ToList() },
-        { "nxy", indices.Select(i => Records[i].Nxy).Cast<object>().ToList() },
-        { "qx", indices.Select(i => Records[i].Qx).Cast<object>().ToList() },
-        { "qy", indices.Select(i => Records[i].Qy).Cast<object>().ToList() }
+        { "nx", indices.Select(i => ApplyFactors(Records2d[i].Nx, factors)).Cast<object>().ToList() },
+        { "ny", indices.Select(i => ApplyFactors(Records2d[i].Ny, factors)).Cast<object>().ToList() },
+        { "nxy", indices.Select(i => ApplyFactors(Records2d[i].Nxy, factors)).Cast<object>().ToList() },
+        { "qx", indices.Select(i => ApplyFactors(Records2d[i].Qx, factors)).Cast<object>().ToList() },
+        { "qy", indices.Select(i => ApplyFactors(Records2d[i].Qy, factors)).Cast<object>().ToList() }
       };
       return retDict;
     }
 
     protected Dictionary<string, List<object>> ResultTypeColumnValues_Element2dProjectedStressBottom(List<int> indices)
     {
+      var factors = GetFactors(ResultUnitType.Stress);
       var retDict = new Dictionary<string, List<object>>
       {
-        { "xx", indices.Select(i => Records[i].Xx_b).Cast<object>().ToList() },
-        { "yy", indices.Select(i => Records[i].Yy_b).Cast<object>().ToList() },
-        { "zz", indices.Select(i => Records[i].Zz_b).Cast<object>().ToList() },
-        { "xy", indices.Select(i => Records[i].Xy_b).Cast<object>().ToList() },
-        { "yz", indices.Select(i => Records[i].Yz_b).Cast<object>().ToList() },
-        { "zx", indices.Select(i => Records[i].Zx_b).Cast<object>().ToList() }
+        { "xx", indices.Select(i => ApplyFactors(Records2d[i].Xx_b, factors)).Cast<object>().ToList() },
+        { "yy", indices.Select(i => ApplyFactors(Records2d[i].Yy_b, factors)).Cast<object>().ToList() },
+        { "zz", indices.Select(i => ApplyFactors(Records2d[i].Zz_b, factors)).Cast<object>().ToList() },
+        { "xy", indices.Select(i => ApplyFactors(Records2d[i].Xy_b, factors)).Cast<object>().ToList() },
+        { "yz", indices.Select(i => ApplyFactors(Records2d[i].Yz_b, factors)).Cast<object>().ToList() },
+        { "zx", indices.Select(i => ApplyFactors(Records2d[i].Zx_b, factors)).Cast<object>().ToList() }
       };
       return retDict;
     }
 
     protected Dictionary<string, List<object>> ResultTypeColumnValues_Element2dProjectedStressMiddle(List<int> indices)
     {
+      var factors = GetFactors(ResultUnitType.Stress);
       var retDict = new Dictionary<string, List<object>>
       {
-        { "xx", indices.Select(i => Records[i].Xx_m).Cast<object>().ToList() },
-        { "yy", indices.Select(i => Records[i].Yy_m).Cast<object>().ToList() },
-        { "zz", indices.Select(i => Records[i].Zz_m).Cast<object>().ToList() },
-        { "xy", indices.Select(i => Records[i].Xy_m).Cast<object>().ToList() },
-        { "yz", indices.Select(i => Records[i].Yz_m).Cast<object>().ToList() },
-        { "zx", indices.Select(i => Records[i].Zx_m).Cast<object>().ToList() }
+        { "xx", indices.Select(i => ApplyFactors(Records2d[i].Xx_m, factors)).Cast<object>().ToList() },
+        { "yy", indices.Select(i => ApplyFactors(Records2d[i].Yy_m, factors)).Cast<object>().ToList() },
+        { "zz", indices.Select(i => ApplyFactors(Records2d[i].Zz_m, factors)).Cast<object>().ToList() },
+        { "xy", indices.Select(i => ApplyFactors(Records2d[i].Xy_m, factors)).Cast<object>().ToList() },
+        { "yz", indices.Select(i => ApplyFactors(Records2d[i].Yz_m, factors)).Cast<object>().ToList() },
+        { "zx", indices.Select(i => ApplyFactors(Records2d[i].Zx_m, factors)).Cast<object>().ToList() }
       };
       return retDict;
     }
 
     protected Dictionary<string, List<object>> ResultTypeColumnValues_Element2dProjectedStressTop(List<int> indices)
     {
+      var factors = GetFactors(ResultUnitType.Stress);
       var retDict = new Dictionary<string, List<object>>
       {
-        { "xx", indices.Select(i => Records[i].Xx_t).Cast<object>().ToList() },
-        { "yy", indices.Select(i => Records[i].Yy_t).Cast<object>().ToList() },
-        { "zz", indices.Select(i => Records[i].Zz_t).Cast<object>().ToList() },
-        { "xy", indices.Select(i => Records[i].Xy_t).Cast<object>().ToList() },
-        { "yz", indices.Select(i => Records[i].Yz_t).Cast<object>().ToList() },
-        { "zx", indices.Select(i => Records[i].Zx_t).Cast<object>().ToList() }
+        { "xx", indices.Select(i => ApplyFactors(Records2d[i].Xx_t, factors)).Cast<object>().ToList() },
+        { "yy", indices.Select(i => ApplyFactors(Records2d[i].Yy_t, factors)).Cast<object>().ToList() },
+        { "zz", indices.Select(i => ApplyFactors(Records2d[i].Zz_t, factors)).Cast<object>().ToList() },
+        { "xy", indices.Select(i => ApplyFactors(Records2d[i].Xy_t, factors)).Cast<object>().ToList() },
+        { "yz", indices.Select(i => ApplyFactors(Records2d[i].Yz_t, factors)).Cast<object>().ToList() },
+        { "zx", indices.Select(i => ApplyFactors(Records2d[i].Zx_t, factors)).Cast<object>().ToList() }
       };
       return retDict;
     }
-
-    private bool SendableValue(object v)
-    {
-      if (v == null)
-      {
-        return false;
-      }
-      if (v is int)
-      {
-        return ((int)v != 0);
-      }
-      else if (v is float)
-      {
-        return ((float)v != 0);
-      }
-      else if (v is double)
-      {
-        return ((double)v != 0);
-      }
-      else if (v is string)
-      {
-        return (!string.IsNullOrEmpty((string)v) && !((string)v).Equals("null", StringComparison.InvariantCultureIgnoreCase));
-      }
-      return true;
-    }
+    #endregion
   }
 }

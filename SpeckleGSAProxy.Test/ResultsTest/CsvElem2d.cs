@@ -5,12 +5,6 @@ namespace SpeckleGSAProxy.Test.ResultsTest
 {
   public class CsvElem2d : CsvRecord
   {
-    [Name("id")]
-    public int ElemId { get; set; }
-
-    [Name("case_id")]
-    public string CaseId { get; set; }
-
     [Name("position_r")]
     public float PosR { get; set; }
 
@@ -23,7 +17,7 @@ namespace SpeckleGSAProxy.Test.ResultsTest
     [Name("disp_y")]
     public float Uy { get; set; }
 
-    [Name("disp_x")]
+    [Name("disp_z")]
     public float Uz { get; set; }
 
     public float? U { get => Magnitude(Ux, Uy, Uz); }
