@@ -19,6 +19,24 @@ namespace SpeckleGSAProxy
     private static readonly string SID_APPID_TAG = "speckle_app_id";
     private static readonly string SID_STRID_TAG = "speckle_stream_id";
 
+    public static Dictionary<ResultType, string> rtStrings = new Dictionary<ResultType, string>
+    {
+      { ResultType.NodalDisplacements, "Nodal Displacements" },
+      { ResultType.NodalVelocity, "Nodal Velocity" },
+      { ResultType.NodalAcceleration, "Nodal Acceleration" },
+      { ResultType.NodalReaction, "Nodal Reaction" },
+      { ResultType.ConstraintForces, "Constraint Forces" },
+      { ResultType.Element1dDisplacement, "1D Element Displacement" },
+      { ResultType.Element1dForce, "1D Element Force" },
+      { ResultType.Element2dDisplacement, "2D Element Displacement" },
+      { ResultType.Element2dProjectedMoment, "2D Element Projected Moment" },
+      { ResultType.Element2dProjectedForce, "2D Element Projected Force" },
+      { ResultType.Element2dProjectedStressBottom, "2D Element Projected Stress - Bottom" },
+      { ResultType.Element2dProjectedStressMiddle, "2D Element Projected Stress - Middle" },
+      { ResultType.Element2dProjectedStressTop, "2D Element Projected Stress - Top" },
+      { ResultType.AssemblyForcesAndMoments, "Assembly Forces and Moments" }
+    };
+
     public static readonly char GwaDelimiter = '\t';
 
     //These are the exceptions to the rule that, in GSA, all records that relate to each table (i.e. the set with mutually-exclusive indices) have the same keyword
@@ -42,25 +60,29 @@ namespace SpeckleGSAProxy
 
     //Results-related
     private string resultDir = null;
-    private IGSAResultsContext resultsContext = null;
-    private List<string> resultTypes = null;
+    private Dictionary<ResultGroup, ResultsProcessorBase> resultProcessors = new Dictionary<ResultGroup, ResultsProcessorBase>();
+    private List<ResultType> allResultTypes;
+
+    //private IGSAResultsContext resultsContext = null;
+    //private List<string> resultTypes = null;
     private List<string> cases = null;
     //This is the factor relative to the SI units (N, m, etc) that the model is currently set to - this is relevant for results as they're always
     //exported to CSV in SI units
     private Dictionary<ResultUnitType, double> unitData = new Dictionary<ResultUnitType, double>();
 
-    private static Dictionary<ResultCsvGroup, string> relativePathsToLoad = new Dictionary<ResultCsvGroup, string>
+    /*
+    private static Dictionary<ResultGroup, string> relativePathsToLoad = new Dictionary<ResultGroup, string>
       {
-        {  ResultCsvGroup.Node, @".\result_node\result_node.csv" },
-        {  ResultCsvGroup.Element1d, @".\result_elem_1d\result_elem_1d.csv" },
-        {  ResultCsvGroup.Element2d, @".\result_elem_2d\result_elem_2d.csv" },
-        {  ResultCsvGroup.Assembly, @".\result_assembly\result_assembly.csv" }
+        {  ResultGroup.Node, @".\result_node\result_node.csv" },
+        {  ResultGroup.Element1d, @".\result_elem_1d\result_elem_1d.csv" },
+        {  ResultGroup.Element2d, @".\result_elem_2d\result_elem_2d.csv" },
+        {  ResultGroup.Assembly, @".\result_assembly\result_assembly.csv" }
       };
 
-    public static Dictionary<ResultCsvGroup, FileToResultTableSpec> resultTypeSpecs = new Dictionary<ResultCsvGroup, FileToResultTableSpec>()
+    public static Dictionary<ResultGroup, FileToResultTableSpec> resultTypeSpecs = new Dictionary<ResultGroup, FileToResultTableSpec>()
     {
       {
-        ResultCsvGroup.Node, new FileToResultTableSpec("id", "case_id")
+        ResultGroup.Node, new FileToResultTableSpec("id", "case_id")
         {
           ResultTypeCsvColumnMap = new Dictionary<string, ColMap>()
           {
@@ -162,7 +184,7 @@ namespace SpeckleGSAProxy
         }
       },
       {
-        ResultCsvGroup.Element1d, new FileToResultTableSpec("id", "case_id")
+        ResultGroup.Element1d, new FileToResultTableSpec("id", "case_id")
         {
           ResultTypeCsvColumnMap = new Dictionary<string, ColMap>()
           {
@@ -204,7 +226,7 @@ namespace SpeckleGSAProxy
         }
       },
       {
-        ResultCsvGroup.Element2d, new FileToResultTableSpec("id", "case_id")
+        ResultGroup.Element2d, new FileToResultTableSpec("id", "case_id")
         {
           ResultTypeCsvColumnMap = new Dictionary<string, ColMap>()
           {
@@ -308,7 +330,7 @@ namespace SpeckleGSAProxy
         }
       },
       {
-        ResultCsvGroup.Assembly, new FileToResultTableSpec("id", "case_id")
+        ResultGroup.Assembly, new FileToResultTableSpec("id", "case_id")
         {
           ResultTypeCsvColumnMap = new Dictionary<string, ColMap>()
           {
@@ -338,7 +360,6 @@ namespace SpeckleGSAProxy
       }
     };
 
-    /*
     public static List<string> ResultTypes = resultTypeSpecs.SelectMany(rts => rts.Value.ResultTypeCsvColumnMap.Keys).ToList();
     public static List<string> ResultTypeFields(string rt)
     {
@@ -1490,9 +1511,10 @@ namespace SpeckleGSAProxy
       return true;
     }
 
-    public bool PrepareResults(int numBeamPoints = 3)
+    public bool PrepareResults(List<ResultType> resultTypes, int numBeamPoints = 3)
     {
       this.resultDir = Path.Combine(Environment.CurrentDirectory, "GSAExport");
+      this.allResultTypes = resultTypes;
 
       ProcessUnitGwaData();
 
@@ -1505,15 +1527,15 @@ namespace SpeckleGSAProxy
       if (retCode == 0)
       {
         //Assume that
-        resultsContext = new SpeckleGSAResultsContext(resultDir);
         return true;
       }
       return false;
     }
 
+    /*
     public bool LoadResults(List<string> resultTypes, List<string> cases = null, List<int> elemIds = null)
     {
-      var fieldsPerGroup = new Dictionary<ResultCsvGroup, List<string>>();
+      var fieldsPerGroup = new Dictionary<ResultGroup, List<string>>();
 
       if (this.resultTypes == null)
       {
@@ -1577,6 +1599,7 @@ namespace SpeckleGSAProxy
 
       return true;
     }
+    */
 
     /*
     public bool PrepareResults(int numBeamPoints, List<string> resultTypes, List<string> cases)
@@ -1649,7 +1672,6 @@ namespace SpeckleGSAProxy
       }
       return false;
     }
-    */
 
     // format for data is [ result_type, [ [ headers ], [ row, column ] ] ]
     public bool GetResults(string keyword, int index, out Dictionary<string, Tuple<List<string>, object[,]>> allData, int dimension = 1)
@@ -1657,21 +1679,21 @@ namespace SpeckleGSAProxy
       allData = new Dictionary<string, Tuple<List<string>, object[,]>>();
 
       var kw = keyword.Split('.').First();
-      ResultCsvGroup g = ResultCsvGroup.Unknown;
+      ResultGroup g = ResultGroup.Unknown;
       if (kw.Equals("NODE", StringComparison.InvariantCultureIgnoreCase))
       {
-        g = ResultCsvGroup.Node;
+        g = ResultGroup.Node;
       }
       else if (kw.Equals("EL", StringComparison.InvariantCultureIgnoreCase))
       {
-        g = dimension == 2 ? ResultCsvGroup.Element2d : ResultCsvGroup.Element1d;
+        g = dimension == 2 ? ResultGroup.Element2d : ResultGroup.Element1d;
       }
       else if (kw.Equals("ASSEMBLY", StringComparison.InvariantCultureIgnoreCase))
       {
-        g = ResultCsvGroup.Assembly;
+        g = ResultGroup.Assembly;
       }
 
-      if (g == ResultCsvGroup.Unknown)
+      if (g == ResultGroup.Unknown)
       {
         return false;
       }
@@ -1691,7 +1713,6 @@ namespace SpeckleGSAProxy
       return found;
     }
 
-    /*
     private bool GetResults(string tableName, ResultCsvGroup group, int elemId, out Dictionary<string, Tuple<List<string>, object[,]>> data)
     {
       data = new Dictionary<string, Tuple<List<string>, object[,]>>();
@@ -1709,9 +1730,8 @@ namespace SpeckleGSAProxy
       }
       return (data.Keys.Count() > 0);
     }
-    */
 
-    private bool GetResults(ResultCsvGroup group, int elemId, out Dictionary<string, Tuple<List<string>, object[,]>> data)
+    private bool GetResults(ResultGroup group, int elemId, out Dictionary<string, Tuple<List<string>, object[,]>> data)
     {
       data = new Dictionary<string, Tuple<List<string>, object[,]>>();
       if (!resultTypeSpecs.ContainsKey(group) || !resultsContext.ResultTableGroups.Contains(group))
@@ -1848,16 +1868,63 @@ namespace SpeckleGSAProxy
       return ruts.Where(r => unitData.ContainsKey(r)).Select(r => unitData[r]).ToList();
     }
 
-    private string GetTableName(ResultCsvGroup csvGroup)
+    private string GetTableName(ResultGroup csvGroup)
     {
       switch (csvGroup)
       {
-        case ResultCsvGroup.Node: return "result_node";
-        case ResultCsvGroup.Element1d: return "result_elem_1d";
-        case ResultCsvGroup.Element2d: return "result_elem_2d";
-        case ResultCsvGroup.Assembly: return "result_assembly";
+        case ResultGroup.Node: return "result_node";
+        case ResultGroup.Element1d: return "result_elem_1d";
+        case ResultGroup.Element2d: return "result_elem_2d";
+        case ResultGroup.Assembly: return "result_assembly";
         default: return null;
       }
+    }
+    */
+
+    public bool LoadResults(ResultGroup group, List<string> cases = null, List<int> elemIds = null)
+    {
+      if (group == ResultGroup.Assembly)
+      {
+        resultProcessors.Add(group, new ResultsAssemblyProcessor(Path.Combine(resultDir, @"result_assembly\result_assembly.csv"), unitData, allResultTypes, cases, elemIds));
+      }
+      else if (group == ResultGroup.Element1d)
+      {
+        resultProcessors.Add(group, new Results1dProcessor(Path.Combine(resultDir, @"result_elem_1d\result_elem_1d.csv"), unitData, allResultTypes, cases, elemIds));
+      }
+      else if (group == ResultGroup.Element2d)
+      {
+        resultProcessors.Add(group, new Results2dProcessor(Path.Combine(resultDir, @"result_elem_2d\result_elem_2d.csv"), unitData, allResultTypes, cases, elemIds));
+      }
+      else if (group == ResultGroup.Node)
+      {
+        resultProcessors.Add(group, new ResultsNodeProcessor(Path.Combine(resultDir, @"result_node\result_node.csv"), unitData, allResultTypes, cases, elemIds));
+      }
+      else
+      {
+        return false;
+      }
+      resultProcessors[group].LoadFromFile();
+      return true;
+    }
+
+    public bool GetResultHierarchy(ResultGroup group, int index, out Dictionary<string, Dictionary<string, object>> valueHierarchy, int dimension = 1)
+    {
+      valueHierarchy = (resultProcessors.ContainsKey(group)) ? resultProcessors[group].GetResultHierarchy(index) : new Dictionary<string, Dictionary<string, object>>();
+      return (valueHierarchy != null && valueHierarchy.Count > 0);
+    }
+
+    public bool ClearResults(ResultGroup group)
+    {
+      if (resultProcessors.ContainsKey(group))
+      {
+        var removed = resultProcessors.Remove(group);
+        if (removed)
+        {
+          GC.Collect();
+          return true;
+        }
+      }
+      return false;
     }
 
     /*

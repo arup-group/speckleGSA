@@ -6,13 +6,13 @@ namespace SpeckleGSAProxy
   internal interface IGSAResultsContext
   {
     string ResultsDir { get; }
-    bool ImportResultsFromFile(string fileName, ResultCsvGroup group, string caseIdField, string elemIdField, List<string> otherFields, List<string> cases, List<int> elemIds);
+    bool ImportResultsFromFile(string fileName, ResultGroup group, string caseIdField, string elemIdField, List<string> otherFields, List<string> cases, List<int> elemIds);
     //Tables currently read and loaded into memory
     List<string> ResultTableNames { get; }
-    List<ResultCsvGroup> ResultTableGroups { get; }
+    List<ResultGroup> ResultTableGroups { get; }
 
-    bool Query(ResultCsvGroup group, IEnumerable<string> columns, string loadCase, out object[,] results, int? elemId = null);
-    bool Query(ResultCsvGroup group, IEnumerable<string> columns, IEnumerable<string> loadCases, out object[,] results, IEnumerable<int> elemIds = null);
-    bool Clear(ResultCsvGroup group = ResultCsvGroup.Unknown);
+    bool Query(ResultGroup group, IEnumerable<string> columns, string loadCase, out object[,] results, int? elemId = null);
+    bool Query(ResultGroup group, IEnumerable<string> columns, IEnumerable<string> loadCases, out object[,] results, IEnumerable<int> elemIds = null);
+    bool Clear(ResultGroup group = ResultGroup.Unknown);
   }
 }

@@ -255,15 +255,18 @@ namespace SpeckleGSAUI.ViewModels
       GSA.App.Settings.ResultCases = resultCases;
 
       var selectedResultNames = resultsToSend.Select(rts => rts.Name).ToList();
+      GSA.App.Settings.ResultTypes = resultsToSend.Select(rts => rts.ResultType).ToList();
+      /*
       GSA.App.Settings.NodalResults = ExtractResultParams(ref Result.NodalResultMap, selectedResultNames);
       GSA.App.Settings.Element1DResults = ExtractResultParams(ref Result.Element1DResultMap, selectedResultNames);
       GSA.App.Settings.Element2DResults = ExtractResultParams(ref Result.Element2DResultMap, selectedResultNames);
       GSA.App.Settings.MiscResults = ExtractResultParams(ref Result.MiscResultMap, selectedResultNames);
+      */
 
       if (GSA.App.LocalSettings.SendResults && resultCases.Count() > 0)
       {
         //GSA.App.LocalProxy.PrepareResults(GSA.App.LocalSettings.Result1DNumPosition + 2, selectedResultNames, resultCases, percentageProgress);
-        GSA.App.LocalProxy.PrepareResults(GSA.App.LocalSettings.Result1DNumPosition + 2);
+        GSA.App.LocalProxy.PrepareResults(GSA.App.Settings.ResultTypes, GSA.App.LocalSettings.Result1DNumPosition + 2);
       }
 
       loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Extracted results"));

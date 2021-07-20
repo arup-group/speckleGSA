@@ -4,21 +4,24 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace SpeckleGSAProxy.Test.ResultsTest
+namespace SpeckleGSAProxy
 {
   public class ResultsAssemblyProcessor : ResultsProcessorBase
   {
     public override ResultGroup Group => ResultGroup.Assembly;
 
-    public ResultsAssemblyProcessor(string filePath, Dictionary<ResultUnitType, double> unitData, List<string> cases = null, List<int> elemIds = null)
-      : base(filePath, unitData, cases, elemIds)
+    public ResultsAssemblyProcessor(string filePath, Dictionary<ResultUnitType, double> unitData, List<ResultType> resultTypes = null, 
+      List<string> cases = null, List<int> elemIds = null) : base(filePath, unitData, cases, elemIds)
     {
-      this.resultTypes = new List<ResultType>()
+      if (resultTypes == null || resultTypes.Contains(ResultType.AssemblyForcesAndMoments))
       {
-        ResultType.AssemblyForcesAndMoments
-      };
+        this.resultTypes = new List<ResultType>()
+        {
+          ResultType.AssemblyForcesAndMoments
+        };
+      }
 
-      ColumnValuesFns = new Dictionary<ResultType, Func<List<int>, Dictionary<string, List<object>>>>()
+      ColumnValuesFns = new Dictionary<ResultType, Func<List<int>, Dictionary<string, object>>>()
       {
         { ResultType.AssemblyForcesAndMoments, ResultTypeColumnValues_AssemblyForcesAndMoments }
       };
@@ -27,10 +30,10 @@ namespace SpeckleGSAProxy.Test.ResultsTest
 
     #region column_values_fns
 
-    protected Dictionary<string, List<object>> ResultTypeColumnValues_AssemblyForcesAndMoments(List<int> indices)
+    protected Dictionary<string, object> ResultTypeColumnValues_AssemblyForcesAndMoments(List<int> indices)
     {
       var factors = GetFactors(ResultUnitType.Length);
-      var retDict = new Dictionary<string, List<object>>
+      var retDict = new Dictionary<string, object>
       {
         { "fx", indices.Select(i => ApplyFactors(((CsvAssembly)Records[i]).Fx, factors)).Cast<object>().ToList() },
         { "fy", indices.Select(i => ApplyFactors(((CsvAssembly)Records[i]).Fy, factors)).Cast<object>().ToList() },

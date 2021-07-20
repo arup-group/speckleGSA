@@ -120,15 +120,20 @@ namespace SpeckleGSAInterfaces
 
     string FormatSidTags(string streamId = "", string applicationId = "");
 
-    // format for data is [ result_type, [ [ headers ], [ row, column ] ] ]
-    bool GetResults(string keyword, int index, out Dictionary<string, Tuple<List<string>, object[,]>> data, int dimension = 1);
-
     //void ParseGeneralGwa(string fullGwa, out string keyword, out int? index, out string streamId, out string applicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType, bool includeKwVersion = false);
 
-    bool PrepareResults(int numBeamPoints = 3);
+    //This calls the ExportToCsv method in the COM API
+    bool PrepareResults(List<ResultType> resultTypes, int numBeamPoints = 3);
 
+    //This is called by the results-related ToSpeckle() methods in the kit; it reads the appropriate individual CSV files into memory ready to be queried
     //null values mean ALL
-    bool LoadResults(List<string> resultTypes, List<string> cases = null, List<int> elemIds = null);
-    bool ClearResults(List<string> resultTypes);
+    bool LoadResults(ResultGroup group, List<string> cases = null, List<int> elemIds = null);
+
+    //This is called by the results-related ToSpeckle() methods in the kit; it provides the data hierarchy for all specified load cases and result types
+    //ready to be inserted as the Value property of the result object for both embedded and separate options
+    // [ load_case [ result_type [ column [ values ] ] ] ]
+    bool GetResultHierarchy(ResultGroup group, int index, out Dictionary<string, Dictionary<string, object>> valueHierarchy, int dimension = 1);
+
+    bool ClearResults(ResultGroup group);
   }
 }

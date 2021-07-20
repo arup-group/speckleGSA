@@ -31,9 +31,9 @@ namespace SpeckleGSAProxy.Results
     public string LoadCaseField;
     public string ElemIdField;
     public List<string> OtherFields;
-    public ResultCsvGroup Group;
+    public ResultGroup Group;
 
-    public ExportCsvResultsTable(string tableName, ResultCsvGroup group, string loadCaseField, string elemIdField, List<string> otherFields) 
+    public ExportCsvResultsTable(string tableName, ResultGroup group, string loadCaseField, string elemIdField, List<string> otherFields) 
       : base(tableName)
     {
       this.fields = (new List<string>() { loadCaseField, elemIdField }).Concat(otherFields).ToList();
@@ -46,7 +46,7 @@ namespace SpeckleGSAProxy.Results
       this.Group = group;
     }
 
-    public ExportCsvResultsTable(string tableName, ResultCsvGroup group, string loadCaseField, List<string> otherFields)
+    public ExportCsvResultsTable(string tableName, ResultGroup group, string loadCaseField, List<string> otherFields)
       : base(tableName)
     {
       this.LoadCaseField = loadCaseField;

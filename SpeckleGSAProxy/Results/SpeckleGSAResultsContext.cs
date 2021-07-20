@@ -12,17 +12,17 @@ namespace SpeckleGSAProxy.Results
 {
   internal class SpeckleGSAResultsContext : IGSAResultsContext
   {
-    private readonly ConcurrentDictionary<ResultCsvGroup, ExportCsvResultsTable> resultsTables = new ConcurrentDictionary<ResultCsvGroup, ExportCsvResultsTable>();
+    private readonly ConcurrentDictionary<ResultGroup, ExportCsvResultsTable> resultsTables = new ConcurrentDictionary<ResultGroup, ExportCsvResultsTable>();
     private readonly ConcurrentBag<ExportCsvTable> dataTables = new ConcurrentBag<ExportCsvTable>();
     public string ResultsDir { get; private set; }
     public List<string> ResultTableNames { get => resultsTables.Keys.Select(rtk => resultsTables[rtk].TableName).ToList(); }
-    public List<ResultCsvGroup> ResultTableGroups { get => resultsTables.Keys.ToList(); }
+    public List<ResultGroup> ResultTableGroups { get => resultsTables.Keys.ToList(); }
     public SpeckleGSAResultsContext(string resultsDir)
     {
       this.ResultsDir = resultsDir;
     }
 
-    public bool Query(ResultCsvGroup group, IEnumerable<string> columns, string loadCase, out object[,] results, int? elemId = null)
+    public bool Query(ResultGroup group, IEnumerable<string> columns, string loadCase, out object[,] results, int? elemId = null)
     {
       results = null; //default
 
@@ -34,7 +34,7 @@ namespace SpeckleGSAProxy.Results
       return resultsTables[group].Query(columns, new[] { loadCase }, out results, elemId.HasValue ? new[] { elemId.Value }: null);
     }
 
-    public bool Query(ResultCsvGroup group, IEnumerable<string> columns, IEnumerable<string> loadCases, out object[,] results, IEnumerable<int> elemIds = null)
+    public bool Query(ResultGroup group, IEnumerable<string> columns, IEnumerable<string> loadCases, out object[,] results, IEnumerable<int> elemIds = null)
     {
       results = null; //default
 
@@ -46,9 +46,9 @@ namespace SpeckleGSAProxy.Results
       return resultsTables[group].Query(columns, loadCases, out results, elemIds);
     }
 
-    public bool Clear(ResultCsvGroup group = ResultCsvGroup.Unknown)
+    public bool Clear(ResultGroup group = ResultGroup.Unknown)
     {
-      if (group == ResultCsvGroup.Unknown)
+      if (group == ResultGroup.Unknown)
       {
         foreach (var g in resultsTables.Keys)
         {
@@ -67,7 +67,7 @@ namespace SpeckleGSAProxy.Results
       return true;
     }
 
-    public bool ImportResultsFromFile(string fileName, ResultCsvGroup group, string caseIdField, string elemIdField, List<string> otherFields, 
+    public bool ImportResultsFromFile(string fileName, ResultGroup group, string caseIdField, string elemIdField, List<string> otherFields, 
       List<string> cases, List<int> elemIds)
     {
       var fn = Path.HasExtension(fileName) ? fileName : fileName + ".csv";

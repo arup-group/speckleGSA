@@ -72,18 +72,19 @@ namespace SpeckleGSA
 				Log.Logger = loggerConfig.CreateLogger();
 			}
 		}
-
+		/*
 		public Dictionary<string, IGSAResultParams> NodalResults { get; set; } = new Dictionary<string, IGSAResultParams>();
 		public Dictionary<string, IGSAResultParams> Element1DResults { get; set; } = new Dictionary<string, IGSAResultParams>();
 		public Dictionary<string, IGSAResultParams> Element2DResults { get; set; } = new Dictionary<string, IGSAResultParams>();
 		public Dictionary<string, IGSAResultParams> MiscResults { get; set; } = new Dictionary<string, IGSAResultParams>();
-
+		*/
 		public List<string> ResultCases { get; set; } = new List<string>();
 		public bool ResultInLocalAxis { get; set; } = false;
 		public int Result1DNumPosition { get; set; } = 3;
 		public bool EmbedResults { get; set; } = true;
+		public List<ResultType> ResultTypes { get; set; } = new List<ResultType>();
 
-		public void SetFieldOrPropValue(string fieldOrPropName, object value)
+    public void SetFieldOrPropValue(string fieldOrPropName, object value)
 		{
 			FieldOrProp fieldOrProp = FieldOrProp.Unknown;
 			object info = null;

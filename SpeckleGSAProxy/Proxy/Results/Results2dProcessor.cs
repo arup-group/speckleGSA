@@ -8,9 +8,9 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace SpeckleGSAProxy.Test.ResultsTest
+namespace SpeckleGSAProxy
 {
-  public class Results2dProcessor2 : ResultsProcessorBase
+  public class Results2dProcessor : ResultsProcessorBase
   {
     //Not using the base class's records or indices as 2D elements are a special case
     protected Dictionary<int, CsvElem2d> Records2d = new Dictionary<int, CsvElem2d>();
@@ -19,20 +19,29 @@ namespace SpeckleGSAProxy.Test.ResultsTest
 
     public override ResultGroup Group => ResultGroup.Element2d;
 
-    public Results2dProcessor2(string filePath, Dictionary<ResultUnitType, double> unitData, List<string> cases = null, List<int> elemIds = null)
-      : base(filePath, unitData, cases, elemIds)
+    private List<ResultType> possibleResultTypes = new List<ResultType>()
     {
-      this.resultTypes = new List<ResultType>()
-      {
-        ResultType.Element2dDisplacement,
-        ResultType.Element2dProjectedForce,
-        ResultType.Element2dProjectedMoment,
-        ResultType.Element2dProjectedStressBottom,
-        ResultType.Element2dProjectedStressMiddle,
-        ResultType.Element2dProjectedStressTop
-      };
+      ResultType.Element2dDisplacement,
+      ResultType.Element2dProjectedForce,
+      ResultType.Element2dProjectedMoment,
+      ResultType.Element2dProjectedStressBottom,
+      ResultType.Element2dProjectedStressMiddle,
+      ResultType.Element2dProjectedStressTop
+    };
 
-      ColumnValuesFns = new Dictionary<ResultType, Func<List<int>, Dictionary<string, List<object>>>>()
+    public Results2dProcessor(string filePath, Dictionary<ResultUnitType, double> unitData, List<ResultType> resultTypes, 
+      List<string> cases = null, List<int> elemIds = null) : base(filePath, unitData, cases, elemIds)
+    {
+      if (resultTypes == null)
+      {
+        this.resultTypes = possibleResultTypes;
+      }
+      else
+      {
+        this.resultTypes = resultTypes.Where(rt => possibleResultTypes.Contains(rt)).ToList();
+      }
+
+      ColumnValuesFns = new Dictionary<ResultType, Func<List<int>, Dictionary<string, object>>>()
       {
         { ResultType.Element2dDisplacement, ResultTypeColumnValues_Element2dDisplacement },
         { ResultType.Element2dProjectedForce, ResultTypeColumnValues_Element2dProjectedForce },
@@ -126,9 +135,9 @@ namespace SpeckleGSAProxy.Test.ResultsTest
 
     // For both embedded and separate results, the format needs to be, per element:
     // [ load_case [ result_type [ column [ values ] ] ] ]
-    public new Dictionary<string, object> GetResultHierarchy(int elemId)
+    public override Dictionary<string, Dictionary<string, object>> GetResultHierarchy(int elemId)
     {
-      var retDict = new Dictionary<string, object>();
+      var retDict = new Dictionary<string, Dictionary<string, object>>();
 
       if (!VertexRecordIndices.ContainsKey(elemId) && !FaceRecordIndices.ContainsKey(elemId))
       {
@@ -142,7 +151,7 @@ namespace SpeckleGSAProxy.Test.ResultsTest
 
         if (indicesVertex != null && indicesVertex.Count > 0 && indicesFace != null && indicesFace.Count > 0)
         {
-          var rtDict = new Dictionary<string, Dictionary<string, List<object>>>(resultTypes.Count * 2);
+          var rtDict = new Dictionary<string, object>(resultTypes.Count * 2);
           foreach (var rt in resultTypes)
           {
             var name = ResultTypeName(rt);
@@ -160,10 +169,10 @@ namespace SpeckleGSAProxy.Test.ResultsTest
     }
 
     #region column_values_fns
-    protected Dictionary<string, List<object>> ResultTypeColumnValues_Element2dDisplacement(List<int> indices)
+    protected Dictionary<string, object> ResultTypeColumnValues_Element2dDisplacement(List<int> indices)
     {
       var factors = GetFactors(ResultUnitType.Length);
-      var retDict = new Dictionary<string, List<object>>
+      var retDict = new Dictionary<string, object>
       {
         { "ux", indices.Select(i => ApplyFactors(Records2d[i].Ux, factors)).Cast<object>().ToList() },
         { "uy", indices.Select(i => ApplyFactors(Records2d[i].Uy, factors)).Cast<object>().ToList() },
@@ -173,10 +182,10 @@ namespace SpeckleGSAProxy.Test.ResultsTest
       return retDict;
     }
 
-    protected Dictionary<string, List<object>> ResultTypeColumnValues_Element2dProjectedMoment(List<int> indices)
+    protected Dictionary<string, object> ResultTypeColumnValues_Element2dProjectedMoment(List<int> indices)
     {
       var factors = GetFactors(ResultUnitType.Force, ResultUnitType.Length);
-      var retDict = new Dictionary<string, List<object>>
+      var retDict = new Dictionary<string, object>
       {
         { "mx", indices.Select(i => ApplyFactors(Records2d[i].Mx, factors)).Cast<object>().ToList() },
         { "my", indices.Select(i => ApplyFactors(Records2d[i].My, factors)).Cast<object>().ToList() },
@@ -187,10 +196,10 @@ namespace SpeckleGSAProxy.Test.ResultsTest
       return retDict;
     }
 
-    protected Dictionary<string, List<object>> ResultTypeColumnValues_Element2dProjectedForce(List<int> indices)
+    protected Dictionary<string, object> ResultTypeColumnValues_Element2dProjectedForce(List<int> indices)
     {
       var factors = GetFactors(ResultUnitType.Force, ResultUnitType.Length);
-      var retDict = new Dictionary<string, List<object>>
+      var retDict = new Dictionary<string, object>
       {
         { "nx", indices.Select(i => ApplyFactors(Records2d[i].Nx, factors)).Cast<object>().ToList() },
         { "ny", indices.Select(i => ApplyFactors(Records2d[i].Ny, factors)).Cast<object>().ToList() },
@@ -201,10 +210,10 @@ namespace SpeckleGSAProxy.Test.ResultsTest
       return retDict;
     }
 
-    protected Dictionary<string, List<object>> ResultTypeColumnValues_Element2dProjectedStressBottom(List<int> indices)
+    protected Dictionary<string, object> ResultTypeColumnValues_Element2dProjectedStressBottom(List<int> indices)
     {
       var factors = GetFactors(ResultUnitType.Stress);
-      var retDict = new Dictionary<string, List<object>>
+      var retDict = new Dictionary<string, object>
       {
         { "xx", indices.Select(i => ApplyFactors(Records2d[i].Xx_b, factors)).Cast<object>().ToList() },
         { "yy", indices.Select(i => ApplyFactors(Records2d[i].Yy_b, factors)).Cast<object>().ToList() },
@@ -216,10 +225,10 @@ namespace SpeckleGSAProxy.Test.ResultsTest
       return retDict;
     }
 
-    protected Dictionary<string, List<object>> ResultTypeColumnValues_Element2dProjectedStressMiddle(List<int> indices)
+    protected Dictionary<string, object> ResultTypeColumnValues_Element2dProjectedStressMiddle(List<int> indices)
     {
       var factors = GetFactors(ResultUnitType.Stress);
-      var retDict = new Dictionary<string, List<object>>
+      var retDict = new Dictionary<string, object>
       {
         { "xx", indices.Select(i => ApplyFactors(Records2d[i].Xx_m, factors)).Cast<object>().ToList() },
         { "yy", indices.Select(i => ApplyFactors(Records2d[i].Yy_m, factors)).Cast<object>().ToList() },
@@ -231,10 +240,10 @@ namespace SpeckleGSAProxy.Test.ResultsTest
       return retDict;
     }
 
-    protected Dictionary<string, List<object>> ResultTypeColumnValues_Element2dProjectedStressTop(List<int> indices)
+    protected Dictionary<string, object> ResultTypeColumnValues_Element2dProjectedStressTop(List<int> indices)
     {
       var factors = GetFactors(ResultUnitType.Stress);
-      var retDict = new Dictionary<string, List<object>>
+      var retDict = new Dictionary<string, object>
       {
         { "xx", indices.Select(i => ApplyFactors(Records2d[i].Xx_t, factors)).Cast<object>().ToList() },
         { "yy", indices.Select(i => ApplyFactors(Records2d[i].Yy_t, factors)).Cast<object>().ToList() },

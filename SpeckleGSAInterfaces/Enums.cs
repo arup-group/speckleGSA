@@ -48,7 +48,7 @@
 		TabularResultsOnly
 	}
 
-	public enum ResultCsvGroup
+	public enum ResultGroup
 	{
 		Unknown = 0,
 		Node,

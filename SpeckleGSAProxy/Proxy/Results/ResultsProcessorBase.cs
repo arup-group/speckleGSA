@@ -1,5 +1,4 @@
 ﻿using CsvHelper;
-using CsvHelper.Configuration;
 using SpeckleGSAInterfaces;
 using SpeckleGSAProxy.Results;
 using System;
@@ -9,7 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace SpeckleGSAProxy.Test.ResultsTest
+namespace SpeckleGSAProxy
 {
   public abstract class ResultsProcessorBase
   {
@@ -17,32 +16,14 @@ namespace SpeckleGSAProxy.Test.ResultsTest
     protected HashSet<string> cases;
     protected HashSet<int> elemIds;
     protected Dictionary<int, CsvRecord> Records = new Dictionary<int, CsvRecord>();
-    protected Dictionary<ResultType, Func<List<int>, Dictionary<string, List<object>>>> ColumnValuesFns;
+    protected Dictionary<ResultType, Func<List<int>, Dictionary<string, object>>> ColumnValuesFns;
     protected Dictionary<ResultUnitType, double> unitData;
     protected List<string> orderedCases = null; // will be updated in the first call to GetResultHierarchy
     protected List<ResultType> resultTypes;
 
-    protected static Dictionary<ResultType, string> rtStrings = new Dictionary<ResultType, string>
-    {
-      { ResultType.NodalDisplacements, "Nodal Displacements" },
-      { ResultType.NodalVelocity, "Nodal Velocity" },
-      { ResultType.NodalAcceleration, "Nodal Acceleration" },
-      { ResultType.NodalReaction, "Nodal Reaction" },
-      { ResultType.ConstraintForces, "Constraint Forces" },
-      { ResultType.Element1dDisplacement, "1D Element Displacement" },
-      { ResultType.Element1dForce, "1D Element Force" },
-      { ResultType.Element2dDisplacement, "2D Element Displacement" },
-      { ResultType.Element2dProjectedMoment, "2D Element Projected Moment" },
-      { ResultType.Element2dProjectedForce, "2D Element Projected Force" },
-      { ResultType.Element2dProjectedStressBottom, "2D Element Projected Stress - Bottom" },
-      { ResultType.Element2dProjectedStressMiddle, "2D Element Projected Stress - Middle" },
-      { ResultType.Element2dProjectedStressTop, "2D Element Projected Stress - Top" },
-      { ResultType.AssemblyForcesAndMoments, "Assembly Forces and Moments" }
-    };
-
     protected Dictionary<int, Dictionary<string, List<int>>> RecordIndices = new Dictionary<int, Dictionary<string, List<int>>>();
 
-    public string ResultTypeName(ResultType rt) => rtStrings[rt];
+    public string ResultTypeName(ResultType rt) => GSAProxy.rtStrings[rt];
     public List<int> ElementIds => elemIds.OrderBy(i => i).ToList();
     public List<string> CaseIds => cases.OrderBy(c => c).ToList();
     public abstract ResultGroup Group { get; }
@@ -76,11 +57,7 @@ namespace SpeckleGSAProxy.Test.ResultsTest
 
       // [ result_type, [ [ headers ], [ row, column ] ] ]
 
-      using (var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture) 
-      { 
-        TrimOptions = TrimOptions.Trim,
-        IgnoreBlankLines = true,
-      }))
+      using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
       {
         csv.Read();
         csv.ReadHeader();
@@ -133,9 +110,9 @@ namespace SpeckleGSAProxy.Test.ResultsTest
 
     // For both embedded and separate results, the format needs to be, per element:
     // [ load_case [ result_type [ column [ values ] ] ] ]
-    public Dictionary<string, object> GetResultHierarchy(int elemId)
+    public virtual Dictionary<string, Dictionary<string, object>> GetResultHierarchy(int elemId)
     {
-      var retDict = new Dictionary<string, object>();
+      var retDict = new Dictionary<string, Dictionary<string, object>>();
 
       if (!RecordIndices.ContainsKey(elemId))
       {
@@ -148,7 +125,7 @@ namespace SpeckleGSAProxy.Test.ResultsTest
 
         if (indices != null && indices.Count > 0)
         {
-          var rtDict = new Dictionary<string, Dictionary<string, List<object>>>(resultTypes.Count * 2);
+          var rtDict = new Dictionary<string, object>(resultTypes.Count * 2);
           foreach (var rt in resultTypes)
           {
             var name = ResultTypeName(rt);
@@ -163,7 +140,6 @@ namespace SpeckleGSAProxy.Test.ResultsTest
 
       return retDict;
     }
-
     protected float? ApplyFactors(float? val, List<double> factors)
     {
       if (!val.HasValue)

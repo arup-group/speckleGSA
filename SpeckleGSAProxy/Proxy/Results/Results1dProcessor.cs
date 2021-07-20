@@ -4,22 +4,31 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace SpeckleGSAProxy.Test.ResultsTest
+namespace SpeckleGSAProxy
 {
   public class Results1dProcessor : ResultsProcessorBase
   {
     public override ResultGroup Group => ResultGroup.Element1d;
 
-    public Results1dProcessor(string filePath, Dictionary<ResultUnitType, double> unitData, List<string> cases = null, List<int> elemIds = null) 
-      : base(filePath, unitData, cases, elemIds)
+    private List<ResultType> possibleResultTypes = new List<ResultType>()
     {
-      this.resultTypes = new List<ResultType>()
-      {
-        ResultType.Element1dDisplacement,
-        ResultType.Element1dForce
-      };
+      ResultType.Element1dDisplacement,
+      ResultType.Element1dForce
+    };
 
-      ColumnValuesFns = new Dictionary<ResultType, Func<List<int>, Dictionary<string, List<object>>>>()
+    public Results1dProcessor(string filePath, Dictionary<ResultUnitType, double> unitData, List<ResultType> resultTypes, 
+      List<string> cases = null, List<int> elemIds = null) : base(filePath, unitData, cases, elemIds)
+    {
+      if (resultTypes == null)
+      {
+        this.resultTypes = possibleResultTypes;
+      }
+      else
+      {
+        this.resultTypes = resultTypes.Where(rt => possibleResultTypes.Contains(rt)).ToList();
+      }
+
+      ColumnValuesFns = new Dictionary<ResultType, Func<List<int>, Dictionary<string, object>>>()
       {
         { ResultType.Element1dDisplacement, ResultTypeColumnValues_Element1dDisplacement },
         { ResultType.Element1dForce, ResultTypeColumnValues_Element1dForce }
@@ -30,10 +39,10 @@ namespace SpeckleGSAProxy.Test.ResultsTest
 
 
     #region column_values_fns
-    protected Dictionary<string, List<object>> ResultTypeColumnValues_Element1dDisplacement(List<int> indices)
+    protected Dictionary<string, object> ResultTypeColumnValues_Element1dDisplacement(List<int> indices)
     {
       var factors = GetFactors(ResultUnitType.Length);
-      var retDict = new Dictionary<string, List<object>>
+      var retDict = new Dictionary<string, object>
       {
         { "ux", indices.Select(i => ApplyFactors(((CsvElem1d)Records[i]).Ux, factors)).Cast<object>().ToList() },
         { "uy", indices.Select(i => ApplyFactors(((CsvElem1d)Records[i]).Uy, factors)).Cast<object>().ToList() },
@@ -44,11 +53,11 @@ namespace SpeckleGSAProxy.Test.ResultsTest
     }
 
 
-    protected Dictionary<string, List<object>> ResultTypeColumnValues_Element1dForce(List<int> indices)
+    protected Dictionary<string, object> ResultTypeColumnValues_Element1dForce(List<int> indices)
     {
       var factorsForce = GetFactors(ResultUnitType.Force);
       var factorsMoment = GetFactors(ResultUnitType.Force, ResultUnitType.Length);
-      var retDict = new Dictionary<string, List<object>>
+      var retDict = new Dictionary<string, object>
       {
         { "fx", indices.Select(i => ApplyFactors(((CsvElem1d)Records[i]).Fx, factorsForce)).Cast<object>().ToList() },
         { "fy", indices.Select(i => ApplyFactors(((CsvElem1d)Records[i]).Fy, factorsForce)).Cast<object>().ToList() },

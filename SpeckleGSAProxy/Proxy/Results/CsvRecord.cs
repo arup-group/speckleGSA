@@ -2,7 +2,7 @@
 using System;
 using System.Linq;
 
-namespace SpeckleGSAProxy.Test.ResultsTest
+namespace SpeckleGSAProxy
 {
   public class CsvRecord
   {
@@ -13,7 +13,7 @@ namespace SpeckleGSAProxy.Test.ResultsTest
     public string CaseId { get; set; }
 
     protected float? Magnitude(params float?[] dims)
-    {
+    { 
       if (dims.Any(v => !v.HasValue))
       {
         return null;

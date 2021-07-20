@@ -1,7 +1,7 @@
 ﻿using CsvHelper.Configuration.Attributes;
 using System;
 
-namespace SpeckleGSAProxy.Test.ResultsTest
+namespace SpeckleGSAProxy
 {
   public class CsvAssembly : CsvRecord
   {

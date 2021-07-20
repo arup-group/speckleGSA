@@ -21,7 +21,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <PlatformTarget>x64</PlatformTarget>
@@ -163,6 +163,16 @@
     <Compile Include="Cache\GSACache.cs" />
     <Compile Include="Cache\GSACacheRecord.cs" />
     <Compile Include="Cache\GsaCacheRecordCollection.cs" />
+    <Compile Include="Proxy\Results\CsvAssembly.cs" />
+    <Compile Include="Proxy\Results\CsvElem1d.cs" />
+    <Compile Include="Proxy\Results\CsvElem2d.cs" />
+    <Compile Include="Proxy\Results\CsvNode.cs" />
+    <Compile Include="Proxy\Results\CsvRecord.cs" />
+    <Compile Include="Proxy\Results\Results1dProcessor.cs" />
+    <Compile Include="Proxy\Results\Results2dProcessor.cs" />
+    <Compile Include="Proxy\Results\ResultsAssemblyProcessor.cs" />
+    <Compile Include="Proxy\Results\ResultsNodeProcessor.cs" />
+    <Compile Include="Proxy\Results\ResultsProcessorBase.cs" />
     <Compile Include="Results\IGSAResultsContext.cs" />
     <Compile Include="Proxy\GSAProxy.cs" />
     <Compile Include="Cache\IGSACache.cs" />
