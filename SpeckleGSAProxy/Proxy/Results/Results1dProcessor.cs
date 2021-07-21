@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace SpeckleGSAProxy
 {
-  public class Results1dProcessor : ResultsProcessorBase
+  public class Results1dProcessor : ResultsProcessorBase  
   {
     public override ResultGroup Group => ResultGroup.Element1d;
 
@@ -16,7 +16,7 @@ namespace SpeckleGSAProxy
       ResultType.Element1dForce
     };
 
-    public Results1dProcessor(string filePath, Dictionary<ResultUnitType, double> unitData, List<ResultType> resultTypes, 
+    public Results1dProcessor(string filePath, Dictionary<ResultUnitType, double> unitData, List<ResultType> resultTypes = null, 
       List<string> cases = null, List<int> elemIds = null) : base(filePath, unitData, cases, elemIds)
     {
       if (resultTypes == null)

@@ -20,10 +20,11 @@ namespace SpeckleGSAProxy
     protected Dictionary<ResultUnitType, double> unitData;
     protected List<string> orderedCases = null; // will be updated in the first call to GetResultHierarchy
     protected List<ResultType> resultTypes;
+    protected const int significantDigits = 6;
 
     protected Dictionary<int, Dictionary<string, List<int>>> RecordIndices = new Dictionary<int, Dictionary<string, List<int>>>();
 
-    public string ResultTypeName(ResultType rt) => GSAProxy.rtStrings[rt];
+    public string ResultTypeName(ResultType rt) => GSAProxy.ResultTypeStrings[rt];
     public List<int> ElementIds => elemIds.OrderBy(i => i).ToList();
     public List<string> CaseIds => cases.OrderBy(c => c).ToList();
     public abstract ResultGroup Group { get; }
@@ -153,22 +154,70 @@ namespace SpeckleGSAProxy
     {
       if (factors == null || factors.Count() == 0)
       {
-        return val;
+        return RoundToSignificantDigits(val);
       }
       if ((float)val == 0)
       {
-        return val;
+        return 0;
       }
       foreach (var f in factors)
       {
         val = (float)((float)val * f);
       }
-      return val;
+      return RoundToSignificantDigits(val);
+    }
+
+    protected double? ApplyFactors(double? val, List<double> factors)
+    {
+      if (!val.HasValue)
+      {
+        return null;
+      }
+      return ApplyFactors(val.Value, factors);
+    }
+
+    protected double ApplyFactors(double val, List<double> factors)
+    {
+      if (factors == null || factors.Count() == 0)
+      {
+        return RoundToSignificantDigits(val);
+      }
+      if ((double)val == 0)
+      {
+        return 0;
+      }
+      foreach (var f in factors)
+      {
+        val = (double)((double)val * f);
+      }
+      return RoundToSignificantDigits(val);
     }
 
     protected List<double> GetFactors(params ResultUnitType[] ruts)
     {
       return ruts.Where(r => unitData.ContainsKey(r)).Select(r => unitData[r]).ToList();
+    }
+
+    protected double RoundToSignificantDigits(double d, int digits = significantDigits)
+    {
+      if (d == 0)
+      {
+        return 0;
+      }
+
+      var scale = Math.Pow(10, Math.Floor(Math.Log10(Math.Abs(d))) + 1);
+      return scale * Math.Round(d / scale, digits);
+    }
+
+    protected float RoundToSignificantDigits(float d, int digits = significantDigits)
+    {
+      if (d == 0)
+      {
+        return 0;
+      }
+
+      var scale = (float)Math.Pow(10, Math.Floor(Math.Log10(Math.Abs(d))) + 1);
+      return (float)(scale * Math.Round(d / scale, digits));
     }
 
     protected bool SendableValue(object v)

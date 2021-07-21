@@ -12,7 +12,7 @@ namespace SpeckleGSAUI.Models
     {
       //ResultSettingItems = SpeckleGSAProxy.GSAProxy.resultTypeSpecs.Keys.SelectMany(k => SpeckleGSAProxy.GSAProxy.resultTypeSpecs[k].ResultTypeCsvColumnMap.Keys.Select(rt => new ResultSettingItem(rt, true))).ToList();
 
-      ResultSettingItems = GSAProxy.rtStrings.Keys.Select(k => new ResultSettingItem(GSAProxy.rtStrings[k], k, true)).ToList();
+      ResultSettingItems = GSAProxy.ResultTypeStrings.Keys.Select(k => new ResultSettingItem(GSAProxy.ResultTypeStrings[k], k, true)).ToList();
 
       /*
       ResultSettingItems = new List<ResultSettingItem>()

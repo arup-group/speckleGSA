@@ -3,7 +3,6 @@ using NUnit.Framework;
 using SpeckleGSA;
 using SpeckleGSAInterfaces;
 using SpeckleGSAProxy.Results;
-using SpeckleGSAProxy.Test.ResultsTest;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -197,9 +196,9 @@ namespace SpeckleGSAProxy.Test
 
       var unitData = new Dictionary<ResultUnitType, double>() { { ResultUnitType.Length, 1 }, { ResultUnitType.Force, 1 } };
 
-      var context = new List<ResultsTest.ResultsProcessorBase>()
+      var context = new List<ResultsProcessorBase>()
       {
-        new ResultsTest.ResultsAssemblyProcessor(Path.Combine(dir, @"result_assembly\result_assembly.csv"), unitData, cases)
+        new ResultsAssemblyProcessor(Path.Combine(dir, @"result_assembly\result_assembly.csv"), unitData, cases: cases)
       };
 
       var hierarchiesByGroup = new Dictionary<ResultGroup, Dictionary<int, object>>();
@@ -243,12 +242,12 @@ namespace SpeckleGSAProxy.Test
 
       var unitData = new Dictionary<ResultUnitType, double>() { { ResultUnitType.Length, 1 }, { ResultUnitType.Force, 1 } };
 
-      var context = new List<ResultsTest.ResultsProcessorBase>()
+      var context = new List<ResultsProcessorBase>()
       {
-        new ResultsTest.ResultsNodeProcessor(Path.Combine(dir, @"result_node\result_node.csv"), unitData, cases),
-        new ResultsTest.Results1dProcessor(Path.Combine(dir, @"result_elem_1d\result_elem_1d.csv"), unitData, cases),
-        new Results2dProcessor2(Path.Combine(dir, @"result_elem_2d\result_elem_2d.csv"), unitData, cases),
-        new ResultsTest.ResultsAssemblyProcessor(Path.Combine(dir, @"result_assembly\result_assembly.csv"), unitData, cases)
+        new ResultsNodeProcessor(Path.Combine(dir, @"result_node\result_node.csv"), unitData, cases: cases),
+        new Results1dProcessor(Path.Combine(dir, @"result_elem_1d\result_elem_1d.csv"), unitData, cases: cases),
+        new Results2dProcessor(Path.Combine(dir, @"result_elem_2d\result_elem_2d.csv"), unitData, cases: cases),
+        new ResultsAssemblyProcessor(Path.Combine(dir, @"result_assembly\result_assembly.csv"), unitData, cases: cases)
       };
 
       var hierarchiesByGroup = new Dictionary<ResultGroup, Dictionary<int, object>>();

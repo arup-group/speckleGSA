@@ -288,7 +288,7 @@ namespace SpeckleGSAUI
       if (GSA.App.LocalSettings.SendResults)
       {
         var results = arguments["result"].Split(new char[] { ',' }).Select(x => x.Replace("\"", ""));
-        var reverseResultTypeMap = GSAProxy.rtStrings.ToDictionary(kvp => kvp.Value, kvp => kvp.Key);
+        var reverseResultTypeMap = GSAProxy.ResultTypeStrings.ToDictionary(kvp => kvp.Value, kvp => kvp.Key);
         GSA.GsaApp.Settings.ResultTypes = results.Where(r => reverseResultTypeMap.ContainsKey(r)).Select(r => reverseResultTypeMap[r]).ToList();
         /*
         foreach (string r in results)

@@ -12,7 +12,7 @@ namespace SpeckleInterface
   /// </summary>
   public class StreamSender : StreamBase, IStreamSender
   {
-    const int DEFAULT_MAX_BUCKET_SIZE = 1000000;
+    const int DEFAULT_MAX_BUCKET_SIZE = 2000000;
     const int DEFAULT_API_TIMEOUT = 20000;
     const int DEFAULT_PARALLEL_API_REQUESTS = 5;
 
@@ -421,7 +421,8 @@ namespace SpeckleInterface
 
         Task.Run(() =>
         {
-          foreach (SpeckleObject obj in payload.Where(o => o.Hash != null && o._id != null))
+          //Don't save results to the hard disk as they take up a huge amount of space and are likely to change very often
+          foreach (SpeckleObject obj in payload.Where(o => o.Hash != null && o._id != null && !o.Type.Contains("Result")))
           {
             tryCatchWithEvents(() => LocalContext.AddSentObject(obj, baseUrl), "", "Error in updating local db");
           }

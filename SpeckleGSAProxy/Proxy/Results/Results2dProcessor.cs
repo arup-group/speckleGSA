@@ -29,7 +29,7 @@ namespace SpeckleGSAProxy
       ResultType.Element2dProjectedStressTop
     };
 
-    public Results2dProcessor(string filePath, Dictionary<ResultUnitType, double> unitData, List<ResultType> resultTypes, 
+    public Results2dProcessor(string filePath, Dictionary<ResultUnitType, double> unitData, List<ResultType> resultTypes = null, 
       List<string> cases = null, List<int> elemIds = null) : base(filePath, unitData, cases, elemIds)
     {
       if (resultTypes == null)
@@ -158,7 +158,10 @@ namespace SpeckleGSAProxy
             if (!string.IsNullOrEmpty(name))
             {
               rtDict.Add(name + "_face", ColumnValuesFns[rt](indicesFace));
-              rtDict.Add(name + "_vertex", ColumnValuesFns[rt](indicesVertex));
+              if (rt == ResultType.Element2dDisplacement)
+              {
+                rtDict.Add(name + "_vertex", ColumnValuesFns[rt](indicesVertex));
+              }
             }
           }
           retDict.Add(caseId, rtDict);

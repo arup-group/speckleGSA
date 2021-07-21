@@ -32,7 +32,7 @@ namespace SpeckleGSAProxy
     public float Mxy { get; set; }
 
     //mx+mxy
-    public float? Mx_Mxy { get => MomentResult(Mx, My); }
+    public float? Mx_Mxy { get => MomentResult(Mx, Mxy); }
     
     //my+myx
     public float? My_Myx { get => MomentResult(My, Mxy); }
