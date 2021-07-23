@@ -52,8 +52,6 @@ namespace SpeckleGSAInterfaces
     /// <returns>Node index</returns>
     int NodeAt(double x, double y, double z, double coincidenceTol);
 
-    void GetGSATotal2DElementOffset(int index, double insertionPointOffset, out double offset, out string offsetRec);
-
     /// <summary>
     /// Converts a GSA list to a list of indices.
     /// </summary>
@@ -72,14 +70,14 @@ namespace SpeckleGSAInterfaces
     /// <param name="loadCase">Load case</param>
     /// <param name="axis">Result axis</param>
     /// <returns>Dictionary of reactions with keys {x,y,z,xx,yy,zz}.</returns>
-    Dictionary<string, object> GetGSAResult(int id, int resHeader, int flags, List<string> keys, string loadCase, string axis = "local", int num1DPoints = 2);
+    //Dictionary<string, object> GetGSAResult(int id, int resHeader, int flags, List<string> keys, string loadCase, string axis = "local", int num1DPoints = 2);
 
     /// <summary>
     /// Checks if the load case exists in the GSA file
     /// </summary>
     /// <param name="loadCase">GSA load case description</param>
     /// <returns>True if load case exists</returns>
-    bool CaseExist(string loadCase);
+    //bool CaseExist(string loadCase);
 
     #endregion
 
@@ -101,7 +99,7 @@ namespace SpeckleGSAInterfaces
 
     void NewFile(bool showWindow = true, object gsaInstance = null);
 
-    void OpenFile(string path, bool showWindow = true, object gsaInstance = null);
+    bool OpenFile(string path, bool showWindow = true, object gsaInstance = null);
 
     //Used to update a node without having to BLANK then SET it - which is the case for all other types
     string SetSid(string gwa, string streamId, string applicationId);
@@ -123,5 +121,19 @@ namespace SpeckleGSAInterfaces
     string FormatSidTags(string streamId = "", string applicationId = "");
 
     //void ParseGeneralGwa(string fullGwa, out string keyword, out int? index, out string streamId, out string applicationId, out string gwaWithoutSet, out GwaSetCommandType? gwaSetCommandType, bool includeKwVersion = false);
+
+    //This calls the ExportToCsv method in the COM API
+    bool PrepareResults(List<ResultType> resultTypes, int numBeamPoints = 3);
+
+    //This is called by the results-related ToSpeckle() methods in the kit; it reads the appropriate individual CSV files into memory ready to be queried
+    //null values mean ALL
+    bool LoadResults(ResultGroup group, List<string> cases = null, List<int> elemIds = null);
+
+    //This is called by the results-related ToSpeckle() methods in the kit; it provides the data hierarchy for all specified load cases and result types
+    //ready to be inserted as the Value property of the result object for both embedded and separate options
+    // [ load_case [ result_type [ column [ values ] ] ] ]
+    bool GetResultHierarchy(ResultGroup group, int index, out Dictionary<string, Dictionary<string, object>> valueHierarchy, int dimension = 1);
+
+    bool ClearResults(ResultGroup group);
   }
 }

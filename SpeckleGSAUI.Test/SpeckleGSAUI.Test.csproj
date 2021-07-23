@@ -125,7 +125,6 @@
     <Compile Include="Utilties\MockGSAMessenger.cs" />
     <Compile Include="Utilties\MockGSAProxyMethods.cs" />
     <Compile Include="Utilties\MockProgressMessenger.cs" />
-    <Compile Include="Utilties\MockSettings.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utilties\TestSpeckleGSAReceiver.cs" />
     <Compile Include="Utilties\TestSpeckleGSASender.cs" />

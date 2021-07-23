@@ -1,4 +1,6 @@
 ﻿using SpeckleGSAInterfaces;
+using System;
+using System.Collections.Generic;
 
 namespace SpeckleGSAProxy
 {
@@ -7,5 +9,6 @@ namespace SpeckleGSAProxy
     void SetAppVersionForTelemetry(string speckleGsaAppVersion);
     void SendTelemetry(params string[] messagePortions);
     bool SetUnits(string units);
+    //bool Clear(ResultCsvGroup group);
   }
 }

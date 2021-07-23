@@ -251,19 +251,27 @@ namespace SpeckleGSAUI
       {
         GSA.App.LocalSettings.SendOnlyMeaningfulNodes = false;
       }
-      if (arguments.ContainsKey("separateStreams"))
-      {
-        GSA.App.LocalSettings.SeparateStreams = true;
-        GSA.App.Settings.EmbedResults = false;
-      }
+
       if (arguments.ContainsKey("resultOnly"))
       {
-        GSA.App.LocalSettings.SendOnlyResults = true;
+        GSA.App.LocalSettings.StreamSendConfig = StreamContentConfig.TabularResultsOnly;
       }
-      if (arguments.ContainsKey("resultUnembedded"))
+      else if (arguments.ContainsKey("result"))
       {
-        GSA.App.Settings.EmbedResults = false;
+        if (arguments.ContainsKey("separateStreams") || arguments.ContainsKey("resultUnembedded"))
+        {
+          GSA.App.LocalSettings.StreamSendConfig = StreamContentConfig.ModelWithTabularResults;
+        }
+        else
+        {
+          GSA.App.LocalSettings.StreamSendConfig = StreamContentConfig.ModelWithEmbeddedResults;
+        }
       }
+      else
+      {
+        GSA.App.LocalSettings.StreamSendConfig = StreamContentConfig.ModelOnly;
+      }
+
       if (arguments.ContainsKey("resultInLocalAxis"))
       {
         GSA.App.Settings.ResultInLocalAxis = true;
@@ -277,12 +285,13 @@ namespace SpeckleGSAUI
         catch { }
       }
 
-      if (arguments.ContainsKey("result"))
+      if (GSA.App.LocalSettings.SendResults)
       {
-        GSA.App.Settings.SendResults = true;
-
         var results = arguments["result"].Split(new char[] { ',' }).Select(x => x.Replace("\"", ""));
-
+        var reverseResultTypeMap = GSAProxy.ResultTypeStrings.ToDictionary(kvp => kvp.Value, kvp => kvp.Key);
+        GSA.GsaApp.Settings.ResultTypes = results.Where(r => reverseResultTypeMap.ContainsKey(r)).Select(r => reverseResultTypeMap[r]).ToList();
+        GSA.GsaApp.Proxy.PrepareResults(GSA.GsaApp.Settings.ResultTypes);
+        /*
         foreach (string r in results)
         {
           if (Result.NodalResultMap.ContainsKey(r))
@@ -302,6 +311,7 @@ namespace SpeckleGSAUI
             GSA.GsaApp.Settings.MiscResults[r] = Result.MiscResultMap[r];
           }
         }
+        */
       }
 
       if (arguments.ContainsKey("resultCases"))

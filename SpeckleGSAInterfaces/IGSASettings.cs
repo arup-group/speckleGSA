@@ -9,15 +9,18 @@ namespace SpeckleGSAInterfaces
 		string Units { get; set; }
 		double CoincidentNodeAllowance { get; set; }
 
+		/*
 		Dictionary<string, IGSAResultParams> NodalResults { get; set; }
 		Dictionary<string, IGSAResultParams> Element1DResults { get; set; }
 		Dictionary<string, IGSAResultParams> Element2DResults { get; set; }
-		Dictionary<string, IGSAResultParams> MiscResults { get; set; } 
+		Dictionary<string, IGSAResultParams> MiscResults { get; set; }
+		*/
 
-		bool SendResults { get; set; }
+		List<ResultType> ResultTypes { get; set; }
+
+		StreamContentConfig StreamSendConfig { get; set; }
 		List<string> ResultCases { get; set; }
 		bool ResultInLocalAxis { get; set; }
 		int Result1DNumPosition { get; set; }
-		bool EmbedResults { get; set; }
 	}
 }

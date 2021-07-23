@@ -107,6 +107,8 @@ namespace SpeckleGSA
       var startTime = DateTime.Now;
       statusProgress.Report("Reading GSA data into cache");
 
+      var txTypePrereqs = GSA.TxTypeDependencies;
+
       //Update cache
       var updatedCache = UpdateCache();
       if (!updatedCache)
@@ -152,6 +154,12 @@ namespace SpeckleGSA
       var allBuckets = CreateStreamBuckets();
 
       var bucketsToCreate = allBuckets.Keys.Except(Senders.Keys).ToList();
+
+      //TO DO: review this, possibly move to the kit
+      if (GSA.GsaApp.Settings.StreamSendConfig == StreamContentConfig.TabularResultsOnly && bucketsToCreate.Contains("results"))
+      {
+        bucketsToCreate = new List<string> { "results" };
+      }
 
       //Now check if any streams need to be created
       if (bucketsToCreate.Count() > 0)
