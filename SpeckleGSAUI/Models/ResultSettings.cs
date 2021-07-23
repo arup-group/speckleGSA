@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using SpeckleGSAProxy;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace SpeckleGSAUI.Models
 {
@@ -8,6 +10,11 @@ namespace SpeckleGSAUI.Models
 
     public ResultSettings()
     {
+      //ResultSettingItems = SpeckleGSAProxy.GSAProxy.resultTypeSpecs.Keys.SelectMany(k => SpeckleGSAProxy.GSAProxy.resultTypeSpecs[k].ResultTypeCsvColumnMap.Keys.Select(rt => new ResultSettingItem(rt, true))).ToList();
+
+      ResultSettingItems = GSAProxy.ResultTypeStrings.Keys.Select(k => new ResultSettingItem(GSAProxy.ResultTypeStrings[k], k, true)).ToList();
+
+      /*
       ResultSettingItems = new List<ResultSettingItem>()
       {
         new ResultSettingItem("Nodal Displacements", true),
@@ -45,6 +52,7 @@ namespace SpeckleGSAUI.Models
         new ResultSettingItem("RC Slab Reinforcement", false),
         new ResultSettingItem("Assembly Forces and Moments", true)
       };
+      */
     }
   }
 }

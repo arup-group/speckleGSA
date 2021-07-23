@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Interop.Gsa_10_1;
 using SpeckleGSAInterfaces;
+using SpeckleGSAProxy.Results;
 
 namespace SpeckleGSAProxy
 {
@@ -17,15 +19,33 @@ namespace SpeckleGSAProxy
     private static readonly string SID_APPID_TAG = "speckle_app_id";
     private static readonly string SID_STRID_TAG = "speckle_stream_id";
 
+    public static Dictionary<ResultType, string> ResultTypeStrings = new Dictionary<ResultType, string>
+    {
+      { ResultType.NodalDisplacements, "Nodal Displacements" },
+      { ResultType.NodalVelocity, "Nodal Velocity" },
+      { ResultType.NodalAcceleration, "Nodal Acceleration" },
+      { ResultType.NodalReaction, "Nodal Reaction" },
+      { ResultType.ConstraintForces, "Constraint Forces" },
+      { ResultType.Element1dDisplacement, "1D Element Displacement" },
+      { ResultType.Element1dForce, "1D Element Force" },
+      { ResultType.Element2dDisplacement, "2D Element Displacement" },
+      { ResultType.Element2dProjectedMoment, "2D Element Projected Moment" },
+      { ResultType.Element2dProjectedForce, "2D Element Projected Force" },
+      { ResultType.Element2dProjectedStressBottom, "2D Element Projected Stress - Bottom" },
+      { ResultType.Element2dProjectedStressMiddle, "2D Element Projected Stress - Middle" },
+      { ResultType.Element2dProjectedStressTop, "2D Element Projected Stress - Top" },
+      { ResultType.AssemblyForcesAndMoments, "Assembly Forces and Moments" }
+    };
+
     public static readonly char GwaDelimiter = '\t';
 
     //These are the exceptions to the rule that, in GSA, all records that relate to each table (i.e. the set with mutually-exclusive indices) have the same keyword
-    public static Dictionary<string, string[]> IrregularKeywordGroups = new Dictionary<string, string[]> { 
-      { "LOAD_BEAM", new string[] { "LOAD_BEAM_POINT", "LOAD_BEAM_UDL", "LOAD_BEAM_LINE", "LOAD_BEAM_PATCH", "LOAD_BEAM_TRILIN" } } 
+    public static Dictionary<string, string[]> IrregularKeywordGroups = new Dictionary<string, string[]> {
+      { "LOAD_BEAM", new string[] { "LOAD_BEAM_POINT", "LOAD_BEAM_UDL", "LOAD_BEAM_LINE", "LOAD_BEAM_PATCH", "LOAD_BEAM_TRILIN" } }
     };
 
     //Note that When a GET_ALL is called for LOAD_BEAM, it returns LOAD_BEAM_UDL, LOAD_BEAM_LINE, LOAD_BEAM_PATCH and LOAD_BEAM_TRILIN
-    public static string[] SetAtKeywords = new string[] { "LOAD_NODE", "LOAD_BEAM", "LOAD_GRID_POINT", "LOAD_GRID_LINE", "LOAD_2D_FACE", 
+    public static string[] SetAtKeywords = new string[] { "LOAD_NODE", "LOAD_BEAM", "LOAD_GRID_POINT", "LOAD_GRID_LINE", "LOAD_2D_FACE",
       "LOAD_GRID_AREA", "LOAD_2D_THERMAL", "LOAD_GRAVITY", "INF_BEAM", "INF_NODE", "RIGID", "GEN_REST" };
     //----
 
@@ -38,18 +58,30 @@ namespace SpeckleGSAProxy
 
     char IGSAProxy.GwaDelimiter => GSAProxy.GwaDelimiter;
 
+    //Results-related
+    private string resultDir = null;
+    private Dictionary<ResultGroup, ResultsProcessorBase> resultProcessors = new Dictionary<ResultGroup, ResultsProcessorBase>();
+    private List<ResultType> allResultTypes;
+
+    //private IGSAResultsContext resultsContext = null;
+    //private List<string> resultTypes = null;
+    private List<string> cases = null;
+    //This is the factor relative to the SI units (N, m, etc) that the model is currently set to - this is relevant for results as they're always
+    //exported to CSV in SI units
+    private Dictionary<SpeckleGSAResultsHelper.ResultUnitType, double> unitData = new Dictionary<SpeckleGSAResultsHelper.ResultUnitType, double>();
+
     private string SpeckleGsaVersion;
     private string units = "m";
 
     #region nodeAt_factors
     public static bool NodeAtCalibrated = false;
     //Set to defaults, which will be updated at calibration
-    private static readonly Dictionary<string, double> UnitNodeAtFactors = new Dictionary<string, double>();
+    private static readonly Dictionary<string, float> UnitNodeAtFactors = new Dictionary<string, float>();
 
     public static void CalibrateNodeAt()
     {
-      double coordValue = 1000;
-      var unitCoincidentDict = new Dictionary<string, double>() { { "mm", 20 }, { "cm", 1 }, { "in", 1 }, { "m", 0.1 } };
+      float coordValue = 1000;
+      var unitCoincidentDict = new Dictionary<string, float>() { { "mm", 20 }, { "cm", 1 }, { "in", 1 }, { "m", 0.1f } };
       var units = new[] { "m", "cm", "mm", "in" };
 
       var proxy = new GSAProxy();
@@ -58,10 +90,10 @@ namespace SpeckleGSAProxy
       {
         proxy.SetUnits(u);
         var nodeIndex = proxy.NodeAt(coordValue, coordValue, coordValue, unitCoincidentDict[u]);
-        double factor = 1;
+        float factor = 1;
         var gwa = proxy.GetGwaForNode(nodeIndex);
         var pieces = gwa.Split(GSAProxy.GwaDelimiter);
-        if (double.TryParse(pieces.Last(), out double z1))
+        if (float.TryParse(pieces.Last(), out float z1))
         {
           if (z1 != coordValue)
           {
@@ -72,7 +104,7 @@ namespace SpeckleGSAProxy
             gwa = proxy.GetGwaForNode(nodeIndex);
             pieces = gwa.Split(GSAProxy.GwaDelimiter);
 
-            if (double.TryParse(pieces.Last(), out double z2) && z2 == 1000)
+            if (float.TryParse(pieces.Last(), out float z2) && z2 == 1000)
             {
               //it's confirmed
               factor = factorCandidate;
@@ -172,8 +204,12 @@ namespace SpeckleGSAProxy
     /// <param name="path">Absolute path to GSA file</param>
     /// <param name="emailAddress">User email address</param>
     /// <param name="serverAddress">Speckle server address</param>
-    public void OpenFile(string path, bool showWindow = true, object gsaInstance = null)
+    public bool OpenFile(string path, bool showWindow = true, object gsaInstance = null)
     {
+      if (!File.Exists(path))
+      {
+        return false;
+      }
       ExecuteWithLock(() =>
       {
         if (GSAObject != null)
@@ -203,6 +239,7 @@ namespace SpeckleGSAProxy
           GSAObject.DisplayGsaWindow(true);
         }
       });
+      return true;
     }
 
     public int SaveAs(string filePath) => ExecuteWithLock(() => GSAObject.SaveAs(filePath));
@@ -360,6 +397,11 @@ namespace SpeckleGSAProxy
         catch
         {
           gwaRecords = new string[0];
+        }
+
+        if (setKeywords[i].Equals("UNIT_DATA", StringComparison.InvariantCultureIgnoreCase))
+        {
+          return gwaRecords.Select(r => new ProxyGwaLine() { GwaWithoutSet = r, Keyword = "UNIT_DATA" }).ToList();
         }
 
         Parallel.ForEach(gwaRecords, gwa =>
@@ -571,6 +613,7 @@ namespace SpeckleGSAProxy
       }
     }
 
+    /*
     public void GetGSATotal2DElementOffset(int index, double insertionPointOffset, out double offset, out string offsetRec)
     {
       double materialInsertionPointOffset = 0;
@@ -603,10 +646,11 @@ namespace SpeckleGSAProxy
       }
       return;
     }
+    */
 
     public int NodeAt(double x, double y, double z, double coincidenceTol)
     {
-      double factor = (UnitNodeAtFactors != null && UnitNodeAtFactors.ContainsKey(units)) ? UnitNodeAtFactors[units] : 1;
+      float factor = (UnitNodeAtFactors != null && UnitNodeAtFactors.ContainsKey(units)) ? UnitNodeAtFactors[units] : 1;
       //Note: the outcome of this might need to be added to the caches!
       var index = ExecuteWithLock(() => GSAObject.Gen_NodeAt(x * factor, y * factor, z * factor, coincidenceTol * factor));
       return index;
@@ -701,167 +745,6 @@ namespace SpeckleGSAProxy
       }
 
       return items.ToArray();
-    }
-
-    public Dictionary<string, object> GetGSAResult(int id, int resHeader, int flags, List<string> keys, string loadCase, string axis = "local", int num1DPoints = 2)
-    {
-      var ret = new Dictionary<string, object>();
-      GsaResults[] res = null;
-      bool exists = false;
-
-      int returnCode = -1;
-
-      try
-      {
-        return ExecuteWithLock(() =>
-        {
-          int num;
-
-          // The 2nd condition here is a special case for assemblies
-          if (Enum.IsDefined(typeof(ResHeader), resHeader) || resHeader == 18002000)
-          {
-            returnCode = GSAObject.Output_Init_Arr(flags, axis, loadCase, (ResHeader)resHeader, num1DPoints);
-
-            try
-            {
-              var existsResult = GSAObject.Output_DataExist(id);
-              exists = (existsResult == 1);
-            }
-            catch (Exception e)
-            {
-              return null;
-            }
-
-            if (exists)
-            {
-              var extracted = false;
-              try
-              {
-                returnCode = GSAObject.Output_Extract_Arr(id, out var outputExtractResults, out num);
-                res = (GsaResults[])outputExtractResults;
-                extracted = true;
-              }
-              catch { }
-
-              if (!extracted)
-              {
-                // Try individual extract
-                for (var i = 1; i <= keys.Count; i++)
-                {
-                  var indivResHeader = resHeader + i;
-
-                  try
-                  {
-                    GSAObject.Output_Init(flags, axis, loadCase, indivResHeader, num1DPoints);
-                  }
-                  catch (Exception e)
-                  {
-                    return null;
-                  }
-
-                  var numPos = 1;
-
-                  try
-                  {
-                    numPos = GSAObject.Output_NumElemPos(id);
-                  }
-                  catch { }
-
-                  if (i == 1)
-                  {
-                    res = new GsaResults[numPos];
-                    for (var j = 0; j < res.Length; j++)
-                    {
-                      res[j] = new GsaResults() { dynaResults = new double[keys.Count] };
-                    }
-                  }
-
-                  for (var j = 0; j < numPos; j++)
-                  {
-                    res[j].dynaResults[i - 1] = (double)GSAObject.Output_Extract(id, j);
-                  }
-                }
-              }
-
-            }
-            else
-            {
-              return null;
-            }
-          }
-          else
-          {
-            returnCode = GSAObject.Output_Init(flags, axis, loadCase, resHeader, num1DPoints);
-
-            try
-            {
-              var existsResult = GSAObject.Output_DataExist(id);
-              exists = (existsResult == 1);
-            }
-            catch
-            {
-              return null;
-            }
-
-            if (exists)
-            {
-              var numPos = GSAObject.Output_NumElemPos(id);
-              res = new GsaResults[numPos];
-
-              try
-              {
-                for (var i = 0; i < numPos; i++)
-                {
-                  res[i] = new GsaResults() { dynaResults = new double[] { (double)GSAObject.Output_Extract(id, i) } };
-                }
-              }
-              catch
-              {
-                return null;
-              }
-            }
-            else
-            {
-              return null;
-            }
-          }
-
-          var numColumns = res[0].dynaResults.Count();
-
-          for (var i = 0; i < numColumns; i++)
-          {
-            ret[keys[i]] = res.Select(x => (double)x.dynaResults.GetValue(i)).ToList();
-          }
-
-          return ret;
-        });
-      }
-      catch
-      {
-        return null;
-      }
-    }
-
-    public bool CaseExist(string loadCase)
-    {
-      try
-      {
-        string[] pieces = loadCase.Split(new char[] { 'p' }, StringSplitOptions.RemoveEmptyEntries);
-
-        if (pieces.Length == 1)
-        {
-          return ExecuteWithLock(() => GSAObject.CaseExist(loadCase[0].ToString(), Convert.ToInt32(loadCase.Substring(1))) == 1);
-        }
-        else if (pieces.Length == 2)
-        {
-          return ExecuteWithLock(() => GSAObject.CaseExist(loadCase[0].ToString(), Convert.ToInt32(pieces[0].Substring(1))) == 1);
-        }
-        else
-        {
-          return false;
-        }
-      }
-      catch { return false; }
     }
 
     #region private_methods
@@ -1041,6 +924,124 @@ namespace SpeckleGSAProxy
       return (entities != null && entities.Count() > 0)
         ? entities.ToList()
         : new List<int>();
+    }
+
+    private bool ClearResultsDirectory()
+    {
+      var di = new DirectoryInfo(resultDir);
+      if (!di.Exists)
+      {
+        return true;
+      }
+
+      foreach (DirectoryInfo dir in di.GetDirectories())
+      {
+        foreach (FileInfo file in dir.GetFiles())
+        {
+          if (!file.Extension.Equals(".csv", StringComparison.InvariantCultureIgnoreCase))
+          {
+            return false;
+          }
+        }
+      }
+
+      foreach (FileInfo file in di.GetFiles())
+      {
+        file.Delete();
+      }
+      foreach (DirectoryInfo dir in di.GetDirectories())
+      {
+        dir.Delete(true);
+      }
+      return true;
+    }
+
+    private bool ProcessUnitGwaData()
+    {
+      var unitGwaLines = GetGwaData(new[] { "UNIT_DATA" }, false);
+      if (unitGwaLines == null || unitGwaLines.Count() == 0)
+      {
+        return false;
+      }
+      unitData.Clear();
+
+      foreach (var gwa in unitGwaLines.Select(l => l.GwaWithoutSet).ToList())
+      {
+        var pieces = gwa.Split(GwaDelimiter);
+
+        if (Enum.TryParse(pieces[1], true, out SpeckleGSAResultsHelper.ResultUnitType rut) && float.TryParse(pieces.Last(), out float factor))
+        {
+          unitData.Add(rut, factor);
+        }
+      }
+      return true;
+    }
+
+    public bool PrepareResults(List<ResultType> resultTypes, int numBeamPoints = 3)
+    {
+      this.resultDir = Path.Combine(Environment.CurrentDirectory, "GSAExport");
+      this.allResultTypes = resultTypes;
+
+      ProcessUnitGwaData();
+
+      //First delete all existing csv files in the results directory to avoid confusion
+      if (!ClearResultsDirectory())
+      {
+        return false;
+      }
+      var retCode = GSAObject.ExportToCsv(resultDir, numBeamPoints, true, true, ",");
+      if (retCode == 0)
+      {
+        //Assume that
+        return true;
+      }
+      return false;
+    }
+
+    public bool LoadResults(ResultGroup group, List<string> cases = null, List<int> elemIds = null)
+    {
+      if (group == ResultGroup.Assembly)
+      {
+        resultProcessors.Add(group, new ResultsAssemblyProcessor(Path.Combine(resultDir, @"result_assembly\result_assembly.csv"), unitData, allResultTypes, cases, elemIds));
+      }
+      else if (group == ResultGroup.Element1d)
+      {
+        resultProcessors.Add(group, new Results1dProcessor(Path.Combine(resultDir, @"result_elem_1d\result_elem_1d.csv"), unitData, allResultTypes, cases, elemIds));
+      }
+      else if (group == ResultGroup.Element2d)
+      {
+        resultProcessors.Add(group, new Results2dProcessor(Path.Combine(resultDir, @"result_elem_2d\result_elem_2d.csv"), unitData, allResultTypes, cases, elemIds));
+      }
+      else if (group == ResultGroup.Node)
+      {
+        resultProcessors.Add(group, new ResultsNodeProcessor(Path.Combine(resultDir, @"result_node\result_node.csv"), unitData, allResultTypes, cases, elemIds));
+      }
+      else
+      {
+        return false;
+      }
+      resultProcessors[group].LoadFromFile();
+      return true;
+    }
+
+    public bool GetResultHierarchy(ResultGroup group, int index, out Dictionary<string, Dictionary<string, object>> valueHierarchy, int dimension = 1)
+    {
+      valueHierarchy = (resultProcessors.ContainsKey(group)) ? resultProcessors[group].GetResultHierarchy(index) : new Dictionary<string, Dictionary<string, object>>();
+      return (valueHierarchy != null && valueHierarchy.Count > 0);
+    }
+
+    public bool ClearResults(ResultGroup group)
+    {
+      if (resultProcessors.ContainsKey(group))
+      {
+        var removed = resultProcessors.Remove(group);
+        if (removed)
+        {
+          GC.Collect();
+          return true;
+        }
+      }
+      return false;
     }
 
     #endregion

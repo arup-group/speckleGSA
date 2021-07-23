@@ -14,7 +14,7 @@ namespace SpeckleGSA
   public class Settings : IGSALocalSettings
 	{
     public bool SendOnlyMeaningfulNodes { get; set; } = true;
-    public bool SeparateStreams { get; set; } = false;
+
     public int PollingRate = 2000;
 		public string ServerAddress { get; set; } = "";
 
@@ -22,9 +22,10 @@ namespace SpeckleGSA
 		public string Units { get; set; } = "mm";
 		public GSATargetLayer TargetLayer { get; set; } = GSATargetLayer.Design;
 		public double CoincidentNodeAllowance { get; set; } = 0.1;
-		public bool SendOnlyResults { get; set; } = false;
 
-		public bool SendResults { get; set; } = false;
+		public StreamContentConfig StreamSendConfig { get; set; }
+		public bool SendResults {  get => (StreamSendConfig == StreamContentConfig.ModelWithEmbeddedResults
+				|| StreamSendConfig == StreamContentConfig.ModelWithTabularResults || StreamSendConfig == StreamContentConfig.TabularResultsOnly); }
 
 		private int loggingthreshold = 3;
 
@@ -71,18 +72,19 @@ namespace SpeckleGSA
 				Log.Logger = loggerConfig.CreateLogger();
 			}
 		}
-
+		/*
 		public Dictionary<string, IGSAResultParams> NodalResults { get; set; } = new Dictionary<string, IGSAResultParams>();
 		public Dictionary<string, IGSAResultParams> Element1DResults { get; set; } = new Dictionary<string, IGSAResultParams>();
 		public Dictionary<string, IGSAResultParams> Element2DResults { get; set; } = new Dictionary<string, IGSAResultParams>();
 		public Dictionary<string, IGSAResultParams> MiscResults { get; set; } = new Dictionary<string, IGSAResultParams>();
-
+		*/
 		public List<string> ResultCases { get; set; } = new List<string>();
 		public bool ResultInLocalAxis { get; set; } = false;
 		public int Result1DNumPosition { get; set; } = 3;
 		public bool EmbedResults { get; set; } = true;
+		public List<ResultType> ResultTypes { get; set; } = new List<ResultType>();
 
-		public void SetFieldOrPropValue(string fieldOrPropName, object value)
+    public void SetFieldOrPropValue(string fieldOrPropName, object value)
 		{
 			FieldOrProp fieldOrProp = FieldOrProp.Unknown;
 			object info = null;

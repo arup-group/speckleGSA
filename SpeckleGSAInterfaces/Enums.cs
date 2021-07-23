@@ -38,4 +38,40 @@
     Set,
     SetAt
   }
+
+	public enum StreamContentConfig
+	{
+		None,
+		ModelOnly,
+		ModelWithEmbeddedResults,
+		ModelWithTabularResults,
+		TabularResultsOnly
+	}
+
+	public enum ResultGroup
+	{
+		Unknown = 0,
+		Node,
+		Element1d,
+		Element2d,
+		Assembly
+	}
+	
+	public enum ResultType
+  {
+		NodalDisplacements,
+		NodalVelocity,
+		NodalAcceleration,
+		NodalReaction,
+		ConstraintForces,
+		Element1dDisplacement,
+		Element1dForce,
+		Element2dDisplacement,
+		Element2dProjectedMoment,
+		Element2dProjectedForce,
+		Element2dProjectedStressBottom,
+		Element2dProjectedStressMiddle,
+		Element2dProjectedStressTop,
+		AssemblyForcesAndMoments
+	}
 }

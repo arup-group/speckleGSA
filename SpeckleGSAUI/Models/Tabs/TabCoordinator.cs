@@ -40,7 +40,7 @@ namespace SpeckleGSAUI.Models
       GSA.Reset();
 
       GSA.Init(getRunningVersion().ToString());
-      SpeckleInitializer.Initialize();
+      //SpeckleInitializer.Initialize();
       LocalContext.Init();
 
       //This will create the logger

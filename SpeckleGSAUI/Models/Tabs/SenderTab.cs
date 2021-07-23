@@ -9,7 +9,7 @@ namespace SpeckleGSAUI.Models
     public StreamContentConfig StreamContentConfig { get; set; } = StreamContentConfig.ModelOnly;
 
     public string LoadCaseList { get; set; }
-    public int AdditionalPositionsFor1dElements { get; set; }
+    public int AdditionalPositionsFor1dElements { get; set; } = 3;
 
     public ResultSettings ResultSettings { get; set; } = new ResultSettings();
 
