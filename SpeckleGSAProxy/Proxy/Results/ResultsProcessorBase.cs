@@ -17,7 +17,7 @@ namespace SpeckleGSAProxy
     protected HashSet<int> elemIds;
     protected Dictionary<int, CsvRecord> Records = new Dictionary<int, CsvRecord>();
     protected Dictionary<ResultType, Func<List<int>, Dictionary<string, object>>> ColumnValuesFns;
-    protected Dictionary<ResultUnitType, double> unitData;
+    protected Dictionary<SpeckleGSAResultsHelper.ResultUnitType, double> unitData;
     protected List<string> orderedCases = null; // will be updated in the first call to GetResultHierarchy
     protected List<ResultType> resultTypes;
     protected const int significantDigits = 6;
@@ -29,7 +29,7 @@ namespace SpeckleGSAProxy
     public List<string> CaseIds => cases.OrderBy(c => c).ToList();
     public abstract ResultGroup Group { get; }
 
-    public ResultsProcessorBase(string filePath, Dictionary<ResultUnitType, double> unitData, List<string> cases = null, List<int> elemIds = null)
+    public ResultsProcessorBase(string filePath, Dictionary<SpeckleGSAResultsHelper.ResultUnitType, double> unitData, List<string> cases = null, List<int> elemIds = null)
     {
       this.filePath = filePath;
       if (cases != null)
@@ -193,7 +193,7 @@ namespace SpeckleGSAProxy
       return RoundToSignificantDigits(val);
     }
 
-    protected List<double> GetFactors(params ResultUnitType[] ruts)
+    protected List<double> GetFactors(params SpeckleGSAResultsHelper.ResultUnitType[] ruts)
     {
       return ruts.Where(r => unitData.ContainsKey(r)).Select(r => unitData[r]).ToList();
     }
@@ -206,7 +206,7 @@ namespace SpeckleGSAProxy
       }
 
       var scale = Math.Pow(10, Math.Floor(Math.Log10(Math.Abs(d))) + 1);
-      return scale * Math.Round(d / scale, digits);
+      return Math.Round(scale * Math.Round(d / scale, digits), digits);
     }
 
     protected float RoundToSignificantDigits(float d, int digits = significantDigits)
@@ -217,7 +217,7 @@ namespace SpeckleGSAProxy
       }
 
       var scale = (float)Math.Pow(10, Math.Floor(Math.Log10(Math.Abs(d))) + 1);
-      return (float)(scale * Math.Round(d / scale, digits));
+      return (float)Math.Round((scale * Math.Round(d / scale, digits)),digits);
     }
 
     protected bool SendableValue(object v)

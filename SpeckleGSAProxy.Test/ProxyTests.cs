@@ -258,6 +258,8 @@ namespace SpeckleGSAProxy.Test
         //RECEIVE EVENT #1: first of continuous
         receiverCoordinator.Trigger(null, null);
 
+        var latestAfter1 = ((IGSACacheForTesting)GSA.App.Cache).Records.Where(r => r.Latest).GroupBy(r => r.Keyword).ToDictionary(g => g.Key, g => g.ToList());
+
         //Check cache to see if object have been received
         var records = ((IGSACacheForTesting)GSA.App.Cache).Records;
         var latestGwaAfter1 = new List<string>(records.Where(r => r.Latest).Select(r => r.Gwa));
@@ -270,6 +272,8 @@ namespace SpeckleGSAProxy.Test
 
         //RECEIVE EVENT #2: second of continuous
         receiverCoordinator.Trigger(null, null);
+
+        var latestAfter2 = ((IGSACacheForTesting)GSA.App.Cache).Records.Where(r => r.Latest).GroupBy(r => r.Keyword).ToDictionary(g => g.Key, g => g.ToList());
 
         //Check cache to see if object have been merged correctly and no extraneous calls to GSA is created
         var latestGwaAfter2 = new List<string>(records.Where(r => r.Latest).Select(r => r.Gwa));

@@ -68,7 +68,7 @@ namespace SpeckleGSAProxy
     private List<string> cases = null;
     //This is the factor relative to the SI units (N, m, etc) that the model is currently set to - this is relevant for results as they're always
     //exported to CSV in SI units
-    private Dictionary<ResultUnitType, double> unitData = new Dictionary<ResultUnitType, double>();
+    private Dictionary<SpeckleGSAResultsHelper.ResultUnitType, double> unitData = new Dictionary<SpeckleGSAResultsHelper.ResultUnitType, double>();
 
     private string SpeckleGsaVersion;
     private string units = "m";
@@ -969,7 +969,7 @@ namespace SpeckleGSAProxy
       {
         var pieces = gwa.Split(GwaDelimiter);
 
-        if (Enum.TryParse(pieces[1], true, out ResultUnitType rut) && float.TryParse(pieces.Last(), out float factor))
+        if (Enum.TryParse(pieces[1], true, out SpeckleGSAResultsHelper.ResultUnitType rut) && float.TryParse(pieces.Last(), out float factor))
         {
           unitData.Add(rut, factor);
         }

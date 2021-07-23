@@ -10,7 +10,7 @@ namespace SpeckleGSAProxy
   {
     public override ResultGroup Group => ResultGroup.Assembly;
 
-    public ResultsAssemblyProcessor(string filePath, Dictionary<ResultUnitType, double> unitData, List<ResultType> resultTypes = null, 
+    public ResultsAssemblyProcessor(string filePath, Dictionary<SpeckleGSAResultsHelper.ResultUnitType, double> unitData, List<ResultType> resultTypes = null, 
       List<string> cases = null, List<int> elemIds = null) : base(filePath, unitData, cases, elemIds)
     {
       if (resultTypes == null || resultTypes.Contains(ResultType.AssemblyForcesAndMoments))
@@ -32,7 +32,7 @@ namespace SpeckleGSAProxy
 
     protected Dictionary<string, object> ResultTypeColumnValues_AssemblyForcesAndMoments(List<int> indices)
     {
-      var factors = GetFactors(ResultUnitType.Length);
+      var factors = GetFactors(SpeckleGSAResultsHelper.ResultUnitType.Length);
       var retDict = new Dictionary<string, object>
       {
         { "fx", indices.Select(i => ApplyFactors(((CsvAssembly)Records[i]).Fx, factors)).Cast<object>().ToList() },

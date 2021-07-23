@@ -254,7 +254,7 @@ namespace SpeckleGSAProxy
         return new List<string>();
       }
       var colIndices = collectionIndicesByKwGsaId[keyword][gsaIndex];
-      return (colIndices.Count() == 0) ? new List<string>() : colIndices.Select(i => records[i].Gwa).ToList();
+      return (colIndices.Count() == 0) ? new List<string>() : colIndices.Where(i => records[i] != null).Select(i => records[i].Gwa).ToList();
     }
 
     public bool GetRecordSummaries(string kw, out List<string> gwa, out List<int> gsaIndices, out List<string> applicationIds)
@@ -356,7 +356,7 @@ namespace SpeckleGSAProxy
       {
         var record = records[i];
         collectionIndicesByKw[record.Keyword].Remove(i);
-        collectionIndicesByKwGsaId[record.Keyword].Remove(i);
+        collectionIndicesByKwGsaId[record.Keyword][record.Index].Remove(i);
         if (!string.IsNullOrEmpty(record.ApplicationId) && collectionIndicesByApplicationId.ContainsKey(record.ApplicationId))
         {
           collectionIndicesByApplicationId[record.ApplicationId].Remove(i);

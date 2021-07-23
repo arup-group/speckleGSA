@@ -26,18 +26,6 @@ namespace SpeckleGSAProxy.Test
       var proxy = new GSAProxy();
       GSA.App = new TestAppResources(proxy, new Settings() { Units = "m", TargetLayer = SpeckleGSAInterfaces.GSATargetLayer.Analysis });
       GSA.Init("");
-
-      /*
-      GSA.App.Settings.NodalResults = new Dictionary<string, IGSAResultParams>() { { "Nodal Displacements", null }, { "Nodal Velocity", null } };
-      GSA.App.Settings.Element1DResults = new Dictionary<string, IGSAResultParams>() { { "1D Element Displacement", null } };
-      */
-      
-
-      /*
-      var allResultTypes = new List<string>();
-      allResultTypes.AddRange(GSA.App.Settings.NodalResults.Keys);
-      allResultTypes.AddRange(GSA.App.Settings.Element1DResults.Keys);
-      */
       
       var cases = new List<string> { "A1", "C3", "C10" };
       var allResultTypes = new List<ResultType> { ResultType.NodalDisplacements, ResultType.NodalVelocity, ResultType.Element1dDisplacement };
@@ -45,14 +33,15 @@ namespace SpeckleGSAProxy.Test
       Assert.IsTrue(proxy.OpenFile(path, true));
       Assert.IsTrue(proxy.PrepareResults(allResultTypes, 3));
 
-      //Assert.IsTrue(proxy.LoadResults(GSA.App.Settings.NodalResults.Keys.ToList(), cases, new List<int> { 13 }));
+      Assert.IsTrue(proxy.LoadResults(ResultGroup.Node, cases, new List<int> { 13 }));
+      Assert.IsTrue(proxy.LoadResults(ResultGroup.Element1d, cases, new List<int> { 1 }));
 
       //Assert.IsTrue(proxy.GetResults("NODE", 13, out var nodeResults));
       Assert.IsTrue(proxy.GetResultHierarchy(ResultGroup.Node, 13, out var nodeResults));
       Assert.IsNotNull(nodeResults);
       Assert.IsTrue(nodeResults.Keys.Count > 0);
       //Assert.IsTrue(proxy.GetResults("EL", 1, out var elem1dResults));
-      Assert.IsTrue(proxy.GetResultHierarchy(ResultGroup.Node, 1, out var elem1dResults));
+      Assert.IsTrue(proxy.GetResultHierarchy(ResultGroup.Element1d, 1, out var elem1dResults));
       Assert.IsNotNull(elem1dResults);
       Assert.IsTrue(elem1dResults.Keys.Count > 0);
 
@@ -100,93 +89,6 @@ namespace SpeckleGSAProxy.Test
       return value;
     }
 
-    [TestCase(@"C:\Nicolaas\Repo\speckleGSA-github\SpeckleGSAUI\bin\Debug\GSAExport\result_elem_2d\result_elem_2d.csv")]
-    public void LoadFileTest(string filePath)
-    {
-      var startTime = DateTime.Now;
-
-      var context = new ExportCsvResultsTable("", ResultGroup.Element2d, "case_id", "id", new List<string>());
-      context.LoadFromFile(filePath);
-
-      TimeSpan duration = DateTime.Now - startTime;
-      var durationString = duration.ToString(@"hh\:mm\:ss");
-
-    }
-
-    [TestCase(@"C:\Nicolaas\Repo\speckleGSA-github\SpeckleGSAUI\bin\Debug\GSAExport\result_elem_1d\result_elem_1d.csv")]
-    public void LoadFileTestControl(string filePath)
-    {
-      var startTime = DateTime.Now;
-
-      var lines = new List<string>();
-
-      var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-      var sr = new StreamReader(fs);
-
-      string line;
-      while ((line = sr.ReadLine()) != null)
-      {
-        lines.Add(line);
-      }
-
-      TimeSpan duration = DateTime.Now - startTime;
-      var durationString = duration.ToString(@"hh\:mm\:ss");
-
-    }
-
-    /*
-    [TestCase(@"C:\Nicolaas\Repo\speckleGSA-github\SpeckleGSAUI\bin\Debug\GSAExport\result_elem_1d\result_elem_1d.csv")]
-    public void CsvHelpersTest(string filePath)
-    {
-      var startTime = DateTime.Now;
-
-      var allFields = new List<string>();
-
-      foreach (var rt in GSAProxy.resultTypeSpecs[ResultGroup.Element1d].ResultTypeCsvColumnMap.Keys)
-      {
-        foreach (var importedField in GSAProxy.resultTypeSpecs[ResultGroup.Element1d].ResultTypeCsvColumnMap[rt].FileCols)
-        {
-          if (!allFields.Contains(importedField.Value.FileCol))
-          {
-            allFields.Add(importedField.Value.FileCol);
-          }
-        }
-      }
-
-
-      var context = new ExportCsvResultsTable("", ResultGroup.Element1d, "case_id", "id", allFields);
-      context.LoadFromFile(filePath);
-
-      TimeSpan duration = DateTime.Now - startTime;
-      var durationString = duration.ToString(@"hh\:mm\:ss");
-
-    }
-
-    [TestCase(@"C:\Nicolaas\Repo\speckleGSA-github\SpeckleGSAUI\bin\Debug\GSAExport\result_elem_2d\result_elem_2d.csv", true)]
-    //[TestCase(@"C:\Temp\result_elem_2d.csv")]
-    public void CsvHelpersTest2(string filePath, bool parallel)
-    {
-      var startTime = DateTime.Now;
-
-      var cases = new List<string> { "A1", "A2", "A3" };
-
-      //var context = new ResultsTest.Results2dProcessor(GSAProxy.resultTypeSpecs[ResultCsvGroup.Element2d], filePath, new List<string>() { "A1", "A2" }, new List<int>() { 1, 2, 3 });
-      var context = new ResultsTest.Results2dProcessor(GSAProxy.resultTypeSpecs[ResultGroup.Element2d], filePath, cases);
-      context.LoadFromFile(true);
-
-      var hierarchies1 = context.GetHierarchy(1, "A1");
-      var hierarchies2 = context.GetHierarchy(2, "A1");
-      var hierarchies3 = context.GetHierarchy(3, "A1");
-      var hierarchies4 = context.GetHierarchy(1, "A2");
-      var hierarchies5 = context.GetHierarchy(2, "A2");
-      var hierarchies6 = context.GetHierarchy(3, "A2");
-
-      TimeSpan duration = DateTime.Now - startTime;
-      var durationString = duration.ToString(@"hh\:mm\:ss");
-      Console.WriteLine("Duration of test: " + durationString);
-    }
-    */
-
     [TestCase(@"C:\Temp", true)]
     public void CsvHelpersTestNullValues(string dir, bool parallel)
     {
@@ -194,7 +96,7 @@ namespace SpeckleGSAProxy.Test
 
       var cases = new List<string> { "A1" };
 
-      var unitData = new Dictionary<ResultUnitType, double>() { { ResultUnitType.Length, 1 }, { ResultUnitType.Force, 1 } };
+      var unitData = new Dictionary<SpeckleGSAResultsHelper.ResultUnitType, double>() { { SpeckleGSAResultsHelper.ResultUnitType.Length, 1 }, { SpeckleGSAResultsHelper.ResultUnitType.Force, 1 } };
 
       var context = new List<ResultsProcessorBase>()
       {
@@ -240,7 +142,7 @@ namespace SpeckleGSAProxy.Test
 
       var cases = new List<string> { "A1" };
 
-      var unitData = new Dictionary<ResultUnitType, double>() { { ResultUnitType.Length, 1 }, { ResultUnitType.Force, 1 } };
+      var unitData = new Dictionary<SpeckleGSAResultsHelper.ResultUnitType, double>() { { SpeckleGSAResultsHelper.ResultUnitType.Length, 1 }, { SpeckleGSAResultsHelper.ResultUnitType.Force, 1 } };
 
       var context = new List<ResultsProcessorBase>()
       {

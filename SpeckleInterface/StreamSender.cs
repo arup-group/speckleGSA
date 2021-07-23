@@ -12,8 +12,8 @@ namespace SpeckleInterface
   /// </summary>
   public class StreamSender : StreamBase, IStreamSender
   {
-    const int DEFAULT_MAX_BUCKET_SIZE = 2000000;
-    const int DEFAULT_API_TIMEOUT = 20000;
+    const int DEFAULT_MAX_BUCKET_SIZE = 5000000;
+    const int DEFAULT_API_TIMEOUT = 30000;
     const int DEFAULT_PARALLEL_API_REQUESTS = 5;
 
     private int maxPayloadBytes = DEFAULT_MAX_BUCKET_SIZE;

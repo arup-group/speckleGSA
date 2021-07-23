@@ -19,7 +19,7 @@ namespace SpeckleGSAProxy
       ResultType.ConstraintForces
     };
 
-    public ResultsNodeProcessor(string filePath, Dictionary<ResultUnitType, double> unitData, List<ResultType> resultTypes = null, 
+    public ResultsNodeProcessor(string filePath, Dictionary<SpeckleGSAResultsHelper.ResultUnitType, double> unitData, List<ResultType> resultTypes = null, 
       List<string> cases = null, List<int> elemIds = null) : base(filePath, unitData, cases, elemIds)
     {
       if (resultTypes == null)
@@ -50,8 +50,8 @@ namespace SpeckleGSAProxy
       {
         return new Dictionary<string, object>();
       }
-      var factors = GetFactors(ResultUnitType.Length);
-      var factorsRotation = GetFactors(ResultUnitType.Angle);
+      var factors = GetFactors(SpeckleGSAResultsHelper.ResultUnitType.Length);
+      var factorsRotation = GetFactors(SpeckleGSAResultsHelper.ResultUnitType.Angle);
 
       var retDict = new Dictionary<string, object>
       {
@@ -70,7 +70,7 @@ namespace SpeckleGSAProxy
 
     protected Dictionary<string, object> ResultTypeColumnValues_NodalVelocity(List<int> indices)
     {
-      var factors = GetFactors(ResultUnitType.Length, ResultUnitType.Time);
+      var factors = GetFactors(SpeckleGSAResultsHelper.ResultUnitType.Length, SpeckleGSAResultsHelper.ResultUnitType.Time);
       var retDict = new Dictionary<string, object>
       {
         { "vx", indices.Select(i => ApplyFactors(((CsvNode) Records[i]).Vx, factors)).Cast<object>().ToList() },
@@ -87,7 +87,7 @@ namespace SpeckleGSAProxy
 
     protected Dictionary<string, object> ResultTypeColumnValues_NodalAcceleration(List<int> indices)
     {
-      var factors = GetFactors(ResultUnitType.Accel);
+      var factors = GetFactors(SpeckleGSAResultsHelper.ResultUnitType.Accel);
       var retDict = new Dictionary<string, object>
       {
         { "ax", indices.Select(i => ApplyFactors(((CsvNode) Records[i]).Ax, factors)).Cast<object>().ToList() },
@@ -104,8 +104,8 @@ namespace SpeckleGSAProxy
 
     protected Dictionary<string, object> ResultTypeColumnValues_NodalReaction(List<int> indices)
     {
-      var factorsForce = GetFactors(ResultUnitType.Force);
-      var factorsMoment = GetFactors(ResultUnitType.Force, ResultUnitType.Length);
+      var factorsForce = GetFactors(SpeckleGSAResultsHelper.ResultUnitType.Force);
+      var factorsMoment = GetFactors(SpeckleGSAResultsHelper.ResultUnitType.Force, SpeckleGSAResultsHelper.ResultUnitType.Length);
       var retDict = new Dictionary<string, object>
       {
         { "fx", indices.Select(i => ApplyFactors(((CsvNode) Records[i]).Fx_Reac, factorsForce)).Cast<object>().ToList() },
@@ -122,8 +122,8 @@ namespace SpeckleGSAProxy
 
     protected Dictionary<string, object> ResultTypeColumnValues_ConstraintForces(List<int> indices)
     {
-      var factorsForce = GetFactors(ResultUnitType.Force);
-      var factorsMoment = GetFactors(ResultUnitType.Force, ResultUnitType.Length);
+      var factorsForce = GetFactors(SpeckleGSAResultsHelper.ResultUnitType.Force);
+      var factorsMoment = GetFactors(SpeckleGSAResultsHelper.ResultUnitType.Force, SpeckleGSAResultsHelper.ResultUnitType.Length);
       var retDict = new Dictionary<string, object>
       {
         { "fx", indices.Select(i => ApplyFactors(((CsvNode) Records[i]).Fx_Cons, factorsForce)).Cast<object>().ToList() },

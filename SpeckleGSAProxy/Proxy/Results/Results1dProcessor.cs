@@ -16,7 +16,7 @@ namespace SpeckleGSAProxy
       ResultType.Element1dForce
     };
 
-    public Results1dProcessor(string filePath, Dictionary<ResultUnitType, double> unitData, List<ResultType> resultTypes = null, 
+    public Results1dProcessor(string filePath, Dictionary<SpeckleGSAResultsHelper.ResultUnitType, double> unitData, List<ResultType> resultTypes = null, 
       List<string> cases = null, List<int> elemIds = null) : base(filePath, unitData, cases, elemIds)
     {
       if (resultTypes == null)
@@ -41,7 +41,7 @@ namespace SpeckleGSAProxy
     #region column_values_fns
     protected Dictionary<string, object> ResultTypeColumnValues_Element1dDisplacement(List<int> indices)
     {
-      var factors = GetFactors(ResultUnitType.Length);
+      var factors = GetFactors(SpeckleGSAResultsHelper.ResultUnitType.Length);
       var retDict = new Dictionary<string, object>
       {
         { "ux", indices.Select(i => ApplyFactors(((CsvElem1d)Records[i]).Ux, factors)).Cast<object>().ToList() },
@@ -55,8 +55,8 @@ namespace SpeckleGSAProxy
 
     protected Dictionary<string, object> ResultTypeColumnValues_Element1dForce(List<int> indices)
     {
-      var factorsForce = GetFactors(ResultUnitType.Force);
-      var factorsMoment = GetFactors(ResultUnitType.Force, ResultUnitType.Length);
+      var factorsForce = GetFactors(SpeckleGSAResultsHelper.ResultUnitType.Force);
+      var factorsMoment = GetFactors(SpeckleGSAResultsHelper.ResultUnitType.Force, SpeckleGSAResultsHelper.ResultUnitType.Length);
       var retDict = new Dictionary<string, object>
       {
         { "fx", indices.Select(i => ApplyFactors(((CsvElem1d)Records[i]).Fx, factorsForce)).Cast<object>().ToList() },
