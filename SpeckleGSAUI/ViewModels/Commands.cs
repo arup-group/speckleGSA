@@ -242,22 +242,21 @@ namespace SpeckleGSAUI.ViewModels
         }
 
         var resultCases = GSA.App.LocalCache.ExpandLoadCasesAndCombinations(coordinator.SenderTab.LoadCaseList);
-        if (resultCases == null || resultCases.Count() == 0)
+        if (resultCases != null && resultCases.Count() > 0)
         {
-          return false;
-        }
-        percentageProgress.Report(5);
+          percentageProgress.Report(5);
 
-        loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Resolved load cases"));
+          loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Resolved load cases"));
 
-        GSA.App.Settings.ResultCases = resultCases;
-        GSA.App.Settings.ResultTypes = resultsToSend.Select(rts => rts.ResultType).ToList();
+          GSA.App.Settings.ResultCases = resultCases;
+          GSA.App.Settings.ResultTypes = resultsToSend.Select(rts => rts.ResultType).ToList();
 
-        if (GSA.App.LocalSettings.SendResults && resultCases.Count() > 0)
-        {
-          GSA.App.LocalProxy.PrepareResults(GSA.App.Settings.ResultTypes, GSA.App.LocalSettings.Result1DNumPosition + 2);
+          if (GSA.App.LocalSettings.SendResults && resultCases.Count() > 0)
+          {
+            GSA.App.LocalProxy.PrepareResults(GSA.App.Settings.ResultTypes, GSA.App.LocalSettings.Result1DNumPosition + 2);
 
-          loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Extracted results"));
+            loggingProgress.Report(new MessageEventArgs(MessageIntent.Display, MessageLevel.Information, "Extracted results"));
+          }
         }
       }
 
