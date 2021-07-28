@@ -312,13 +312,14 @@ namespace SpeckleGSA
         }
       }      
       );
+
       foreach (var t in batch)
       {
         progressEstimator.AppendCurrent(WorkPhase.Conversion, GSA.SenderDictionaries.Sum(d => d.Count(t)));
       }
       changeDetected = parallelChangeDetected;
 #endif
-
+      GSA.App.LocalMessenger.Trigger();
 
       lock (traversedSerialisedLock)
       {
