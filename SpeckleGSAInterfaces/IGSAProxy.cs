@@ -127,7 +127,7 @@ namespace SpeckleGSAInterfaces
 
     //This is called by the results-related ToSpeckle() methods in the kit; it reads the appropriate individual CSV files into memory ready to be queried
     //null values mean ALL
-    bool LoadResults(ResultGroup group, List<string> cases = null, List<int> elemIds = null);
+    bool LoadResults(ResultGroup group, out int numErrorRows, List<string> cases = null, List<int> elemIds = null);
 
     //This is called by the results-related ToSpeckle() methods in the kit; it provides the data hierarchy for all specified load cases and result types
     //ready to be inserted as the Value property of the result object for both embedded and separate options

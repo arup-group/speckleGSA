@@ -43,9 +43,9 @@ namespace SpeckleGSAProxy
       this.unitData = unitData;
     }
 
-    public abstract bool LoadFromFile(bool parallel = true);
+    public abstract bool LoadFromFile(out int numErrorRows, bool parallel = true);
 
-    protected bool LoadFromFile<T>(bool parallel = true) where T: CsvRecord
+    protected bool LoadFromFile<T>(out int numErrorRows, bool parallel = true) where T: CsvRecord
     {
       var reader = new StreamReader(filePath);
 
@@ -56,6 +56,8 @@ namespace SpeckleGSAProxy
       var foundCases = new HashSet<string>();
       var foundElems = new HashSet<int>();
 
+      numErrorRows = 0;
+
       // [ result_type, [ [ headers ], [ row, column ] ] ]
 
       using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
@@ -65,29 +67,42 @@ namespace SpeckleGSAProxy
 
         while (csv.Read())
         {
-          var record = csv.GetRecord<T>();
-
-          if (elemIds == null && !foundElems.Contains(record.ElemId))
+          bool successfulRead = false;
+          T record = null;
+          try
           {
-            foundElems.Add(record.ElemId);
+            record = csv.GetRecord<T>();
+            successfulRead = true;
           }
-          if (cases == null && !foundCases.Contains(record.CaseId))
+          catch
           {
-            foundCases.Add(record.CaseId);
+            numErrorRows++;
           }
 
-          if ((elemIds == null || elemIds.Contains(record.ElemId)) && ((cases == null) || (cases.Contains(record.CaseId))))
+          if (successfulRead)
           {
-            Records.Add(rowIndex, record);
-            if (!RecordIndices.ContainsKey(record.ElemId))
+            if (elemIds == null && !foundElems.Contains(record.ElemId))
             {
-              RecordIndices.Add(record.ElemId, new Dictionary<string, List<int>>());
+              foundElems.Add(record.ElemId);
             }
-            if (!RecordIndices[record.ElemId].ContainsKey(record.CaseId))
+            if (cases == null && !foundCases.Contains(record.CaseId))
             {
-              RecordIndices[record.ElemId].Add(record.CaseId, new List<int>());
+              foundCases.Add(record.CaseId);
             }
-            RecordIndices[record.ElemId][record.CaseId].Add(rowIndex);
+
+            if ((elemIds == null || elemIds.Contains(record.ElemId)) && ((cases == null) || (cases.Contains(record.CaseId))))
+            {
+              Records.Add(rowIndex, record);
+              if (!RecordIndices.ContainsKey(record.ElemId))
+              {
+                RecordIndices.Add(record.ElemId, new Dictionary<string, List<int>>());
+              }
+              if (!RecordIndices[record.ElemId].ContainsKey(record.CaseId))
+              {
+                RecordIndices[record.ElemId].Add(record.CaseId, new List<int>());
+              }
+              RecordIndices[record.ElemId][record.CaseId].Add(rowIndex);
+            }
           }
 
           rowIndex++;

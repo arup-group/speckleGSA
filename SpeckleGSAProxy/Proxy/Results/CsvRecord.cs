@@ -31,9 +31,9 @@ namespace SpeckleGSAProxy
       return (float?)Math.Sqrt(vals.Select(d => Math.Pow((float)d, 2)).Sum());
     }
 
-    protected float? MomentResult(params float[] dims)
+    protected float? MomentResult(params float?[] dims)
     {
-      if (dims.Length < 2)
+      if (dims.Length < 2 || dims.Any(d => !d.HasValue))
       {
         return null;
       }

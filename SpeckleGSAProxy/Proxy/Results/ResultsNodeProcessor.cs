@@ -41,7 +41,8 @@ namespace SpeckleGSAProxy
       };
     }
 
-    public override bool LoadFromFile(bool parallel = true) =>base.LoadFromFile<CsvNode>(parallel);
+    public override bool LoadFromFile(out int numErrorRows, bool parallel = true)
+      => base.LoadFromFile<CsvNode>(out numErrorRows, parallel);
 
     #region column_values_fns
     protected Dictionary<string, object> ResultTypeColumnValues_NodalDisplacements(List<int> indices)

@@ -54,7 +54,7 @@ namespace SpeckleGSAProxy
 
     //Assume order is always correct
     //the hierarchy to compile, to be converted, is
-    public override bool LoadFromFile(bool parallel = true)
+    public override bool LoadFromFile(out int numErrorRows, bool parallel = true)
     {
       var reader = new StreamReader(filePath);
 
@@ -65,6 +65,8 @@ namespace SpeckleGSAProxy
       var foundCases = new HashSet<string>();
       var foundElems = new HashSet<int>();
 
+      numErrorRows = 0;
+
       // [ result_type, [ [ headers ], [ row, column ] ] ]
 
       using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
@@ -74,43 +76,56 @@ namespace SpeckleGSAProxy
 
         while (csv.Read())
         {
-          var record = csv.GetRecord<CsvElem2d>();
-
-          if (elemIds == null && !foundElems.Contains(record.ElemId))
+          bool successfulRead = false;
+          CsvElem2d record = null;
+          try
           {
-            foundElems.Add(record.ElemId);
+            record = csv.GetRecord<CsvElem2d>();
+            successfulRead = true;
           }
-          if (cases == null && !foundCases.Contains(record.CaseId))
+          catch
           {
-            foundCases.Add(record.CaseId);
+            numErrorRows++;
           }
 
-          if ((elemIds == null || elemIds.Contains(record.ElemId)) && ((cases == null) || (cases.Contains(record.CaseId))))
+          if (successfulRead)
           {
-            Records2d.Add(rowIndex, record);
-            if (record.IsVertex)
+            if (elemIds == null && !foundElems.Contains(record.ElemId))
             {
-              if (!VertexRecordIndices.ContainsKey(record.ElemId))
-              {
-                VertexRecordIndices.Add(record.ElemId, new Dictionary<string, List<int>>());
-              }
-              if (!VertexRecordIndices[record.ElemId].ContainsKey(record.CaseId))
-              {
-                VertexRecordIndices[record.ElemId].Add(record.CaseId, new List<int>());
-              }
-              VertexRecordIndices[record.ElemId][record.CaseId].Add(rowIndex);
+              foundElems.Add(record.ElemId);
             }
-            else
+            if (cases == null && !foundCases.Contains(record.CaseId))
             {
-              if (!FaceRecordIndices.ContainsKey(record.ElemId))
+              foundCases.Add(record.CaseId);
+            }
+
+            if ((elemIds == null || elemIds.Contains(record.ElemId)) && ((cases == null) || (cases.Contains(record.CaseId))))
+            {
+              Records2d.Add(rowIndex, record);
+              if (record.IsVertex)
               {
-                FaceRecordIndices.Add(record.ElemId, new Dictionary<string, List<int>>());
+                if (!VertexRecordIndices.ContainsKey(record.ElemId))
+                {
+                  VertexRecordIndices.Add(record.ElemId, new Dictionary<string, List<int>>());
+                }
+                if (!VertexRecordIndices[record.ElemId].ContainsKey(record.CaseId))
+                {
+                  VertexRecordIndices[record.ElemId].Add(record.CaseId, new List<int>());
+                }
+                VertexRecordIndices[record.ElemId][record.CaseId].Add(rowIndex);
               }
-              if (!FaceRecordIndices[record.ElemId].ContainsKey(record.CaseId))
+              else
               {
-                FaceRecordIndices[record.ElemId].Add(record.CaseId, new List<int>());
+                if (!FaceRecordIndices.ContainsKey(record.ElemId))
+                {
+                  FaceRecordIndices.Add(record.ElemId, new Dictionary<string, List<int>>());
+                }
+                if (!FaceRecordIndices[record.ElemId].ContainsKey(record.CaseId))
+                {
+                  FaceRecordIndices[record.ElemId].Add(record.CaseId, new List<int>());
+                }
+                FaceRecordIndices[record.ElemId][record.CaseId].Add(rowIndex);
               }
-              FaceRecordIndices[record.ElemId][record.CaseId].Add(rowIndex);
             }
           }
          
