@@ -395,6 +395,32 @@ namespace SpeckleGSA
           }
         }
       }
+
+      if (buckets.ContainsKey("model"))
+      {
+        var elem2dKey = buckets["model"].Keys.FirstOrDefault(k => k.Contains("Structural2DElement"));
+        var elem1dKey = buckets["model"].Keys.FirstOrDefault(k => k.Contains("Structural1DElement"));
+        var nodeKey = buckets["model"].Keys.FirstOrDefault(k => k.Contains("StructuralNode"));
+        var typesToSplitIfTooNumerous = new Dictionary<string, string> 
+        { 
+          { "Structural1DElement", "1D elements" },
+          { "Structural2DElement", "2D elements" },
+          { "StructuralNode", "Nodes" } 
+        };
+        foreach (var k in typesToSplitIfTooNumerous.Keys)
+        {
+          if (!string.IsNullOrEmpty(k))
+          {
+            if (buckets["model"][k].Count() > 10000)
+            {
+              var objs = buckets["model"][k].ToList();
+              buckets.Add(typesToSplitIfTooNumerous[k], new Dictionary<string, List<SpeckleObject>>() { { k, objs } });
+              buckets["model"].Remove(k);
+            }
+          }
+        }
+      }
+
       return buckets;
     }
 

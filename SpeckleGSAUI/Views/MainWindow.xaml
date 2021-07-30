@@ -347,13 +347,13 @@
                   <TextBlock DockPanel.Dock="Left" Text="Polling Rate:" VerticalAlignment="Center" Margin="0 5" />
                   <TextBox Text="{Binding PollingRate}" VerticalContentAlignment="Center"/>
                 </UniformGrid>
-                <RadioButton GroupName="StreamContentConfig" Content="Send model with no results (one stream)" Padding="5" VerticalContentAlignment="Center"
+                <RadioButton GroupName="StreamContentConfig" Content="Send model with no results" Padding="5" VerticalContentAlignment="Center"
 												 IsChecked="{Binding Path=StreamContentConfig, Converter={StaticResource EnumConverter}, ConverterParameter=ModelOnly}"/>
-                <RadioButton GroupName="StreamContentConfig" Content="Send model with embedded results (one stream)" Padding="5" VerticalContentAlignment="Center"
+                <RadioButton GroupName="StreamContentConfig" Content="Send model with embedded results" Padding="5" VerticalContentAlignment="Center"
 												 IsChecked="{Binding Path=StreamContentConfig, Converter={StaticResource EnumConverter}, ConverterParameter=ModelWithEmbeddedResults}"/>
-                <RadioButton GroupName="StreamContentConfig" Content="Send model and tabular results (two streams)" Padding="5" VerticalContentAlignment="Center"
+                <RadioButton GroupName="StreamContentConfig" Content="Send model and tabular results" Padding="5" VerticalContentAlignment="Center"
 												 IsChecked="{Binding Path=StreamContentConfig, Converter={StaticResource EnumConverter}, ConverterParameter=ModelWithTabularResults}"/>
-                <RadioButton  GroupName="StreamContentConfig" Content="Send only tabular results (one stream)" Padding="5" VerticalContentAlignment="Center"
+                <RadioButton  GroupName="StreamContentConfig" Content="Send only tabular results" Padding="5" VerticalContentAlignment="Center"
 												 IsChecked="{Binding Path=StreamContentConfig, Converter={StaticResource EnumConverter}, ConverterParameter=TabularResultsOnly}"/>
               </StackPanel>
             </GroupBox>
