@@ -35,7 +35,8 @@ namespace SpeckleGSAProxy
       };
     }
 
-    public override bool LoadFromFile(bool parallel = true) => base.LoadFromFile<CsvElem1d>(parallel);
+    public override bool LoadFromFile(out int numErrorRows, bool parallel = true) 
+      => base.LoadFromFile<CsvElem1d>(out numErrorRows, parallel);
 
 
     #region column_values_fns

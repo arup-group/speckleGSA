@@ -26,7 +26,8 @@ namespace SpeckleGSAProxy
         { ResultType.AssemblyForcesAndMoments, ResultTypeColumnValues_AssemblyForcesAndMoments }
       };
     }
-    public override bool LoadFromFile(bool parallel = true) => base.LoadFromFile<CsvAssembly>(parallel);
+    public override bool LoadFromFile(out int numErrorRows, bool parallel = true)
+      => base.LoadFromFile<CsvAssembly>(out numErrorRows, parallel);
 
     #region column_values_fns
 
