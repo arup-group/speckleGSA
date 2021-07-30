@@ -996,8 +996,9 @@ namespace SpeckleGSAProxy
       return false;
     }
 
-    public bool LoadResults(ResultGroup group, List<string> cases = null, List<int> elemIds = null)
+    public bool LoadResults(ResultGroup group, out int numErrorRows, List<string> cases = null, List<int> elemIds = null)
     {
+      numErrorRows = 0;
       if (group == ResultGroup.Assembly)
       {
         resultProcessors.Add(group, new ResultsAssemblyProcessor(Path.Combine(resultDir, @"result_assembly\result_assembly.csv"), unitData, allResultTypes, cases, elemIds));
@@ -1018,7 +1019,7 @@ namespace SpeckleGSAProxy
       {
         return false;
       }
-      resultProcessors[group].LoadFromFile();
+      resultProcessors[group].LoadFromFile(out numErrorRows);
       return true;
     }
 
