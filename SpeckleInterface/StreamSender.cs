@@ -12,8 +12,8 @@ namespace SpeckleInterface
   /// </summary>
   public class StreamSender : StreamBase, IStreamSender
   {
-    const int DEFAULT_MAX_BUCKET_SIZE = 5000000;
-    const int DEFAULT_API_TIMEOUT = 30000;
+    const int DEFAULT_MAX_BUCKET_SIZE = 2000000;
+    const int DEFAULT_API_TIMEOUT = 60000;
     const int DEFAULT_PARALLEL_API_REQUESTS = 5;
 
     private int maxPayloadBytes = DEFAULT_MAX_BUCKET_SIZE;
@@ -363,7 +363,8 @@ namespace SpeckleInterface
         numErrors++;
         messenger.Message(MessageIntent.Display, MessageLevel.Error, "Updating the stream's object list on the server", StreamId);
         var speckleExceptionContext = ExtractSpeckleExceptionContext(ex);
-        var errContext = speckleExceptionContext.Concat(new[] { "Error updating the stream's object list on the server", "StreamId=" + StreamId });
+        var errContext = speckleExceptionContext.Concat(new[] { "Endpoint=StreamUpdateAsync", "Error updating the stream's object list on the server", "StreamId=" + StreamId,
+          "NumPlaceHolders=" + placeholders.Count(), "PayloadBytes=" + Converter.getBytes(apiClient.Stream.Objects).Length });
         messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, ex, errContext.ToArray());
       }
 
@@ -405,8 +406,8 @@ namespace SpeckleInterface
         {
           numErrors++;
           var speckleExceptionContext = ExtractSpeckleExceptionContext(ex);
-          var errContext = speckleExceptionContext.Concat(new[] { "StreamId=" + StreamId,
-                "Error in updating the server with a payload of " + payload.Count() + " objects" });
+          var errContext = speckleExceptionContext.Concat(new[] { "StreamId=" + StreamId, "Endpoint=ObjectCreateAsync", 
+            "PayloadBytes=" + Converter.getBytes(payload).Length, "Error in updating the server with a payload of " + payload.Count() + " objects" }); ;
           messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, ex, errContext.ToArray());
         }
 

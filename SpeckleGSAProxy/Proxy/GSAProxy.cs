@@ -709,14 +709,12 @@ namespace SpeckleGSAProxy
         {
           items.AddRange(ConvertNamedGSAList(pieces[i], type));
         }
-        else if (pieces[i] == "to")
+        else if (pieces[i] == "to" && int.TryParse(pieces[i - 1], out int lowerRange) && int.TryParse(pieces[i + 1], out int upperRange))
         {
-          int lowerRange = Convert.ToInt32(pieces[i - 1]);
-          int upperRange = Convert.ToInt32(pieces[i + 1]);
-
           for (int j = lowerRange + 1; j <= upperRange; j++)
+          {
             items.Add(j);
-
+          }
           i++;
         }
         else

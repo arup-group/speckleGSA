@@ -200,7 +200,9 @@ namespace SpeckleInterface
       }
       else
       {
-        var currObjsDict = apiClient.Stream.Objects.ToDictionary(o => o._id, o => o);
+        //There's been a case where the same object has been added to the same stream twice, which in this case meant there were 2 objects with the same
+        // _id value, so this line just takes the first one whenever that happens
+        var currObjsDict = apiClient.Stream.Objects.GroupBy(o => o._id).ToDictionary(o => o.Key, o => o.First());
         foreach (SpeckleObject obj in receivedObjects)
         {
           if (currObjsDict.ContainsKey(obj._id))
