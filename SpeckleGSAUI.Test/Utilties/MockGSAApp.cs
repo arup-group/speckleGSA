@@ -36,7 +36,7 @@ namespace SpeckleGSAUI.Test
     {
       LocalCache = cache ?? new GSACache();
       Cache = LocalCache;
-      LocalSettings = settings ?? new MockSettings();
+      LocalSettings = settings ?? new Settings();
       if (proxy == null)
       {
         var mockProxy = new Mock<IGSALocalProxy>();

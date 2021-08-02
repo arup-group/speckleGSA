@@ -135,9 +135,9 @@ namespace SpeckleGSAUI.Test
       Assert.IsTrue(sendersCreated.All(s => s.SentObjects.Keys.Count() > 0 && s.SentObjects.Values.Count() > 0)); //Number of times a streamSender.SendObjects has been called
 
       Assert.IsTrue(GSA.App.LocalSettings.ResultCases.SequenceEqual(expectedTestCases));
-      Assert.IsTrue(GSA.App.LocalSettings.SeparateStreams);
-      Assert.IsTrue(GSA.App.LocalSettings.NodalResults.ContainsKey(results[0]));
-      Assert.IsTrue(GSA.App.LocalSettings.Element1DResults.ContainsKey(results[1]));
+      Assert.IsTrue(GSA.App.LocalSettings.StreamSendConfig == SpeckleGSAInterfaces.StreamContentConfig.ModelWithTabularResults);
+      Assert.IsTrue(GSA.App.LocalSettings.ResultTypes.Contains(SpeckleGSAInterfaces.ResultType.NodalDisplacements));
+      Assert.IsTrue(GSA.App.LocalSettings.ResultTypes.Contains(SpeckleGSAInterfaces.ResultType.Element1dDisplacement));
     }
 
     [Test]

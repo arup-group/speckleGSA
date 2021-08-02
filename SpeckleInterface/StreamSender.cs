@@ -12,8 +12,8 @@ namespace SpeckleInterface
   /// </summary>
   public class StreamSender : StreamBase, IStreamSender
   {
-    const int DEFAULT_MAX_BUCKET_SIZE = 1000000;
-    const int DEFAULT_API_TIMEOUT = 30000;
+    const int DEFAULT_MAX_BUCKET_SIZE = 2000000;
+    const int DEFAULT_API_TIMEOUT = 60000;
     const int DEFAULT_PARALLEL_API_REQUESTS = 5;
 
     private int maxPayloadBytes = DEFAULT_MAX_BUCKET_SIZE;
@@ -39,7 +39,7 @@ namespace SpeckleInterface
       tryCatchWithEvents(() =>
       {
         var streamToCreate = new SpeckleStream() { BaseProperties = CreateBaseProperties(units, tolerance, angleTolerance), Name = streamName };
-        var streamResponse = apiClient.StreamCreateAsync(streamToCreate, timeoutMillisecondsOverride: DEFAULT_API_TIMEOUT).Result;
+        var streamResponse = apiClient.StreamCreateAsync(streamToCreate, timeoutMillisecondsOverride: apiTimeoutOverride).Result;
         apiClient.Stream = streamResponse.Resource;
         apiClient.StreamId = apiClient.Stream.StreamId;
       },
@@ -54,7 +54,7 @@ namespace SpeckleInterface
           Role = "Sender",
           StreamId = this.StreamId,
           Online = true,
-        }, timeoutMillisecondsOverride: DEFAULT_API_TIMEOUT).Result;
+        }, timeoutMillisecondsOverride: apiTimeoutOverride).Result;
         apiClient.ClientId = clientResponse.Resource._id;
       }, "", "Unable to create client on the server");
 
@@ -83,7 +83,7 @@ namespace SpeckleInterface
         {
           DocumentName = documentName,
           Online = true,
-        }, timeoutMillisecondsOverride: DEFAULT_API_TIMEOUT);
+        }, timeoutMillisecondsOverride: apiTimeoutOverride);
 
         apiClient.ClientId = clientId;
       }, "", "Unable to update client on the server");
@@ -258,7 +258,7 @@ namespace SpeckleInterface
     {
       tryCatchWithEvents(() =>
       {
-        _ = apiClient.ClientUpdateAsync(apiClient.ClientId, new AppClient() { Online = false }).Result;
+        _ = apiClient.ClientUpdateAsync(apiClient.ClientId, new AppClient() { Online = false }, apiTimeoutOverride).Result;
       },
         "", "Unable to update client on server with offline status");
 
@@ -355,7 +355,7 @@ namespace SpeckleInterface
 
       try
       {
-        _ = apiClient.StreamUpdateAsync(StreamId, apiClient.Stream).Result;
+        _ = apiClient.StreamUpdateAsync(StreamId, apiClient.Stream, apiTimeoutOverride).Result;
         messenger.Message(MessageIntent.Display, MessageLevel.Information, "Updated the stream's object list on the server", StreamId);
       }
       catch (Exception ex)
@@ -363,7 +363,8 @@ namespace SpeckleInterface
         numErrors++;
         messenger.Message(MessageIntent.Display, MessageLevel.Error, "Updating the stream's object list on the server", StreamId);
         var speckleExceptionContext = ExtractSpeckleExceptionContext(ex);
-        var errContext = speckleExceptionContext.Concat(new[] { "Error updating the stream's object list on the server", "StreamId=" + StreamId });
+        var errContext = speckleExceptionContext.Concat(new[] { "Endpoint=StreamUpdateAsync", "Error updating the stream's object list on the server", "StreamId=" + StreamId,
+          "NumPlaceHolders=" + placeholders.Count(), "PayloadBytes=" + Converter.getBytes(apiClient.Stream.Objects).Length });
         messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, ex, errContext.ToArray());
       }
 
@@ -405,8 +406,8 @@ namespace SpeckleInterface
         {
           numErrors++;
           var speckleExceptionContext = ExtractSpeckleExceptionContext(ex);
-          var errContext = speckleExceptionContext.Concat(new[] { "StreamId=" + StreamId,
-                "Error in updating the server with a payload of " + payload.Count() + " objects" });
+          var errContext = speckleExceptionContext.Concat(new[] { "StreamId=" + StreamId, "Endpoint=ObjectCreateAsync", 
+            "PayloadBytes=" + Converter.getBytes(payload).Length, "Error in updating the server with a payload of " + payload.Count() + " objects" }); ;
           messenger.Message(MessageIntent.TechnicalLog, MessageLevel.Error, ex, errContext.ToArray());
         }
 
@@ -421,7 +422,8 @@ namespace SpeckleInterface
 
         Task.Run(() =>
         {
-          foreach (SpeckleObject obj in payload.Where(o => o.Hash != null && o._id != null))
+          //Don't save results to the hard disk as they take up a huge amount of space and are likely to change very often
+          foreach (SpeckleObject obj in payload.Where(o => o.Hash != null && o._id != null && !o.Type.Contains("Result")))
           {
             tryCatchWithEvents(() => LocalContext.AddSentObject(obj, baseUrl), "", "Error in updating local db");
           }

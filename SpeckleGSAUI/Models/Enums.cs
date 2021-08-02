@@ -56,15 +56,6 @@
     Loaded
   }
 
-  public enum StreamContentConfig
-  {
-    None,
-    ModelOnly,
-    ModelWithEmbeddedResults,
-    ModelWithTabularResults,
-    TabularResultsOnly
-  }
-
   public enum GsaUnit
   {
     None,
