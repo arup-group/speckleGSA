@@ -5,6 +5,9 @@ excerpt: "Troubleshooting SpeckleGSA"
 toc: false
 ---
 
+This is still V1 documentation. We are going to update this page to V2.
+{: .notice--danger}
+
 Here are some tips for troubleshooting SpeckleGSA and the StructuralKit. We are working to improve the software so that these issues do not appear, but in the meantime, here are some tips and workarounds!
 
 ## I am missing StructuralKit elements!

@@ -5,6 +5,9 @@ excerpt: "Command line interface (CLI)"
 toc: false
 ---
 
+This is still V1 documentation. We are going to update this page to V2.
+{: .notice--danger}
+
 The GSA plugin has a CLI interface to send and receive GSA models without the use of the interface. To use it, you will need to obtain the `token` associated with your account, which can be found from the *Profile* page of the Speckle admin app. For detailed usage help, execute the `SpeckleGSAUI -h` command.
 
 Sample sending command:
