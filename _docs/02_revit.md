@@ -5,7 +5,10 @@ excerpt: "Revit"
 toc: false
 ---
 
-<i class="fa fa-graduation-cap"></i>For Speckle-Revit documentation [refer to the main Speckle documentation site](https://speckle.systems/docs/clients/revit/basics).
+Stay tuned for updates.
+{: .notice--danger}
+
+<i class="fa fa-graduation-cap"></i>For Speckle-Revit documentation [refer to the main Speckle documentation site](https://speckle.systems/tag/revit/).
 {: .notice--primary}
 
 Using the Revit plugin and the GSA plugin, you can send the Revit Analytical Model and receive it in GSA. To do so, add the analytical model elements you wish to send to a sender in the Revit plugin and receive as usual in GSA.

@@ -5,6 +5,9 @@ excerpt: "Sending data from grasshopper"
 toc: true
 ---
 
+Stay tuned for updates.
+{: .notice--danger}
+
 In this section we show how to create a structural model in Rhino / Grasshopper, and then send it to Speckle for later use in SpeckleGSA.
 
 The example files that accompany this tutorial [can be downloaded here]({{site.baseurl}}/assets/sample_files/gh/SpeckleGSA_gh_send_00.zip)

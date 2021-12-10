@@ -7,6 +7,15 @@ David de Koning:
       icon: "fas fa-fw fa-envelope-square"
       url: "mailto:David.deKoning@arup.com"
 
+Jeroen de Bruijn:
+  name        : "Jeroen de Bruijn"
+  bio         : "Product Manager - Speckle"
+  avatar      : "/assets/images/jdb_profile.jpg"
+  links:
+    - label: "Email"
+      icon: "fas fa-fw fa-envelope-square"
+      url: "mailto:Jeroen.deBruijn@arup.com"
+
 Mishael Nuh:
   name        : "Mishael Nuh"
   bio         : "Engineering Science student majoring in Infrastructure Engineering at the University of Toronto interested in the interplay between digital technologies and structural engineering"
