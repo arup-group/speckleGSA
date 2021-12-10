@@ -21,6 +21,3 @@ General:
 
 All Arup staff should use this all-in-one installer and everyone else is welcome to use it as well!
 {: .notice--success}
-
-You may get a warning screen from Windows Defender due to the executable being downloaded from the internet. It is safe to ignore this message and continue installation (and yes, we are working on removing the warning!).
-{: .notice--warning}

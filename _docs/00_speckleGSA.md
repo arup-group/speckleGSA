@@ -5,12 +5,12 @@ excerpt: "SpeckleGSA"
 toc: true
 ---
 
-Download the [Speckle@Arup Account Manager Installer](https://github.com/arup-group/speckle-sharp/releases) in order to install the SpeckleGSA standalone application.
+Download the [Speckle@Arup Account Manager Installer](https://github.com/arup-group/speckle-sharp/releases) from GitHub in order to install the GSA connector for Speckle standalone application.
 
-It is available either in [ArupApps](http://appstoreprod01.global.arup.com:81/Shopping/RequestItem/Detail/836?query=speckle) or from [GitHub](https://github.com/arup-group/speckle-sharp/releases). New versions of the clients are released first to GitHub, then to ArupApps a few days later. 
+It is also available in [ArupApps](http://appstoreprod01.global.arup.com:81/Shopping/RequestItem/Detail/836?query=speckle). New versions of the clients are released first to GitHub, then to ArupApps a few days later. 
 
-## Opening the plugin
-SpeckleGSA runs as its own standalone application. After you've installed Speckle and the GSA plugin, the client should be added to your start menu as `SpeckleGSAV2`.
+## Opening the GSA connector for Speckle
+SpeckleGSA runs as its own standalone application. After you've installed Speckle and the GSA connector, the client should be added to your windows start menu as `GSA connector for Speckle`.
 
 ## Interface
 The plugin is separated into tabs:
