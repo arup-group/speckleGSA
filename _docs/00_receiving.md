@@ -14,9 +14,10 @@ Receiving streams can be done through the Receiver tab. Add the stream ID of the
 
 ![receiving02 - receive]({{site.baseurl}}/assets/images/quick_start/receiving02.png)
 
-Within the Settings tab, there are two options to change how the sender operates.
+Within the Settings tab, there are three options to change how the sender operates.
 - The `Coincident Node Allowence` specifies the distance of 2 nodes in order to coincide them.
 - The `Distance units` specifies in which units this distance is defined.
+- The `Mapping stream` specifies the speckle stream that the conversion will use to map catalogue sections [ (Section Mapping)](06_section_mapping.md).
 
 ![receiving03 - settings]({{site.baseurl}}/assets/images/quick_start/receiving03.png)
 
