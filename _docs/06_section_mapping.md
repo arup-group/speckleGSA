@@ -25,3 +25,20 @@ To update/append to section mappings, the user should maintain heading naming co
 
 *Note: Future functionality will be added to allow custom streams to be used for section mapping, allowing users to specify their own mappings if preferred. This would alleviate the need to send updated mappings to default mapping stream collaborators to update.*
 
+## Supported Sections
+Current sections that are supported by the default section mappings stream:
+<br>
+### UK
+- I-Sections
+- Rectangular/square hollow sections
+- Circular hollow sections
+
+### Canadian
+- I-Sections
+- Rectangular/square hollow sections
+- Circular hollow sections
+
+## Supported Software
+Current software that has catalogue section mapping interoperability:
+- GSA
+- Revit (GRS standards)
