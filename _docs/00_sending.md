@@ -4,32 +4,48 @@ title: "Sending data from SpeckleGSA"
 excerpt: "Sending data from SpeckleGSA"
 toc: false
 ---
-Before you can send a stream, you first need to create/open a GSA file in the GSA tab so the `GSA connector for Speckle` application and GSA can communicate.
+Before you can send a stream, you first need to create/open a GSA file in SpeckleGSA so the `GSA connector for Speckle` application and GSA can communicate.
 
 **Only files opened in the GSA tab are accessible by the GSA connector for Speckle application.**
 
-![sending01 - open or new file]({{site.baseurl}}/assets/images/quick_start/sending01.png)
+![new-or-open-gsa]({{site.baseurl}}/assets/images/quick_start/new-or-open-gsa.png)
 
-Sending streams can be done through the Sender tab. Choose which layers you want to send `Design` or `Both` (Both includes the Design model and the Analysis model). Then click the `Send` button.
+Select the desired stream from the list of streams.
 
-![sending02 - send]({{site.baseurl}}/assets/images/quick_start/sending02.png)
+![select-stream-to-receive]({{site.baseurl}}/assets/images/quick_start/select-stream-to-receive.png)
 
-Additional options for the sender are contained within the Settings tab. Once finished, the ID of the stream as well as the name will be displayed in the list view. Right clicking this entry will give two options: `Copy streamId` and `View Stream` to view the stream in your web browser.
+Select `send` and expand the options.
 
-![sending03 - view stream]({{site.baseurl}}/assets/images/quick_start/sending03.png)
+![select-send - send]({{site.baseurl}}/assets/images/quick_start/select-send.png)
 
-![sending]({{site.baseurl}}/assets/images/quick_start/sending.gif)
+Additional options for the sender are now available. The user can modify the following behaviour of the sender:
+- Speckle branch to send data to
+- What to send (see [Filtering](#filtering))
+- Layer to send (see GSA documentation for more info on layers)
+- `Advanced Settings` allows the user to specify a speckle stream that the conversion will use to map catalogue sections [ (Section Mapping)](06_section_mapping.md).
 
+Press the `send button` to send the data from GSA to speckle. You can track the logs of sent/received streams easily in the desktop UI, as well as selecting the shortcut to view the stream in the Speckle web viewer.
+
+![send-log]({{site.baseurl}}/assets/images/quick_start/send-log.png)
+
+## Filtering
+
+SpeckleGSA currently supports two options for filtering:
+- Send everything (on selected layers)
+- Send by list
+
+Sending by list utilizes native GSA lists to group objects within the model. All lists defined in the GSA model will be visible for selection in the SpeckleGSA connector. 
+
+The connector currently supports the following list types from GSA:
+- Member
+- Element
+- Node
+- Case
+
+![gsa to speckle list filters]({{site.baseurl}}/assets/images/quick_start/GsaToSpeckleLists.gif)
 
 ## Sending results
 
-To send analysis results from GSA, some settings must be modified within the Settings tab:
-- Check the radio button in front of `Send model(s) with results`.
-- Set the GSA result cases you want to send in the `Cases` field.
-- Select which results you wish to export from the `Results` checkbox group.
+Currently not available on DesktopUI v2. 
 
-Results can then be received in other clients and manipulated, for example in Grasshopper.
-
-![sending04 - settings]({{site.baseurl}}/assets/images/quick_start/sending04.png)
-
-![results]({{site.baseurl}}/assets/images/quick_start/results.gif)
+*Coming soon.*

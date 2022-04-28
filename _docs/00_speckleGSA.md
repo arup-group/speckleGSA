@@ -21,9 +21,7 @@ The plugin is separated into tabs:
 - **Settings**: contains all settings
 
 ## Creating an account or logging in
-The SpeckleGSA client should automatically authenticate with the Speckle server thanks to the Speckle@Arup AccountManager. You can change your account and server settings by clicking by `Manage Accounts` on the top right, which will open the Speckle@Arup AccountManager. Within Arup we host our own Speckle servers and there is a server available for all our colleagues to use `https://v2.speckle.arup.com/`. For large projects a dedicated server can be requested.
-
-![login]({{site.baseurl}}/assets/images/quick_start/login.png)
+The SpeckleGSA client should automatically authenticate with the Speckle server thanks to the Speckle@Arup AccountManager. You can change your account and server settings by opening the Speckle@Arup AccountManager. Within Arup we host our own Speckle servers and there is a server available for all our colleagues to use `https://v2.speckle.arup.com/`. For large projects a dedicated server can be requested.
 
 ## Receiving and sending
 

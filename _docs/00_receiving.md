@@ -8,17 +8,21 @@ Before you can receive a stream, you first need to create/open a GSA file in the
 
 **Only files opened in the GSA tab are accessible by the GSA connector for Speckle application.**
 
-![receiving01 - open or new file]({{site.baseurl}}/assets/images/quick_start/receiving01.png)
+![new-or-open-gsa]({{site.baseurl}}/assets/images/quick_start/new-or-open-gsa.png)
 
-Receiving streams can be done through the Receiver tab. Add the stream ID of the stream you wish to receive using the `Add Receiver` button. Next, click on  the `Receive` button to start receiving.
+Select the desired stream from the list of streams.
 
-![receiving02 - receive]({{site.baseurl}}/assets/images/quick_start/receiving02.png)
+![select-stream-to-receive]({{site.baseurl}}/assets/images/quick_start/select-stream-to-receive.png)
 
-Within the Settings tab, there are three options to change how the sender operates.
+Select `receive` and expand the options.
+
+![select-receive]({{site.baseurl}}/assets/images/quick_start/select-receive.png)
+
+Within the expanded options, there are three options to modify how the sender operates.
 - The `Coincident Node Allowence` specifies the distance of 2 nodes in order to coincide them.
 - The `Distance units` specifies in which units this distance is defined.
-- The `Mapping stream` specifies the speckle stream that the conversion will use to map catalogue sections [ (Section Mapping)](06_section_mapping.md).
+- The `Advanced Settings` allows the user to specify a speckle stream that the conversion will use to map catalogue sections [ (Section Mapping)](06_section_mapping.md).
 
-![receiving03 - settings]({{site.baseurl}}/assets/images/quick_start/receiving03.png)
+![set-units - settings]({{site.baseurl}}/assets/images/quick_start/set-units.png)
 
-![receiving]({{site.baseurl}}/assets/images/quick_start/receiving.gif)
+Hit the receive button to receive the data into GSA!
