@@ -19,7 +19,7 @@ For specific instructions on implementing section mapping on sending/receiving, 
 Present implementation only supports use of the default mapping stream (https://v2.speckle.arup.com/streams/e53a0242be).
 
 
-To best view/modify the mapping data, the user will need to pull the current mapping data from the stream URL into Excel. At this time, the SpeckleExcel connector does not allow streams to be received by URL. As a workaround, receive the stream into grasshopper and then send this data to a new stream accessible from your account. You will then be able to receive this data into Excel. Any updated data should be sent to original default mapping stream collaborators to include in the stream that is currently used by connectors.<br>
+To best view/modify the mapping data, the user will need to pull the current mapping data from the stream URL into Excel. At this time, the SpeckleExcel connector does not allow streams to be received by URL. As a workaround, receive the stream into grasshopper and then send this data to a new stream accessible from your account. You will then be able to receive this data into Excel. Any updated data should be sent to original default mapping stream collaborators to include in the stream that is currently used by connectors.
 
 To update/append to section mappings, the user should maintain heading naming conventions and maintain the branch structure used in the default mappings stream, i.e. a separate branch for mappings and section data.
 
@@ -27,7 +27,7 @@ To update/append to section mappings, the user should maintain heading naming co
 
 ## Supported Sections
 Current sections that are supported by the default section mappings stream:
-<br>
+
 ### UK
 - I-Sections
 - Rectangular/square hollow sections
