@@ -24,6 +24,8 @@ Additional options for the sender are now available. The user can modify the fol
 - Layer to send (see GSA documentation for more info on layers)
 - `Advanced Settings` allows the user to specify a speckle stream that the conversion will use to map catalogue sections [ (Section Mapping)](06_section_mapping.md).
 
+![send-options](/assets/images/quick_start/send-options.png)
+
 Press the `send button` to send the data from GSA to speckle. You can track the logs of sent/received streams easily in the desktop UI, as well as selecting the shortcut to view the stream in the Speckle web viewer.
 
 ![send-log]({{site.baseurl}}/assets/images/quick_start/send-log.png)
