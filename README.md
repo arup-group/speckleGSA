@@ -1,4 +1,9 @@
-# SpeckleGSA
+# → New version for Speckle V2 can be found [HERE](https://github.com/arup-group/speckle-sharp/releases/latest) ←
+This repo contains the **OLD** SpeckleGSA for Speckle V1. This version has been deprecated and is no longer supported.
+
+As mentioned above, the new version for Speckle V2 can be found [HERE](https://github.com/arup-group/speckle-sharp/releases/latest).
+
+## SpeckleGSA
 ![specklegsa-demo](https://github.com/arup-group/speckleGSA/blob/master/readme/demo.gif?raw=true)
 
 SpeckleGSA is a plugin for [GSA 10](https://www.oasys-software.com/products/structural/gsa/) that connects it to the [Speckle](https://speckle.systems) ecosystem.
