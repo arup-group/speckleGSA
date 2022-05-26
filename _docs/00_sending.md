@@ -50,8 +50,17 @@ The connector currently supports the following list types from GSA:
 
 ![gsa to speckle list filters]({{site.baseurl}}/assets/images/quick_start/GsaToSpeckleLists.gif)
 
-## Sending results
+## Sending Results
 
-Currently not available on DesktopUI v2. 
+On sending data from GSA to Speckle, two options are available for sending (sendings page must be fully expanded to access these options):
 
-*Coming soon.*
+- Model only
+- Model with results
+
+![send options]({{site.baseurl}}/assets/images/quick_start/results-v2.png)
+
+To send results, the `Model with results` option should be selected. 
+
+The results settings can be modified by selecting `Results`. This gives the user the opportunity to select relevant results, as well as define desired cases. The user should define the cases by case name with a space between each entry, e.g. `A1 A2 A3`, or the keyword `all` can be used to select all cases.
+
+*Note: if the user selects `Model with results` but fails to provide inputs for `Cases`, no results will be sent to speckle.*
