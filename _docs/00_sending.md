@@ -52,15 +52,23 @@ The connector currently supports the following list types from GSA:
 
 ## Sending Results
 
-On sending data from GSA to Speckle, two options are available for sending (sendings page must be fully expanded to access these options):
+By default, SpeckleGSA doesn't send results to Speckle. To add results, select the `Results` option on the send stream options page.
 
-- Model only
-- Model with results
+![Results settings]({{site.baseurl}}/assets/images/quick_start/send-results-1.png)
 
-![send options]({{site.baseurl}}/assets/images/quick_start/results-v2.png)
+Ensure the `Send Results` checkbox has been selected. Three options are available for sending results:
+- Send results to Speckle Server (these results will be available to receive by stream)
+- Save results to local SQLite file (saves results in a local database, directory provided in logs)
+- Save results as local .csv (directory provided in logs)
 
-To send results, the `Model with results` option should be selected. 
+![Results setting options]({{site.baseurl}}/assets/images/quick_start/send-results-2.png)
 
-The results settings can be modified by selecting `Results`. This gives the user the opportunity to select relevant results, as well as define desired cases. The user should define the cases by case name with a space between each entry, e.g. `A1 A2 A3`, or the keyword `all` can be used to select all cases.
+The user should define the cases by case name with a space between each entry, e.g. `A1 A2 A3`, or the keyword `all` can be used to select all cases.
 
 *Note: if the user selects `Model with results` but fails to provide inputs for `Cases`, no results will be sent to speckle.*
+
+Select `Save` to save the results settings and return to the general send options. Hit the send button. If the local SQLite or .csv options were selected, directories for the files can be found in the logs. To access the logs, select the yellow `check report` button. 
+
+![Open logs]({{site.baseurl}}/assets/images/quick_start/send-results-3.png)
+
+![Local directories]({{site.baseurl}}/assets/images/quick_start/send-results-4.png)
