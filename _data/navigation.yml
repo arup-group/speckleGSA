@@ -12,6 +12,8 @@ docs:
       url: /docs/specklegsa_receiving
     - title: "Sending"
       url: /docs/specklegsa_sending
+    - title: "GSA Lists"
+      url: /docs/specklegsa_gsa_lists
     - title: "Stream organisation"
       url: /docs/stream_org
   - title: "Grasshopper"
