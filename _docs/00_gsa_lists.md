@@ -19,6 +19,8 @@ Conversion is supported for lists with all variations of definitions (using pref
 - Named lists: support using named lists as a sub-list to define another list is currently limited to using only one list name - e.g. `"List 1"` without additional list names or indices. Instead, if you wish to define a list by a more complex arrangement of sub-lists (and/or indices), we recommend providing the **list number** as per GSA's docs - e.g. using a definition of `#1 #2` instead of `"List one name" "List two name"`. *Note, a similar limitation applies to using assemblies or grid surfaces to define lists.*
 - Asterisk shorthand: in GSA, it is valid to provide a list definition using the asterisk shorthand, e.g. `2 to *`, which will include all objects from 2 to the last index. This shorthand is not currently supported in conversion to Speckle.
 
+GSA list objects sent from GSA to Speckle will contain references to the ids of the objects it contains. You can view these references in the `definitionRefs` property of the GSA list object in Speckle.
+
 ### Receiving Lists in GSA from Speckle
 
 Speckle also only provides support for the list types documented above on receiving to GSA. On receiving, GSA lists will be created using indices only to define list objects, e.g. `1 2 3 4 5`, and conversion will not use any prefixes or shorthand notation.
@@ -42,6 +44,6 @@ Current implementation of GSA lists only provides support for passing them as in
 
 ### Receiving GSA Lists into Grasshopper from Speckle
 
-GSA lists received into Grasshopper will be accessible through the `General Data` property of the `Model` object.
+GSA lists received into Grasshopper will be accessible through the `General Data` property of the `Model` object. GSA lists received from Speckle but originally from GSA will contain a list of references to object ids contained within the list in the `definitionRefs` property.
 
 ![gh-list-receive]({{site.baseurl}}/assets/images/gsa_lists/gh-list-receive.png)
